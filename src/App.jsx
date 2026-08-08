@@ -41,7 +41,7 @@ function RouteEffects() {
 }
 
 function Logo({ light = false }) {
-  return <img className="brand-logo brand-logo-image" src="/assets/fastshipindia-logo.jpg" alt="Fastship India" decoding="async" />
+  return <img className="brand-logo brand-logo-image" src="/assets/fastshipindia-logo-green-navy.jpg" alt="Fastship India" decoding="async" />
 }
 
 function Header() {
@@ -102,7 +102,7 @@ function CampaignCards() {
     ['Sell further, sooner', 'Reach new pin codes without adding a new operations headache.', '29K+', 'PIN CODES', 'tone-blue'],
     ['Make every margin count', 'See the route, rate and weight before the order becomes a cost.', '220+', 'GLOBAL MARKETS', 'tone-coral'],
     ['Give customers the good news', 'Clear milestones turn a delivery update into a reason to come back.', '99.2%', 'UPTIME', 'tone-lime'],
-    ['One dashboard. Less tab chaos.', 'Bring bookings, exceptions and courier signals into one focused view.', '01', 'WORKFLOW', 'tone-purple'],
+    ['One dashboard. Less tab chaos.', 'Bring bookings, exceptions and courier signals into one focused view.', '01', 'WORKFLOW', 'tone-green'],
     ['From local to legendary', 'Build a delivery experience that feels as thoughtful as the product.', '24/7', 'VISIBILITY', 'tone-blue'],
     ['Keep the promise moving', 'Fastship India helps your team take the next best action, every time.', 'âˆž', 'POSSIBILITY', 'tone-coral'],
   ]
