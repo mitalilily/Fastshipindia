@@ -84,6 +84,7 @@ function Home() {
     <FeatureShowcase />
     <CampaignCards />
     <VisualGallery />
+    <InteractiveWorkbench />
     <section className="image-story home-stack-card"><div className="shell image-story-grid"><div className="story-image"><img src="/assets/shipray-strength-india.jpg" alt="Fastship India delivery network across India" loading="lazy" decoding="async" /></div><div className="story-copy"><Eyebrow icon={Globe2}>MADE FOR THE LONG WAY</Eyebrow><h2>Local knowledge.<br /><em>Global ambition.</em></h2><p>From a first order in a home studio to a brand shipping around the world, Fastship India grows with the people behind every package.</p><div className="stat-line"><strong>220+</strong><span>countries and territories<br />within reach</span></div><ButtonLink to="/integrations/courier-partners">Explore the network</ButtonLink></div></div></section>
     <section className="home-steps home-stack-card"><div className="shell"><Eyebrow icon={PackageCheck}>FROM CLICK TO DOORSTEP</Eyebrow><h2>A simple rhythm for<br /><em>complex movement.</em></h2><div className="step-grid"><div><span>01</span><h3>Plan</h3><p>Understand the route, weight and delivery promise before the parcel leaves.</p></div><div><span>02</span><h3>Move</h3><p>Give every handoff a clear next action, from pickup to hub to doorstep.</p></div><div><span>03</span><h3>Learn</h3><p>Use the signals from every shipment to make the next one even better.</p></div></div></div></section>
     <Testimonials />
@@ -116,6 +117,24 @@ function VisualGallery() {
     ['/assets/shipray-strength-businesses.jpg', 'Growing ecommerce business', 'Built around growing brands'],
   ]
   return <section className="visual-gallery home-stack-card"><div className="shell"><div className="gallery-heading"><div><Eyebrow icon={Globe2}>THE NETWORK IN MOTION</Eyebrow><h2>Every route has<br /><em>a real story.</em></h2></div><ButtonLink to="/rate-calculator">Plan your next shipment</ButtonLink></div><div className="gallery-grid">{images.map(([src, alt, caption], index) => <figure className={`gallery-item gallery-item-${index + 1} reveal-on-view`} key={src}><img src={src} alt={alt} loading="lazy" decoding="async" /><figcaption><span>0{index + 1}</span>{caption}</figcaption></figure>)}</div></div></section>
+}
+
+function InteractiveWorkbench() {
+  const [mode, setMode] = useState('D2C')
+  const [openDrawer, setOpenDrawer] = useState(0)
+  const plans = {
+    D2C: [['Surface smart', 'Everyday orders', '3–5 days', '₹58'], ['Express air', 'Urgent deliveries', '1–2 days', '₹92'], ['Same day', 'City customers', '4–8 hours', '₹118']],
+    B2B: [['Cargo surface', 'Bulk cartons', '4–7 days', '₹44/kg'], ['Priority cargo', 'Time-sensitive stock', '2–3 days', '₹71/kg'], ['Part truckload', 'Growing volume', '2–6 days', 'Custom']],
+    Global: [['Economy export', 'Value-led shipping', '8–12 days', '₹640'], ['Priority export', 'Fast expansion', '4–7 days', '₹980'], ['Express world', 'Critical parcels', '2–4 days', '₹1,420']],
+  }
+  const drawers = [
+    ['Smart courier matching', 'Compare courier fit using route, serviceability and delivery promise in one decision.', '/assets/shipray-automated-shipping.jpg', Sparkles],
+    ['Visible exception control', 'See delayed scans and stalled handoffs early enough to protect the customer experience.', '/assets/shipray-control-tower.jpg', ShieldCheck],
+    ['Customer-first tracking', 'Turn shipment milestones into useful, branded updates that reduce support pressure.', '/assets/shipray-tracking-mobile.jpg', PackageSearch],
+    ['Cross-border confidence', 'Plan international movement with clearer service choices and an export-ready workflow.', '/assets/shipray-strength-global.jpg', Globe2],
+  ]
+  const activeDrawer = drawers[openDrawer]
+  return <section className="workbench home-stack-card"><div className="shell"><div className="section-head workbench-head"><div><Eyebrow icon={Sparkles}>TRY THE OPERATING LAYER</Eyebrow><h2>Explore your next<br /><em>shipping move.</em></h2></div><p>Switch shipment modes, compare services, then open each capability to see how Fastship India fits the day.</p></div><div className="workbench-layout"><div className="planner-panel reveal-on-view"><div className="mode-switch" role="tablist" aria-label="Shipment type">{Object.keys(plans).map(item => <button className={mode === item ? 'active' : ''} type="button" role="tab" aria-selected={mode === item} onClick={() => setMode(item)} key={item}>{item}</button>)}</div><div className="table-wrap"><table><thead><tr><th>Service</th><th>Best for</th><th>Delivery</th><th>From</th></tr></thead><tbody>{plans[mode].map(row => <tr key={row[0]}>{row.map((cell, index) => <td key={cell}>{index === 0 ? <strong>{cell}</strong> : cell}</td>)}</tr>)}</tbody></table></div><div className="planner-ad"><div><small>FASTSHIP RECOMMENDS</small><strong>{plans[mode][1][0]}</strong><span>Best balance of speed and predictability for this mode.</span></div><Link to="/rate-calculator">See my rate <ArrowRight size={16} /></Link></div></div><div className="drawer-panel reveal-on-view"><div className="drawer-photo" key={activeDrawer[0]}><img src={activeDrawer[2]} alt={activeDrawer[0]} loading="lazy" decoding="async" /><span>0{openDrawer + 1} / 04</span></div><div className="drawer-list">{drawers.map(([title, copy, , DrawerIcon], index) => <article className={openDrawer === index ? 'open' : ''} key={title}><button type="button" aria-expanded={openDrawer === index} onClick={() => setOpenDrawer(index)}><span><DrawerIcon /> {title}</span><ChevronDown /></button><div className="drawer-copy"><p>{copy}</p><Link to="/integrations">Explore capability <ArrowRight size={14} /></Link></div></article>)}</div></div></div></div></section>
 }
 
 function Testimonials() {
