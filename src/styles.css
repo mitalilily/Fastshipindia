@@ -181,3 +181,178 @@ body { color:var(--ink); background-color:var(--ivory); background-image:radial-
   .hero-backdrop { background-image:linear-gradient(180deg,rgba(246,251,248,.97) 0%,rgba(227,245,235,.8) 54%,rgba(8,42,61,.14) 100%),url('/assets/fastshipindia-hero-green-navy.jpg'); }
 }
 
+/* Jitter-inspired ambient motion: muted luma dots plus a slow noisy-haze feel. */
+.home-stack-card:not(.hero),
+.page-hero,
+.card-section,
+.tool-page,
+.contact-page,
+.final-cta,
+footer {
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+}
+
+.home-stack-card:not(.hero) > .shell,
+.home-stack-card:not(.hero) > .final-cta,
+.page-hero > .shell,
+.card-section > .shell,
+.tool-page > .shell,
+.contact-page > .shell,
+.final-cta > .shell,
+footer > .shell {
+  position:relative;
+  z-index:2;
+}
+
+.home-stack-card:not(.hero)::before,
+.page-hero::before,
+.card-section::before,
+.tool-page::before,
+.contact-page::before,
+.final-cta::before,
+footer::before {
+  position:absolute;
+  z-index:0;
+  inset:-12%;
+  content:"";
+  pointer-events:none;
+  opacity:.28;
+  background-image:radial-gradient(circle,rgba(8,42,61,.2) 1.15px,transparent 1.7px);
+  background-size:25px 25px;
+  -webkit-mask-image:radial-gradient(ellipse 52% 68% at 35% 45%,#000 8%,rgba(0,0,0,.74) 40%,transparent 78%);
+  mask-image:radial-gradient(ellipse 52% 68% at 35% 45%,#000 8%,rgba(0,0,0,.74) 40%,transparent 78%);
+  transform:translate3d(-2%,0,0);
+  animation:lumaField 12s ease-in-out infinite alternate;
+  will-change:transform,opacity;
+}
+
+.home-stack-card:not(.hero)::after,
+.card-section::after,
+.tool-page::after,
+.contact-page::after,
+.final-cta::after,
+footer::after {
+  position:absolute;
+  z-index:0;
+  inset:-18%;
+  content:"";
+  pointer-events:none;
+  opacity:.48;
+  background:
+    radial-gradient(circle at 18% 34%,rgba(20,155,109,.3),transparent 28%),
+    radial-gradient(circle at 78% 62%,rgba(16,71,94,.22),transparent 31%),
+    radial-gradient(circle at 52% 18%,rgba(168,230,194,.34),transparent 24%),
+    repeating-linear-gradient(115deg,rgba(255,255,255,.025) 0 1px,transparent 1px 5px);
+  transform:translate3d(2%,1%,0) scale(1.03);
+  animation:noisyHaze 18s cubic-bezier(.45,.05,.55,.95) infinite alternate;
+  will-change:transform,opacity;
+}
+
+.home-stack-card:nth-child(3n)::before,
+.card-section::before,
+.contact-page::before {
+  background-size:19px 19px;
+  -webkit-mask-image:radial-gradient(ellipse 58% 74% at 72% 48%,#000 5%,rgba(0,0,0,.7) 38%,transparent 78%);
+  mask-image:radial-gradient(ellipse 58% 74% at 72% 48%,#000 5%,rgba(0,0,0,.7) 38%,transparent 78%);
+  animation-direction:alternate-reverse;
+}
+
+.home-stack-card:nth-child(3n + 2)::before,
+.tool-page::before,
+footer::before {
+  background-image:radial-gradient(circle,rgba(20,155,109,.25) 1.2px,transparent 1.75px);
+  background-size:30px 30px;
+  -webkit-mask-image:linear-gradient(112deg,transparent 8%,#000 42%,transparent 82%);
+  mask-image:linear-gradient(112deg,transparent 8%,#000 42%,transparent 82%);
+}
+
+.hero-grid-lines {
+  inset:-8%;
+  opacity:.38;
+  background-image:radial-gradient(circle,rgba(20,155,109,.34) 1.15px,transparent 1.75px);
+  background-size:24px 24px;
+  -webkit-mask-image:radial-gradient(ellipse 50% 72% at 76% 48%,#000 12%,rgba(0,0,0,.7) 45%,transparent 80%);
+  mask-image:radial-gradient(ellipse 50% 72% at 76% 48%,#000 12%,rgba(0,0,0,.7) 45%,transparent 80%);
+  transform:translate3d(0,0,0);
+  animation:heroLuma 14s ease-in-out infinite alternate;
+  will-change:transform,opacity;
+}
+
+.quote-band::before,
+footer::before {
+  background-image:radial-gradient(circle,rgba(168,230,194,.42) 1.15px,transparent 1.8px);
+}
+
+.quote-band::after,
+footer::after {
+  opacity:.32;
+  background:
+    radial-gradient(circle at 22% 30%,rgba(20,155,109,.4),transparent 25%),
+    radial-gradient(circle at 78% 66%,rgba(168,230,194,.18),transparent 31%),
+    repeating-linear-gradient(115deg,rgba(255,255,255,.025) 0 1px,transparent 1px 5px);
+}
+
+.final-cta::before { opacity:.2; }
+.final-cta::after { opacity:.3; }
+
+@keyframes lumaField {
+  0% { opacity:.18; transform:translate3d(-2.5%,-1%,0) scale(1); }
+  52% { opacity:.34; }
+  100% { opacity:.22; transform:translate3d(2.5%,1.5%,0) scale(1.035); }
+}
+
+@keyframes noisyHaze {
+  0% { opacity:.34; transform:translate3d(-2%,-1%,0) scale(1.02); }
+  55% { opacity:.5; }
+  100% { opacity:.4; transform:translate3d(3%,2%,0) scale(1.08); }
+}
+
+@keyframes heroLuma {
+  0% { opacity:.22; transform:translate3d(-1.5%,0,0); }
+  100% { opacity:.42; transform:translate3d(2%,1%,0); }
+}
+
+@media (max-width:900px) {
+  .home-stack-card:not(.hero)::after,
+  .card-section::after,
+  .tool-page::after,
+  .contact-page::after,
+  .final-cta::after,
+  footer::after { display:none; }
+
+  .home-stack-card:not(.hero)::before,
+  .page-hero::before,
+  .card-section::before,
+  .tool-page::before,
+  .contact-page::before,
+  .final-cta::before,
+  footer::before {
+    inset:-6%;
+    opacity:.2;
+    animation-duration:18s;
+  }
+
+  .hero-grid-lines { opacity:.24; animation-duration:20s; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .home-stack-card::before,
+  .home-stack-card::after,
+  .page-hero::before,
+  .card-section::before,
+  .card-section::after,
+  .tool-page::before,
+  .tool-page::after,
+  .contact-page::before,
+  .contact-page::after,
+  .final-cta::before,
+  .final-cta::after,
+  footer::before,
+  footer::after,
+  .hero-grid-lines {
+    animation:none !important;
+  }
+}
+
