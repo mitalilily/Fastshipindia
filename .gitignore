@@ -5,3 +5,4 @@ node_modules/
 app
 app.exe
 .DS_Store
+vite-dev*.log
