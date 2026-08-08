@@ -20,7 +20,7 @@ function ScrollTop() {
 }
 
 function Logo({ light = false }) {
-  return <img className="brand-logo" src={light ? '/assets/fastshipindia-logo-light.svg' : '/assets/fastshipindia-logo.svg'} alt="Fastship India" />
+  return <img className="brand-logo brand-logo-image" src="/assets/fastshipindia-logo.png" alt="Fastship India" />
 }
 
 function Header() {
