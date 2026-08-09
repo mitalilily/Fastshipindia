@@ -375,7 +375,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                       : alpha(TEXT_PRIMARY, 0.08),
                   color: index < currentStep || index === currentStep ? ACCENT : TEXT_PRIMARY,
                   fontWeight: 700,
-                  fontSize: '0.64rem',
+                  fontSize: '0.72rem',
                   transition: 'all 0.2s ease',
                 }}
               >
@@ -383,7 +383,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
               </Box>
               <Typography
                 sx={{
-                  fontSize: '0.68rem',
+                  fontSize: '0.76rem',
                   fontWeight: index === currentStep ? 600 : 500,
                   color: index === currentStep ? TEXT_PRIMARY : alpha(TEXT_PRIMARY, 0.7),
                   transition: 'all 0.2s ease',

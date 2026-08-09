@@ -75,14 +75,14 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
             alignItems="center"
             sx={{
               color: '#17171A',
-              fontSize: compact ? { xs: '0.76rem', sm: '0.8rem' } : { xs: '0.95rem', sm: '1rem' },
+              fontSize: compact ? { xs: '0.82rem', sm: '0.86rem' } : { xs: '0.95rem', sm: '1rem' },
             }}
           >
             {icon && <span style={{ marginRight: 6, display: 'flex', alignItems: 'center' }}>{icon}</span>}
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="caption" fontWeight={400} sx={{ color: '#6b6b6b', fontSize: compact ? '0.68rem' : '0.8rem' }}>
+            <Typography variant="caption" fontWeight={400} sx={{ color: '#6b6b6b', fontSize: '0.8rem' }}>
               {subtitle}
             </Typography>
           )}

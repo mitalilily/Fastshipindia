@@ -507,7 +507,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                     <Typography
                       variant="h6"
                       fontWeight={800}
-                      sx={{ color: TEXT_PRIMARY, fontSize: '0.78rem' }}
+                      sx={{ color: TEXT_PRIMARY, fontSize: '0.86rem' }}
                     >
                       Order Information
                     </Typography>
@@ -537,7 +537,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                           <Typography
                             variant="subtitle1"
                             fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
+                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
                           >
                             Recipient Details
                           </Typography>
@@ -562,7 +562,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                           <Typography
                             variant="subtitle1"
                             fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
+                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
                           >
                             Shipment Details
                           </Typography>
@@ -585,7 +585,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                                   color: TEXT_MUTED,
                                   mb: 0.25,
                                   display: 'block',
-                                  fontSize: '0.7rem',
+                                  fontSize: '0.74rem',
                                 }}
                               >
                                 Products
@@ -605,7 +605,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                                   color: TEXT_MUTED,
                                   mb: 0.25,
                                   display: 'block',
-                                  fontSize: '0.7rem',
+                                  fontSize: '0.74rem',
                                 }}
                               >
                                 Package Details
@@ -627,7 +627,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                           <Typography
                             variant="subtitle1"
                             fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
+                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
                           >
                             Order Summary
                           </Typography>
@@ -649,7 +649,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               color: TEXT_MUTED,
                               fontWeight: 700,
                               textTransform: 'uppercase',
-                              fontSize: '0.64rem',
+                              fontSize: '0.68rem',
                               display: 'block',
                               mb: 0.45,
                             }}
@@ -782,13 +782,13 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               >
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_MUTED, fontSize: '0.7rem' }}
+                                  sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}
                                 >
                                   Subtotal
                                 </Typography>
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.74rem' }}
+                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.8rem' }}
                                 >
                                   ₹{' '}
                                   {subtotal.toLocaleString('en-IN', {
@@ -807,13 +807,13 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               >
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_MUTED, fontSize: '0.7rem' }}
+                                  sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}
                                 >
                                   Total Order Value
                                 </Typography>
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.74rem' }}
+                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.8rem' }}
                                 >
                                   ₹{' '}
                                   {totalOrderValue.toLocaleString('en-IN', {
@@ -844,12 +844,12 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               >
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.72rem' }}
+                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.8rem' }}
                                 >
                                   Amount Collectable
                                 </Typography>
                                 <Typography
-                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.8rem' }}
+                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.9rem' }}
                                 >
                                   ₹{' '}
                                   {totalCollectable.toLocaleString('en-IN', {
@@ -868,7 +868,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                             <Typography
                               variant="subtitle1"
                               fontWeight={700}
-                              sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
+                              sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
                             >
                               Pickup Information
                             </Typography>
@@ -926,7 +926,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                 alignItems={{ xs: 'stretch', sm: 'center' }}
                 gap={0.5}
               >
-                <Typography variant="body2" sx={{ color: TEXT_MUTED, fontWeight: 600, fontSize: '0.74rem' }}>
+                <Typography variant="body2" sx={{ color: TEXT_MUTED, fontWeight: 600 }}>
                   {steps[currentStep]}
                 </Typography>
                 {currentStep > 0 && (

@@ -89,13 +89,13 @@ const CreateOrderWrapper = () => {
               borderRadius: '50%',
               color: '#071d33',
               px: 0,
-              fontSize: 20,
+              fontSize: 24,
               '&:hover': { bgcolor: '#eef4f8' },
             }}
           >
             &lt;
           </Button>
-          <Typography sx={{ color: '#071d33', fontSize: { xs: 16, md: 17 }, fontWeight: 900 }}>
+          <Typography sx={{ color: '#071d33', fontSize: 20, fontWeight: 900 }}>
             Add {activeTab.toUpperCase()} Order
           </Typography>
         </Stack>
@@ -142,23 +142,17 @@ const CreateOrderWrapper = () => {
           overflow: 'hidden',
           '& .MuiInputBase-root': {
             minHeight: 32,
-            fontSize: '0.78rem',
           },
           '& .MuiInputBase-input, & .MuiSelect-select': {
             py: '6px',
             px: '10px',
           },
-          '& .MuiFormLabel-root, & .MuiInputLabel-root': {
-            fontSize: '0.76rem',
-          },
           '& .MuiFormHelperText-root': {
             mt: 0.25,
-            fontSize: '0.68rem',
             lineHeight: 1.2,
           },
           '& .MuiButton-root': {
             minHeight: 30,
-            fontSize: '0.76rem',
             lineHeight: 1.2,
           },
           '& .MuiAccordionSummary-root': {
@@ -260,7 +254,6 @@ function SegmentControl({
               bgcolor: selected ? '#0789ad' : 'transparent',
               textTransform: 'none',
               fontWeight: 800,
-              fontSize: '0.76rem',
               py: 0.35,
               '&:hover': { bgcolor: selected ? '#0789ad' : '#eef4f8' },
             }}
@@ -280,7 +273,6 @@ const createTopButtonSx = {
   borderRadius: '8px',
   textTransform: 'none',
   fontWeight: 900,
-  fontSize: '0.78rem',
   boxShadow: 'none',
   '&:hover': { opacity: 0.92 },
 }
