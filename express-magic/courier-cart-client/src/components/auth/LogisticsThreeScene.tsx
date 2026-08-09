@@ -5,75 +5,70 @@ import { BRAND } from '../../config/brand'
 
 const { teal, orange, paper } = BRAND.colors
 
-function createParcel(width: number, height: number, depth: number, x: number, y: number, z: number) {
-  const parcel = new THREE.Group()
-  const box = new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, depth),
-    new THREE.MeshStandardMaterial({ color: '#D69A54', roughness: 0.72, metalness: 0.02 }),
-  )
-  const tape = new THREE.Mesh(
-    new THREE.BoxGeometry(width * 0.16, height + 0.012, depth + 0.012),
-    new THREE.MeshStandardMaterial({ color: '#B87534', roughness: 0.78 }),
-  )
-
-  box.castShadow = true
-  box.receiveShadow = true
-  tape.castShadow = true
-  parcel.add(box, tape)
-  parcel.position.set(x, y, z)
-  return parcel
-}
-
-function createTruck() {
-  const truck = new THREE.Group()
-  const cargo = new THREE.Mesh(
-    new THREE.BoxGeometry(2.35, 1.25, 1.18),
-    new THREE.MeshStandardMaterial({ color: teal, roughness: 0.42, metalness: 0.04 }),
-  )
-  const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(1.02, 1.05, 1.12),
-    new THREE.MeshStandardMaterial({ color: paper, roughness: 0.36, metalness: 0.02 }),
-  )
-  const windshield = new THREE.Mesh(
-    new THREE.BoxGeometry(0.42, 0.38, 1.14),
-    new THREE.MeshStandardMaterial({ color: '#8FB6D8', roughness: 0.18, metalness: 0.08 }),
-  )
-  const stripe = new THREE.Mesh(
-    new THREE.BoxGeometry(0.08, 1.28, 1.2),
-    new THREE.MeshStandardMaterial({ color: orange, roughness: 0.38 }),
-  )
-  const wheelMaterial = new THREE.MeshStandardMaterial({ color: '#0B1627', roughness: 0.5 })
-
-  cargo.position.set(-0.66, 0.88, 0)
-  cabin.position.set(1.08, 0.78, 0)
-  windshield.position.set(1.46, 0.94, 0)
-  stripe.position.set(0.38, 0.9, 0)
-  truck.add(cargo, cabin, windshield, stripe)
-
-  ;[-1.45, 0.95].forEach((x) => {
-    ;[-0.63, 0.63].forEach((z) => {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.18, 24), wheelMaterial)
-      wheel.rotation.x = Math.PI / 2
-      wheel.position.set(x, 0.18, z)
-      wheel.castShadow = true
-      truck.add(wheel)
-    })
-  })
-
-  truck.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = true
-      child.receiveShadow = true
-    }
-  })
-
-  truck.rotation.y = -0.36
-  truck.position.set(0.2, 0.02, 0.25)
-  return truck
-}
-
 type LogisticsThreeSceneProps = {
   compact?: boolean
+}
+
+function createRoute(points: THREE.Vector3[], color: string, opacity: number) {
+  const curve = new THREE.CatmullRomCurve3(points)
+  const route = new THREE.Mesh(
+    new THREE.TubeGeometry(curve, 96, 0.012, 8, false),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity }),
+  )
+
+  return { curve, route }
+}
+
+function createShipmentBlock(color: string, accent: string) {
+  const group = new THREE.Group()
+  const shell = new THREE.Mesh(
+    new THREE.BoxGeometry(0.46, 0.34, 0.38),
+    new THREE.MeshPhysicalMaterial({
+      color,
+      roughness: 0.34,
+      metalness: 0.06,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.32,
+    }),
+  )
+  const band = new THREE.Mesh(
+    new THREE.BoxGeometry(0.48, 0.052, 0.4),
+    new THREE.MeshStandardMaterial({ color: accent, roughness: 0.42, metalness: 0.02 }),
+  )
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(shell.geometry),
+    new THREE.LineBasicMaterial({ color: paper, transparent: true, opacity: 0.42 }),
+  )
+
+  shell.castShadow = true
+  shell.receiveShadow = true
+  band.position.y = 0.04
+  band.castShadow = true
+  group.add(shell, band, edges)
+  return group
+}
+
+function createNode(color: string) {
+  const group = new THREE.Group()
+  const node = new THREE.Mesh(
+    new THREE.SphereGeometry(0.095, 32, 32),
+    new THREE.MeshPhysicalMaterial({
+      color,
+      roughness: 0.22,
+      metalness: 0.08,
+      clearcoat: 0.7,
+      emissive: color,
+      emissiveIntensity: 0.18,
+    }),
+  )
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(0.18, 0.007, 10, 48),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45 }),
+  )
+
+  halo.rotation.x = Math.PI / 2
+  group.add(node, halo)
+  return group
 }
 
 export default function LogisticsThreeScene({ compact = false }: LogisticsThreeSceneProps) {
@@ -84,97 +79,135 @@ export default function LogisticsThreeScene({ compact = false }: LogisticsThreeS
     if (!mount) return
 
     const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
+    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100)
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     const clock = new THREE.Clock()
-    const routeDots: THREE.Mesh[] = []
+    const routeDots: Array<{ mesh: THREE.Mesh; curve: THREE.CatmullRomCurve3; offset: number }> = []
+    const shipmentBlocks: THREE.Group[] = []
+    const nodes: THREE.Group[] = []
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.7))
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     mount.appendChild(renderer.domElement)
 
-    camera.position.set(compact ? 4.35 : 4.8, compact ? 3 : 3.25, compact ? 6.4 : 6.2)
-    camera.lookAt(0, 0.75, 0)
+    camera.position.set(compact ? 3.2 : 4.15, compact ? 2.3 : 2.8, compact ? 5.15 : 5.7)
+    camera.lookAt(0.15, 0.42, 0)
 
-    scene.add(new THREE.HemisphereLight('#F7FBFF', '#9BB0C9', 2.8))
-    const keyLight = new THREE.DirectionalLight('#ffffff', 2.3)
-    keyLight.position.set(3.5, 5, 4)
+    scene.add(new THREE.HemisphereLight('#FFFFFF', '#5C7899', 2.45))
+    const keyLight = new THREE.DirectionalLight('#ffffff', 2.15)
+    keyLight.position.set(2.8, 4.5, 3.8)
     keyLight.castShadow = true
     keyLight.shadow.mapSize.set(1024, 1024)
     scene.add(keyLight)
 
+    const rimLight = new THREE.DirectionalLight('#7FD8FF', 1.15)
+    rimLight.position.set(-3, 2.4, -2.5)
+    scene.add(rimLight)
+
     const stage = new THREE.Group()
-    if (compact) {
-      stage.scale.setScalar(0.78)
-      stage.position.y = -0.28
-    }
+    stage.scale.setScalar(compact ? 0.92 : 1)
+    stage.position.set(compact ? 0.22 : 0, compact ? -0.18 : 0, 0)
     scene.add(stage)
 
-    const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(3.9, 80),
-      new THREE.MeshStandardMaterial({ color: '#F4F8FC', roughness: 0.82, metalness: 0.01 }),
+    const hubMaterial = new THREE.MeshPhysicalMaterial({
+      color: '#0D376B',
+      roughness: 0.28,
+      metalness: 0.16,
+      clearcoat: 0.85,
+      clearcoatRoughness: 0.2,
+      transparent: true,
+      opacity: 0.88,
+    })
+    const hub = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.68, 0.8), hubMaterial)
+    hub.position.set(0.12, 0.58, 0.02)
+    hub.rotation.y = -0.42
+    hub.castShadow = true
+    hub.receiveShadow = true
+    stage.add(hub)
+    const hubEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(hub.geometry),
+      new THREE.LineBasicMaterial({ color: '#9FD6FF', transparent: true, opacity: 0.52 }),
     )
-    floor.rotation.x = -Math.PI / 2
-    floor.position.y = -0.02
-    floor.receiveShadow = true
-    stage.add(floor)
+    hubEdges.position.copy(hub.position)
+    hubEdges.rotation.copy(hub.rotation)
+    stage.add(hubEdges)
 
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(3.1, 0.012, 10, 120),
-      new THREE.MeshBasicMaterial({ color: teal, transparent: true, opacity: 0.22 }),
+    const orbitOne = new THREE.Mesh(
+      new THREE.TorusGeometry(1.95, 0.009, 10, 128),
+      new THREE.MeshBasicMaterial({ color: teal, transparent: true, opacity: 0.3 }),
     )
-    ring.rotation.x = Math.PI / 2
-    ring.position.y = 0.02
-    stage.add(ring)
+    orbitOne.rotation.set(Math.PI / 2.7, 0.1, -0.15)
+    stage.add(orbitOne)
 
-    const truck = createTruck()
-    stage.add(truck)
-
-    const parcels = new THREE.Group()
-    parcels.add(createParcel(0.72, 0.48, 0.58, -1.9, 0.24, -0.62))
-    parcels.add(createParcel(0.62, 0.42, 0.56, -2.34, 0.2, 0.08))
-    parcels.add(createParcel(0.58, 0.38, 0.5, -1.72, 0.19, 0.18))
-    parcels.add(createParcel(0.5, 0.34, 0.48, -2.06, 0.68, -0.24))
-    stage.add(parcels)
-
-    const routeCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-2.8, 0.06, 1.35),
-      new THREE.Vector3(-1.5, 0.1, 2.15),
-      new THREE.Vector3(0.15, 0.08, 1.82),
-      new THREE.Vector3(1.65, 0.1, 1.18),
-      new THREE.Vector3(2.7, 0.06, 0.08),
-    ])
-    const route = new THREE.Mesh(
-      new THREE.TubeGeometry(routeCurve, 90, 0.018, 8, false),
-      new THREE.MeshBasicMaterial({ color: orange, transparent: true, opacity: 0.68 }),
+    const orbitTwo = new THREE.Mesh(
+      new THREE.TorusGeometry(2.55, 0.006, 10, 128),
+      new THREE.MeshBasicMaterial({ color: paper, transparent: true, opacity: 0.18 }),
     )
-    stage.add(route)
+    orbitTwo.rotation.set(Math.PI / 2.15, -0.2, 0.38)
+    stage.add(orbitTwo)
 
-    for (let index = 0; index < 5; index += 1) {
-      const dot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.055, 16, 16),
-        new THREE.MeshStandardMaterial({ color: index % 2 ? orange : teal, roughness: 0.25 }),
-      )
-      dot.userData.offset = index / 5
-      dot.castShadow = true
-      routeDots.push(dot)
-      stage.add(dot)
-    }
+    const routes = [
+      createRoute(
+        [
+          new THREE.Vector3(-2.15, 0.12, 0.9),
+          new THREE.Vector3(-1.1, 0.66, 1.36),
+          new THREE.Vector3(0.1, 0.9, 1.05),
+          new THREE.Vector3(1.5, 0.62, 0.48),
+          new THREE.Vector3(2.15, 0.2, -0.42),
+        ],
+        orange,
+        0.78,
+      ),
+      createRoute(
+        [
+          new THREE.Vector3(-1.65, 0.24, -0.92),
+          new THREE.Vector3(-0.76, 0.82, -1.22),
+          new THREE.Vector3(0.52, 1.05, -0.86),
+          new THREE.Vector3(1.85, 0.34, -0.82),
+        ],
+        '#7AD8FF',
+        0.54,
+      ),
+    ]
+    routes.forEach(({ route }) => stage.add(route))
 
-    const pinMaterial = new THREE.MeshStandardMaterial({ color: orange, roughness: 0.38 })
-    ;[
-      new THREE.Vector3(-2.8, 0.24, 1.35),
-      new THREE.Vector3(2.7, 0.24, 0.08),
-    ].forEach((position) => {
-      const pin = new THREE.Group()
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 24, 24), pinMaterial)
-      const stem = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.34, 18), pinMaterial)
-      stem.position.y = -0.22
-      pin.add(head, stem)
-      pin.position.copy(position)
-      pin.castShadow = true
-      stage.add(pin)
+    const nodePositions = [
+      new THREE.Vector3(-2.15, 0.12, 0.9),
+      new THREE.Vector3(2.15, 0.2, -0.42),
+      new THREE.Vector3(-1.65, 0.24, -0.92),
+      new THREE.Vector3(1.85, 0.34, -0.82),
+      new THREE.Vector3(0.12, 1.02, 1.02),
+    ]
+    nodePositions.forEach((position, index) => {
+      const node = createNode(index % 2 ? orange : teal)
+      node.position.copy(position)
+      nodes.push(node)
+      stage.add(node)
+    })
+
+    routes.forEach(({ curve }, routeIndex) => {
+      for (let index = 0; index < 4; index += 1) {
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.042, 18, 18),
+          new THREE.MeshBasicMaterial({ color: routeIndex ? '#BDEBFF' : orange, transparent: true, opacity: 0.95 }),
+        )
+        routeDots.push({ mesh: dot, curve, offset: (index + routeIndex * 0.5) / 4 })
+        stage.add(dot)
+      }
+    })
+
+    const blockPositions = [
+      new THREE.Vector3(-1.28, 0.45, 0.12),
+      new THREE.Vector3(1.18, 0.5, 0.32),
+      new THREE.Vector3(0.54, 1.35, -0.58),
+    ]
+    blockPositions.forEach((position, index) => {
+      const block = createShipmentBlock(index === 1 ? paper : '#D7E9F7', index === 2 ? orange : teal)
+      block.position.copy(position)
+      block.rotation.set(0.12, index * 0.64 - 0.4, -0.08)
+      shipmentBlocks.push(block)
+      stage.add(block)
     })
 
     const resize = () => {
@@ -191,15 +224,25 @@ export default function LogisticsThreeScene({ compact = false }: LogisticsThreeS
     let frameId = 0
     const render = () => {
       const elapsed = clock.getElapsedTime()
-      stage.rotation.y = Math.sin(elapsed * 0.26) * 0.12
-      truck.position.y = Math.sin(elapsed * 1.65) * 0.045
-      parcels.rotation.y = Math.sin(elapsed * 0.72) * 0.08
-      ring.rotation.z = elapsed * 0.12
+      stage.rotation.y = Math.sin(elapsed * 0.22) * 0.09
+      hub.position.y = 0.58 + Math.sin(elapsed * 1.05) * 0.035
+      orbitOne.rotation.z = elapsed * 0.14
+      orbitTwo.rotation.z = -elapsed * 0.09
 
-      routeDots.forEach((dot) => {
-        const point = routeCurve.getPoint((elapsed * 0.12 + dot.userData.offset) % 1)
-        dot.position.copy(point)
-        dot.position.y += 0.08 + Math.sin(elapsed * 2 + dot.userData.offset * 10) * 0.025
+      routeDots.forEach(({ mesh, curve, offset }, index) => {
+        const point = curve.getPoint((elapsed * 0.11 + offset) % 1)
+        mesh.position.copy(point)
+        mesh.scale.setScalar(1 + Math.sin(elapsed * 2.3 + index) * 0.18)
+      })
+
+      shipmentBlocks.forEach((block, index) => {
+        block.position.y += Math.sin(elapsed * 1.2 + index * 1.7) * 0.0018
+        block.rotation.y += 0.004 + index * 0.0012
+      })
+
+      nodes.forEach((node, index) => {
+        const pulse = 1 + Math.sin(elapsed * 1.9 + index) * 0.055
+        node.scale.setScalar(pulse)
       })
 
       renderer.render(scene, camera)
@@ -214,7 +257,7 @@ export default function LogisticsThreeScene({ compact = false }: LogisticsThreeS
       renderer.dispose()
       renderer.domElement.remove()
       scene.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
+        if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments) {
           object.geometry.dispose()
           const materials = Array.isArray(object.material) ? object.material : [object.material]
           materials.forEach((material) => material.dispose())
@@ -236,7 +279,7 @@ export default function LogisticsThreeScene({ compact = false }: LogisticsThreeS
           display: 'block',
           width: '100%',
           height: '100%',
-          filter: 'drop-shadow(0 26px 34px rgba(6, 26, 51, 0.12))',
+          filter: 'drop-shadow(0 18px 30px rgba(6, 26, 51, 0.18))',
         },
       }}
     />

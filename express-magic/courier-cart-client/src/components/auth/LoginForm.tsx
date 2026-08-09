@@ -100,11 +100,11 @@ export default function LoginForm() {
             sx={{
               position: 'absolute',
               zIndex: 1,
-              right: { md: -54, lg: -68 },
-              top: { md: 54, lg: 48 },
-              width: { md: '54%', lg: '52%' },
-              height: { md: '44%', lg: '46%' },
-              opacity: 0.92,
+              right: { md: 10, lg: 18 },
+              top: { md: 72, lg: 66 },
+              width: { md: '38%', lg: '36%' },
+              height: { md: '36%', lg: '38%' },
+              opacity: 0.86,
               pointerEvents: 'none',
             }}
           >
