@@ -1,0 +1,15 @@
+{
+  "short_name": "FastShip",
+  "name": "FastShip Admin",
+  "icons": [
+    {
+      "src": "fastship-logo.png",
+      "sizes": "any",
+      "type": "image/jpeg"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "theme_color": "#062A5B",
+  "background_color": "#ffffff"
+}

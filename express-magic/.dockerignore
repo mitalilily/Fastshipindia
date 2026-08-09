@@ -1,0 +1,10 @@
+.git
+.github
+**/.env
+**/.env.*
+**/node_modules
+**/dist
+combined-dist
+admin-dashboard
+courier-cart-client
+landing

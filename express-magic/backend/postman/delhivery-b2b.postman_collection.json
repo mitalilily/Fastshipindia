@@ -1,0 +1,399 @@
+{
+  "info": {
+    "_postman_id": "91d8af16-20bf-4aa5-b44d-delhivery-b2b",
+    "name": "FastShip - Delhivery B2B (LTL)",
+    "description": "End-to-end checks for the admin-only FastShip Delhivery B2B proxy. Save credentials in Admin > Courier Credentials first. Password Reset, Manifest, Update, Cancellation, Pickup, and Appointment requests mutate Delhivery state; run them deliberately.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('HTTP status is successful', function () {",
+          "  pm.expect(pm.response.code).to.be.within(200, 299);",
+          "});",
+          "var body = {};",
+          "try { body = pm.response.json(); } catch (e) {}",
+          "pm.test('proxy reports success', function () {",
+          "  pm.expect(body.success).to.eql(true);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Password Reset (manual, mutating)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/auth/password-reset",
+            "description": "Sends a reset link for the registered Delhivery username. Do not include this request in routine collection runs.",
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{delhiveryUsername}}\"\n}" }
+          }
+        },
+        {
+          "name": "Login / Validate Saved Credentials",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/delhivery/b2b/auth/login",
+            "description": "Validates the saved Delhivery username/password. FastShip caches the returned JWT until shortly before its 24-hour expiry and never exposes it to the browser. Concurrent courier requests share a single login call."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Serviceability and Freight",
+      "item": [
+        {
+          "name": "Pincode Serviceability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/serviceability/{{destinationPincode}}?weight={{weightGrams}}",
+            "description": "Checks a six-digit pincode before any shipment operation. Weight is optional and expressed in grams. FastShip checks both origin and consignee pincodes before B2B manifestation."
+          }
+        },
+        {
+          "name": "Expected TAT",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/tat?origin_pin={{originPincode}}&destination_pin={{destinationPincode}}",
+            "description": "Returns Delhivery's current network transit estimate in days for two valid six-digit pincodes. FastShip forwards the request to GET /tat/estimate with the cached UMS bearer token and a unique X-Request-Id."
+          }
+        },
+        {
+          "name": "Freight Estimate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/freight/estimate",
+            "description": "Estimates Delhivery B2B freight using centimetre dimensions and shipment weight in grams. Required values are validated before forwarding; cod_amount is required for COD, and the configured B2BR fop/fod mode is used when freight_mode is omitted.",
+            "body": { "mode": "raw", "raw": "{\n  \"dimensions\": [{\"length_cm\": 10, \"width_cm\": 10, \"height_cm\": 10, \"box_count\": 1}],\n  \"weight_g\": {{weightGrams}},\n  \"cheque_payment\": false,\n  \"source_pin\": \"{{originPincode}}\",\n  \"consignee_pin\": \"{{destinationPincode}}\",\n  \"payment_mode\": \"prepaid\",\n  \"inv_amount\": 1000,\n  \"freight_mode\": \"fop\",\n  \"rov_insurance\": false\n}" }
+          }
+        },
+        {
+          "name": "Freight Charge Breakup",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/freight/charges?lrns={{lrn}}",
+            "description": "Returns the applicable charge breakdown for one or more comma-separated LRNs. FastShip trims the list, enforces Delhivery's maximum of 25 LRNs, percent-encodes the comma-separated path value, and forwards it with the cached bearer token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Warehouses",
+      "item": [
+        {
+          "name": "Create Warehouse (mutating)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/warehouses",
+            "description": "Registers a pickup warehouse before manifestation. The warehouse name is preserved exactly because Delhivery treats its case and spaces as significant. Required address data, schedules, weekday lists, GST format, and boolean options are validated before forwarding.",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{warehouseName}}\",\n  \"pin_code\": \"{{originPincode}}\",\n  \"city\": \"Gurugram\",\n  \"state\": \"Haryana\",\n  \"country\": \"India\",\n  \"address_details\": {\"address\": \"Test warehouse address\", \"contact_person\": \"Operations\", \"phone_number\": \"9999999999\"},\n  \"same_as_fwd_add\": false,\n  \"business_hours\": {\"TUE\": {\"start_time\": \"07:00\", \"close_time\": \"08:30\"}},\n  \"pick_up_hours\": {\"TUE\": {\"start_time\": \"13:00\", \"close_time\": \"16:00\"}},\n  \"pick_up_days\": [\"TUE\"],\n  \"business_days\": [\"TUE\"],\n  \"ret_address\": {\"pin\": \"721657\", \"address\": \"test\"}\n}" }
+          }
+        },
+        {
+          "name": "Update Warehouse (mutating)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/warehouses",
+            "description": "Updates a warehouse identified by its exact case/space-sensitive name. Nested address, return address, billing, schedule, weekday, QR, and appointment fields are validated. FastShip uses Delhivery's cURL path first and retries the alternate documented environment path only for 404/405 responses.",
+            "body": { "mode": "raw", "raw": "{\n  \"cl_warehouse_name\": \"{{warehouseName}}\",\n  \"update_dict\": {\n    \"city\": \"Faridabad\",\n    \"state\": \"Maharashtra\",\n    \"country\": \"India\",\n    \"address_details\": {\"address\": \"Updated warehouse address\", \"contact_person\": \"Operations Team\", \"phone_number\": \"9999999999\", \"email\": \"operations@example.com\", \"company\": \"FastShip\"},\n    \"ret_address\": {\"address\": \"Return address\", \"city\": \"Gurugram\", \"state\": \"Haryana\", \"pin\": \"122001\", \"country\": \"INDIA\"}\n  }\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipments",
+      "item": [
+        {
+          "name": "Manifest Shipment (mutating)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "var body = pm.response.json();",
+              "var data = body.data || {};",
+              "var jobId = data.job_id || data.request_id || (data.data || {}).job_id;",
+              "var lrn = data.lrn || data.lrnum || (data.data || {}).lrn;",
+              "if (jobId) pm.environment.set('manifestJobId', jobId);",
+              "if (lrn) pm.environment.set('lrn', lrn);"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/manifest",
+            "description": "Creates a B2B shipment asynchronously and stores the returned job/request ID for Manifest Status. Multipart JSON fields are validated and normalized; pickup and drop-off alternatives, COD rules, invoice rules, dimensions, retail fields, and the 10-file/20-MB aggregate document limits are enforced. Enable doc_data and doc_file together when uploading invoice documents.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "pickup_location_name", "value": "{{warehouseName}}", "type": "text" },
+                { "key": "payment_mode", "value": "prepaid", "type": "text" },
+                { "key": "weight", "value": "{{weightGrams}}", "type": "text" },
+                { "key": "dropoff_location", "value": "{\"consignee_name\":\"Postman Test\",\"address\":\"Test address\",\"city\":\"Mumbai\",\"state\":\"Maharashtra\",\"zip\":\"{{destinationPincode}}\",\"phone\":\"9999999999\",\"email\":\"test@example.com\"}", "type": "text" },
+                { "key": "shipment_details", "value": "[{\"order_id\":\"POSTMAN-{{$timestamp}}\",\"box_count\":1,\"description\":\"Postman test shipment\",\"weight\":{{weightGrams}},\"waybills\":[],\"master\":true}]", "type": "text" },
+                { "key": "dimensions", "value": "[{\"box_count\":1,\"length\":10,\"width\":10,\"height\":10}]", "type": "text" },
+                { "key": "invoices", "value": "[{\"ewaybill\":\"\",\"inv_num\":\"POSTMAN-INV-{{$timestamp}}\",\"inv_amt\":1000,\"inv_qr_code\":\"\"}]", "type": "text" },
+                { "key": "rov_insurance", "value": "false", "type": "text" },
+                { "key": "enable_paperless_movement", "value": "false", "type": "text" },
+                { "key": "freight_mode", "value": "fop", "type": "text" },
+                { "key": "fm_pickup", "value": "false", "type": "text" },
+                { "key": "billing_address", "value": "{\"name\":\"Billing Contact\",\"company\":\"FastShip\",\"consignor\":\"FastShip\",\"address\":\"Test billing address\",\"city\":\"Gurugram\",\"state\":\"Haryana\",\"pin\":\"{{originPincode}}\",\"phone\":\"9999999999\",\"pan_number\":\"ABCDE1234F\"}", "type": "text" },
+                { "key": "callback", "value": "{\"uri\":\"{{documentCallbackUrl}}\",\"method\":\"POST\"}", "type": "text" },
+                { "key": "doc_data", "value": "[{\"doc_type\":\"INVOICE_COPY\",\"doc_meta\":{\"invoice_num\":[\"POSTMAN-INV\"]}}]", "type": "text", "disabled": true },
+                { "key": "doc_file", "type": "file", "src": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Manifest Status",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json(); var data = body.data || {}; var lrn = data.lrn || data.lrnum || (data.data || {}).lrn; if (lrn) pm.environment.set('lrn', lrn);"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/manifest/{{manifestJobId}}",
+            "description": "Retrieves the LR and box/document AWBs using the asynchronous job_id. The booking workflow waits before its first status poll and retries with a bounded delay while Delhivery processes the manifest."
+          }
+        },
+        {
+          "name": "Update Shipment (mutating)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('updateJobId', id);"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}",
+            "description": "Updates mutable fields for a manifested COD LR before last-mile dispatch. Prepaid LR updates are rejected. Multipart JSON, dimensions, invoices, callback/cb aliases, pincode, invoice metadata sequencing, file formats, the 10-file limit, and the 20-MB aggregate limit are validated before forwarding.",
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "payment_mode", "value": "cod", "type": "text" },
+              { "key": "cod_amount", "value": "0", "type": "text" },
+              { "key": "consignee_name", "value": "Postman Updated Consignee", "type": "text" },
+              { "key": "consignee_address", "value": "Updated consignee address", "type": "text" },
+              { "key": "consignee_pincode", "value": "{{destinationPincode}}", "type": "text" },
+              { "key": "consignee_phone", "value": "9999999999", "type": "text" },
+              { "key": "weight_g", "value": "{{weightGrams}}", "type": "text" },
+              { "key": "dimensions", "value": "[{\"width_cm\":5,\"height_cm\":4,\"length_cm\":3,\"box_count\":1}]", "type": "text" },
+              { "key": "invoices", "value": "[{\"inv_number\":\"POSTMAN-INV\",\"inv_amount\":1000,\"qr_code\":\"\",\"ewaybill\":\"\"}]", "type": "text" },
+              { "key": "callback", "value": "{\"uri\":\"{{documentCallbackUrl}}\",\"method\":\"POST\"}", "type": "text" },
+              { "key": "invoice_files_meta", "value": "[{\"invoices\":[\"POSTMAN-INV\"]}]", "type": "text", "disabled": true },
+              { "key": "invoice_file", "type": "file", "src": "", "disabled": true }
+            ] }
+          }
+        },
+        {
+          "name": "Shipment Update Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/update/{{updateJobId}}",
+            "description": "Fetches the asynchronous Edit LR result using the job/request ID captured from Update Shipment. Delhivery may need processing time before returning a final status; retry this read-only request after a short gap when the job is still pending. FastShip forwards job_id with the cached UMS bearer token."
+          }
+        },
+        {
+          "name": "Track Shipment",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}/tracking?all_wbns=true",
+            "description": "Returns Delhivery's latest LR status only; historical scans are not supplied by this API. Set all_wbns=true to request child-waybill statuses or omit it for the master shipment. FastShip maps all documented B2B statuses into local shipment, NDR, delivered, return, and lost states."
+          }
+        },
+        {
+          "name": "Book Last-Mile Appointment (mutating)",
+          "event": [{
+            "listen": "prerequest",
+            "script": { "type": "text/javascript", "exec": [
+              "function indiaDate(offsetDays) {",
+              "  var value = new Date(Date.now() + (330 + offsetDays * 1440) * 60000);",
+              "  return String(value.getUTCDate()).padStart(2, '0') + '/' + String(value.getUTCMonth() + 1).padStart(2, '0') + '/' + value.getUTCFullYear();",
+              "}",
+              "pm.environment.set('appointmentDate', indiaDate(1));",
+              "pm.environment.set('appointmentExpiryDate', indiaDate(2));"
+            ] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}/appointments",
+            "description": "Books last-mile delivery after manifestation and before OFD. Dates use DD/MM/YYYY in India time, the appointment must be today or later, expiry cannot precede the appointment, only Delhivery's eight slots are accepted, and 1-5 PO numbers are required. Delhivery validates the promised-delivery-date and provider-stage constraints.",
+            "body": { "mode": "raw", "raw": "{\n  \"date\": \"{{appointmentDate}}\",\n  \"appointment_slot\": \"12:00 PM-03:00 PM\",\n  \"po_number\": [\"NotApplicable\"],\n  \"appointment_id\": \"\",\n  \"po_expiry_date\": \"{{appointmentExpiryDate}}\"\n}" }
+          }
+        },
+        {
+          "name": "Cancel Shipment (destructive)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}",
+            "description": "Cancels the manifested LRN through DELETE /lrn/cancel/{lrn}. Delhivery accepts cancellation only while its shipment is Manifested, In Transit, Pending, Open, or Scheduled and remains authoritative for that provider-side status check. Successful prepaid/COD cancellations transition to Returned in Delhivery."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pickups",
+      "item": [
+        {
+          "name": "Create Pickup (mutating)",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = new Date(Date.now() + (330 + 1440) * 60000);",
+              "var pickupDate = value.getUTCFullYear() + '-' + String(value.getUTCMonth() + 1).padStart(2, '0') + '-' + String(value.getUTCDate()).padStart(2, '0');",
+              "pm.environment.set('pickupDate', pickupDate);"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "var body = pm.response.json(); var data = body.data || {}; var id = data.pickup_id || data.pur_id || (data.data || {}).pickup_id; if (id) pm.environment.set('pickupId', id);"
+            ] } }
+          ],
+          "request": {
+            "description": "Creates a pickup request using the exact case- and space-sensitive warehouse name. The pre-request script sets pickupDate to tomorrow in India; start_time must be HH:MM:SS and expected_package_count must be a positive integer.",
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/pickups",
+            "body": { "mode": "raw", "raw": "{\n  \"client_warehouse\": \"{{warehouseName}}\",\n  \"pickup_date\": \"{{pickupDate}}\",\n  \"start_time\": \"05:00:00\",\n  \"expected_package_count\": 1\n}" }
+          }
+        },
+        {
+          "name": "Cancel Pickup (destructive)",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+            "var pickupId = String(pm.environment.get('pickupId') || '').trim();",
+            "if (!pickupId || pickupId === 'replace-with-pickup-id') { throw new Error('Set pickupId to a real Delhivery pickup request ID before cancellation.'); }"
+          ] } }],
+          "request": {
+            "description": "Cancels the Delhivery pickup request identified by pickupId. This is destructive; the pre-request script blocks the default placeholder value. Run Create Pickup first or set pickupId to an existing pickup request ID.",
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/delhivery/b2b/pickups/{{pickupId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Labels and Documents",
+      "item": [
+        {
+          "name": "Shipping Label",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "pm.test('label payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+          ] } }],
+          "request": {
+            "description": "Generates one shipping-label link per waybill for the LRN. labelSize must be sm (4x2 in), md (4x2.5 in), a4 (11.7x8.3 in), or std (3x2 in). Delhivery's returned links contain Base64 image streams that must be decoded to PNG before printing.",
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}/labels/{{labelSize}}"
+          }
+        },
+        {
+          "name": "LR Copy",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "pm.test('LR copy PDF payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+          ] } }],
+          "request": {
+            "description": "Generates a PDF LR copy for one LRN. lrCopyTypes is a comma-separated selection from SHIPPER COPY, ORIGIN ACCOUNTS COPY, REGULATORY COPY, LM POD, and RECIPIENT COPY. Remove the query parameter to request all copy types.",
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}/lr-copy?lr_copy_type={{lrCopyTypes}}"
+          }
+        },
+        {
+          "name": "Generate Shipping Labels (async)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('shippingLabelJobId', id);",
+            "pm.test('document job ID is returned', function () { pm.expect(id).to.be.ok; });"
+          ] } }],
+          "request": {
+            "description": "Asynchronously generates PDF shipping labels for 1-25 LRNs. size is required and must be sm, md, a4, or std. Delhivery POSTs the generated document link to the required HTTP(S) callback URL.",
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/documents/shipping_label",
+            "body": { "mode": "raw", "raw": "{\n  \"lrns\": [\"{{lrn}}\"],\n  \"size\": \"{{labelSize}}\",\n  \"callback\": {\"uri\": \"{{documentCallbackUrl}}\", \"method\": \"POST\"}\n}" }
+          }
+        },
+        {
+          "name": "Generate LR Copies (async)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('lrCopyJobId', id);",
+            "pm.test('document job ID is returned', function () { pm.expect(id).to.be.ok; });"
+          ] } }],
+          "request": {
+            "description": "Asynchronously generates PDF LR copies for 1-25 LRNs. lr_copy_type is optional and defaults to all five copy variants. Delhivery POSTs the generated document link to the required HTTP(S) callback URL.",
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/documents/lr_copy",
+            "body": { "mode": "raw", "raw": "{\n  \"lrns\": [\"{{lrn}}\"],\n  \"lr_copy_type\": [\"SHIPPER COPY\", \"LM POD\"],\n  \"callback\": {\"uri\": \"{{documentCallbackUrl}}\", \"method\": \"POST\"}\n}" }
+          }
+        },
+        {
+          "name": "Generate Shipping Labels Status",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json(); var data = body.data || {}; var nested = data.data || {}; var link = data.s3_url || data.url || data.download_url || data.document_url || nested.s3_url || nested.url || nested.download_url || nested.document_url; if (link) pm.environment.set('shippingLabelDownloadUrl', link);",
+            "pm.test('document status payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+          ] } }],
+          "request": {
+            "description": "Fetches the async shipping-label job status and captures a returned S3/document URL when generation is complete.",
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/documents/shipping_label/{{shippingLabelJobId}}"
+          }
+        },
+        {
+          "name": "Generate LR Copies Status",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json(); var data = body.data || {}; var nested = data.data || {}; var link = data.s3_url || data.url || data.download_url || data.document_url || nested.s3_url || nested.url || nested.download_url || nested.document_url; if (link) pm.environment.set('lrCopyDownloadUrl', link);",
+            "pm.test('document status payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+          ] } }],
+          "request": {
+            "description": "Fetches the async LR-copy job status and captures a returned S3/document URL when generation is complete.",
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/documents/lr_copy/{{lrCopyJobId}}"
+          }
+        },
+        {
+          "name": "Download POD Document by LRN",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "pm.test('POD document payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+          ] } }],
+          "request": {
+            "description": "Downloads document metadata or the first matching file for an LRN. Set podDocType to LM_POD, ALTERNATE_LM_POD, RETURN_DSP_POD, or another Delhivery-supported type. auto_download accepts true or false; version accepts latest or all.",
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/documents?lrn={{lrn}}&doc_type={{podDocType}}&auto_download=false&version=latest&fields={{podFields}}"
+          }
+        },
+        {
+          "name": "Download POD Document by MWN",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "pm.test('POD document payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+          ] } }],
+          "request": {
+            "description": "Downloads document metadata or the first matching file using an MWN instead of an LRN. Remove fields when full metadata is preferred.",
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/documents?mwn={{mwn}}&doc_type={{podDocType}}&auto_download=false&version=latest&fields={{podFields}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session Cleanup",
+      "item": [
+        {
+          "name": "Logout (optional)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/delhivery/b2b/auth/logout",
+            "description": "Invalidates the cached Delhivery JWT. This API is optional and should run after the other B2B requests."
+          }
+        }
+      ]
+    }
+  ]
+}

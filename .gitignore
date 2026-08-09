@@ -6,3 +6,5 @@ app
 app.exe
 .DS_Store
 vite-dev*.log
+.vite-*.log
+/express-magic/.git-disabled/

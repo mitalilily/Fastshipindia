@@ -1,0 +1,124 @@
+:root {
+  --brand-teal: #062A5B;
+  --brand-teal-dark: #041A38;
+  --brand-teal-soft: #EEF4FB;
+  --brand-orange: #ED1C24;
+  --brand-orange-dark: #B80F1A;
+  --brand-amber-soft: #FDE7EA;
+  --brand-sky-soft: #D9E6F7;
+  --brand-ink: #061A33;
+  --brand-text: #183153;
+  --brand-muted: #64748B;
+  --brand-surface: rgba(255, 255, 255, 0.92);
+  --brand-border: rgba(6, 42, 91, 0.16);
+  --brand-shadow: 0 24px 70px rgba(15, 44, 67, 0.08);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: clip;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  color: var(--brand-ink);
+  background:
+    radial-gradient(circle at 0 0, rgba(253, 231, 234, 0.82), transparent 28%),
+    radial-gradient(circle at 100% 0, rgba(217, 230, 247, 0.62), transparent 28%),
+    linear-gradient(180deg, #F5F8FC 0%, #fbfbfb 30%, #F5F8FC 64%, #fbfbfb 100%);
+  background-attachment: fixed;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 14% 14%, rgba(255, 230, 160, 0.24), transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(253, 231, 234, 0.3), transparent 20%),
+    radial-gradient(circle at 74% 76%, rgba(217, 230, 247, 0.26), transparent 22%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  color: #0b2232;
+  background: rgba(217, 230, 247, 0.92);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(6, 42, 91, 0.04);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(6, 42, 91, 0.72), rgba(237, 28, 36, 0.72));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(6, 42, 91, 0.88), rgba(237, 28, 36, 0.88));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(6, 42, 91, 0.72) rgba(6, 42, 91, 0.04);
+}
+
+@media (max-width: 600px) {
+  body {
+    background-attachment: scroll;
+  }
+
+  img,
+  svg,
+  canvas {
+    max-width: 100%;
+  }
+}

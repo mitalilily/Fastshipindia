@@ -1,0 +1,26 @@
+:root {
+  --rdp-background-color: transparent;
+}
+
+.app-route-loader {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f7f9fc;
+  color: #062a5b;
+  font: 700 0.95rem/1.5 'Open Sans', sans-serif;
+}
+
+.dark .rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #d90416;
+  --rdp-background-color: #1a1a1a; /* text-primary */
+  --rdp-accent-color-dark: #b10313;
+  --rdp-text-color: #f5f7fa; /* bg-default */
+}
+
+.light .rdp {
+  --rdp-accent-color: #d90416;
+  --rdp-accent-color-dark: #b10313;
+  --rdp-text-color: #1a1a1a; /* text-primary */
+}

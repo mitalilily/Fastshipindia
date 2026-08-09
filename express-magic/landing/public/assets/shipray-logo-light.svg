@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 92" role="img" aria-labelledby="title desc">
+  <title id="title">Shipray Logistics Pvt. Ltd.</title><desc id="desc">Light Shipray wordmark for dark backgrounds</desc>
+  <g transform="translate(2 2) scale(.95)">
+    <defs>
+      <linearGradient id="t" x1="12" y1="9" x2="68" y2="35" gradientUnits="userSpaceOnUse"><stop stop-color="#54a4ff"/><stop offset="1" stop-color="#1474ec"/></linearGradient>
+      <linearGradient id="l" x1="10" y1="24" x2="42" y2="72" gradientUnits="userSpaceOnUse"><stop stop-color="#2584ef"/><stop offset="1" stop-color="#0b52bd"/></linearGradient>
+      <linearGradient id="r" x1="41" y1="32" x2="72" y2="67" gradientUnits="userSpaceOnUse"><stop stop-color="#469cff"/><stop offset="1" stop-color="#1269df"/></linearGradient>
+      <linearGradient id="o" x1="43" y1="31" x2="76" y2="69" gradientUnits="userSpaceOnUse"><stop stop-color="#ffbd44"/><stop offset="1" stop-color="#ff7900"/></linearGradient>
+    </defs>
+    <path d="M10 22 39 6l31 16-30 17L10 22Z" fill="url(#t)"/><path d="M10 22 40 39v37L10 59V22Z" fill="url(#l)"/><path d="M40 39 70 22v36L40 76V39Z" fill="url(#r)"/>
+    <path d="M19 28.3 39.8 39.8v9.9L26.4 42.3v7.4l13.4 7.5v10.1L19 55.5V28.3Z" fill="#fff"/><path d="M40 15.5 53.4 22 40 29.2 26.5 22 40 15.5Z" fill="#fff" opacity=".96"/>
+    <path d="M41.5 38.5 57 29.8c8.9-5 17.5-.6 17.5 7.3 0 6.2-3.8 11.6-9.9 15.1L78 64.8 65.7 72 54.1 57.8 51.8 59v11.1l-10.3 5.8V38.5Zm10.3 5.9v7.7l6.3-3.5c3.7-2.1 5.9-4.4 5.9-7.1 0-2.4-2.1-2.6-5.3-.8l-6.9 3.7Z" fill="url(#o)"/>
+  </g>
+  <text x="89" y="52" font-family="Arial, Helvetica, sans-serif" font-size="37" font-weight="800" letter-spacing="-1.4"><tspan fill="#ffffff">Ship</tspan><tspan fill="#ff9324">ray</tspan></text>
+  <text x="91" y="70" fill="#a9bdd7" font-family="Arial, Helvetica, sans-serif" font-size="8.8" font-weight="700" letter-spacing="2.4">LOGISTICS PVT. LTD.</text>
+</svg>

@@ -1,0 +1,617 @@
+name: Deploy VPS (Manual)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.FGSHIP_HOST }}
+      DEPLOY_USER: ${{ secrets.FGSHIP_USER }}
+      DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.FGSHIP_SSH_PRIVATE_KEY }}
+      DEPLOY_PASSWORD: ${{ secrets.FGSHIP_PASSWORD }}
+      DEPLOY_APP_ROOT: /srv/feathers-global/current
+      DEPLOY_PUBLIC_API_URL: https://api.fgship.in/api
+      DEPLOY_PUBLIC_SOCKET_URL: https://api.fgship.in
+      DEPLOY_SHOPIFY_OAUTH_SUCCESS_URL: https://client.fgship.in/channels/connected
+      DEPLOY_RUNTIME_USER: ${{ vars.DEPLOY_RUNTIME_USER || 'deploy' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deploy secrets
+        run: |
+          missing=()
+          [ -n "${DEPLOY_HOST}" ] || missing+=("FGSHIP_HOST")
+          [ -n "${DEPLOY_USER}" ] || missing+=("FGSHIP_USER")
+          if [ -z "${DEPLOY_SSH_PRIVATE_KEY}" ] && [ -z "${DEPLOY_PASSWORD}" ]; then
+            missing+=("FGSHIP_SSH_PRIVATE_KEY or FGSHIP_PASSWORD")
+          fi
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required GitHub Actions secrets:\n' >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Install SSH tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+      - name: Configure deploy SSH
+        run: |
+          mkdir -p ~/.ssh "${RUNNER_TEMP}/bin"
+          chmod 700 ~/.ssh
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          cat > ~/.ssh/config <<EOF
+          Host deploy-target
+            HostName ${DEPLOY_HOST}
+            User ${DEPLOY_USER}
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+            ServerAliveInterval 30
+            ServerAliveCountMax 3
+          EOF
+
+          auth_mode=''
+          if [ -n "${DEPLOY_SSH_PRIVATE_KEY}" ]; then
+            normalized_key="${DEPLOY_SSH_PRIVATE_KEY}"
+            if [[ "${normalized_key}" == \"*\" && "${normalized_key}" == *\" ]]; then
+              normalized_key="${normalized_key:1:-1}"
+            elif [[ "${normalized_key}" == \'*\' && "${normalized_key}" == *\' ]]; then
+              normalized_key="${normalized_key:1:-1}"
+            fi
+            if [[ "${normalized_key}" != *$'\n'* && "${normalized_key}" == *\\n* ]]; then
+              echo "Normalizing newline-escaped SSH private key secret."
+              normalized_key="${normalized_key//\\r/}"
+              normalized_key="${normalized_key//\\n/$'\n'}"
+            fi
+
+            printf '%s' "${normalized_key}" | tr -d '\r' > ~/.ssh/deploy_key
+            printf '\n' >> ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+
+            if ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1; then
+              cat >> ~/.ssh/config <<'EOF'
+            IdentitiesOnly yes
+            IdentityFile ~/.ssh/deploy_key
+          EOF
+              auth_mode='key'
+            elif [ -n "${DEPLOY_PASSWORD}" ]; then
+              echo "SSH private key secret is invalid; falling back to password authentication."
+              rm -f ~/.ssh/deploy_key
+            else
+              echo "::error::SSH private key secret is invalid. Use an unencrypted OpenSSH private key with the original newlines, or set FGSHIP_PASSWORD."
+              exit 1
+            fi
+          fi
+
+          if [ -z "${auth_mode}" ]; then
+            auth_mode='password'
+          fi
+
+          chmod 600 ~/.ssh/config
+          ssh-keyscan -T 10 -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          cat > "${RUNNER_TEMP}/bin/dep-ssh" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [ "${DEPLOY_AUTH_MODE:-}" = "password" ]; then
+            SSHPASS="${DEPLOY_PASSWORD:?}" exec sshpass -e ssh deploy-target "$@"
+          fi
+          exec ssh deploy-target "$@"
+          EOF
+          chmod +x "${RUNNER_TEMP}/bin/dep-ssh"
+
+          cat > "${RUNNER_TEMP}/bin/dep-rsync" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [ "${DEPLOY_AUTH_MODE:-}" = "password" ]; then
+            SSHPASS="${DEPLOY_PASSWORD:?}" exec sshpass -e rsync -e "ssh" "$@"
+          fi
+          exec rsync "$@"
+          EOF
+          chmod +x "${RUNNER_TEMP}/bin/dep-rsync"
+
+          echo "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+          echo "DEPLOY_AUTH_MODE=${auth_mode}" >> "${GITHUB_ENV}"
+
+      - name: Prepare server deploy directory
+        run: |
+          dep-ssh "DEPLOY_APP_ROOT='${DEPLOY_APP_ROOT}' DEPLOY_RUNTIME_USER='${DEPLOY_RUNTIME_USER}' DEPLOY_LOGIN_USER='${DEPLOY_USER}' bash -s" <<'SH'
+          set -euo pipefail
+          runtime_user="${DEPLOY_RUNTIME_USER:-deploy}"
+          if ! id -u "${runtime_user}" >/dev/null 2>&1; then
+            runtime_user="${DEPLOY_LOGIN_USER}"
+          fi
+          runtime_group="$(id -gn "${runtime_user}" 2>/dev/null || echo "${runtime_user}")"
+
+          if [ "${runtime_user}" != "root" ] && sudo -n true >/dev/null 2>&1; then
+            printf '%s ALL=(ALL) NOPASSWD:ALL\n' "${runtime_user}" | sudo tee "/etc/sudoers.d/${runtime_user}" >/dev/null
+            sudo chmod 440 "/etc/sudoers.d/${runtime_user}"
+          fi
+
+          sudo install -d -m 2775 "${DEPLOY_APP_ROOT}"
+          sudo chown -R "${runtime_user}:${runtime_group}" "${DEPLOY_APP_ROOT}" || sudo chown -R "${runtime_user}" "${DEPLOY_APP_ROOT}"
+          sudo find "${DEPLOY_APP_ROOT}" -path '*/node_modules' -prune -o -type d -exec chmod 2775 {} +
+          sudo find "${DEPLOY_APP_ROOT}" -path '*/node_modules' -prune -o -type f -exec chmod u+rw,g+rw {} +
+          if [ -f "${DEPLOY_APP_ROOT}/backend/.env.production" ]; then
+            sudo chmod 0600 "${DEPLOY_APP_ROOT}/backend/.env.production"
+          fi
+          SH
+
+      - name: Sync project to server
+        run: |
+          dep-rsync -az --delete \
+            --no-owner \
+            --no-group \
+            --no-perms \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.deployed_commit' \
+            --exclude '.DS_Store' \
+            --exclude 'backend/.env.production' \
+            --exclude 'backend/node_modules' \
+            --exclude 'landing/node_modules' \
+            --exclude 'courier-cart-client/node_modules' \
+            --exclude 'admin-dashboard/node_modules' \
+            --exclude 'backend/dist' \
+            --exclude 'landing/dist' \
+            --exclude 'courier-cart-client/dist' \
+            --exclude 'admin-dashboard/build' \
+            ./ "deploy-target:${DEPLOY_APP_ROOT}/"
+
+      - name: Sync backend Amazon env
+        env:
+          AMAZON_SHIPPING_REFRESH_TOKEN: ${{ secrets.AMAZON_SHIPPING_REFRESH_TOKEN }}
+          AMAZON_SHIPPING_LWA_CLIENT_ID: ${{ secrets.AMAZON_SHIPPING_LWA_CLIENT_ID }}
+          AMAZON_SHIPPING_LWA_CLIENT_SECRET: ${{ secrets.AMAZON_SHIPPING_LWA_CLIENT_SECRET }}
+          AMAZON_SHIPPING_GSTIN: ${{ secrets.AMAZON_SHIPPING_GSTIN }}
+        run: |
+          if [ -z "$AMAZON_SHIPPING_REFRESH_TOKEN" ] || [ -z "$AMAZON_SHIPPING_LWA_CLIENT_ID" ] || [ -z "$AMAZON_SHIPPING_LWA_CLIENT_SECRET" ]; then
+            echo "Amazon LWA secrets are not fully set; skipping Amazon env sync."
+            exit 0
+          fi
+
+          python3 - <<'PY' | dep-ssh "cd ${DEPLOY_APP_ROOT}/backend && umask 077 && python3 -"
+          import os
+
+          token = os.environ["AMAZON_SHIPPING_REFRESH_TOKEN"]
+          client_id = os.environ["AMAZON_SHIPPING_LWA_CLIENT_ID"]
+          client_secret = os.environ["AMAZON_SHIPPING_LWA_CLIENT_SECRET"]
+          gstin = os.environ.get("AMAZON_SHIPPING_GSTIN", "").strip()
+          print(f"""
+          from pathlib import Path
+
+          path = Path(".env.production")
+          updates = {{
+              "AMAZON_SHIPPING_REFRESH_TOKEN": {token!r},
+              "AMAZON_SHIPPING_LWA_CLIENT_ID": {client_id!r},
+              "AMAZON_SHIPPING_LWA_CLIENT_SECRET": {client_secret!r},
+              "AMAZON_SHIPPING_BUSINESS_ID": "AmazonShipping_IN",
+              "AMAZON_SHIPPING_REGION": "eu",
+              "AMAZON_SHIPPING_SANDBOX": "false",
+              "AMAZON_SHIPPING_LWA_TOKEN_URL": "https://api.amazon.com/auth/o2/token",
+              "AMAZON_SHIPPING_API_BASE": "https://sellingpartnerapi-eu.amazon.com",
+          }}
+          gstin = {gstin!r}
+          if gstin:
+              updates["AMAZON_SHIPPING_GSTIN"] = gstin
+
+          lines = path.read_text().splitlines() if path.exists() else []
+          seen = set()
+          next_lines = []
+
+          for line in lines:
+              if "=" not in line or line.lstrip().startswith("#"):
+                  next_lines.append(line)
+                  continue
+              key = line.split("=", 1)[0].strip()
+              if key in updates:
+                  next_lines.append(f"{{key}}={{updates[key]}}")
+                  seen.add(key)
+              else:
+                  next_lines.append(line)
+                  seen.add(key)
+
+          for key, value in updates.items():
+              if key not in seen:
+                  next_lines.append(f"{{key}}={{value}}")
+                  seen.add(key)
+
+          path.write_text("\\n".join(next_lines) + "\\n")
+          print("Amazon backend env updated.")
+          """)
+          PY
+
+      - name: Sync backend Shopify OAuth env
+        env:
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SHOPIFY_SCOPES: ${{ vars.SHOPIFY_SCOPES }}
+          SHOPIFY_SEND_OAUTH_SCOPE: ${{ vars.SHOPIFY_SEND_OAUTH_SCOPE }}
+          DEPLOY_PUBLIC_API_URL: ${{ env.DEPLOY_PUBLIC_API_URL }}
+          DEPLOY_SHOPIFY_OAUTH_SUCCESS_URL: ${{ env.DEPLOY_SHOPIFY_OAUTH_SUCCESS_URL }}
+        run: |
+          if [ -z "$SHOPIFY_CLIENT_ID" ] || [ -z "$SHOPIFY_CLIENT_SECRET" ]; then
+            echo "Shopify OAuth secrets are not fully set; skipping Shopify env sync."
+            exit 0
+          fi
+
+          python3 - <<'PY' | dep-ssh "cd ${DEPLOY_APP_ROOT}/backend && umask 077 && python3 -"
+          import os
+
+          client_id = os.environ["SHOPIFY_CLIENT_ID"]
+          client_secret = os.environ["SHOPIFY_CLIENT_SECRET"]
+          scopes = os.environ.get("SHOPIFY_SCOPES", "").strip() or "read_orders,write_orders,read_customers,read_products,read_webhooks,write_webhooks,read_merchant_managed_fulfillment_orders,write_merchant_managed_fulfillment_orders"
+          api_origin = os.environ["DEPLOY_PUBLIC_API_URL"].strip().rstrip("/")
+          if api_origin.endswith("/api"):
+              api_origin = api_origin[:-4]
+          send_oauth_scope = os.environ.get("SHOPIFY_SEND_OAUTH_SCOPE", "").strip().lower()
+          if send_oauth_scope in {"true", "1", "yes", "on"}:
+              send_oauth_scope = "true"
+          else:
+              send_oauth_scope = "false"
+
+          print(f"""
+          from pathlib import Path
+
+          path = Path(".env.production")
+          existing = {{}}
+          if path.exists():
+              for existing_line in path.read_text().splitlines():
+                  if "=" not in existing_line or existing_line.lstrip().startswith("#"):
+                      continue
+                  existing_key, existing_value = existing_line.split("=", 1)
+                  existing[existing_key.strip()] = existing_value.strip().strip('"').strip("'")
+
+          preserve_admin_panel_credentials = existing.get("SHOPIFY_CREDENTIALS_SOURCE", "").strip().lower() == "admin_panel"
+          updates = {{
+              "API_URL": {api_origin!r},
+              "SHOPIFY_SCOPES": {scopes!r},
+              "SHOPIFY_API_VERSION": "2026-07",
+              "SHOPIFY_OAUTH_SUCCESS_URL": {os.environ["DEPLOY_SHOPIFY_OAUTH_SUCCESS_URL"]!r},
+              "SHOPIFY_USE_EXPIRING_OFFLINE_TOKENS": "true",
+              "SHOPIFY_SEND_OAUTH_SCOPE": {send_oauth_scope!r},
+              "SHOPIFY_ALLOW_LEGACY_MANUAL_AUTH": "false",
+          }}
+          if preserve_admin_panel_credentials:
+              print("Preserving Shopify OAuth credentials managed from the admin panel.")
+          else:
+              updates["SHOPIFY_CLIENT_ID"] = {client_id!r}
+              updates["SHOPIFY_CLIENT_SECRET"] = {client_secret!r}
+
+          lines = path.read_text().splitlines() if path.exists() else []
+          seen = set()
+          next_lines = []
+
+          for line in lines:
+              if "=" not in line or line.lstrip().startswith("#"):
+                  next_lines.append(line)
+                  continue
+              key = line.split("=", 1)[0].strip()
+              if key in updates:
+                  next_lines.append(f"{{key}}={{updates[key]}}")
+                  seen.add(key)
+              else:
+                  next_lines.append(line)
+                  seen.add(key)
+
+          for key, value in updates.items():
+              if key not in seen:
+                  next_lines.append(f"{{key}}={{value}}")
+                  seen.add(key)
+
+          path.write_text("\\n".join(next_lines) + "\\n")
+          print("Shopify OAuth backend env updated.")
+          """)
+          PY
+
+      - name: Sync backend Razorpay env
+        env:
+          RAZORPAY_KEY_ID_PROD: ${{ secrets.RAZORPAY_KEY_ID_PROD }}
+          RAZORPAY_KEY_SECRET_PROD: ${{ secrets.RAZORPAY_KEY_SECRET_PROD }}
+          RAZORPAY_MERCHANT_ID_PROD: ${{ secrets.RAZORPAY_MERCHANT_ID_PROD }}
+          RAZORPAY_WEBHOOK_SECRET_PROD: ${{ secrets.RAZORPAY_WEBHOOK_SECRET_PROD }}
+        run: |
+          if [ -z "$RAZORPAY_KEY_ID_PROD" ] || [ -z "$RAZORPAY_KEY_SECRET_PROD" ]; then
+            echo "Razorpay live secrets are not fully set; skipping Razorpay env sync."
+            exit 0
+          fi
+
+          python3 - <<'PY' | dep-ssh "cd ${DEPLOY_APP_ROOT}/backend && umask 077 && python3 -"
+          import os
+
+          key_id = os.environ["RAZORPAY_KEY_ID_PROD"]
+          key_secret = os.environ["RAZORPAY_KEY_SECRET_PROD"]
+          merchant_id = os.environ.get("RAZORPAY_MERCHANT_ID_PROD", "").strip()
+          webhook_secret = os.environ.get("RAZORPAY_WEBHOOK_SECRET_PROD", "").strip()
+
+          print(f"""
+          from pathlib import Path
+
+          path = Path(".env.production")
+          updates = {{
+              "RAZORPAY_MODE": "live",
+              "RAZORPAY_KEY_ID_PROD": {key_id!r},
+              "RAZORPAY_KEY_SECRET_PROD": {key_secret!r},
+          }}
+          merchant_id = {merchant_id!r}
+          webhook_secret = {webhook_secret!r}
+          if merchant_id:
+              updates["RAZORPAY_MERCHANT_ID_PROD"] = merchant_id
+          if webhook_secret:
+              updates["RAZORPAY_WEBHOOK_SECRET_PROD"] = webhook_secret
+
+          lines = path.read_text().splitlines() if path.exists() else []
+          seen = set()
+          next_lines = []
+
+          for line in lines:
+              if "=" not in line or line.lstrip().startswith("#"):
+                  next_lines.append(line)
+                  continue
+              key = line.split("=", 1)[0].strip()
+              if key in updates:
+                  next_lines.append(f"{{key}}={{updates[key]}}")
+                  seen.add(key)
+              else:
+                  next_lines.append(line)
+                  seen.add(key)
+
+          for key, value in updates.items():
+              if key not in seen:
+                  next_lines.append(f"{{key}}={{value}}")
+                  seen.add(key)
+
+          path.write_text("\\n".join(next_lines) + "\\n")
+          print("Razorpay backend env updated.")
+          """)
+          PY
+
+      - name: Verify Shopify OAuth env
+        continue-on-error: true
+        env:
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+        run: |
+          if [ -z "$SHOPIFY_CLIENT_ID" ] || [ -z "$SHOPIFY_CLIENT_SECRET" ]; then
+            echo "Shopify OAuth secrets are not fully set; skipping Shopify OAuth smoke check."
+            exit 0
+          fi
+
+          dep-ssh \
+            "cd ${DEPLOY_APP_ROOT}/backend && NODE_ENV=production npm run check:shopify-oauth -- --require-public --shop=fgship-oauth-smoke.myshopify.com"
+
+      - name: Backfill Amazon LWA env from DB
+        continue-on-error: true
+        run: |
+          cat <<'NODE' | dep-ssh "cd ${DEPLOY_APP_ROOT}/backend && node -"
+          const fs = require('fs')
+          const path = require('path')
+          const dotenv = require('dotenv')
+          const { Client } = require('pg')
+
+          const envPath = path.resolve(process.cwd(), '.env.production')
+          const parsed = fs.existsSync(envPath) ? dotenv.parse(fs.readFileSync(envPath)) : {}
+          const databaseUrl = parsed.DATABASE_URL || process.env.DATABASE_URL
+
+          const writeEnv = (updates) => {
+            const lines = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8').split(/\r?\n/) : []
+            const seen = new Set()
+            const next = []
+
+            for (const line of lines) {
+              if (!line || line.trim().startsWith('#') || !line.includes('=')) {
+                next.push(line)
+                continue
+              }
+              const key = line.split('=', 1)[0].trim()
+              if (Object.prototype.hasOwnProperty.call(updates, key)) {
+                next.push(`${key}=${updates[key]}`)
+                seen.add(key)
+              } else {
+                next.push(line)
+                seen.add(key)
+              }
+            }
+
+            for (const [key, value] of Object.entries(updates)) {
+              if (!seen.has(key)) next.push(`${key}=${value}`)
+            }
+
+            fs.writeFileSync(envPath, `${next.filter((line, index, arr) => line || index < arr.length - 1).join('\n')}\n`)
+          }
+
+          const pick = (...values) => values.map((value) => String(value || '').trim()).find(Boolean) || ''
+          const normalizeGstin = (value) => {
+            const normalized = String(value || '').trim().toUpperCase().replace(/\s+/g, '')
+            return /^[0-9A-Z]{15}$/.test(normalized) ? normalized : ''
+          }
+
+          ;(async () => {
+            if (!databaseUrl) {
+              console.log('DATABASE_URL missing; cannot backfill Amazon LWA env from DB.')
+              return
+            }
+
+            const client = new Client({
+              connectionString: databaseUrl,
+              ssl: { rejectUnauthorized: false },
+            })
+
+            try {
+              await client.connect()
+              const result = await client.query(
+                "select client_id, password, metadata from courier_credentials where provider = 'amazon' limit 1",
+              )
+              const row = result.rows[0]
+              if (!row) {
+                console.log('Amazon courier credential row not found; skipping LWA env backfill.')
+                return
+              }
+
+              const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {}
+              const lwaClientId = pick(parsed.AMAZON_SHIPPING_LWA_CLIENT_ID, parsed.AMAZON_LWA_CLIENT_ID, metadata.lwaClientId, row.client_id)
+              const lwaClientSecret = pick(
+                parsed.AMAZON_SHIPPING_LWA_CLIENT_SECRET,
+                parsed.AMAZON_LWA_CLIENT_SECRET,
+                metadata.lwaClientSecret,
+                row.password,
+              )
+              let gstin = normalizeGstin(parsed.AMAZON_SHIPPING_GSTIN)
+              if (!gstin) {
+                const gstResult = await client.query(
+                  'select "gstNumber" from addresses where coalesce(trim("gstNumber"), \'\') <> \'\' order by "updatedAt" desc nulls last limit 1',
+                )
+                gstin = normalizeGstin(gstResult.rows[0]?.gstNumber)
+              }
+              const updates = {}
+              if (lwaClientId) updates.AMAZON_SHIPPING_LWA_CLIENT_ID = lwaClientId
+              if (lwaClientSecret) updates.AMAZON_SHIPPING_LWA_CLIENT_SECRET = lwaClientSecret
+              if (gstin) updates.AMAZON_SHIPPING_GSTIN = gstin
+              if (Object.keys(updates).length) writeEnv(updates)
+              console.log('Amazon LWA env backfill complete', {
+                hasClientId: Boolean(lwaClientId),
+                hasClientSecret: Boolean(lwaClientSecret),
+                hasGstin: Boolean(gstin),
+                clientId: lwaClientId ? `${lwaClientId.slice(0, 4)}...${lwaClientId.slice(-4)}` : '',
+              })
+            } finally {
+              await client.end().catch(() => undefined)
+            }
+          })().catch((error) => {
+            console.error('Amazon LWA env backfill failed:', error.message || error)
+            process.exit(1)
+          })
+          NODE
+
+      - name: Verify Amazon LWA env
+        continue-on-error: true
+        run: |
+          cat <<'PY' | dep-ssh "cd ${DEPLOY_APP_ROOT}/backend && python3 -"
+          from pathlib import Path
+          from urllib import parse, request, error
+          import hashlib
+          import json
+          import sys
+
+          def read_env(path):
+              env = {}
+              for raw in path.read_text().splitlines():
+                  line = raw.strip()
+                  if not line or line.startswith("#") or "=" not in line:
+                      continue
+                  key, value = line.split("=", 1)
+                  env[key.strip()] = value.strip().strip("\"").strip("'")
+              return env
+
+          def mask(value):
+              value = value or ""
+              return "" if not value else f"{value[:4]}...{value[-4:]}"
+
+          def fingerprint(value):
+              value = value or ""
+              return "" if not value else hashlib.sha256(value.encode()).hexdigest()[:12]
+
+          env = read_env(Path(".env.production"))
+          token_url = env.get("AMAZON_SHIPPING_LWA_TOKEN_URL") or env.get("AMAZON_LWA_TOKEN_URL") or "https://api.amazon.com/auth/o2/token"
+          payload = {
+              "grant_type": "refresh_token",
+              "refresh_token": env.get("AMAZON_SHIPPING_REFRESH_TOKEN", ""),
+              "client_id": env.get("AMAZON_SHIPPING_LWA_CLIENT_ID") or env.get("AMAZON_LWA_CLIENT_ID", ""),
+              "client_secret": env.get("AMAZON_SHIPPING_LWA_CLIENT_SECRET") or env.get("AMAZON_LWA_CLIENT_SECRET", ""),
+          }
+          print("Amazon LWA env check", {
+              "tokenUrl": token_url,
+              "businessId": env.get("AMAZON_SHIPPING_BUSINESS_ID"),
+              "clientId": mask(payload["client_id"]),
+              "refreshTokenSha": fingerprint(payload["refresh_token"]),
+          })
+          missing = [key for key, value in payload.items() if key != "grant_type" and not value]
+          if missing:
+              print("Missing Amazon LWA env keys:", ", ".join(missing), file=sys.stderr)
+              sys.exit(1)
+
+          data = parse.urlencode(payload).encode()
+          req = request.Request(
+              token_url,
+              data=data,
+              headers={
+                  "Accept": "application/json",
+                  "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              },
+              method="POST",
+          )
+          try:
+              with request.urlopen(req, timeout=30) as resp:
+                  body = json.loads(resp.read().decode() or "{}")
+                  print("Amazon LWA env check passed", {
+                      "status": resp.status,
+                      "accessTokenSha": fingerprint(body.get("access_token", "")),
+                      "expiresIn": body.get("expires_in"),
+                  })
+          except error.HTTPError as exc:
+              body = exc.read().decode(errors="replace")
+              try:
+                  parsed = json.loads(body)
+              except Exception:
+                  parsed = {"message": body[:500]}
+              print("Amazon LWA env check failed", {
+                  "status": exc.code,
+                  "message": parsed.get("error_description") or parsed.get("message") or parsed.get("error"),
+              }, file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Deploy on server
+        run: |
+          dep-ssh "DEPLOY_APP_ROOT='${DEPLOY_APP_ROOT}' DEPLOY_PUBLIC_API_URL='${DEPLOY_PUBLIC_API_URL}' DEPLOY_PUBLIC_SOCKET_URL='${DEPLOY_PUBLIC_SOCKET_URL}' DEPLOY_RUNTIME_USER='${DEPLOY_RUNTIME_USER}' DEPLOY_LOGIN_USER='${DEPLOY_USER}' bash -s" <<'SH'
+          set -euo pipefail
+          if ! command -v node >/dev/null 2>&1 || ! command -v nginx >/dev/null 2>&1 || ! command -v pm2 >/dev/null 2>&1; then
+            sudo APP_ROOT="${DEPLOY_APP_ROOT}" DEPLOY_USER="${DEPLOY_RUNTIME_USER:-deploy}" bash "${DEPLOY_APP_ROOT}/deploy/setup-vps.sh"
+            exit 0
+          fi
+
+          run_user="${DEPLOY_RUNTIME_USER:-deploy}"
+          if ! id -u "${run_user}" >/dev/null 2>&1; then
+            run_user="${DEPLOY_LOGIN_USER}"
+          fi
+
+          run_group="$(id -gn "${run_user}" 2>/dev/null || echo "${run_user}")"
+          run_home="$(getent passwd "${run_user}" | cut -d: -f6)"
+          if [ -z "${run_home}" ]; then
+            run_home="${HOME}"
+          fi
+
+          sudo chown -R "${run_user}:${run_group}" "${DEPLOY_APP_ROOT}" || sudo chown -R "${run_user}" "${DEPLOY_APP_ROOT}"
+          sudo chmod +x "${DEPLOY_APP_ROOT}/deploy/release.sh"
+          sudo -u "${run_user}" -H env \
+            PM2_HOME="${run_home}/.pm2" \
+            APP_ROOT="${DEPLOY_APP_ROOT}" \
+            DEPLOY_PUBLIC_API_URL="${DEPLOY_PUBLIC_API_URL}" \
+            DEPLOY_PUBLIC_SOCKET_URL="${DEPLOY_PUBLIC_SOCKET_URL}" \
+            bash -lc 'cd "$APP_ROOT" && ./deploy/release.sh'
+          SH
+
+      - name: Mark deployed commit
+        run: |
+          dep-ssh "DEPLOY_APP_ROOT='${DEPLOY_APP_ROOT}' DEPLOY_RUNTIME_USER='${DEPLOY_RUNTIME_USER}' DEPLOY_LOGIN_USER='${DEPLOY_USER}' DEPLOY_SHA='${{ github.sha }}' bash -s" <<'SH'
+          set -euo pipefail
+          owner="${DEPLOY_RUNTIME_USER:-deploy}"
+          if ! id -u "${owner}" >/dev/null 2>&1; then
+            owner="${DEPLOY_LOGIN_USER}"
+          fi
+          owner_group="$(id -gn "${owner}" 2>/dev/null || echo "${owner}")"
+          printf '%s\n' "${DEPLOY_SHA}" | sudo tee "${DEPLOY_APP_ROOT}/.deployed_commit" >/dev/null
+          sudo chown "${owner}:${owner_group}" "${DEPLOY_APP_ROOT}/.deployed_commit" || sudo chown "${owner}" "${DEPLOY_APP_ROOT}/.deployed_commit"
+          SH

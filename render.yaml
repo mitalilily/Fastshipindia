@@ -1,30 +1,81 @@
 services:
   - type: web
-    name: shipray-logistic
     runtime: static
+    name: fastship-piwy
+    rootDir: express-magic
     buildCommand: npm run build
-    staticPublishPath: ./dist
+    staticPublishPath: ./combined-dist
+    autoDeployTrigger: commit
+    envVars:
+      - key: VITE_CLIENT_APP_URL
+        value: https://fastship-piwy.onrender.com/app
+      - key: VITE_AUTH_APP_URL
+        value: https://fastship-piwy.onrender.com/app/#/login
+      - key: VITE_ADMIN_APP_URL
+        value: https://fastshipadmin.onrender.com
+      - key: VITE_ADMIN_AUTH_URL
+        value: https://fastshipadmin.onrender.com/#/auth/signin
+      - key: VITE_API_URL
+        value: https://fastshipindia.onrender.com/api
+      - key: VITE_APP_SOCKET_URL
+        value: https://fastshipindia.onrender.com
+      - key: VITE_GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: VITE_PUBLIC_GEOAPIFY_KEY
+        sync: false
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+
+  - type: web
+    runtime: static
+    name: fastshipadmin
+    rootDir: express-magic/admin-dashboard
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    staticPublishPath: ./dist
+    autoDeployTrigger: commit
     envVars:
-      - key: API_BASE_URL
-        value: https://shipray-logisticbackend.onrender.com
-      - key: BACKEND_URL
-        value: https://shipray-logisticbackend.onrender.com
+      - key: REACT_APP_API_BASE_URL
+        value: https://fastshipindia.onrender.com/api
+      - key: REACT_APP_SOCKET_URL
+        value: https://fastshipindia.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    runtime: docker
+    name: fastshipindia
+    rootDir: express-magic/backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_URL
+        value: https://fastshipindia.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://fastship-piwy.onrender.com,https://fastshipadmin.onrender.com
       - key: FRONTEND_URL
-        value: https://shipray-logistic.onrender.com
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-store, no-cache, must-revalidate, max-age=0, s-maxage=0
-      - path: /*
-        name: Pragma
-        value: no-cache
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
+        value: https://fastship-piwy.onrender.com/app
+      - key: AUTH_OTP_DELIVERY
+        value: screen
+      - key: AUTO_MIGRATE_ON_START
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        sync: false
+      - key: REFRESH_TOKEN_SECRET
+        sync: false
+      - key: COURIER_SECRET_KEY
+        sync: false
+      - key: ADMIN_SEED_EMAIL
+        value: admin@fastship.in
+      - key: ADMIN_SEED_PASSWORD
+        sync: false
+      - key: ADMIN_FORCE_PASSWORD_RESET
+        value: "false"
