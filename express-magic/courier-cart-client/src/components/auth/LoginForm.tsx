@@ -1,6 +1,7 @@
 import { alpha, Box, Stack, Typography } from '@mui/material'
 import { FiBarChart2, FiCheckCircle, FiMapPin, FiShield, FiTruck } from 'react-icons/fi'
 import { BRAND } from '../../config/brand'
+import LogisticsThreeScene from './LogisticsThreeScene'
 import PhoneForm from './PhoneForm'
 
 const { teal, tealDark, orange, ink, text, muted, paper, surface, border } = BRAND.colors
@@ -95,11 +96,25 @@ export default function LoginForm() {
                 `radial-gradient(circle at 18% 16%, ${alpha(orange, 0.22)}, transparent 28%)`,
             }}
           />
+          <Box
+            sx={{
+              position: 'absolute',
+              zIndex: 1,
+              right: { md: -54, lg: -68 },
+              top: { md: 54, lg: 48 },
+              width: { md: '54%', lg: '52%' },
+              height: { md: '44%', lg: '46%' },
+              opacity: 0.92,
+              pointerEvents: 'none',
+            }}
+          >
+            <LogisticsThreeScene compact />
+          </Box>
 
           <Stack
             sx={{
               position: 'relative',
-              zIndex: 1,
+              zIndex: 2,
               height: '100%',
               justifyContent: 'space-between',
               p: { md: 2.4, lg: 3.2 },
