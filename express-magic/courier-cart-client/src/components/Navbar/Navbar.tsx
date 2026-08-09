@@ -92,7 +92,16 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
   }
 
   return (
-    <Box sx={{ position: 'sticky', top: 0, zIndex: (currentTheme) => currentTheme.zIndex.appBar }}>
+    <Box
+      sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: (currentTheme) => currentTheme.zIndex.appBar,
+        bgcolor: '#fff',
+        backgroundImage: 'none',
+        overflow: 'hidden',
+      }}
+    >
       <Stack
         direction="row"
         alignItems="center"
@@ -102,10 +111,13 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
           px: { xs: 1, sm: 1.2, md: 1.6, lg: 2 },
           py: 0,
           borderRadius: 0,
-          background: BRAND_SURFACE,
+          bgcolor: BRAND_SURFACE,
+          backgroundImage: 'none',
           borderBottom: 'none',
           boxShadow: 'none',
           minHeight: { xs: 56, md: 68 },
+          position: 'relative',
+          overflow: 'hidden',
           transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
@@ -168,6 +180,7 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
             }}
             sx={{
               display: { xs: 'none', sm: 'flex' },
+              alignItems: 'stretch',
               height: 50,
               width: { sm: 280, md: 330, lg: 420 },
               maxWidth: '38vw',
@@ -176,6 +189,9 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
               overflow: 'hidden',
               boxSizing: 'border-box',
               bgcolor: '#fff',
+              backgroundImage: 'none',
+              position: 'relative',
+              zIndex: 1,
               ml: { md: 1.5, lg: 3 },
             }}
           >
@@ -183,6 +199,9 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
               onClick={(event) => setSearchAnchor(event.currentTarget)}
               sx={{
                 width: 106,
+                minWidth: 106,
+                height: '100%',
+                minHeight: 0,
                 bgcolor: '#eef3f8',
                 display: 'flex',
                 alignItems: 'center',
@@ -193,6 +212,7 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
                 fontWeight: 600,
                 flexShrink: 0,
                 borderRadius: 0,
+                boxShadow: 'none',
                 textTransform: 'none',
                 whiteSpace: 'nowrap',
                 '&:hover': { bgcolor: '#e7eef6' },
@@ -216,6 +236,7 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
                 color: BRAND_TEXT,
                 fontSize: 14,
                 bgcolor: '#fff',
+                backgroundImage: 'none',
               }}
             />
           </Box>
