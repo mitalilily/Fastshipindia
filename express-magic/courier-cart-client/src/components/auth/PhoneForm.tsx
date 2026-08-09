@@ -34,7 +34,7 @@ type AuthMode = 'otp' | 'password'
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
-    minHeight: 48,
+    minHeight: 42,
     borderRadius: 1.25,
     background: paper,
     color: ink,
@@ -51,7 +51,7 @@ const fieldSx = {
     },
   },
   '& .MuiOutlinedInput-input': {
-    py: 1.15,
+    py: 0.8,
     fontSize: 16,
     color: ink,
     fontWeight: 500,
@@ -68,7 +68,7 @@ const fieldSx = {
 }
 
 const tabButtonSx = {
-  minHeight: 46,
+  minHeight: 40,
   minWidth: 0,
   borderRadius: 1,
   textTransform: 'none',
@@ -196,7 +196,7 @@ export default function PhoneForm() {
   }
 
   return (
-    <Stack spacing={{ xs: 1.2, md: 1.15 }} alignItems="stretch" sx={{ minWidth: 0 }}>
+    <Stack spacing={{ xs: 0.85, md: 0.8 }} alignItems="stretch" sx={{ minWidth: 0 }}>
       <Box
         sx={{
           width: 'fit-content',
@@ -207,7 +207,7 @@ export default function PhoneForm() {
           alignItems: 'center',
           gap: 1,
           px: 1.55,
-          py: 0.75,
+          py: 0.48,
           borderRadius: 1,
           color: orange,
           border: `1px solid ${alpha(orange, 0.18)}`,
@@ -225,8 +225,8 @@ export default function PhoneForm() {
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
           minWidth: 0,
-          gap: 0.65,
-          p: 0.3,
+          gap: 0.45,
+          p: 0.22,
           borderRadius: 1.35,
           border: `1px solid ${alpha(teal, 0.18)}`,
           background: alpha(teal, 0.045),
@@ -275,9 +275,9 @@ export default function PhoneForm() {
 
       {authMode === 'otp' ? (
         <Box component="form" onSubmit={handleSubmit} width="100%">
-          <Stack spacing={{ xs: 1.35, md: 1.45 }}>
+          <Stack spacing={{ xs: 0.9, md: 0.9 }}>
             <Box>
-              <Typography sx={{ color: '#081932', fontSize: 14, fontWeight: 900, mb: 0.9 }}>
+              <Typography sx={{ color: '#081932', fontSize: 14, fontWeight: 900, mb: 0.45 }}>
                 Work Email <Box component="span" sx={{ color: '#e1261c' }}>*</Box>
               </Typography>
               <TextField
@@ -323,7 +323,7 @@ export default function PhoneForm() {
               disabled={!email || !termsChecked || isPending || !isValidEmail}
               sx={{
                 width: '100%',
-                minHeight: 50,
+                minHeight: 44,
                 borderRadius: 1,
                 textTransform: 'none',
                 color: paper,
@@ -348,7 +348,7 @@ export default function PhoneForm() {
 
             <Divider
               sx={{
-                my: 0.15,
+                my: -0.15,
                 color: '#263a59',
                 fontSize: 14,
                 '&::before, &::after': {
@@ -364,7 +364,7 @@ export default function PhoneForm() {
               onClick={() => setOpenTerms(true)}
               sx={{
                 width: '100%',
-                minHeight: 50,
+                minHeight: 44,
                 borderRadius: 1,
                 textTransform: 'none',
                 color: '#102344',

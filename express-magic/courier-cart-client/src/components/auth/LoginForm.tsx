@@ -44,7 +44,7 @@ export default function LoginForm() {
         alignItems: 'center',
         justifyContent: 'center',
         px: { xs: 1.5, sm: 2.5, md: 3, lg: 4.5 },
-        py: { xs: 1.5, md: 2 },
+        py: { xs: 1.2, md: 1 },
         background:
           `linear-gradient(90deg, ${alpha(teal, 0.06)} 1px, transparent 1px) 0 0 / 52px 52px, ` +
           `linear-gradient(${alpha(teal, 0.045)} 1px, transparent 1px) 0 0 / 52px 52px, ` +
@@ -59,15 +59,15 @@ export default function LoginForm() {
           maxWidth: 1240,
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(400px, 0.68fr)' },
-          gap: { xs: 2, md: 2.5, lg: 3.25 },
+          gap: { xs: 1.4, md: 2, lg: 2.5 },
           alignItems: 'stretch',
-          maxHeight: { md: 'calc(100svh - 32px)' },
+          maxHeight: { md: 'calc(100svh - 16px)' },
         }}
       >
         <Box
           sx={{
             display: { xs: 'none', md: 'grid' },
-            minHeight: 'min(610px, calc(100svh - 32px))',
+            minHeight: 'min(610px, calc(100svh - 16px))',
             overflow: 'hidden',
             position: 'relative',
             borderRadius: 3,
@@ -102,7 +102,7 @@ export default function LoginForm() {
               zIndex: 1,
               height: '100%',
               justifyContent: 'space-between',
-              p: { md: 3.4, lg: 4.4 },
+              p: { md: 2.4, lg: 3.2 },
               color: paper,
             }}
           >
@@ -112,7 +112,7 @@ export default function LoginForm() {
                 src={BRAND.logo}
                 alt={`${BRAND.name} logo`}
                 sx={{
-                  width: 154,
+                  width: { md: 128, lg: 142 },
                   height: 'auto',
                   borderRadius: 1.5,
                   background: paper,
@@ -122,7 +122,7 @@ export default function LoginForm() {
               />
               <Typography
                 sx={{
-                  mt: 3.25,
+                  mt: 2,
                   color: alpha(paper, 0.72),
                   fontSize: 13,
                   fontWeight: 900,
@@ -135,7 +135,7 @@ export default function LoginForm() {
               <Typography
                 component="h1"
                 sx={{
-                  mt: 2,
+                  mt: 1.35,
                   maxWidth: 600,
                   color: paper,
                   fontSize: { md: 44, lg: 56 },
@@ -149,7 +149,7 @@ export default function LoginForm() {
                   Deliver Smarter.
                 </Box>
               </Typography>
-              <Typography sx={{ mt: 2.2, maxWidth: 520, color: alpha(paper, 0.78), fontSize: 18, lineHeight: 1.7 }}>
+              <Typography sx={{ mt: 1.35, maxWidth: 520, color: alpha(paper, 0.78), fontSize: 18, lineHeight: 1.55 }}>
                 Login to book shipments, compare courier rates, track orders and manage delivery exceptions from one
                 focused workspace.
               </Typography>
@@ -161,7 +161,7 @@ export default function LoginForm() {
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                   gap: 1.25,
-                  mb: 1.4,
+                  mb: 0.85,
                 }}
               >
                 <MetricCard value="29K+" label="PIN codes" />
@@ -175,7 +175,7 @@ export default function LoginForm() {
                   borderRadius: 2,
                   border: `1px solid ${alpha(paper, 0.24)}`,
                   background: alpha(paper, 0.1),
-                  p: 1.25,
+                  p: 0.9,
                   backdropFilter: 'blur(14px)',
                 }}
               >
@@ -184,19 +184,19 @@ export default function LoginForm() {
                     key={item.title}
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: '42px 1fr',
-                      gap: 1.25,
+                      gridTemplateColumns: '38px 1fr',
+                      gap: 1,
                       alignItems: 'center',
                       borderRadius: 1.5,
                       background: alpha(paper, 0.1),
-                      px: 1.35,
-                      py: 1.15,
+                      px: 1.1,
+                      py: 0.75,
                     }}
                   >
                     <Box
                       sx={{
-                        width: 38,
-                        height: 38,
+                        width: 34,
+                        height: 34,
                         display: 'grid',
                         placeItems: 'center',
                         borderRadius: 1.2,
@@ -233,36 +233,36 @@ export default function LoginForm() {
             sx={{
               width: '100%',
               maxWidth: { xs: 450, md: 520 },
-              maxHeight: { md: 'calc(100svh - 32px)' },
-              overflow: { md: 'hidden' },
+              maxHeight: { md: 'calc(100svh - 16px)' },
+              overflow: { xs: 'visible', md: 'auto' },
               borderRadius: 3,
               border: `1px solid ${alpha(border, 0.9)}`,
               background: paper,
               boxShadow: '0 26px 70px rgba(6, 26, 51, 0.13)',
-              px: { xs: 2, sm: 3, md: 3.2 },
-              py: { xs: 2.25, sm: 2.8, md: 2.9 },
+              px: { xs: 2, sm: 2.6, md: 2.7 },
+              py: { xs: 1.6, sm: 1.9, md: 1.6 },
             }}
           >
-            <Box sx={{ mb: { xs: 1.8, md: 1.85 }, textAlign: 'center' }}>
+            <Box sx={{ mb: { xs: 1.2, md: 1.05 }, textAlign: 'center' }}>
               <Box
                 component="img"
                 src={BRAND.logo}
                 alt={`${BRAND.name} logo`}
                 sx={{
                   display: 'block',
-                  width: { xs: 150, sm: 170 },
+                  width: { xs: 126, sm: 138 },
                   height: 'auto',
                   mx: 'auto',
-                  mb: 1.35,
+                  mb: 0.65,
                   objectFit: 'contain',
                 }}
               />
               <Box
                 sx={{
-                  width: 58,
-                  height: 58,
+                  width: 48,
+                  height: 48,
                   mx: 'auto',
-                  mb: 1.15,
+                  mb: 0.7,
                   display: 'grid',
                   placeItems: 'center',
                   borderRadius: 2,
@@ -288,7 +288,7 @@ export default function LoginForm() {
               </Typography>
               <Typography
                 sx={{
-                  mt: 1.15,
+                  mt: 0.65,
                   color: text,
                   fontSize: { xs: 14, sm: 14.5 },
                   lineHeight: 1.5,
@@ -304,7 +304,7 @@ export default function LoginForm() {
 
             <Box
               sx={{
-                mt: 2.2,
+                mt: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
