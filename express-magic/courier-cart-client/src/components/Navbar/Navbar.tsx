@@ -202,7 +202,7 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
                 minWidth: 106,
                 height: '100%',
                 minHeight: 0,
-                bgcolor: '#eef3f8',
+                bgcolor: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -215,7 +215,7 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
                 boxShadow: 'none',
                 textTransform: 'none',
                 whiteSpace: 'nowrap',
-                '&:hover': { bgcolor: '#e7eef6' },
+                '&:hover': { bgcolor: '#fff' },
               }}
             >
               {searchType.label} <MdKeyboardArrowDown size={18} />
