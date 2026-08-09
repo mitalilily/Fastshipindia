@@ -35,14 +35,16 @@ export default function LoginForm() {
   return (
     <Box
       sx={{
-        minHeight: '100dvh',
+        height: { xs: 'auto', md: '100svh' },
+        minHeight: { xs: '100svh', md: '100svh' },
         width: '100%',
         overflowX: 'hidden',
+        overflowY: { xs: 'auto', md: 'hidden' },
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        px: { xs: 1.5, sm: 2.5, md: 4.5, lg: 6 },
-        py: { xs: 2, md: 4.5 },
+        px: { xs: 1.5, sm: 2.5, md: 3, lg: 4.5 },
+        py: { xs: 1.5, md: 2 },
         background:
           `linear-gradient(90deg, ${alpha(teal, 0.06)} 1px, transparent 1px) 0 0 / 52px 52px, ` +
           `linear-gradient(${alpha(teal, 0.045)} 1px, transparent 1px) 0 0 / 52px 52px, ` +
@@ -56,15 +58,16 @@ export default function LoginForm() {
           width: '100%',
           maxWidth: 1240,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(430px, 0.72fr)' },
-          gap: { xs: 2.5, md: 3.5, lg: 4.5 },
+          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(400px, 0.68fr)' },
+          gap: { xs: 2, md: 2.5, lg: 3.25 },
           alignItems: 'stretch',
+          maxHeight: { md: 'calc(100svh - 32px)' },
         }}
       >
         <Box
           sx={{
             display: { xs: 'none', md: 'grid' },
-            minHeight: 690,
+            minHeight: 'min(610px, calc(100svh - 32px))',
             overflow: 'hidden',
             position: 'relative',
             borderRadius: 3,
@@ -99,7 +102,7 @@ export default function LoginForm() {
               zIndex: 1,
               height: '100%',
               justifyContent: 'space-between',
-              p: { md: 4.5, lg: 5.5 },
+              p: { md: 3.4, lg: 4.4 },
               color: paper,
             }}
           >
@@ -119,7 +122,7 @@ export default function LoginForm() {
               />
               <Typography
                 sx={{
-                  mt: 5,
+                  mt: 3.25,
                   color: alpha(paper, 0.72),
                   fontSize: 13,
                   fontWeight: 900,
@@ -135,7 +138,7 @@ export default function LoginForm() {
                   mt: 2,
                   maxWidth: 600,
                   color: paper,
-                  fontSize: { md: 54, lg: 66 },
+                  fontSize: { md: 44, lg: 56 },
                   fontWeight: 950,
                   letterSpacing: 0,
                   lineHeight: 1.02,
@@ -158,7 +161,7 @@ export default function LoginForm() {
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                   gap: 1.25,
-                  mb: 2,
+                  mb: 1.4,
                 }}
               >
                 <MetricCard value="29K+" label="PIN codes" />
@@ -230,15 +233,17 @@ export default function LoginForm() {
             sx={{
               width: '100%',
               maxWidth: { xs: 450, md: 520 },
+              maxHeight: { md: 'calc(100svh - 32px)' },
+              overflow: { md: 'hidden' },
               borderRadius: 3,
               border: `1px solid ${alpha(border, 0.9)}`,
               background: paper,
               boxShadow: '0 26px 70px rgba(6, 26, 51, 0.13)',
-              px: { xs: 2, sm: 3.2, md: 3.6 },
-              py: { xs: 2.4, sm: 3.4, md: 3.8 },
+              px: { xs: 2, sm: 3, md: 3.2 },
+              py: { xs: 2.25, sm: 2.8, md: 2.9 },
             }}
           >
-            <Box sx={{ mb: { xs: 2, md: 2.4 }, textAlign: 'center' }}>
+            <Box sx={{ mb: { xs: 1.8, md: 1.85 }, textAlign: 'center' }}>
               <Box
                 component="img"
                 src={BRAND.logo}
@@ -248,7 +253,7 @@ export default function LoginForm() {
                   width: { xs: 150, sm: 170 },
                   height: 'auto',
                   mx: 'auto',
-                  mb: 2,
+                  mb: 1.35,
                   objectFit: 'contain',
                 }}
               />
@@ -257,14 +262,14 @@ export default function LoginForm() {
                   width: 58,
                   height: 58,
                   mx: 'auto',
-                  mb: 1.6,
+                  mb: 1.15,
                   display: 'grid',
                   placeItems: 'center',
                   borderRadius: 2,
                   color: paper,
                   background: `linear-gradient(135deg, ${teal} 0%, ${tealDark} 64%, ${orange} 100%)`,
                   boxShadow: `0 14px 28px ${alpha(teal, 0.18)}`,
-                  fontSize: 28,
+                  fontSize: 26,
                 }}
               >
                 <FiShield />
@@ -274,7 +279,7 @@ export default function LoginForm() {
                 sx={{
                   color: ink,
                   fontWeight: 950,
-                  fontSize: { xs: 30, sm: 34 },
+                  fontSize: { xs: 28, sm: 31 },
                   lineHeight: 1.08,
                   letterSpacing: 0,
                 }}
@@ -285,8 +290,8 @@ export default function LoginForm() {
                 sx={{
                   mt: 1.15,
                   color: text,
-                  fontSize: { xs: 14.5, sm: 15.5 },
-                  lineHeight: 1.6,
+                  fontSize: { xs: 14, sm: 14.5 },
+                  lineHeight: 1.5,
                   maxWidth: 370,
                   mx: 'auto',
                 }}

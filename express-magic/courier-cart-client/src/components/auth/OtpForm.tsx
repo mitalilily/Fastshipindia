@@ -25,7 +25,7 @@ const primaryButtonStyles = {
   borderRadius: 1,
   background: `linear-gradient(135deg, ${BRAND_TEAL} 0%, #041A38 70%, ${BRAND_RED} 100%)`,
   boxShadow: '0 16px 26px rgba(6, 42, 91, 0.18)',
-  minHeight: 52,
+  minHeight: 48,
 }
 
 const ghostButtonStyles = {
@@ -34,7 +34,7 @@ const ghostButtonStyles = {
   color: BRAND_DARK,
   backgroundColor: '#ffffff',
   borderRadius: 1,
-  minHeight: 48,
+  minHeight: 44,
 }
 
 type Props = {
@@ -209,10 +209,10 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
   }, [email, resendOtp, resendEnabled, resending])
 
   return (
-    <Stack component="form" onSubmit={handleSubmit} width="100%" mt={0} gap={1.75}>
+    <Stack component="form" onSubmit={handleSubmit} width="100%" mt={0} gap={1.25}>
       <Box
         sx={{
-          p: 1.65,
+          p: 1.25,
           borderRadius: 1.25,
           background: 'linear-gradient(135deg, rgba(228,246,248,0.76), rgba(255,255,255,0.92))',
           border: '1px solid rgba(6,42,91,0.16)',
@@ -242,7 +242,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
           role="status"
           aria-live="polite"
           sx={{
-            p: 1.35,
+            p: 1.05,
             borderRadius: 1.25,
             textAlign: 'center',
             background: 'linear-gradient(135deg, rgba(6,42,91,0.08), rgba(237,28,36,0.11))',
@@ -252,7 +252,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
           <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: BRAND_TEAL, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             Demo OTP visible on this screen
           </Typography>
-          <Typography sx={{ mt: 0.4, fontSize: '1.5rem', fontWeight: 800, color: BRAND_DARK, letterSpacing: '0.18em' }}>
+          <Typography sx={{ mt: 0.3, fontSize: '1.35rem', fontWeight: 800, color: BRAND_DARK, letterSpacing: '0.18em' }}>
             {debugOtp}
           </Typography>
           <Typography sx={{ mt: 0.35, fontSize: '0.72rem', fontWeight: 650, color: '#5F5A57' }}>
@@ -265,7 +265,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
         sx={{
           display: 'grid',
           gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-          gap: { xs: 0.55, sm: 1 },
+          gap: { xs: 0.5, sm: 0.8 },
           width: '100%',
           maxWidth: 380,
           mx: 'auto',
@@ -287,7 +287,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
                   textAlign: 'center',
                   fontSize: '1.15rem',
                   padding: 0,
-                  height: 46,
+                  height: 42,
                   fontWeight: 700,
                 },
               },
@@ -295,7 +295,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
             sx={{
               width: '100%',
               '& .MuiOutlinedInput-root': {
-                height: 52,
+                height: 48,
                 borderRadius: 1,
                 backgroundColor: '#f8fcfd',
                 color: BRAND_DARK,

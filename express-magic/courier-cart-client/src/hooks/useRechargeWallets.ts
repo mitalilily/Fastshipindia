@@ -70,6 +70,42 @@ declare global {
   }
 }
 
+const RAZORPAY_CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js'
+let razorpayCheckoutPromise: Promise<void> | null = null
+
+const loadRazorpayCheckout = () => {
+  if (window.Razorpay) return Promise.resolve()
+  if (razorpayCheckoutPromise) return razorpayCheckoutPromise
+
+  razorpayCheckoutPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${RAZORPAY_CHECKOUT_SRC}"]`,
+    )
+
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true })
+      existingScript.addEventListener(
+        'error',
+        () => reject(new Error('Razorpay Checkout failed to load. Please refresh and try again.')),
+        { once: true },
+      )
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = RAZORPAY_CHECKOUT_SRC
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => {
+      razorpayCheckoutPromise = null
+      reject(new Error('Razorpay Checkout failed to load. Please refresh and try again.'))
+    }
+    document.head.appendChild(script)
+  })
+
+  return razorpayCheckoutPromise
+}
+
 const getErrorMessage = (error: unknown, fallback: string) => {
   const apiMessage =
     typeof error === 'object' &&
@@ -98,9 +134,7 @@ export const useRechargeWallet = () =>
         throw new Error('Invalid Razorpay order response')
       }
 
-      if (!window.Razorpay) {
-        throw new Error('Razorpay Checkout failed to load. Please refresh and try again.')
-      }
+      await loadRazorpayCheckout()
 
       return new Promise<void>((resolve, reject) => {
         let settled = false

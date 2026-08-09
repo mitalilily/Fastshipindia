@@ -34,7 +34,7 @@ type AuthMode = 'otp' | 'password'
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
-    minHeight: 52,
+    minHeight: 48,
     borderRadius: 1.25,
     background: paper,
     color: ink,
@@ -51,7 +51,7 @@ const fieldSx = {
     },
   },
   '& .MuiOutlinedInput-input': {
-    py: 1.35,
+    py: 1.15,
     fontSize: 16,
     color: ink,
     fontWeight: 500,
@@ -68,7 +68,7 @@ const fieldSx = {
 }
 
 const tabButtonSx = {
-  minHeight: 52,
+  minHeight: 46,
   minWidth: 0,
   borderRadius: 1,
   textTransform: 'none',
@@ -196,7 +196,7 @@ export default function PhoneForm() {
   }
 
   return (
-    <Stack spacing={{ xs: 1.35, md: 1.45 }} alignItems="stretch" sx={{ minWidth: 0 }}>
+    <Stack spacing={{ xs: 1.2, md: 1.15 }} alignItems="stretch" sx={{ minWidth: 0 }}>
       <Box
         sx={{
           width: 'fit-content',
@@ -207,7 +207,7 @@ export default function PhoneForm() {
           alignItems: 'center',
           gap: 1,
           px: 1.55,
-          py: 0.9,
+          py: 0.75,
           borderRadius: 1,
           color: orange,
           border: `1px solid ${alpha(orange, 0.18)}`,
@@ -348,6 +348,7 @@ export default function PhoneForm() {
 
             <Divider
               sx={{
+                my: 0.15,
                 color: '#263a59',
                 fontSize: 14,
                 '&::before, &::after': {

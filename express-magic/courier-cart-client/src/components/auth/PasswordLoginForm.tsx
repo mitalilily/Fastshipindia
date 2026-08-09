@@ -27,7 +27,7 @@ const { teal, tealDark, orange, ink, muted, paper, tealSoft } = BRAND.colors
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
-    minHeight: 56,
+    minHeight: 50,
     borderRadius: 1.25,
     background: paper,
     color: ink,
@@ -43,7 +43,7 @@ const fieldSx = {
     },
   },
   '& .MuiOutlinedInput-input': {
-    py: 1.55,
+    py: 1.2,
     fontSize: 16,
     color: ink,
     fontWeight: 500,
@@ -180,14 +180,14 @@ export default function PasswordLoginForm({ setStep, step, setOpenTerms }: IPass
   return (
     <>
       {step === 0 ? (
-        <Stack component="form" onSubmit={handleSubmit} width="100%" spacing={{ xs: 1.55, md: 1.75 }}>
+        <Stack component="form" onSubmit={handleSubmit} width="100%" spacing={{ xs: 1.25, md: 1.25 }}>
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: '58px 1fr',
               gap: 1.55,
               alignItems: 'center',
-              p: { xs: 1.5, md: 1.65 },
+              p: { xs: 1.35, md: 1.35 },
               borderRadius: 1.25,
               border: `1px solid ${alpha(teal, 0.12)}`,
               background: `linear-gradient(135deg, ${alpha(tealSoft, 0.72)} 0%, ${alpha(paper, 0.92)} 100%)`,
@@ -195,15 +195,15 @@ export default function PasswordLoginForm({ setStep, step, setOpenTerms }: IPass
           >
             <Box
               sx={{
-                width: 46,
-                height: 46,
+                width: 42,
+                height: 42,
                 borderRadius: '50%',
                 display: 'grid',
                 placeItems: 'center',
                 color: teal,
                 background: alpha(paper, 0.74),
                 boxShadow: `inset 0 0 0 1px ${alpha(teal, 0.12)}`,
-                fontSize: 25,
+                fontSize: 23,
               }}
             >
               <FiShield />
@@ -212,7 +212,7 @@ export default function PasswordLoginForm({ setStep, step, setOpenTerms }: IPass
               <Typography sx={{ color: '#102344', fontSize: 15.5, fontWeight: 900, lineHeight: 1.25 }}>
                 Sign in with your merchant credentials
               </Typography>
-              <Typography sx={{ mt: 0.55, color: muted, fontSize: 14.5, lineHeight: 1.55 }}>
+              <Typography sx={{ mt: 0.45, color: muted, fontSize: 13.5, lineHeight: 1.45 }}>
                 Password access may still require email verification to protect billing and shipment data.
               </Typography>
             </Box>
@@ -328,7 +328,7 @@ export default function PasswordLoginForm({ setStep, step, setOpenTerms }: IPass
             disabled={!isFormValid || isPending}
             sx={{
               width: '100%',
-              minHeight: 52,
+              minHeight: 48,
               borderRadius: 1,
               textTransform: 'none',
               color: paper,
