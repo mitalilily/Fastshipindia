@@ -332,37 +332,37 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   return (
     <FormProvider {...methods}>
       <Stack
-        gap={0.75}
+        gap={0.45}
         sx={{
           height: '100%',
           position: 'relative',
-          p: { xs: 0.45, sm: 0.55, md: 0.65 },
-          borderRadius: 2,
+          p: { xs: 0.25, sm: 0.3, md: 0.35 },
+          borderRadius: 1.4,
           border: `1px solid ${alpha(ACCENT, 0.14)}`,
           background: '#ffffff',
-          boxShadow: `0 12px 30px ${alpha(ACCENT, 0.08)}`,
+          boxShadow: `0 6px 16px ${alpha(ACCENT, 0.06)}`,
         }}
       >
         {/* Step Indicator */}
         <Box
           sx={{
-            px: { xs: 0.75, sm: 0.9 },
-            py: { xs: 0.45, sm: 0.55 },
-            borderRadius: 2,
+            px: { xs: 0.5, sm: 0.65 },
+            py: { xs: 0.25, sm: 0.3 },
+            borderRadius: 1.3,
             background: alpha(ACCENT, 0.05),
             border: `1px solid ${alpha(ACCENT, 0.1)}`,
             display: 'flex',
             alignItems: 'center',
-            gap: 0.75,
+            gap: 0.45,
             flexWrap: 'wrap',
           }}
         >
           {steps.map((label, index) => (
-            <Stack key={label} direction="row" alignItems="center" gap={0.55}>
+            <Stack key={label} direction="row" alignItems="center" gap={0.35}>
               <Box
                 sx={{
-                  width: 22,
-                  height: 22,
+                  width: 18,
+                  height: 18,
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
@@ -375,7 +375,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                       : alpha(TEXT_PRIMARY, 0.08),
                   color: index < currentStep || index === currentStep ? ACCENT : TEXT_PRIMARY,
                   fontWeight: 700,
-                  fontSize: '0.72rem',
+                  fontSize: '0.64rem',
                   transition: 'all 0.2s ease',
                 }}
               >
@@ -383,7 +383,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
               </Box>
               <Typography
                 sx={{
-                  fontSize: '0.76rem',
+                  fontSize: '0.68rem',
                   fontWeight: index === currentStep ? 600 : 500,
                   color: index === currentStep ? TEXT_PRIMARY : alpha(TEXT_PRIMARY, 0.7),
                   transition: 'all 0.2s ease',
@@ -394,7 +394,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
               {index < steps.length - 1 && (
                 <Box
                   sx={{
-                    width: 12,
+                    width: 8,
                     height: '1px',
                     background: index < currentStep ? ACCENT : alpha(TEXT_PRIMARY, 0.2),
                     transition: 'all 0.2s ease',
@@ -409,11 +409,11 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit)}
-          sx={{ flex: 1, overflowY: 'auto', p: { xs: 0.1, sm: 0.2, md: 0.3 } }}
+          sx={{ flex: 1, overflowY: 'auto', p: 0.05, pr: { xs: 0.25, sm: 0.35, md: 0.45 } }}
         >
 
           {currentStep === 0 && (
-            <Stack gap={0.75} mb={0.75}>
+            <Stack gap={0.45} mb={0.45}>
               <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded compact>
                 <OrderDetailsForm />
               </FormSectionAccordion>
@@ -465,18 +465,18 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
           <Box
             sx={{
-              py: 0.45,
-              px: { xs: 0.75, sm: 1 },
+              py: 0.25,
+              px: { xs: 0.55, sm: 0.75 },
               background: '#FFFFFF',
               border: '1px solid #E2E8F0',
-              borderRadius: '15px',
+              borderRadius: '10px',
               position: 'sticky',
               bottom: 0,
               zIndex: 10,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              boxShadow: '0 3px 8px rgba(0,0,0,0.07)',
             }}
           >
-            <Stack direction="row" justifyContent="space-between" gap={1}>
+            <Stack direction="row" justifyContent="space-between" gap={0.5}>
               {currentStep > 0 && (
                 <Button
                   loading={createShipmentMutation?.isPending}

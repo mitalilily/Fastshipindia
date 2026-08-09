@@ -40,21 +40,21 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
       disableGutters
       sx={{
         ...glassStyles,
-        borderRadius: compact ? 2 : glassStyles.borderRadius,
-        mb: compact ? 0.75 : glassStyles.mb,
-        boxShadow: compact ? `0 2px 8px ${alpha(BRAND_PRIMARY, 0.045)}` : glassStyles.boxShadow,
+        borderRadius: compact ? 1.2 : glassStyles.borderRadius,
+        mb: compact ? 0.45 : glassStyles.mb,
+        boxShadow: compact ? `0 1px 5px ${alpha(BRAND_PRIMARY, 0.035)}` : glassStyles.boxShadow,
       }}
     >
       <AccordionSummary
         expandIcon={<MdExpandMore color={BRAND_PRIMARY} />}
         sx={{
           backgroundColor: alpha(BRAND_PRIMARY, 0.03),
-          px: compact ? 1.2 : 2.5,
-          py: compact ? 0.45 : 1.5,
-          minHeight: compact ? 34 : undefined,
+          px: compact ? 0.9 : 2.5,
+          py: compact ? 0.2 : 1.5,
+          minHeight: compact ? 30 : undefined,
           transition: 'all 0.2s ease',
           '& .MuiAccordionSummary-content': {
-            my: compact ? 0.15 : undefined,
+            my: compact ? 0 : undefined,
           },
           '&:hover': {
             backgroundColor: alpha(BRAND_PRIMARY, 0.06),
@@ -68,21 +68,21 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
           },
         }}
       >
-        <Stack gap={0.5}>
+        <Stack gap={0.25}>
           <Typography
             fontWeight={700}
             display="flex"
             alignItems="center"
             sx={{
               color: '#17171A',
-              fontSize: compact ? { xs: '0.82rem', sm: '0.86rem' } : { xs: '0.95rem', sm: '1rem' },
+              fontSize: compact ? { xs: '0.76rem', sm: '0.8rem' } : { xs: '0.95rem', sm: '1rem' },
             }}
           >
-            {icon && <span style={{ marginRight: 8, display: 'flex', alignItems: 'center' }}>{icon}</span>}
+            {icon && <span style={{ marginRight: 6, display: 'flex', alignItems: 'center' }}>{icon}</span>}
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="caption" fontWeight={400} sx={{ color: '#6b6b6b', fontSize: '0.8rem' }}>
+            <Typography variant="caption" fontWeight={400} sx={{ color: '#6b6b6b', fontSize: compact ? '0.68rem' : '0.8rem' }}>
               {subtitle}
             </Typography>
           )}
@@ -90,8 +90,8 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
       </AccordionSummary>
       <AccordionDetails
         sx={{
-          px: compact ? 1.1 : 2.5,
-          py: compact ? 0.85 : 2.5,
+          px: compact ? 0.75 : 2.5,
+          py: compact ? 0.55 : 2.5,
           backgroundColor: '#FFFFFF',
         }}
       >

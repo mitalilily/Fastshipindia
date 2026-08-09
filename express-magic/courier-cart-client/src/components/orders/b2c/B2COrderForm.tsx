@@ -462,15 +462,15 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
   return (
     <FormProvider {...methods}>
       <Stack
-        gap={0.75}
+        gap={0.45}
         sx={{
           height: '100%',
           position: 'relative',
-          p: { xs: 0.45, sm: 0.55, md: 0.65 },
-          borderRadius: 2,
+          p: { xs: 0.25, sm: 0.3, md: 0.35 },
+          borderRadius: 1.4,
           border: `1px solid ${alpha(ACCENT, 0.14)}`,
           background: '#ffffff',
-          boxShadow: `0 12px 30px ${alpha(ACCENT, 0.08)}`,
+          boxShadow: `0 6px 16px ${alpha(ACCENT, 0.06)}`,
         }}
       >
         <Stack direction="row" sx={{ flex: 1, minHeight: 0, gap: 0 }}>
@@ -481,8 +481,8 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
             sx={{
               flex: 1,
               overflowY: 'auto',
-              p: { xs: 0.1, sm: 0.2, md: 0.3 },
-              pr: { xs: 0.4, sm: 0.65, md: 0.8 },
+              p: 0.05,
+              pr: { xs: 0.25, sm: 0.35, md: 0.45 },
               minHeight: 0,
               '&::-webkit-scrollbar': {
                 width: '8px',
@@ -499,24 +499,24 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
           >
             {/* Step content */}
             {currentStep === 0 && (
-              <Stack gap={0.75} mb={0.75}>
+              <Stack gap={0.45} mb={0.45}>
                 {/* Order Information */}
                 <Box>
-                  <Stack direction="row" alignItems="center" gap={0.6} sx={{ mb: 0.4 }}>
-                    <FaBox size={14} color={ACCENT} />
+                  <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
+                    <FaBox size={12} color={ACCENT} />
                     <Typography
                       variant="h6"
                       fontWeight={800}
-                      sx={{ color: TEXT_PRIMARY, fontSize: '0.86rem' }}
+                      sx={{ color: TEXT_PRIMARY, fontSize: '0.78rem' }}
                     >
                       Order Information
                     </Typography>
                   </Stack>
                   <Box
                     sx={{
-                      px: { xs: 0.75, md: 0.9 },
-                      py: 0.65,
-                      borderRadius: 2,
+                      px: { xs: 0.55, md: 0.65 },
+                      py: 0.45,
+                      borderRadius: 1.3,
                       border: `1px solid ${alpha(ACCENT, 0.1)}`,
                       background: '#f9f9f9',
                     }}
@@ -526,27 +526,27 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                 </Box>
 
                 {/* Main Content - 2 Column Grid Layout */}
-                <Grid container spacing={0.75}>
+                <Grid container spacing={0.45}>
                   {/* Left Column (8 cols) - Form Fields */}
                   <Grid size={{ xs: 12, xl: 8 }}>
-                    <Stack gap={0.75}>
+                    <Stack gap={0.45}>
                       {/* Recipient Details */}
                       <Box>
-                        <Stack direction="row" alignItems="center" gap={0.6} sx={{ mb: 0.4 }}>
-                          <FaUser size={14} color={ACCENT} />
+                        <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
+                          <FaUser size={12} color={ACCENT} />
                           <Typography
                             variant="subtitle1"
                             fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
+                            sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
                           >
                             Recipient Details
                           </Typography>
                         </Stack>
                         <Box
                           sx={{
-                            px: { xs: 0.75, md: 0.9 },
-                            py: 0.65,
-                            borderRadius: 2,
+                            px: { xs: 0.55, md: 0.65 },
+                            py: 0.45,
+                            borderRadius: 1.3,
                             border: `1px solid ${alpha(ACCENT, 0.1)}`,
                             background: '#f9f9f9',
                           }}
@@ -557,35 +557,35 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
 
                       {/* Shipment Details */}
                       <Box>
-                        <Stack direction="row" alignItems="center" gap={0.6} sx={{ mb: 0.4 }}>
-                          <FaBox size={14} color={ACCENT} />
+                        <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
+                          <FaBox size={12} color={ACCENT} />
                           <Typography
                             variant="subtitle1"
                             fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
+                            sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
                           >
                             Shipment Details
                           </Typography>
                         </Stack>
                         <Box
                           sx={{
-                            px: { xs: 0.75, md: 0.9 },
-                            py: 0.65,
-                            borderRadius: 2,
+                            px: { xs: 0.55, md: 0.65 },
+                            py: 0.45,
+                            borderRadius: 1.3,
                             border: `1px solid ${alpha(ACCENT, 0.1)}`,
                             background: '#f9f9f9',
                           }}
                         >
-                          <Stack spacing={0.7}>
+                          <Stack spacing={0.45}>
                             <Box>
                               <Typography
                                 variant="body2"
                                 fontWeight={700}
                                 sx={{
                                   color: TEXT_MUTED,
-                                  mb: 0.45,
+                                  mb: 0.25,
                                   display: 'block',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.7rem',
                                 }}
                               >
                                 Products
@@ -603,9 +603,9 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                                 fontWeight={700}
                                 sx={{
                                   color: TEXT_MUTED,
-                                  mb: 0.45,
+                                  mb: 0.25,
                                   display: 'block',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.7rem',
                                 }}
                               >
                                 Package Details
@@ -620,14 +620,14 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
 
                   {/* Right Column (4 cols) - Order Summary */}
                   <Grid size={{ xs: 12, xl: 4 }}>
-                    <Stack gap={0.75} sx={{ position: { xl: 'sticky' }, top: 4 }}>
+                    <Stack gap={0.45} sx={{ position: { xl: 'sticky' }, top: 2 }}>
                       <Box>
-                        <Stack direction="row" alignItems="center" gap={0.6} sx={{ mb: 0.4 }}>
-                          <BiRupee size={14} color={ACCENT} />
+                        <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
+                          <BiRupee size={12} color={ACCENT} />
                           <Typography
                             variant="subtitle1"
                             fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
+                            sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
                           >
                             Order Summary
                           </Typography>
@@ -636,11 +636,11 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                         {/* Charges Section */}
                         <Paper
                           sx={{
-                            p: 1,
-                            borderRadius: 2,
+                            p: 0.65,
+                            borderRadius: 1.3,
                             border: `1px solid ${alpha(ACCENT, 0.1)}`,
                             background: '#ffffff',
-                            mb: 0.75,
+                            mb: 0.45,
                           }}
                         >
                           <Typography
@@ -649,14 +649,14 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               color: TEXT_MUTED,
                               fontWeight: 700,
                               textTransform: 'uppercase',
-                              fontSize: '0.68rem',
+                              fontSize: '0.64rem',
                               display: 'block',
-                              mb: 0.7,
+                              mb: 0.45,
                             }}
                           >
                             Additional Charges
                           </Typography>
-                          <Grid container spacing={0.65}>
+                          <Grid container spacing={0.45}>
                             <Grid size={{ xs: 12, sm: 6 }}>
                               <Controller
                                 name="shippingCharges"
@@ -766,15 +766,15 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                         {/* Summary Section */}
                         <Paper
                           sx={{
-                            p: 1,
-                            borderRadius: 2,
+                            p: 0.65,
+                            borderRadius: 1.3,
                             border: `2px solid ${ACCENT}`,
                             background: alpha(ACCENT, 0.04),
                             overflow: 'hidden',
                           }}
                         >
-                          <Stack gap={0.65}>
-                            <Box sx={{ pb: 0.65, borderBottom: `1px solid ${alpha(ACCENT, 0.2)}` }}>
+                          <Stack gap={0.4}>
+                            <Box sx={{ pb: 0.4, borderBottom: `1px solid ${alpha(ACCENT, 0.2)}` }}>
                               <Stack
                                 direction="row"
                                 justifyContent="space-between"
@@ -782,13 +782,13 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               >
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}
+                                  sx={{ color: TEXT_MUTED, fontSize: '0.7rem' }}
                                 >
                                   Subtotal
                                 </Typography>
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.8rem' }}
+                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.74rem' }}
                                 >
                                   ₹{' '}
                                   {subtotal.toLocaleString('en-IN', {
@@ -807,13 +807,13 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               >
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}
+                                  sx={{ color: TEXT_MUTED, fontSize: '0.7rem' }}
                                 >
                                   Total Order Value
                                 </Typography>
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.8rem' }}
+                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.74rem' }}
                                 >
                                   ₹{' '}
                                   {totalOrderValue.toLocaleString('en-IN', {
@@ -826,15 +826,15 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
 
                             <Box
                               sx={{
-                                pt: 0.75,
-                                mt: 0.25,
+                                pt: 0.45,
+                                mt: 0.15,
                                 borderTop: `2px solid ${ACCENT}`,
                                 background: alpha(ACCENT, 0.08),
-                                px: 1.5,
-                                py: 0.75,
-                                borderRadius: 1.5,
-                                my: -0.5,
-                                mx: -0.5,
+                                px: 0.8,
+                                py: 0.5,
+                                borderRadius: 1,
+                                my: -0.3,
+                                mx: -0.3,
                               }}
                             >
                               <Stack
@@ -844,12 +844,12 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                               >
                                 <Typography
                                   variant="body2"
-                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.8rem' }}
+                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.72rem' }}
                                 >
                                   Amount Collectable
                                 </Typography>
                                 <Typography
-                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.9rem' }}
+                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.8rem' }}
                                 >
                                   ₹{' '}
                                   {totalCollectable.toLocaleString('en-IN', {
@@ -862,22 +862,22 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
                           </Stack>
                         </Paper>
 
-                        <Box sx={{ mt: 0.7 }}>
-                          <Stack direction="row" alignItems="center" gap={0.6} sx={{ mb: 0.4 }}>
-                            <FaTruck size={14} color={ACCENT} />
+                        <Box sx={{ mt: 0.45 }}>
+                          <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
+                            <FaTruck size={12} color={ACCENT} />
                             <Typography
                               variant="subtitle1"
                               fontWeight={700}
-                              sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
+                              sx={{ color: TEXT_PRIMARY, fontSize: '0.77rem' }}
                             >
                               Pickup Information
                             </Typography>
                           </Stack>
                           <Box
                             sx={{
-                              px: { xs: 0.75, md: 0.9 },
-                              py: 0.65,
-                              borderRadius: 2,
+                              px: { xs: 0.55, md: 0.65 },
+                              py: 0.45,
+                              borderRadius: 1.3,
                               border: `1px solid ${alpha(ACCENT, 0.1)}`,
                               background: '#f9f9f9',
                             }}
@@ -895,7 +895,7 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
             {currentStep === 1 && (
               <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded compact>
                 {errors.courierPartnerId && (
-                  <Alert severity="error" sx={{ mb: 2 }}>
+                <Alert severity="error" sx={{ mb: 0.7 }}>
                     {errors.courierPartnerId.message as string}
                   </Alert>
                 )}
@@ -908,25 +908,25 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
             {/* Sticky footer inside scroll */}
             <Box
               sx={{
-                py: 0.45,
-                px: { xs: 0.75, sm: 1 },
+                py: 0.25,
+                px: { xs: 0.55, sm: 0.75 },
                 background: '#ffffff',
                 border: `1px solid ${alpha(ACCENT, 0.16)}`,
-                borderRadius: '14px',
+                borderRadius: '10px',
                 position: 'sticky',
                 bottom: 0,
                 zIndex: 10,
-                mt: 0.65,
-                boxShadow: `0 10px 20px ${alpha(ACCENT, 0.08)}`,
+                mt: 0.35,
+                boxShadow: `0 6px 12px ${alpha(ACCENT, 0.06)}`,
               }}
             >
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
                 justifyContent="space-between"
                 alignItems={{ xs: 'stretch', sm: 'center' }}
-                gap={1}
+                gap={0.5}
               >
-                <Typography variant="body2" sx={{ color: TEXT_MUTED, fontWeight: 600 }}>
+                <Typography variant="body2" sx={{ color: TEXT_MUTED, fontWeight: 600, fontSize: '0.74rem' }}>
                   {steps[currentStep]}
                 </Typography>
                 {currentStep > 0 && (

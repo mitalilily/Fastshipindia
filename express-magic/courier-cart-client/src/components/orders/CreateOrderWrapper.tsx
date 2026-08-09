@@ -59,8 +59,8 @@ const CreateOrderWrapper = () => {
     <Container
       maxWidth={false}
       sx={{
-        px: { xs: 1, md: 1.5 },
-        py: 2,
+        px: { xs: 0.6, md: 1 },
+        py: { xs: 0.6, md: 0.8 },
         bgcolor: '#f4f7fb',
         minHeight: 'calc(100dvh - 68px)',
       }}
@@ -69,37 +69,37 @@ const CreateOrderWrapper = () => {
         direction={{ xs: 'column', md: 'row' }}
         alignItems={{ xs: 'stretch', md: 'center' }}
         justifyContent="space-between"
-        gap={1.4}
+        gap={0.8}
         sx={{
-          mb: 2,
-          px: { xs: 1.2, md: 2 },
-          py: 1.4,
+          mb: 0.7,
+          px: { xs: 0.8, md: 1.2 },
+          py: 0.65,
           border: '1px solid #E2E8F0',
-          borderRadius: 2,
+          borderRadius: 1.5,
           bgcolor: '#fff',
         }}
       >
-        <Stack direction="row" alignItems="center" gap={1.4}>
+        <Stack direction="row" alignItems="center" gap={0.8}>
           <Button
             onClick={() => navigate('/orders/new')}
             sx={{
-              minWidth: 36,
-              width: 36,
-              height: 36,
+              minWidth: 30,
+              width: 30,
+              height: 30,
               borderRadius: '50%',
               color: '#071d33',
               px: 0,
-              fontSize: 24,
+              fontSize: 20,
               '&:hover': { bgcolor: '#eef4f8' },
             }}
           >
             &lt;
           </Button>
-          <Typography sx={{ color: '#071d33', fontSize: 20, fontWeight: 900 }}>
+          <Typography sx={{ color: '#071d33', fontSize: { xs: 16, md: 17 }, fontWeight: 900 }}>
             Add {activeTab.toUpperCase()} Order
           </Typography>
         </Stack>
-        <Stack direction="row" gap={1} justifyContent="flex-end" flexWrap="wrap">
+        <Stack direction="row" gap={0.6} justifyContent="flex-end" flexWrap="wrap">
           <Button onClick={() => navigate('/orders/new')} sx={{ ...createTopButtonSx, bgcolor: '#cceaf3', color: '#007197' }}>
             Dismiss
           </Button>
@@ -110,7 +110,7 @@ const CreateOrderWrapper = () => {
         </Stack>
       </Stack>
 
-      <Stack direction="row" gap={1.2} flexWrap="wrap" sx={{ mb: 2 }}>
+      <Stack direction="row" gap={0.6} flexWrap="wrap" sx={{ mb: 0.7 }}>
         <SegmentControl
           items={[
             { label: 'B2C Order', value: 'b2c' },
@@ -134,20 +134,53 @@ const CreateOrderWrapper = () => {
           flex: 1,
           bgcolor: '#FFFFFF',
           border: '1px solid #E2E8F0',
-          borderRadius: { xs: 1.5, sm: 2 },
+          borderRadius: { xs: 1.2, sm: 1.5 },
           boxShadow: '0 1px 6px rgba(0,0,0,0.05)',
-          p: { xs: 0.65, sm: 0.75, md: 0.85 },
-          minHeight: { xs: 'calc(100dvh - 210px)', md: 'calc(100dvh - 212px)' },
-          height: { md: 'calc(100dvh - 212px)' },
+          p: { xs: 0.35, sm: 0.4, md: 0.45 },
+          minHeight: { xs: 'calc(100dvh - 170px)', md: 'calc(100dvh - 156px)' },
+          height: { md: 'calc(100dvh - 156px)' },
           overflow: 'hidden',
+          '& .MuiInputBase-root': {
+            minHeight: 32,
+            fontSize: '0.78rem',
+          },
+          '& .MuiInputBase-input, & .MuiSelect-select': {
+            py: '6px',
+            px: '10px',
+          },
+          '& .MuiFormLabel-root, & .MuiInputLabel-root': {
+            fontSize: '0.76rem',
+          },
+          '& .MuiFormHelperText-root': {
+            mt: 0.25,
+            fontSize: '0.68rem',
+            lineHeight: 1.2,
+          },
+          '& .MuiButton-root': {
+            minHeight: 30,
+            fontSize: '0.76rem',
+            lineHeight: 1.2,
+          },
+          '& .MuiAccordionSummary-root': {
+            minHeight: '30px !important',
+          },
+          '& .MuiAccordionSummary-content': {
+            my: '3px !important',
+          },
+          '& .MuiAccordionDetails-root': {
+            py: '6px',
+          },
+          '& .MuiGrid-root': {
+            rowGap: '6px',
+          },
         }}
       >
         <Box sx={{ height: '100%', minHeight: 0 }}>
           {activeTab === 'b2c' ? (
-            <Stack sx={{ height: '100%', minHeight: 0 }} spacing={1}>
+            <Stack sx={{ height: '100%', minHeight: 0 }} spacing={0.45}>
               {pickupMode === 'forward' ? (
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Stack direction="row" spacing={1}>
+                  <Stack direction="row" spacing={0.6}>
                     <Button
                       variant="contained"
                       onClick={() => setPickupMode('forward')}
@@ -155,7 +188,8 @@ const CreateOrderWrapper = () => {
                         textTransform: 'none',
                         fontWeight: 700,
                         borderRadius: 999,
-                        px: 2,
+                        px: 1.4,
+                        py: 0.35,
                         boxShadow: 'none',
                       }}
                     >
@@ -170,7 +204,8 @@ const CreateOrderWrapper = () => {
                           textTransform: 'none',
                           fontWeight: 700,
                           borderRadius: 999,
-                          px: 2,
+                          px: 1.4,
+                          py: 0.35,
                         }}
                       >
                         Reverse Pickup
@@ -210,7 +245,7 @@ function SegmentControl({
   onChange: (value: string) => void
 }) {
   return (
-    <Stack direction="row" sx={{ border: '1px solid #D7E1EC', bgcolor: '#fff', borderRadius: '11px', p: 0.35 }}>
+    <Stack direction="row" sx={{ border: '1px solid #D7E1EC', bgcolor: '#fff', borderRadius: '9px', p: 0.22 }}>
       {items.map((item) => {
         const selected = item.value === value
         return (
@@ -218,12 +253,15 @@ function SegmentControl({
             key={item.value}
             onClick={() => onChange(item.value)}
             sx={{
-              minWidth: 96,
-              borderRadius: '10px',
+              minWidth: { xs: 82, sm: 90 },
+              minHeight: 30,
+              borderRadius: '8px',
               color: selected ? '#fff' : '#071d33',
               bgcolor: selected ? '#0789ad' : 'transparent',
               textTransform: 'none',
               fontWeight: 800,
+              fontSize: '0.76rem',
+              py: 0.35,
               '&:hover': { bgcolor: selected ? '#0789ad' : '#eef4f8' },
             }}
           >
@@ -236,11 +274,13 @@ function SegmentControl({
 }
 
 const createTopButtonSx = {
-  height: 40,
-  px: 2,
-  borderRadius: '10px',
+  height: 32,
+  minHeight: 32,
+  px: 1.35,
+  borderRadius: '8px',
   textTransform: 'none',
   fontWeight: 900,
+  fontSize: '0.78rem',
   boxShadow: 'none',
   '&:hover': { opacity: 0.92 },
 }
