@@ -1,6 +1,10 @@
 import {
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   MenuItem,
@@ -10,8 +14,9 @@ import {
 } from '@mui/material'
 import type { JSX } from 'react'
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  TbArrowLeft,
   TbCalendar,
   TbChevronDown,
   TbDownload,
@@ -22,6 +27,7 @@ import {
   TbSettings,
   TbSquareRoundedPlusFilled,
   TbTruckDelivery,
+  TbUpload,
   TbWallet,
 } from 'react-icons/tb'
 
@@ -72,6 +78,8 @@ const summaryCards = [
 ]
 
 type OrderScope = 'All' | 'Archive'
+type BulkImportStep = 'choice' | 'b2b' | 'b2c'
+type CreateOrderType = 'b2b' | 'b2c'
 
 type ShipmozoOrder = {
   orderDate: string
@@ -665,17 +673,25 @@ function OrdersTable({ activeStatus, activeScope }: { activeStatus: string; acti
   )
 }
 
-function OrderActions() {
+function OrderActions({
+  onBulkImport,
+  onAddOrder,
+  onCreateMenu,
+}: {
+  onBulkImport: () => void
+  onAddOrder: () => void
+  onCreateMenu: () => void
+}) {
   return (
     <Stack direction="row" gap={1} justifyContent="flex-end" flexWrap="wrap">
       <Button startIcon={<TbRotateClockwise size={18} />} sx={{ ...actionButtonSx, bgcolor: navy }}>
         Sync Orders
       </Button>
-      <Button sx={actionButtonSx}>Bulk Import</Button>
-      <Button startIcon={<TbSquareRoundedPlusFilled size={20} />} sx={actionButtonSx}>
+      <Button onClick={onBulkImport} sx={actionButtonSx}>Bulk Import</Button>
+      <Button onClick={onAddOrder} startIcon={<TbSquareRoundedPlusFilled size={20} />} sx={actionButtonSx}>
         Add Order
       </Button>
-      <IconButton sx={{ width: 40, height: 40, bgcolor: teal, color: '#fff', '&:hover': { bgcolor: '#057798' } }}>
+      <IconButton onClick={onCreateMenu} sx={{ width: 40, height: 40, bgcolor: teal, color: '#fff', '&:hover': { bgcolor: '#057798' } }}>
         <TbChevronDown />
       </IconButton>
     </Stack>
@@ -696,6 +712,9 @@ const actionButtonSx = {
 
 export function ShipmozoOrdersPanel() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [bulkImportStep, setBulkImportStep] = useState<BulkImportStep | null>(null)
+  const [createChooserOpen, setCreateChooserOpen] = useState(false)
   const statusParam = searchParams.get('status') ?? 'New'
   const scopeParam = searchParams.get('view') ?? 'All'
   const allStatuses = [...tabGroups.flatMap((group) => group.tabs), ...summaryCards.map((card) => card.status)]
@@ -708,11 +727,20 @@ export function ShipmozoOrdersPanel() {
     setSearchParams(next)
   }
 
+  const goToCreateOrder = (type: CreateOrderType) => {
+    setCreateChooserOpen(false)
+    navigate(`/orders/create?type=${type}&shipment=domestic`)
+  }
+
   return (
     <Box sx={{ bgcolor: page, minHeight: 'calc(100dvh - 68px)', px: { xs: 1, md: 1.5 }, py: 2 }}>
       <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" gap={2} sx={{ mb: 2 }}>
         <SegmentTabs />
-        <OrderActions />
+        <OrderActions
+          onBulkImport={() => setBulkImportStep('choice')}
+          onAddOrder={() => goToCreateOrder('b2c')}
+          onCreateMenu={() => setCreateChooserOpen(true)}
+        />
       </Stack>
       <Box sx={{ mb: 2.1 }}>
         <FilterGroups
@@ -723,8 +751,176 @@ export function ShipmozoOrdersPanel() {
         />
       </Box>
       <OrdersTable activeStatus={activeStatus} activeScope={activeScope} />
+      <BulkImportDialog step={bulkImportStep} onStepChange={setBulkImportStep} onClose={() => setBulkImportStep(null)} />
+      <CreateOrderDialog
+        open={createChooserOpen}
+        onClose={() => setCreateChooserOpen(false)}
+        onSelect={goToCreateOrder}
+      />
     </Box>
   )
+}
+
+function CreateOrderDialog({
+  open,
+  onClose,
+  onSelect,
+}: {
+  open: boolean
+  onClose: () => void
+  onSelect: (type: CreateOrderType) => void
+}) {
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle sx={dialogTitleSx}>
+        Add Order
+        <IconButton aria-label="Close add order dialog" onClick={onClose} sx={dialogCloseSx}>
+          x
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ pt: 6, pb: 5, textAlign: 'center' }}>
+        <Stack direction="row" justifyContent="center" gap={2} flexWrap="wrap">
+          <Button onClick={() => onSelect('b2b')} sx={dialogPrimaryButtonSx}>B2B Order</Button>
+          <Button onClick={() => onSelect('b2c')} sx={dialogPrimaryButtonSx}>B2C Order</Button>
+        </Stack>
+        <Typography sx={{ mt: 3, color: '#44546a', fontSize: 14 }}>
+          Select which type of order you want to create.
+        </Typography>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function BulkImportDialog({
+  step,
+  onStepChange,
+  onClose,
+}: {
+  step: BulkImportStep | null
+  onStepChange: (step: BulkImportStep | null) => void
+  onClose: () => void
+}) {
+  const [fileName, setFileName] = useState('')
+  const isUploadStep = step === 'b2b' || step === 'b2c'
+  const uploadTitle = step === 'b2b' ? 'B2B Bulk order upload by Excel' : 'B2C Bulk order upload by csv'
+  const sampleName = step === 'b2b' ? 'b2b-bulk-order-sample.xlsx' : 'b2c-bulk-order-sample.csv'
+  const sampleMime = step === 'b2b' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv'
+  const sampleHref = `data:${sampleMime};charset=utf-8,${encodeURIComponent('Download this sample and replace rows with your order data.')}`
+
+  const resetAndClose = () => {
+    setFileName('')
+    onClose()
+  }
+
+  return (
+    <Dialog open={Boolean(step)} onClose={resetAndClose} fullWidth maxWidth="sm">
+      <DialogTitle sx={dialogTitleSx}>
+        {isUploadStep ? uploadTitle : 'Bulk Import'}
+        <IconButton aria-label="Close bulk import dialog" onClick={resetAndClose} sx={dialogCloseSx}>
+          x
+        </IconButton>
+      </DialogTitle>
+      {isUploadStep ? (
+        <>
+          <DialogContent sx={{ pt: 2.4, pb: 2.2 }}>
+            <Typography sx={{ mb: 1, color: '#344256', fontWeight: 700, fontSize: 14 }}>
+              Upload File (Maximum limit 1000)
+            </Typography>
+            <Button
+              component="label"
+              fullWidth
+              endIcon={<TbUpload size={24} />}
+              sx={{
+                height: 52,
+                justifyContent: 'space-between',
+                border: `1.5px solid ${teal}`,
+                borderRadius: '11px',
+                color: fileName ? ink : '#718096',
+                bgcolor: '#fff',
+                textTransform: 'none',
+                fontWeight: fileName ? 800 : 500,
+                px: 1.8,
+                '&:hover': { bgcolor: '#f8fbfd', borderColor: teal },
+              }}
+            >
+              {fileName || 'Select file'}
+              <Box
+                component="input"
+                hidden
+                type="file"
+                accept={step === 'b2b' ? '.xls,.xlsx' : '.csv'}
+                onChange={(event) => setFileName(event.currentTarget.files?.[0]?.name || '')}
+              />
+            </Button>
+            <Typography sx={{ mt: 0.7, color: '#344256', fontSize: 13 }}>Max file size: 5MB</Typography>
+            <Button
+              component="a"
+              href={sampleHref}
+              download={sampleName}
+              sx={{ mt: 1, px: 0, minHeight: 0, color: '#165dff', fontWeight: 800, textTransform: 'none' }}
+            >
+              Download Sample File
+            </Button>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 2, borderTop: `1px solid ${border}` }}>
+            <Button onClick={() => { setFileName(''); onStepChange('choice') }} sx={backButtonSx}>
+              <TbArrowLeft size={20} />
+            </Button>
+            <Button onClick={resetAndClose} sx={dialogPrimaryButtonSx}>Save</Button>
+          </DialogActions>
+        </>
+      ) : (
+        <DialogContent sx={{ pt: 5.4, pb: 4.4, textAlign: 'center' }}>
+          <Stack direction="row" justifyContent="center" gap={2} flexWrap="wrap">
+            <Button onClick={() => onStepChange('b2b')} sx={dialogPrimaryButtonSx}>B2B Order</Button>
+            <Button onClick={() => onStepChange('b2c')} sx={dialogPrimaryButtonSx}>B2C Order</Button>
+          </Stack>
+          <Typography sx={{ mt: 3, color: '#44546a', fontSize: 14 }}>
+            Please select which type of orders you want to upload
+          </Typography>
+        </DialogContent>
+      )}
+    </Dialog>
+  )
+}
+
+const dialogTitleSx = {
+  minHeight: 70,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  borderBottom: `1px solid ${border}`,
+  color: '#2d3748',
+  fontWeight: 900,
+  fontSize: 20,
+}
+
+const dialogCloseSx = {
+  color: '#7186a6',
+  fontSize: 24,
+  fontWeight: 300,
+}
+
+const dialogPrimaryButtonSx = {
+  minWidth: 108,
+  height: 40,
+  px: 2,
+  borderRadius: '10px',
+  bgcolor: teal,
+  color: '#fff',
+  textTransform: 'none',
+  fontWeight: 900,
+  '&:hover': { bgcolor: '#057798' },
+}
+
+const backButtonSx = {
+  minWidth: 48,
+  width: 48,
+  height: 38,
+  borderRadius: '10px',
+  bgcolor: '#cceaf3',
+  color: teal,
+  '&:hover': { bgcolor: '#b9e1ed' },
 }
 
 function OrderTextCell({ text, strongFirst = false, strongLast = false }: { text: string; strongFirst?: boolean; strongLast?: boolean }) {

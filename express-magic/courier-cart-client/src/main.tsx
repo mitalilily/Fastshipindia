@@ -14,6 +14,7 @@ const CHUNK_RELOAD_KEY = "__chunk_reload_attempted__";
 const HASH_ROUTE_PATHS = new Set([
   "/dashboard",
   "/orders/new",
+  "/orders/add",
   "/orders/list",
   "/orders/create",
   "/orders/b2c/list",

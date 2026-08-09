@@ -46,7 +46,6 @@ interface NavbarProps {
 
 const BRAND_SURFACE = BRAND.colors.paper
 const BRAND_TEXT = BRAND.colors.ink
-const BRAND_PRIMARY = BRAND.colors.teal
 const SHIPMOZO_BLUE = '#0789ad'
 const SHIPMOZO_NAVY = '#313456'
 
@@ -104,8 +103,8 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
           py: 0,
           borderRadius: 0,
           background: BRAND_SURFACE,
-          borderBottom: `1px solid ${alpha(BRAND_PRIMARY, 0.1)}`,
-          boxShadow: '0 2px 4px rgba(15, 23, 42, 0.08)',
+          borderBottom: 'none',
+          boxShadow: 'none',
           minHeight: { xs: 56, md: 68 },
           transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
@@ -175,6 +174,7 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
               border: '1px solid #d5dce6',
               borderRadius: '25px',
               overflow: 'hidden',
+              boxSizing: 'border-box',
               bgcolor: '#fff',
               ml: { md: 1.5, lg: 3 },
             }}

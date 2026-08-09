@@ -308,7 +308,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       // Call the mutation
       createShipmentMutation.mutate(payload, {
         onSuccess: () => {
-          if (location.pathname === '/orders/create') {
+          if (location.pathname === '/orders/create' || location.pathname === '/orders/add') {
             navigate('/orders/list?status=pending')
           }
         },

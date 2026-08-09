@@ -266,6 +266,14 @@ export default function AppRoutes() {
                 </RequireMerchantReady>
               }
             />
+            <Route
+              path="/orders/add"
+              element={
+                <RequireMerchantReady>
+                  <CreateOrderWrapper />
+                </RequireMerchantReady>
+              }
+            />
             <Route path="/orders/b2c/list" element={<B2COrdersList />} />
             <Route path="/support/about_us" element={<AboutUs />} />
             <Route path="/orders/b2b/list" element={<B2bOrders />} />
