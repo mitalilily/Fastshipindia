@@ -81,7 +81,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
               Wallet
             </Typography>
           ) : null}
-          {isLoading || walletBalance === null ? (
+          {!compactLabel && (isLoading || walletBalance === null) ? (
             <Skeleton variant="text" width={70} height={20} sx={{ bgcolor: alpha(INK, 0.08) }} />
           ) : (
             <Typography
@@ -92,7 +92,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
                 letterSpacing: '-0.02em',
               }}
             >
-              {compactLabel || `INR ${walletBalance?.toLocaleString('en-IN')}`}
+              {compactLabel ?? `INR ${Number(walletBalance ?? 0).toLocaleString('en-IN')}`}
             </Typography>
           )}
         </Stack>
