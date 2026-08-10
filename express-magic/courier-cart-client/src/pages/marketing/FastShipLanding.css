@@ -471,14 +471,14 @@ footer::after {
   .home-stack-card > .final-cta { min-height:calc(100svh - 66px); }
 }
 
-/* Landing-only colour lift: brighter section rhythm without changing layout or product screens. */
+/* Landing-only colour balance: restrained brand tones with one warm accent. */
 .home-stack {
-  --landing-orange:#f36b21;
-  --landing-orange-deep:#d95312;
-  --landing-blue:#155dc7;
-  --landing-sky:#dff1ff;
-  --landing-teal:#079b72;
-  --landing-lime:#c9ef72;
+  --landing-orange:#b95326;
+  --landing-orange-deep:#913d1e;
+  --landing-blue:#315f78;
+  --landing-sky:#e4ecef;
+  --landing-teal:#3b7869;
+  --landing-lime:#cddcae;
 }
 
 .home-stack .eyebrow { color:var(--landing-blue); }
@@ -486,119 +486,119 @@ footer::after {
 .home-stack h2 em { color:var(--landing-orange); }
 .home-stack .button-coral {
   color:#fff;
-  background:linear-gradient(135deg,#ff8242,var(--landing-orange-deep));
-  box-shadow:0 13px 28px rgba(243,107,33,.25);
+  background:var(--landing-orange);
+  box-shadow:0 11px 24px rgba(185,83,38,.2);
 }
-.home-stack .button-coral:hover { background:linear-gradient(135deg,var(--landing-orange),#bd430d); }
+.home-stack .button-coral:hover { background:var(--landing-orange-deep); }
 .home-stack .hero-proof svg { color:var(--landing-orange); }
-.home-stack .hero-marquee { background:linear-gradient(90deg,#072f42,#104e69 58%,#0c695a); }
+.home-stack .hero-marquee { background:#123b4a; }
 .home-stack .marquee-track i { background:var(--landing-orange); box-shadow:0 0 0 5px rgba(243,107,33,.13); }
 
 .home-stack .manifesto {
-  background-color:#fff6eb;
+  background-color:#f5efe7;
   background-image:
-    repeating-linear-gradient(120deg,rgba(243,107,33,.055) 0 1px,transparent 1px 30px),
-    radial-gradient(ellipse at 82% 18%,rgba(255,190,128,.46),transparent 45%),
-    linear-gradient(135deg,#fffaf4,#fff0df);
+    repeating-linear-gradient(120deg,rgba(121,92,69,.04) 0 1px,transparent 1px 30px),
+    radial-gradient(ellipse at 82% 18%,rgba(218,191,163,.28),transparent 45%),
+    linear-gradient(135deg,#f8f4ed,#f2e9df);
 }
 
 .home-stack .feature-section {
   background-color:var(--landing-sky);
   background-image:
-    radial-gradient(circle,rgba(21,93,199,.13) 1px,transparent 1.5px),
-    linear-gradient(135deg,#e6f5ff 0%,#d9e9ff 50%,#e9e2ff 100%);
+    radial-gradient(circle,rgba(49,95,120,.09) 1px,transparent 1.5px),
+    linear-gradient(135deg,#eaf0f1 0%,#e2e9ec 55%,#e9eeeb 100%);
 }
 .home-stack .feature-card { border-color:rgba(8,42,61,.13); box-shadow:0 14px 32px rgba(24,75,112,.08); }
-.home-stack .feature-card.tone-blue { background:linear-gradient(145deg,#cce8ff,#b9d9ff); }
-.home-stack .feature-card.tone-coral { background:linear-gradient(145deg,#ffd8c7,#ffc1a8); }
-.home-stack .feature-card.tone-lime { background:linear-gradient(145deg,#e7f8aa,#cfef78); }
+.home-stack .feature-card.tone-blue { background:#dce8ed; }
+.home-stack .feature-card.tone-coral { background:#efe1d7; }
+.home-stack .feature-card.tone-lime { background:#e4ead8; }
 .home-stack .feature-card .card-top svg { color:var(--landing-blue); }
 .home-stack .feature-card.tone-coral .card-top svg { color:var(--landing-orange-deep); }
 .home-stack .feature-card.tone-lime .card-top svg { color:#377c2c; }
 
 .home-stack .feature-showcase {
-  background-color:#e1f8ef;
+  background-color:#e1ebe6;
   background-image:
-    repeating-linear-gradient(90deg,rgba(7,155,114,.065) 0 1px,transparent 1px 52px),
-    repeating-linear-gradient(0deg,rgba(21,93,199,.05) 0 1px,transparent 1px 52px),
-    linear-gradient(135deg,#dff8ef,#dceeff 76%);
+    repeating-linear-gradient(90deg,rgba(59,120,105,.045) 0 1px,transparent 1px 52px),
+    repeating-linear-gradient(0deg,rgba(49,95,120,.04) 0 1px,transparent 1px 52px),
+    linear-gradient(135deg,#e2ebe6,#e2eaed 76%);
 }
-.home-stack .showcase-note { background:linear-gradient(145deg,#fff2df,#ffd9bd); }
+.home-stack .showcase-note { background:#eee4da; }
 .home-stack .note-symbol { background:var(--landing-orange); }
 .home-stack .showcase-photo img,
 .home-stack .gallery-item img,
 .home-stack .story-image img,
-.home-stack .drawer-photo img { filter:saturate(1.06) contrast(1.055); }
+.home-stack .drawer-photo img { filter:saturate(.96) contrast(1.045); }
 
 .home-stack .campaign-section {
-  background-color:#fff8ec;
+  background-color:#f3f1eb;
   background-image:
-    repeating-linear-gradient(135deg,rgba(21,93,199,.065) 0 2px,transparent 2px 34px),
-    linear-gradient(120deg,#fffaf3,#ecf7ff 48%,#e5f8e9);
+    repeating-linear-gradient(135deg,rgba(49,95,120,.045) 0 2px,transparent 2px 34px),
+    linear-gradient(120deg,#f6f3ed,#e9eff1 52%,#e7eee8);
 }
-.home-stack .campaign-card.tone-blue { background:linear-gradient(145deg,#c9e7ff,#acd5ff); }
-.home-stack .campaign-card.tone-coral { background:linear-gradient(145deg,#ffe0cb,#ffc19c); }
-.home-stack .campaign-card.tone-lime { background:linear-gradient(145deg,#e8f8ae,#cdec74); }
-.home-stack .campaign-card.tone-green { background:linear-gradient(145deg,#c9f1dc,#a8e5c7); }
+.home-stack .campaign-card.tone-blue { background:#d9e5ea; }
+.home-stack .campaign-card.tone-coral { background:#eee0d6; }
+.home-stack .campaign-card.tone-lime { background:#e3ead4; }
+.home-stack .campaign-card.tone-green { background:#d9e8e0; }
 .home-stack .campaign-card { border-color:rgba(8,42,61,.12); box-shadow:0 13px 28px rgba(8,42,61,.07); }
 
 .home-stack .visual-gallery {
   color:#f7fffb;
-  background-color:#07384a;
+  background-color:#183e49;
   background-image:
-    radial-gradient(circle at center,rgba(201,239,114,.16) 1px,transparent 1.7px),
-    linear-gradient(145deg,#062f43,#0b5860 58%,#087357);
+    radial-gradient(circle at center,rgba(205,220,174,.1) 1px,transparent 1.7px),
+    linear-gradient(145deg,#173946,#214c54 62%,#2e5d51);
 }
 .home-stack .visual-gallery h2 { color:#fff; }
 .home-stack .visual-gallery h2 em { color:var(--landing-lime); }
-.home-stack .visual-gallery .eyebrow { color:#9de5ff; }
-.home-stack .visual-gallery .button { color:#082a3d; background:var(--landing-lime); box-shadow:0 13px 28px rgba(0,0,0,.2); }
+.home-stack .visual-gallery .eyebrow { color:#b9d5df; }
+.home-stack .visual-gallery .button { color:#fff; background:var(--landing-orange); box-shadow:0 12px 25px rgba(0,0,0,.18); }
 .home-stack .gallery-item { border:1px solid rgba(255,255,255,.19); box-shadow:0 16px 34px rgba(0,0,0,.19); }
 
 .home-stack .workbench {
-  background-color:#e4f7ff;
+  background-color:#e5edeb;
   background-image:
-    linear-gradient(90deg,rgba(21,93,199,.06) 1px,transparent 1px),
-    linear-gradient(rgba(7,155,114,.055) 1px,transparent 1px),
-    linear-gradient(135deg,#e5f5ff,#e8f9ef 55%,#fff2df);
+    linear-gradient(90deg,rgba(49,95,120,.045) 1px,transparent 1px),
+    linear-gradient(rgba(59,120,105,.04) 1px,transparent 1px),
+    linear-gradient(135deg,#e7eeed,#e3ebe7 58%,#eee8e1);
 }
 .home-stack .planner-panel,
 .home-stack .drawer-panel { background:rgba(255,255,255,.9); border-color:rgba(21,93,199,.14); box-shadow:0 18px 42px rgba(19,76,115,.11); }
-.home-stack .mode-switch { background:#dcecff; }
+.home-stack .mode-switch { background:#dfe7e9; }
 .home-stack .mode-switch button.active,
 .home-stack .planner-ad a { background:var(--landing-orange); }
-.home-stack .planner-ad { background:linear-gradient(135deg,#e8f7c1,#d6f2b2); }
-.home-stack .drawer-list article.open { background:#fff0e4; }
+.home-stack .planner-ad { background:#e2ead7; }
+.home-stack .drawer-list article.open { background:#eee4dc; }
 
 .home-stack .image-story {
-  background-color:#fff2e7;
+  background-color:#f2ebe4;
   background-image:
-    repeating-linear-gradient(45deg,rgba(243,107,33,.06) 0 1px,transparent 1px 42px),
-    linear-gradient(120deg,#fff8f1,#ffe7d7 52%,#e7f5ff);
+    repeating-linear-gradient(45deg,rgba(121,92,69,.045) 0 1px,transparent 1px 42px),
+    linear-gradient(120deg,#f5f0ea,#eee4dc 58%,#e7edef);
 }
 .home-stack .stat-line { border-left-color:var(--landing-orange); }
 
 .home-stack .home-steps {
-  background-color:#e5f4ff;
+  background-color:#e6ecee;
   background-image:
-    repeating-linear-gradient(45deg,rgba(255,255,255,.34) 0 1px,transparent 1px 42px),
-    linear-gradient(120deg,#e8f6ff,#dfe9ff 50%,#e6f7ea);
+    repeating-linear-gradient(45deg,rgba(255,255,255,.24) 0 1px,transparent 1px 42px),
+    linear-gradient(120deg,#e9eef0,#e2e8eb 54%,#e5ece7);
 }
-.home-stack .step-grid > div:nth-child(1) { background:rgba(198,229,255,.72); }
-.home-stack .step-grid > div:nth-child(2) { background:rgba(255,218,196,.72); }
-.home-stack .step-grid > div:nth-child(3) { background:rgba(219,243,159,.68); }
+.home-stack .step-grid > div:nth-child(1) { background:rgba(217,229,234,.78); }
+.home-stack .step-grid > div:nth-child(2) { background:rgba(238,224,214,.78); }
+.home-stack .step-grid > div:nth-child(3) { background:rgba(226,234,215,.78); }
 
 .home-stack .shipping-stories {
-  background:linear-gradient(135deg,#fffdf8 0%,#f1f9ff 50%,#edfaef 100%);
+  background:linear-gradient(135deg,#f6f3ed 0%,#eaf0f1 54%,#e8eeea 100%);
 }
-.home-stack .shipping-story-card.story-tone-mint { background:linear-gradient(145deg,#c9f4dc,#aeeacb); }
-.home-stack .shipping-story-card.story-tone-sky { background:linear-gradient(145deg,#d9efff,#bddfff); }
-.home-stack .shipping-story-card.story-tone-orange { background:linear-gradient(145deg,#ffd79a,#ffbd71); }
+.home-stack .shipping-story-card.story-tone-mint { background:#dce9e1; }
+.home-stack .shipping-story-card.story-tone-sky { background:#dce7eb; }
+.home-stack .shipping-story-card.story-tone-orange { background:#eadccf; }
 .home-stack .shipping-story-controls button:last-child { background:var(--landing-lime); }
 
-.home-stack .quote-band { background:linear-gradient(120deg,#062e45,#104d76 55%,#09624f); }
+.home-stack .quote-band { background:linear-gradient(120deg,#153845,#234b59 62%,#315b51); }
 .home-stack .quote-mark { color:var(--landing-lime); }
-.home-stack .final-cta { background:linear-gradient(120deg,#ff8b4c,var(--landing-orange) 55%,#de4e14); }
+.home-stack .final-cta { background:#b95326; }
 .home-stack .final-cta .eyebrow,
 .home-stack .final-cta h2,
 .home-stack .final-cta h2 em { color:#fff; }
