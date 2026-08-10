@@ -1,7 +1,6 @@
 import { Box, Typography } from '@mui/material'
 import React from 'react'
 import './loader.css'
-import Logo from '/favicon.jpg'
 import { brandIdentity } from '../../../theme/brand'
 
 type Props = {
@@ -13,7 +12,7 @@ const FullScreenLoader: React.FC<Props> = ({ night = false }) => {
     <Box className={`loader-overlay ${night ? 'night' : ''}`}>
       <Box className="loader-content">
         <div className="logo-container">
-          <img src={Logo} alt={brandIdentity.name} className="loader-logo" />
+          <img src={brandIdentity.logoSrc} alt={brandIdentity.name} className="loader-logo" />
         </div>
         <Typography
           sx={{

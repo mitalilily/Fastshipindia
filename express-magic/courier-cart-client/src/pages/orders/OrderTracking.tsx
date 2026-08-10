@@ -312,7 +312,7 @@ function CtaSection() {
             </Box>
           </Typography>
           <Typography sx={{ color: alpha('#fff', 0.62), fontSize: { xs: '1.05rem', md: '1.18rem' }, lineHeight: 1.6, maxWidth: 660 }}>
-            Sign up for the Ship Aggregator dashboard and get a unified tracking view for every order, every courier.
+            Sign up for the FastShip dashboard and get a unified tracking view for every order, every courier.
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.4} sx={{ width: { xs: '100%', sm: 'auto' }, pt: 1 }}>
             <Button component={RouterLink} to="/signup" variant="contained" endIcon={<FiArrowRight />} sx={{ minHeight: 64, px: 4.6, borderRadius: '12px', bgcolor: orange, fontSize: '1rem', fontWeight: 900, boxShadow: '0 16px 34px rgba(249, 115, 22, 0.32)', '&:hover': { bgcolor: '#ea580c' } }}>

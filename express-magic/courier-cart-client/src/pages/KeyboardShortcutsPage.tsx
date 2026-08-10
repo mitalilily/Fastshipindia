@@ -90,7 +90,7 @@ export default function KeyboardShortcutsPage() {
       <PageHeading
         eyebrow="Workspace Tools"
         title="Keyboard Shortcuts"
-        subtitle="Speed up the Ship Aggregator workspace with quick navigation and booking shortcuts."
+        subtitle="Speed up the FastShip workspace with quick navigation and booking shortcuts."
       />
 
       <Grid container spacing={3} sx={{ mt: 1 }}>

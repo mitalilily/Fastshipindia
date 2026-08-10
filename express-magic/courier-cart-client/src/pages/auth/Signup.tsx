@@ -1,4 +1,4 @@
-﻿import { Box, Stack, Typography } from '@mui/material'
+import { Box, Stack, Typography } from '@mui/material'
 import { Navigate, Link as RouterLink } from 'react-router-dom'
 import AuthShell from '../../components/auth/AuthShell'
 import CredentialAuthForm from '../../components/auth/CredentialAuthForm'
@@ -17,7 +17,7 @@ export default function Signup() {
     <AuthShell
       eyebrow="Create Account"
       title="Start shipping with a faster courier workspace."
-      subtitle="Create your Ship Aggregator account to unlock courier booking, rate checks, shipment tracking, and a smoother delivery workflow."
+      subtitle="Create your FastShip account to unlock courier booking, rate checks, shipment tracking, and a smoother delivery workflow."
       helperTitle="Start shipping sooner"
       helperText="Create your account once and move straight into onboarding, courier setup, and day-to-day shipment operations."
       showChrome

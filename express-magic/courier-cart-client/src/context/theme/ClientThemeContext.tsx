@@ -9,7 +9,7 @@ interface ClientThemeContextValue {
   toggleMode: () => void
 }
 
-const STORAGE_KEY = 'ship-aggregator-client-theme'
+const STORAGE_KEY = 'fastship-client-theme'
 
 const ClientThemeContext = createContext<ClientThemeContextValue | undefined>(undefined)
 

@@ -103,7 +103,7 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
                 mb: 0.5,
               }}
             >
-              Ship Aggregator workspace
+              FastShip workspace
             </Typography>
             <Typography variant="h6" fontWeight={800} color={theme.palette.text.primary}>
               {title}

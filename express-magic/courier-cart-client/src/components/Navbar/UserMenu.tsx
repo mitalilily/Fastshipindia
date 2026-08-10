@@ -180,7 +180,7 @@ const UserMenu = ({ compact = false }: UserMenuProps) => {
           }}
         >
           <Typography sx={{ fontSize: '0.92rem', fontWeight: 900, color: textColor }} noWrap>
-            {user?.companyInfo?.contactPerson || user?.name || 'Ship Aggregator User'}
+            {user?.companyInfo?.contactPerson || user?.name || 'FastShip User'}
           </Typography>
           <Typography sx={{ mt: 0.3, fontSize: '0.76rem', fontWeight: 600, color: mutedColor }} noWrap>
             {user?.companyInfo?.contactEmail || user?.email}

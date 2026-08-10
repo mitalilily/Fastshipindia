@@ -43,6 +43,6 @@ export const getAuthErrorMessage = (err: unknown, fallback: string) => {
 
   const base =
     import.meta.env.VITE_API_URL || 'https://aggregator-backend-7gmk.onrender.com/api'
-  return `Cannot reach the Ship Aggregator API (${base}). Please try again in a minute.`
+  return `Cannot reach the FastShip API (${base}). Please try again in a minute.`
 }
 

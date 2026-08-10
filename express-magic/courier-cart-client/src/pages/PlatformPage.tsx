@@ -337,7 +337,7 @@ export default function PlatformPage() {
       <Box component="section" sx={{ py: { xs: 9, md: 12 }, bgcolor: page }}>
         <Container maxWidth="xl" sx={{ px: { xs: 2.5, sm: 4, lg: 10 } }}>
           <SectionHeader
-            eyebrow="Why Choose Ship Aggregator"
+            eyebrow="Why Choose FastShip"
             title={
               <>
                 Everything you need to{' '}

@@ -22,6 +22,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/auth/AuthContext'
 import { useClientThemeMode } from '../../context/theme/ClientThemeContext'
 import { useClientNotifications } from '../../hooks/useClientNotifications'
+import QuickActions from './QuickActions'
 import WalletMenu from './WalletMenu'
 import UserMenu from './UserMenu'
 
@@ -167,6 +168,8 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         justifyContent="flex-end"
         sx={{ minWidth: 0 }}
       >
+        <QuickActions />
+
         {!isMobile ? (
           <IconButton
             aria-label="Search"

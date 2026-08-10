@@ -1,4 +1,4 @@
-﻿import { Box, Button, Stack } from '@mui/material'
+import { Box, Button, Stack } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
@@ -23,8 +23,8 @@ export default function Login() {
     <AuthShell
       eyebrow="Client Auth"
       title={'Ship Smarter.\nDeliver Faster.'}
-      subtitle="Track orders, compare courier options, and keep every delivery moving from one polished Ship Aggregator workspace."
-      helperTitle="Welcome Back to Ship Aggregator"
+      subtitle="Track orders, compare courier options, and keep every delivery moving from one polished FastShip workspace."
+      helperTitle="Welcome Back to FastShip"
       helperText="Sign in to open your courier command center."
       showChrome
       showNavbar={false}

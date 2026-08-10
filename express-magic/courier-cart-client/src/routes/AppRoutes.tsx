@@ -18,11 +18,7 @@ import GlobalRedirectHandler from './WalletRedirectHandler'
 // Onboarding & Dashboard
 const UserOnboarding = lazy(() => import('../pages/onboarding/UserOnboarding'))
 const Dashboard = lazy(() => import('../pages/dashboard/Dashboard'))
-const LandingPage = lazy(() => import('../pages/LandingPage'))
-const PlatformPage = lazy(() => import('../pages/PlatformPage'))
-const SalesChannelsPage = lazy(() => import('../pages/SalesChannelsPage'))
-const CourierPartnersPage = lazy(() => import('../pages/CourierPartnersPage'))
-const BlogsPage = lazy(() => import('../pages/BlogsPage'))
+const FastShipLanding = lazy(() => import('../pages/marketing/FastShipLanding'))
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 
 // Orders
@@ -30,8 +26,6 @@ const Orders = lazy(() => import('../pages/orders/Orders'))
 const B2COrdersList = lazy(() => import('../components/orders/b2c/B2COrdersList'))
 const B2bOrders = lazy(() => import('../pages/orders/B2bOrders'))
 const CreateOrderWrapper = lazy(() => import('../components/orders/CreateOrderWrapper'))
-const OrderTracking = lazy(() => import('../pages/orders/OrderTracking'))
-
 // Settings
 const Settings = lazy(() => import('../pages/settings/Settings'))
 const PickupAddresses = lazy(() => import('../pages/pickup-addresses/PickupAddresses'))
@@ -105,7 +99,7 @@ const RtoList = lazy(() => import('../pages/ops/RtoList'))
 // API Integration
 const ApiIntegration = lazy(() => import('../pages/settings/ApiIntegration'))
 
-const ROUTE_RELOAD_KEY = 'shipaggregator-route-asset-reload'
+const ROUTE_RELOAD_KEY = 'fastship-route-asset-reload'
 
 const isRouteAssetError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error ?? '')
@@ -180,16 +174,16 @@ function RouteAssetRecovery() {
   return null
 }
 
-function isAppShipAggregatorHost() {
+function isFastShipAppHost() {
   if (typeof window === 'undefined') return false
 
-  return window.location.hostname.toLowerCase().startsWith('app.shipaggregator')
+  return window.location.hostname.toLowerCase().startsWith('app.fastship')
 }
 
 function RootRoute() {
-  if (isAppShipAggregatorHost()) return <Navigate to="/login" replace />
+  if (isFastShipAppHost()) return <Navigate to="/login" replace />
 
-  return <LandingPage />
+  return <FastShipLanding />
 }
 
 function RoutedApp() {
@@ -208,16 +202,16 @@ function RoutedApp() {
           <Routes location={location} key={routeKey}>
           {/* public */}
           <Route path="/" element={<RootRoute />} />
-          <Route path="/landing" element={<LandingPage />} />
-          <Route path="/platform" element={<PlatformPage />} />
-          <Route path="/integrations" element={<Navigate to="/integrations/courier-partners" replace />} />
-          <Route path="/integrations/sales-channels" element={<SalesChannelsPage />} />
-          <Route path="/integrations/courier-partners" element={<CourierPartnersPage />} />
-          <Route path="/blogs" element={<BlogsPage />} />
-          <Route path="/about" element={<LandingPage />} />
-          <Route path="/careers" element={<LandingPage />} />
-          <Route path="/contact" element={<LandingPage />} />
-          <Route path="/partners" element={<LandingPage />} />
+          <Route path="/landing" element={<Navigate to="/" replace />} />
+          <Route path="/platform" element={<Navigate to="/integrations" replace />} />
+          <Route path="/integrations" element={<FastShipLanding />} />
+          <Route path="/integrations/sales-channels" element={<FastShipLanding />} />
+          <Route path="/integrations/courier-partners" element={<FastShipLanding />} />
+          <Route path="/blogs" element={<FastShipLanding />} />
+          <Route path="/about" element={<FastShipLanding />} />
+          <Route path="/careers" element={<Navigate to="/about" replace />} />
+          <Route path="/contact" element={<FastShipLanding />} />
+          <Route path="/partners" element={<Navigate to="/integrations/courier-partners" replace />} />
           <Route path="/admin/*" element={<Navigate to="/" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signin" element={<SignIn />} />
@@ -226,12 +220,12 @@ function RoutedApp() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/app" element={<AppEntry />} />
           <Route path="/preview" element={<ClientPreview />} />
-          <Route path="/track" element={<OrderTracking />} />
-          <Route path="/tracking" element={<Navigate to="/track" replace />} />
+          <Route path="/track" element={<Navigate to="/tracking" replace />} />
+          <Route path="/tracking" element={<FastShipLanding />} />
           <Route path="/resources/rate-calculator" element={<RateCalculator publicView="rate" />} />
           <Route path="/resources/weight-estimator" element={<RateCalculator publicView="weight" />} />
-          <Route path="/rate-calculator" element={<Navigate to="/resources/rate-calculator" replace />} />
-          <Route path="/weight-calculator" element={<Navigate to="/resources/weight-estimator" replace />} />
+          <Route path="/rate-calculator" element={<FastShipLanding />} />
+          <Route path="/weight-calculator" element={<FastShipLanding />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/refund" element={<CancellationPolicy />} />

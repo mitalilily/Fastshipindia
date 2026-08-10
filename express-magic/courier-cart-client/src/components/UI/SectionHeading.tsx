@@ -48,7 +48,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
               letterSpacing: 0,
             }}
           >
-            Ship Aggregator workflow
+            FastShip workflow
           </Typography>
           <Typography
             variant="h3"

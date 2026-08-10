@@ -1667,7 +1667,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                 fontWeight: 500,
               }}
             >
-              Join 1.5 Lakh+ businesses using Ship Aggregator to ship
+              Join 1.5 Lakh+ businesses using FastShip to ship
               smarter and cheaper across India.
             </Typography>
             <Stack

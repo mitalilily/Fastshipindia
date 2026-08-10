@@ -30,7 +30,7 @@ const focusCards = [
   },
   {
     title: 'Help Center',
-    text: 'Support tickets, public pages, and policy surfaces now follow the same Ship Aggregator visual system.',
+    text: 'Support tickets, public pages, and policy surfaces now follow the same FastShip visual system.',
   },
 ]
 
@@ -113,7 +113,7 @@ export default function ClientPreview() {
 
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 <Chip
-                  label="Ship Aggregator theme"
+                  label="FastShip theme"
                   icon={<TbBolt size={14} />}
                   sx={{
                     bgcolor: alpha(PLUM, 0.08),
@@ -209,7 +209,7 @@ export default function ClientPreview() {
                   </Typography>
 
                   <Typography sx={{ maxWidth: 620, color: MUTED, lineHeight: 1.65 }}>
-                    This preview skips sign-in so you can review the client UI shell, Ship Aggregator color
+                    This preview skips sign-in so you can review the client UI shell, FastShip color
                     system, logo treatment, sidebar labels, and the overall layout direction first.
                   </Typography>
 

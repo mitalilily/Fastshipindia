@@ -23,7 +23,7 @@ const CompanyDetails = () => {
     <Stack mt={2} gap={5}>
       <PageHeading
         title="Contact Us"
-        subtitle="We’re here to help with bookings, account support, and courier operations. Reach out to Ship Aggregator whenever you need assistance."
+        subtitle="We’re here to help with bookings, account support, and courier operations. Reach out to FastShip whenever you need assistance."
       />
 
       <Box
@@ -107,7 +107,7 @@ const CompanyDetails = () => {
             width="100%"
             draggable={false}
             zoom={16}
-            popupText="Ship Aggregator"
+            popupText="FastShip"
             currentLocation={false}
           />
         </Paper>
