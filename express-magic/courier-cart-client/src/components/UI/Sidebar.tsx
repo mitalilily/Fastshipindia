@@ -482,11 +482,7 @@ export default function Sidebar({
                 : 'clamp(42px, 5.8vh, 48px)'
               : 18,
             aspectRatio: 'auto',
-            backgroundSize: isSidebarExpanded
-              ? temporary
-                ? '143% auto'
-                : '140% auto'
-              : '118% auto',
+            backgroundSize: 'contain',
             backgroundPosition: 'center',
             flexShrink: 0,
           }}
