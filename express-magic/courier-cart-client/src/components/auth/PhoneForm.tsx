@@ -17,6 +17,7 @@ import { BRAND } from '../../config/brand'
 import { useRequestOtp } from '../../hooks/useOTP'
 import { extractScreenOtp, type OtpResponseLike } from '../../utils/authOtp'
 import { TERMS_AND_CONDITIONS } from '../../utils/constants'
+import { DEMO_OTP, isDemoLoginEnabled } from '../../utils/demoAuth'
 import CustomCheckbox from '../UI/inputs/CustomCheckbox'
 import CustomModal from '../UI/modal/CustomModal'
 import { toast } from '../UI/Toast'
@@ -24,11 +25,7 @@ import OtpForm from './OtpForm'
 import PasswordLoginForm from './PasswordLoginForm'
 
 const { teal, tealDark, orange, ink, paper, tealSoft } = BRAND.colors
-const LOCAL_DEMO_OTP = '246810'
-const isLocalDemoLogin =
-  import.meta.env.DEV ||
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1'
+const isDemoLogin = isDemoLoginEnabled()
 
 type AuthMode = 'otp' | 'password'
 
@@ -119,7 +116,7 @@ export default function PhoneForm() {
 
       sendOtpRequest(normalizedEmail, {
         onSuccess: (data: OtpResponseLike) => {
-          const otpFromResponse = extractScreenOtp(data) || (isLocalDemoLogin ? LOCAL_DEMO_OTP : '')
+          const otpFromResponse = extractScreenOtp(data) || (isDemoLogin ? DEMO_OTP : '')
           setDebugOtp(otpFromResponse)
           sessionStorage.setItem('preferredMethod', 'email_otp')
           setOtpStep(1)
@@ -131,8 +128,8 @@ export default function PhoneForm() {
             severity: 'warning',
             position: { vertical: 'top', horizontal: 'center' },
           })
-          if (isLocalDemoLogin) {
-            setDebugOtp(LOCAL_DEMO_OTP)
+          if (isDemoLogin) {
+            setDebugOtp(DEMO_OTP)
             sessionStorage.setItem('preferredMethod', 'email_otp')
             setOtpStep(1)
           }

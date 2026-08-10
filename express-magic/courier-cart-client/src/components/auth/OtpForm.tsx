@@ -5,6 +5,7 @@ import { BRAND } from '../../config/brand'
 import { useAuth } from '../../context/auth/AuthContext'
 import { useRequestOtp, useVerifyOtp } from '../../hooks/useOTP'
 import { extractScreenOtp, type OtpResponseLike } from '../../utils/authOtp'
+import { DEMO_OTP, isDemoLoginEnabled } from '../../utils/demoAuth'
 import { emptyUserProfile } from '../../utils/utility'
 import CustomIconLoadingButton from '../UI/button/CustomLoadingButton'
 import { toast } from '../UI/Toast'
@@ -14,11 +15,7 @@ const OTP_RESEND_DELAY_MS = 30000
 const BRAND_DARK = BRAND.colors.ink
 const BRAND_TEAL = BRAND.colors.teal
 const BRAND_RED = BRAND.colors.orange
-const LOCAL_DEMO_OTP = '246810'
-const isLocalDemoLogin =
-  import.meta.env.DEV ||
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1'
+const isDemoLogin = isDemoLoginEnabled()
 
 const primaryButtonStyles = {
   width: '100%',
@@ -123,7 +120,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
 
     setError('')
 
-    if (isLocalDemoLogin && debugOtp && otp === debugOtp) {
+    if (isDemoLogin && debugOtp && otp === debugOtp) {
       const demoUser = {
         ...emptyUserProfile,
         id: 'local-demo-user',
@@ -174,7 +171,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
 
     resendOtp(email.toLowerCase().trim(), {
       onSuccess: (data: OtpResponseLike) => {
-        const nextOtp = extractScreenOtp(data) || (isLocalDemoLogin ? LOCAL_DEMO_OTP : '')
+        const nextOtp = extractScreenOtp(data) || (isDemoLogin ? DEMO_OTP : '')
         onDebugOtpChange?.(nextOtp)
         setOtpDigits(Array(OTP_LENGTH).fill(''))
         setError('')
@@ -203,6 +200,14 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
         toast.open({ message: 'Verification code generated again.', severity: 'success' })
       },
       onError: (err: any) => {
+        if (isDemoLogin) {
+          onDebugOtpChange?.(DEMO_OTP)
+          setOtpDigits(DEMO_OTP.split(''))
+          setError('')
+          toast.open({ message: 'Demo verification code generated again.', severity: 'success' })
+          return
+        }
+
         setError(err?.response?.data?.error || 'Failed to resend OTP')
       },
     })
@@ -256,7 +261,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
             {debugOtp}
           </Typography>
           <Typography sx={{ mt: 0.35, fontSize: '0.72rem', fontWeight: 650, color: '#5F5A57' }}>
-            Fill this code to continue in local demo mode.
+            Fill this code to continue in demo mode.
           </Typography>
         </Box>
       )}
