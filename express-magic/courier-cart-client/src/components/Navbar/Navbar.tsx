@@ -269,7 +269,30 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
               },
             }}
           >
-            <MdNotifications size={21} />
+            <Box
+              component="span"
+              sx={{
+                display: 'inline-flex',
+                transformOrigin: '50% 12%',
+                animation:
+                  unreadCount > 0
+                    ? 'fastship-notification-ring 1.35s ease-in-out infinite'
+                    : 'none',
+                '@keyframes fastship-notification-ring': {
+                  '0%, 48%, 100%': { transform: 'rotate(0deg)' },
+                  '8%': { transform: 'rotate(18deg)' },
+                  '16%': { transform: 'rotate(-16deg)' },
+                  '24%': { transform: 'rotate(12deg)' },
+                  '32%': { transform: 'rotate(-9deg)' },
+                  '40%': { transform: 'rotate(5deg)' },
+                },
+                '@media (prefers-reduced-motion: reduce)': {
+                  animation: 'none',
+                },
+              }}
+            >
+              <MdNotifications size={21} />
+            </Box>
           </Badge>
         </IconButton>
 
