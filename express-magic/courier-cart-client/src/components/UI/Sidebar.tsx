@@ -244,7 +244,6 @@ export default function Sidebar({
   const activeBg = isDark ? alpha(ACTIVE, 0.28) : alpha(ACTIVE, 0.08)
   const childActiveBg = isDark ? alpha(ACTIVE, 0.24) : alpha(ACTIVE, 0.1)
   const iconMuted = isDark ? '#91a7c3' : alpha(ACTIVE, 0.58)
-  const scrollbarThumb = isDark ? '#3a4350' : '#cbd5e1'
   const activeText = isDark ? '#d9e7fa' : ACTIVE
   const initialsBg = isDark ? alpha(ACTIVE, 0.34) : alpha(ACTIVE, 0.09)
   const initialsBorder = isDark ? alpha('#ffffff', 0.1) : alpha(ACCENT, 0.28)
@@ -273,7 +272,7 @@ export default function Sidebar({
   }
 
   const navItemSx = {
-    minHeight: temporary ? 43 : 38,
+    minHeight: temporary ? 'clamp(34px, 5.2vh, 43px)' : 'clamp(29px, 4.25vh, 38px)',
     borderRadius: 0,
     px: isSidebarExpanded ? (temporary ? 3.6 : 2.75) : 0,
     py: 0,
@@ -284,6 +283,9 @@ export default function Sidebar({
       bgcolor: itemHoverBg,
       color: WHITE,
       '& .MuiListItemIcon-root': { color: ACTIVE },
+    },
+    '@media (max-height: 760px)': {
+      '& .MuiListItemIcon-root svg': { width: 19, height: 19 },
     },
   }
 
@@ -301,6 +303,10 @@ export default function Sidebar({
       width: 4,
       borderRadius: '0 8px 8px 0',
       bgcolor: ACCENT,
+      '@media (max-height: 760px)': {
+        top: 7,
+        bottom: 7,
+      },
     },
   }
 
@@ -337,7 +343,9 @@ export default function Sidebar({
           <ListItemText
             primary={item.text}
             primaryTypographyProps={{
-              fontSize: temporary ? '1rem' : '0.9rem',
+              fontSize: temporary
+                ? 'clamp(0.86rem, 2vh, 1rem)'
+                : 'clamp(0.78rem, 2vh, 0.9rem)',
               fontWeight: active ? 650 : 500,
               letterSpacing: '-0.01em',
             }}
@@ -378,7 +386,7 @@ export default function Sidebar({
                     to={sub.path}
                     onClick={handleRouteNavigate}
                     sx={{
-                      minHeight: 32,
+                      minHeight: 'clamp(28px, 3.8vh, 32px)',
                       px: 1.2,
                       py: 0.45,
                       borderRadius: 1,
@@ -394,7 +402,7 @@ export default function Sidebar({
                     <ListItemText
                       primary={sub.text}
                       primaryTypographyProps={{
-                        fontSize: '0.88rem',
+                        fontSize: 'clamp(0.76rem, 1.9vh, 0.88rem)',
                         fontWeight: subActive ? 650 : 500,
                       }}
                     />
@@ -451,7 +459,7 @@ export default function Sidebar({
     >
       <Box
         sx={{
-          height: temporary ? 72 : 64,
+          height: temporary ? 'clamp(58px, 8vh, 72px)' : 'clamp(48px, 7.2vh, 64px)',
           px: isSidebarExpanded ? (temporary ? 2.25 : 1.75) : 1,
           display: 'flex',
           alignItems: 'center',
@@ -464,7 +472,11 @@ export default function Sidebar({
           compact
           sx={{
             width: isSidebarExpanded ? (temporary ? 72 : 64) : 52,
-            height: isSidebarExpanded ? (temporary ? 26 : 23) : 20,
+            height: isSidebarExpanded
+              ? temporary
+                ? 'clamp(22px, 3vh, 26px)'
+                : 'clamp(19px, 2.6vh, 23px)'
+              : 20,
             backgroundSize: '100% auto',
             flexShrink: 0,
           }}
@@ -491,25 +503,37 @@ export default function Sidebar({
           overflowY: 'auto',
           overflowX: 'hidden',
           overscrollBehavior: 'contain',
-          scrollbarGutter: 'stable',
+          scrollbarGutter: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
-          py: temporary ? 1.5 : 1,
+          py: temporary ? 'clamp(6px, 1.4vh, 12px)' : 'clamp(4px, 1vh, 8px)',
           bgcolor: DARK_BG,
-          '&::-webkit-scrollbar': { width: 6 },
-          '&::-webkit-scrollbar-track': { background: DARK_BG },
-          '&::-webkit-scrollbar-thumb': { background: scrollbarThumb, borderRadius: 8 },
+          '&::-webkit-scrollbar': { width: 0, height: 0, display: 'none' },
         }}
       >
         {visibleSections.map((section) =>
           section.items.length ? (
-            <Box key={section.title} sx={{ mb: temporary ? 2.2 : 1.45 }}>
+            <Box
+              key={section.title}
+              sx={{
+                mb: temporary
+                  ? 'clamp(6px, 1.8vh, 18px)'
+                  : 'clamp(3px, 1.1vh, 12px)',
+              }}
+            >
               {isSidebarExpanded ? (
                 <Typography
                   sx={{
                     px: temporary ? 3.6 : 2.75,
-                    mb: temporary ? 0.8 : 0.5,
+                    mb: temporary
+                      ? 'clamp(2px, 0.7vh, 6px)'
+                      : 'clamp(1px, 0.45vh, 4px)',
                     color: MUTED,
-                    fontSize: temporary ? '0.82rem' : '0.72rem',
+                    fontSize: temporary
+                      ? 'clamp(0.7rem, 1.7vh, 0.82rem)'
+                      : 'clamp(0.6rem, 1.5vh, 0.72rem)',
+                    lineHeight: 1.15,
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: 0,
@@ -530,7 +554,9 @@ export default function Sidebar({
           <Box
             sx={{
               px: temporary ? 3.6 : 2.75,
-              py: temporary ? 1.85 : 1.25,
+              py: temporary
+                ? 'clamp(8px, 1.8vh, 15px)'
+                : 'clamp(6px, 1.35vh, 10px)',
               borderTop: `1px solid ${BORDER}`,
               display: 'flex',
               alignItems: 'center',
