@@ -59,6 +59,9 @@ export const dashboardIconSx = (color = dashboardPalette.orange) => ({
   background: `linear-gradient(135deg, ${alpha(color, 0.18)} 0%, ${alpha(brand.gold, 0.1)} 100%)`,
   border: `1px solid ${alpha(color, 0.16)}`,
   flex: '0 0 auto',
+  '& svg': {
+    strokeWidth: 2.4,
+  },
 }) satisfies SxProps<Theme>
 
 export const dashboardButtonSx = {

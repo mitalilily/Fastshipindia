@@ -335,6 +335,9 @@ export default function Sidebar({
             justifyContent: 'center',
             color: active ? ACCENT : iconMuted,
             transition: 'color 160ms ease',
+            '& svg': {
+              strokeWidth: 2.4,
+            },
           }}
         >
           {item.icon}
@@ -358,6 +361,7 @@ export default function Sidebar({
               transform: showExpanded ? 'rotate(180deg)' : 'rotate(-90deg)',
               transition: 'transform 0.2s',
               color: active ? activeText : iconMuted,
+              strokeWidth: 2.4,
             }}
           />
         ) : null}
