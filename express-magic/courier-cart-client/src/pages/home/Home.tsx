@@ -840,7 +840,8 @@ export default function Home() {
                 onClick={() => navigate('/orders/create')}
                 sx={{
                   mt: 2.2,
-                  background: `linear-gradient(135deg, ${NAVY}, ${RED})`,
+                  bgcolor: NAVY,
+                  borderLeft: `3px solid ${RED}`,
                   color: '#ffffff',
                   borderRadius: 2,
                   textTransform: 'none',
@@ -848,7 +849,7 @@ export default function Home() {
                   px: 2.6,
                   boxShadow: `0 12px 26px ${alpha(PURPLE, 0.24)}`,
                   '&:hover': {
-                    background: `linear-gradient(135deg, #072B5B, #B8141A)`,
+                    bgcolor: '#072B5B',
                     boxShadow: `0 16px 32px ${alpha(PURPLE, 0.3)}`,
                   },
                 }}
