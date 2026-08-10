@@ -1,7 +1,5 @@
 import { useEffect } from 'react'
-import { getEmployeeByUserId } from '../api/employee.service'
 import { useAuth } from '../context/auth/AuthContext'
-import { disconnectSocket, registerUserSocket } from './User/useUserOnline'
 
 export const useEmployeeSocket = () => {
   const { user, isAuthenticated } = useAuth()
@@ -9,14 +7,30 @@ export const useEmployeeSocket = () => {
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return
 
+    let cancelled = false
+    let disconnect: (() => void) | undefined
+
     const initSocket = async () => {
+      const [{ getEmployeeByUserId }, socketModule] = await Promise.all([
+        import('../api/employee.service'),
+        import('./User/useUserOnline'),
+      ])
+      if (cancelled) return
+
+      disconnect = socketModule.disconnectSocket
       const employee = await getEmployeeByUserId(user.userId)
-      if (employee?.employee?.isActive) {
-        registerUserSocket({ id: user.userId, role: 'employee' })
+      if (!cancelled && employee?.employee?.isActive) {
+        socketModule.registerUserSocket({ id: user.userId, role: 'employee' })
       }
     }
 
-    initSocket()
-    return () => disconnectSocket()
-  }, [isAuthenticated, user?.userId])
+    void initSocket().catch(() => {
+      // Realtime presence is optional and must never delay the workspace.
+    })
+
+    return () => {
+      cancelled = true
+      disconnect?.()
+    }
+  }, [isAuthenticated, user?.id, user?.userId])
 }
