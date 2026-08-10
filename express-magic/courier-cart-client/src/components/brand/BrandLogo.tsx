@@ -13,13 +13,13 @@ export default function BrandLogo({ compact = false, sx, ...rest }: BrandLogoPro
       aria-label={brandIdentity.name}
       sx={{
         width: compact ? 58 : { xs: 132, sm: 156 },
-        aspectRatio: '2.4 / 1',
+        aspectRatio: compact ? '3.2 / 1' : '3 / 1',
         flexShrink: 0,
         display: 'block',
         backgroundImage: `url(${compact ? brandIdentity.markSrc : brandIdentity.logoSrc})`,
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
-        backgroundSize: 'contain',
+        backgroundSize: 'cover',
         ...sx,
       }}
       {...rest}
