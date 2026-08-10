@@ -12,10 +12,7 @@ const getSocketUrl = () => {
 
     const candidate = new URL(rawSocketUrl, window.location.origin)
     const currentHost = window.location.hostname
-    const isHostedFrontend =
-      currentHost.endsWith('netlify.app') ||
-      currentHost.endsWith('vercel.app') ||
-      currentHost.endsWith('up.railway.app')
+    const isHostedFrontend = currentHost.endsWith('onrender.com')
     const pointsBackToFrontend = candidate.hostname === currentHost
     const pointsToLegacyAggregatorApi = candidate.hostname === LEGACY_AGGREGATOR_API_HOST
     const pointsToPlaceholderApi = candidate.hostname === PLACEHOLDER_API_HOST
