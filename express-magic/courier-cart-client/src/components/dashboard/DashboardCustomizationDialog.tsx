@@ -31,9 +31,13 @@ const widgetLabels: Record<string, string> = {
   quickActions: 'Quick Actions',
   insights: 'Smart Insights',
   actionItems: 'Action Items',
-  recommendations: 'Recommendations',
+  deliveryHealth: 'Delivery Health Rings',
+  paymentMix: 'Payment Mix Donut',
   performanceMetrics: 'Performance Metrics',
   ordersTrend: 'Orders Trend Chart',
+  shipmentFlow: 'Shipment Lifecycle',
+  revenueChart: 'Revenue Trend',
+  revenueByTypeChart: 'Revenue by Type',
   financialHealth: 'Financial Health',
   recentActivity: 'Recent Activity',
   todaysOperations: "Today's Operations",
@@ -50,9 +54,13 @@ const defaultPreferences: DashboardPreferences = {
     quickActions: true,
     insights: true,
     actionItems: true,
-    recommendations: true,
+    deliveryHealth: true,
+    paymentMix: true,
     performanceMetrics: true,
     ordersTrend: true,
+    shipmentFlow: true,
+    revenueChart: true,
+    revenueByTypeChart: true,
     financialHealth: true,
     recentActivity: true,
     todaysOperations: true,
@@ -64,19 +72,23 @@ const defaultPreferences: DashboardPreferences = {
   },
   widgetOrder: [
     'quickStats',
+    'deliveryHealth',
+    'paymentMix',
+    'metricsOverview',
+    'ordersTrend',
+    'performanceMetrics',
+    'shipmentFlow',
+    'orderStatusChart',
+    'revenueChart',
+    'revenueByTypeChart',
     'quickActions',
     'insights',
     'actionItems',
-    'recommendations',
-    'performanceMetrics',
-    'ordersTrend',
     'financialHealth',
     'recentActivity',
     'todaysOperations',
-    'orderStatusChart',
-    'courierComparison',
-    'metricsOverview',
     'courierPerformance',
+    'courierComparison',
     'topDestinations',
   ],
   layout: {
@@ -90,6 +102,29 @@ const defaultPreferences: DashboardPreferences = {
   },
 }
 
+const normalizePreferences = (preferences?: DashboardPreferences): DashboardPreferences => {
+  if (!preferences) return defaultPreferences
+
+  const savedOrder = (preferences.widgetOrder || []).filter((widgetId) =>
+    defaultPreferences.widgetOrder.includes(widgetId),
+  )
+
+  return {
+    ...defaultPreferences,
+    ...preferences,
+    widgetVisibility: {
+      ...defaultPreferences.widgetVisibility,
+      ...preferences.widgetVisibility,
+    },
+    widgetOrder: [
+      ...savedOrder,
+      ...defaultPreferences.widgetOrder.filter((widgetId) => !savedOrder.includes(widgetId)),
+    ],
+    layout: { ...defaultPreferences.layout, ...preferences.layout },
+    dateRange: { ...defaultPreferences.dateRange, ...preferences.dateRange },
+  }
+}
+
 export default function DashboardCustomizationDialog({ open, onClose }: DashboardCustomizationDialogProps) {
   const theme = useTheme()
   const { data: preferences, isLoading } = useDashboardPreferences()
@@ -99,7 +134,7 @@ export default function DashboardCustomizationDialog({ open, onClose }: Dashboar
 
   useEffect(() => {
     if (preferences) {
-      setLocalPreferences(preferences)
+      setLocalPreferences(normalizePreferences(preferences))
     } else if (!isLoading && open) {
       // If no preferences exist yet, use defaults
       setLocalPreferences(defaultPreferences)
@@ -153,7 +188,7 @@ export default function DashboardCustomizationDialog({ open, onClose }: Dashboar
 
   const handleReset = () => {
     if (preferences) {
-      setLocalPreferences(preferences)
+      setLocalPreferences(normalizePreferences(preferences))
     } else {
       setLocalPreferences(defaultPreferences)
     }
@@ -218,9 +253,7 @@ export default function DashboardCustomizationDialog({ open, onClose }: Dashboar
               Toggle widgets on/off to customize your dashboard
             </Typography>
             <Stack spacing={1.5}>
-              {localPreferences.widgetOrder
-                .filter((widgetId) => widgetId !== 'revenueChart' && widgetId !== 'revenueByTypeChart')
-                .map((widgetId) => (
+              {localPreferences.widgetOrder.map((widgetId) => (
                 <Box
                   key={widgetId}
                   sx={{
@@ -267,9 +300,7 @@ export default function DashboardCustomizationDialog({ open, onClose }: Dashboar
               Reorder widgets to prioritize what matters most
             </Typography>
             <Stack spacing={1.5}>
-              {localPreferences.widgetOrder
-                .filter((widgetId) => widgetId !== 'revenueChart' && widgetId !== 'revenueByTypeChart')
-                .map((widgetId, index) => (
+              {localPreferences.widgetOrder.map((widgetId, index) => (
                 <Box
                   key={widgetId}
                   sx={{
