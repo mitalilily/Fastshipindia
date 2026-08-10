@@ -152,7 +152,8 @@ export default function Layout() {
             ref={mainScrollRef}
             sx={{
               flexGrow: 1,
-              overflow: 'auto',
+              overflowY: 'auto',
+              overflowX: 'hidden',
               bgcolor: shellBg,
               position: 'relative',
               zIndex: 0,
@@ -171,7 +172,9 @@ export default function Layout() {
                 bgcolor: 'transparent',
                 pt: { xs: 2, md: 2 },
                 px: { xs: 0, md: 0 },
-                overflowX: 'visible',
+                width: '100%',
+                minWidth: 0,
+                overflowX: 'hidden',
               }}
             >
               <Suspense fallback={<RouteContentLoader />}>

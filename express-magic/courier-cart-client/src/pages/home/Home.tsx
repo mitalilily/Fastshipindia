@@ -199,26 +199,26 @@ export default function Home() {
     { title: 'Create Order', text: 'Ship a new package', icon: <TbPlus />, color: PURPLE, path: '/orders/create' },
     { title: 'All Orders', text: 'View all shipments', icon: <TbTruckDelivery />, color: BLUE, path: '/orders/list' },
     { title: 'NDR Actions', text: 'Handle failed deliveries', icon: <TbRefresh />, color: RED, path: '/ops/ndr' },
-    { title: 'COD Remittance', text: 'Track COD payouts', icon: <TbCreditCard />, color: '#d99b1c', path: '/cod-remittance' },
-    { title: 'Rate Calculator', text: 'Compare courier rates', icon: <TbCalculator />, color: '#00a976', path: '/tools/rate_calculator' },
+    { title: 'COD Remittance', text: 'Track COD payouts', icon: <TbCreditCard />, color: RED, path: '/cod-remittance' },
+    { title: 'Rate Calculator', text: 'Compare courier rates', icon: <TbCalculator />, color: NAVY, path: '/tools/rate_calculator' },
     { title: 'Analytics', text: 'Shipping insights', icon: <TbChartBar />, color: PURPLE, path: '/dashboard' },
   ]
 
   return (
-    <Box sx={{ bgcolor: pageBg, color: text, minHeight: '100%', pb: 5 }}>
-      <Stack spacing={{ xs: 3, md: 2 }}>
+    <Box sx={{ bgcolor: pageBg, color: text, width: '100%', minWidth: 0, minHeight: '100%', overflowX: 'hidden', pb: 4 }}>
+      <Stack spacing={{ xs: 2.5, md: 1.5 }}>
         {showKycBanner && !readinessByKey.get('kyc')?.done ? (
           <Box
             sx={{
               ...cardSx,
-              minHeight: { xs: 92, md: 76 },
-              px: { xs: 2, md: 2.25 },
-              py: { xs: 2, md: 1.25 },
-              pr: { xs: 5, md: 2.25 },
+              minHeight: { xs: 88, md: 68 },
+              px: { xs: 1.75, md: 2 },
+              py: { xs: 1.5, md: 1 },
+              pr: { xs: 5, md: 5 },
               borderColor: strongBorder,
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr auto' },
-              gap: 2,
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) auto' },
+              gap: { xs: 1.25, lg: 2 },
               alignItems: 'center',
               position: 'relative',
               overflow: 'hidden',
@@ -227,15 +227,15 @@ export default function Home() {
                 : `linear-gradient(120deg, ${alpha(ORANGE, 0.09)} 0%, #ffffff 48%, ${alpha(PURPLE, 0.07)} 100%)`,
             }}
           >
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
               <Box sx={{ color: ORANGE, display: 'grid', placeItems: 'center' }}>
                 <TbShieldCheck size={22} />
               </Box>
-              <Box>
-                <Typography sx={{ color: ORANGE, fontWeight: 700, fontSize: '1.05rem' }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ color: ORANGE, fontWeight: 700, fontSize: { xs: '0.96rem', md: '0.88rem' } }}>
                   Complete Your KYC
                 </Typography>
-                <Typography sx={{ color: dim, fontWeight: 600 }}>
+                <Typography sx={{ color: dim, fontWeight: 500, fontSize: { xs: '0.82rem', md: '0.76rem' }, lineHeight: 1.45 }}>
                   Verify your identity to unlock COD orders, wallet withdrawals, and more.
                 </Typography>
               </Box>
@@ -245,13 +245,14 @@ export default function Home() {
               endIcon={<TbArrowRight />}
               onClick={() => navigate('/profile/kyc_details')}
               sx={{
-                justifySelf: { xs: 'start', md: 'end' },
+                justifySelf: { xs: 'start', lg: 'end' },
                 bgcolor: PURPLE,
                 color: '#ffffff',
                 borderRadius: 2,
-                px: 2.6,
-                py: 1.1,
+                px: 2,
+                py: 0.8,
                 fontWeight: 700,
+                fontSize: '0.78rem',
                 textTransform: 'none',
                 '&:hover': { bgcolor: '#072B5B' },
               }}
@@ -285,10 +286,10 @@ export default function Home() {
         ) : null}
 
         <Box>
-          <Typography sx={{ color: text, fontSize: { xs: '1.55rem', md: '1.35rem' }, fontWeight: 700 }}>
+          <Typography sx={{ color: text, fontSize: { xs: '1.35rem', md: '1.18rem' }, fontWeight: 700 }}>
             {greeting}, {displayName}!
           </Typography>
-          <Typography sx={{ color: muted, mt: 0.3, fontSize: { xs: '1rem', md: '0.9rem' } }}>
+          <Typography sx={{ color: muted, mt: 0.2, fontSize: { xs: '0.9rem', md: '0.8rem' } }}>
             Here's your daily overview.
           </Typography>
         </Box>
@@ -302,7 +303,7 @@ export default function Home() {
               lg: 'repeat(3, minmax(0, 1fr))',
               xl: 'repeat(5, minmax(0, 1fr))',
             },
-            gap: { xs: 2, md: 1.5 },
+            gap: { xs: 1.5, md: 1.1 },
           }}
         >
           {statCards.map((item) => (
@@ -313,8 +314,8 @@ export default function Home() {
               onClick={() => navigate(item.path)}
               sx={{
                 ...cardSx,
-                minHeight: { xs: 112, md: 94 },
-                p: { xs: 2, md: 1.5 },
+                minHeight: { xs: 104, md: 82 },
+                p: { xs: 1.75, md: 1.25 },
                 position: 'relative',
                 overflow: 'hidden',
                 width: '100%',
@@ -365,9 +366,9 @@ export default function Home() {
             >
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ position: 'relative', zIndex: 1 }}>
                 <Box>
-                  <Typography sx={{ color: dim, fontWeight: 500 }}>{item.label}</Typography>
+                  <Typography sx={{ color: dim, fontWeight: 500, fontSize: { xs: '0.88rem', md: '0.78rem' } }}>{item.label}</Typography>
                   <Typography
-                    sx={{ color: text, fontSize: { xs: '1.75rem', md: '1.5rem' }, lineHeight: 1.1, fontWeight: 700 }}
+                    sx={{ color: text, fontSize: { xs: '1.55rem', md: '1.24rem' }, lineHeight: 1.1, fontWeight: 700 }}
                   >
                     {dashboardLoading && item.label !== 'Wallet'
                       ? '—'
@@ -375,21 +376,21 @@ export default function Home() {
                         ? item.value.toLocaleString('en-IN')
                         : item.value ?? '0'}
                   </Typography>
-                  <Typography sx={{ color: item.color, mt: 0.8, fontWeight: 600, fontSize: '0.76rem' }}>
+                  <Typography sx={{ color: item.color, mt: 0.6, fontWeight: 600, fontSize: '0.68rem' }}>
                     {item.action} {'\u2192'}
                   </Typography>
                 </Box>
                 <Box
                   sx={{
-                    width: 38,
-                    height: 38,
+                    width: 32,
+                    height: 32,
                     borderRadius: 2.2,
                     display: 'grid',
                     placeItems: 'center',
                     color: item.color,
                     bgcolor: alpha(item.color, isDark ? 0.17 : 0.11),
                     border: `1px solid ${alpha(item.color, 0.14)}`,
-                    '& svg': { width: 21, height: 21 },
+                    '& svg': { width: 18, height: 18 },
                   }}
                 >
                   {item.icon}
@@ -403,7 +404,7 @@ export default function Home() {
           sx={{
             ...cardSx,
             borderColor: alpha(PURPLE, isDark ? 0.28 : 0.18),
-            p: { xs: 2, md: 2 },
+            p: { xs: 1.75, md: 1.5 },
             position: 'relative',
             overflow: 'hidden',
             background: isDark
@@ -411,12 +412,12 @@ export default function Home() {
               : `linear-gradient(135deg, ${alpha(PURPLE, 0.055)} 0%, #ffffff 44%, ${alpha(ORANGE, 0.045)} 100%)`,
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={{ xs: 2.2, md: 1.5 }}>
-            <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={{ xs: 1.8, md: 1.2 }}>
+            <Stack direction="row" spacing={1.25} alignItems="center">
               <Box
                 sx={{
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   borderRadius: 2.2,
                   display: 'grid',
                   placeItems: 'center',
@@ -425,9 +426,9 @@ export default function Home() {
                   border: `1px solid ${alpha(PURPLE, 0.14)}`,
                 }}
               >
-                <TbShieldCheck size={20} />
+                <TbShieldCheck size={18} />
               </Box>
-              <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.1rem' }}>
+              <Typography sx={{ color: text, fontWeight: 700, fontSize: '0.95rem' }}>
                 Complete Your Profile
               </Typography>
             </Stack>
@@ -435,8 +436,9 @@ export default function Home() {
               sx={{
                 color: PURPLE,
                 fontWeight: 700,
-                px: 1.2,
-                py: 0.45,
+                px: 1,
+                py: 0.35,
+                fontSize: '0.75rem',
                 borderRadius: 999,
                 bgcolor: alpha(PURPLE, 0.1),
                 border: `1px solid ${alpha(PURPLE, 0.12)}`,
@@ -452,7 +454,7 @@ export default function Home() {
               height: 7,
               borderRadius: 999,
               bgcolor: progressTrack,
-              mb: { xs: 2.4, md: 1.7 },
+              mb: { xs: 2, md: 1.3 },
               '& .MuiLinearProgress-bar': {
                 borderRadius: 999,
                 background: `linear-gradient(90deg, ${PURPLE} 0%, ${BLUE} 50%, ${ORANGE} 100%)`,
@@ -469,7 +471,7 @@ export default function Home() {
                 lg: 'repeat(3, minmax(0, 1fr))',
                 xl: 'repeat(5, minmax(0, 1fr))',
               },
-              gap: 1.2,
+              gap: 0.9,
             }}
           >
             {setupSteps.map((step) => (
@@ -479,8 +481,8 @@ export default function Home() {
                 key={step.title}
                 onClick={() => navigate(step.path)}
                 sx={{
-                  minHeight: { xs: 66, md: 58 },
-                  p: { xs: 1.6, md: 1.2 },
+                  minHeight: { xs: 62, md: 52 },
+                  p: { xs: 1.4, md: 1 },
                   borderRadius: 2,
                   width: '100%',
                   border: `1px solid ${step.done ? alpha(GREEN, 0.26) : border}`,
@@ -493,7 +495,7 @@ export default function Home() {
                   font: 'inherit',
                   textAlign: 'left',
                   display: 'flex',
-                  gap: 1.5,
+                  gap: 1,
                   alignItems: 'center',
                   cursor: 'pointer',
                   transition: 'border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease',
@@ -506,8 +508,8 @@ export default function Home() {
               >
                 <Box
                   sx={{
-                    width: 25,
-                    height: 25,
+                    width: 22,
+                    height: 22,
                     borderRadius: '50%',
                     border: `2px solid ${step.done ? GREEN : emptyStepBorder}`,
                     bgcolor: step.done ? GREEN : 'transparent',
@@ -524,13 +526,14 @@ export default function Home() {
                     sx={{
                       color: step.done ? alpha(text, 0.6) : text,
                       fontWeight: 600,
+                      fontSize: '0.82rem',
                       textDecoration: step.done ? 'line-through' : 'none',
                     }}
                     noWrap
                   >
                     {step.title}
                   </Typography>
-                  <Typography sx={{ color: muted, fontSize: '0.78rem' }} noWrap>
+                  <Typography sx={{ color: muted, fontSize: '0.7rem' }} noWrap>
                     {step.text}
                   </Typography>
                 </Box>
@@ -539,12 +542,12 @@ export default function Home() {
           </Box>
         </Box>
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '0.9fr 1.85fr' }, gap: 2.2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '0.9fr 1.85fr' }, gap: 1.5 }}>
           <Box
             sx={{
               ...cardSx,
-              minHeight: { xs: 258, md: 225 },
-              p: { xs: 3, md: 2 },
+              minHeight: { xs: 246, md: 205 },
+              p: { xs: 2, md: 1.5 },
               overflow: 'hidden',
               position: 'relative',
             }}
@@ -553,8 +556,8 @@ export default function Home() {
               <Stack direction="row" spacing={1.4} alignItems="center">
                 <Box
                   sx={{
-                    width: 34,
-                    height: 34,
+                    width: 30,
+                    height: 30,
                     borderRadius: 2,
                     display: 'grid',
                     placeItems: 'center',
@@ -562,9 +565,9 @@ export default function Home() {
                     bgcolor: alpha(PURPLE, 0.1),
                   }}
                 >
-                  <TbChartBar size={19} />
+                  <TbChartBar size={17} />
                 </Box>
-                <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.08rem' }}>
+                <Typography sx={{ color: text, fontWeight: 700, fontSize: '0.95rem' }}>
                   Orders by Status
                 </Typography>
               </Stack>
@@ -575,7 +578,7 @@ export default function Home() {
                   py: 0.4,
                   borderRadius: 999,
                   bgcolor: alpha(PURPLE, 0.07),
-                  fontSize: '0.78rem',
+                  fontSize: '0.7rem',
                 }}
               >
                 {statusTotal.toLocaleString('en-IN')} total
@@ -611,11 +614,11 @@ export default function Home() {
                 })}
               </Stack>
             ) : (
-              <Stack alignItems="center" justifyContent="center" sx={{ minHeight: { xs: 178, md: 155 } }}>
+              <Stack alignItems="center" justifyContent="center" sx={{ minHeight: { xs: 170, md: 142 } }}>
                 <Box
                   sx={{
-                    width: 58,
-                    height: 58,
+                    width: 50,
+                    height: 50,
                     borderRadius: '50%',
                     display: 'grid',
                     placeItems: 'center',
@@ -625,7 +628,7 @@ export default function Home() {
                     boxShadow: `0 12px 26px ${alpha(PURPLE, 0.09)}`,
                   }}
                 >
-                  <TbPackage size={27} />
+                  <TbPackage size={23} />
                 </Box>
                 <Typography sx={{ color: text, mt: 1.3, fontWeight: 600 }}>No orders yet</Typography>
                 <Typography sx={{ color: muted, mt: 0.35, fontSize: '0.78rem' }}>
@@ -635,9 +638,9 @@ export default function Home() {
             )}
           </Box>
 
-          <Box sx={{ ...cardSx, p: { xs: 3, md: 2 }, overflow: 'hidden' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.08rem' }}>
+          <Box sx={{ ...cardSx, p: { xs: 2, md: 1.5 }, overflow: 'hidden', minWidth: 0 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+              <Typography sx={{ color: text, fontWeight: 700, fontSize: '0.95rem' }}>
                 Quick Actions
               </Typography>
               <Typography sx={{ color: muted, fontSize: '0.76rem' }}>Shortcuts</Typography>
@@ -650,7 +653,7 @@ export default function Home() {
                   md: 'repeat(2, minmax(0, 1fr))',
                   lg: 'repeat(3, minmax(0, 1fr))',
                 },
-                gap: 1.2,
+                gap: 0.9,
               }}
             >
               {quickActions.map((item) => (
@@ -660,11 +663,11 @@ export default function Home() {
                   key={item.title}
                   onClick={() => navigate(item.path)}
                   sx={{
-                    minHeight: { xs: 76, md: 66 },
-                    p: { xs: 1.7, md: 1.3 },
+                    minHeight: { xs: 70, md: 58 },
+                    p: { xs: 1.4, md: 1 },
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.5,
+                    gap: 1,
                     borderRadius: 2,
                     width: '100%',
                     border: `1px solid ${alpha(item.color, isDark ? 0.23 : 0.14)}`,
@@ -689,24 +692,24 @@ export default function Home() {
                 >
                   <Box
                     sx={{
-                      width: { xs: 40, md: 34 },
-                      height: { xs: 40, md: 34 },
+                      width: { xs: 36, md: 30 },
+                      height: { xs: 36, md: 30 },
                       borderRadius: 2,
                       display: 'grid',
                       placeItems: 'center',
-                    bgcolor: alpha(item.color, 0.13),
+                      bgcolor: alpha(item.color, 0.13),
                       color: item.color,
                       flexShrink: 0,
-                      '& svg': { width: 22, height: 22 },
+                      '& svg': { width: 18, height: 18 },
                     }}
                   >
                     {item.icon}
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ color: text, fontWeight: 600, fontSize: '0.94rem' }} noWrap>
+                    <Typography sx={{ color: text, fontWeight: 600, fontSize: '0.82rem' }} noWrap>
                       {item.title}
                     </Typography>
-                    <Typography sx={{ color: muted, fontSize: '0.84rem' }} noWrap>
+                    <Typography sx={{ color: muted, fontSize: '0.72rem' }} noWrap>
                       {item.text}
                     </Typography>
                   </Box>
@@ -719,14 +722,14 @@ export default function Home() {
         <Box
           sx={{
             ...cardSx,
-            minHeight: { xs: 386, md: 330 },
-            p: { xs: 3, md: 2 },
+            minHeight: { xs: 360, md: 300 },
+            p: { xs: 2, md: 1.5 },
             position: 'relative',
             overflow: 'hidden',
           }}
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.08rem' }}>
+            <Typography sx={{ color: text, fontWeight: 700, fontSize: '0.95rem' }}>
               Recent Orders
             </Typography>
             <Typography onClick={() => navigate('/orders/list')} sx={{ color: PURPLE, fontWeight: 600, cursor: 'pointer' }}>
@@ -809,11 +812,11 @@ export default function Home() {
               })}
             </Stack>
           ) : (
-            <Stack alignItems="center" justifyContent="center" sx={{ minHeight: { xs: 300, md: 246 } }}>
+            <Stack alignItems="center" justifyContent="center" sx={{ minHeight: { xs: 278, md: 220 } }}>
               <Box
                 sx={{
-                  width: 68,
-                  height: 68,
+                  width: 56,
+                  height: 56,
                   borderRadius: '50%',
                   display: 'grid',
                   placeItems: 'center',
@@ -823,9 +826,9 @@ export default function Home() {
                   boxShadow: `0 16px 34px ${alpha(PURPLE, 0.1)}`,
                 }}
               >
-                <TbCube size={30} />
+                <TbCube size={25} />
               </Box>
-              <Typography sx={{ color: text, mt: 2, fontWeight: 700, fontSize: '1.05rem' }}>
+              <Typography sx={{ color: text, mt: 1.5, fontWeight: 700, fontSize: '0.92rem' }}>
                 No orders yet
               </Typography>
               <Typography sx={{ color: muted, mt: 0.7, textAlign: 'center' }}>
@@ -837,7 +840,7 @@ export default function Home() {
                 onClick={() => navigate('/orders/create')}
                 sx={{
                   mt: 2.2,
-                  background: `linear-gradient(135deg, ${PURPLE}, ${BLUE})`,
+                  background: `linear-gradient(135deg, ${NAVY}, ${RED})`,
                   color: '#ffffff',
                   borderRadius: 2,
                   textTransform: 'none',
@@ -845,7 +848,7 @@ export default function Home() {
                   px: 2.6,
                   boxShadow: `0 12px 26px ${alpha(PURPLE, 0.24)}`,
                   '&:hover': {
-                    background: `linear-gradient(135deg, #5f4fe8, #236ee5)`,
+                    background: `linear-gradient(135deg, #072B5B, #B8141A)`,
                     boxShadow: `0 16px 32px ${alpha(PURPLE, 0.3)}`,
                   },
                 }}
