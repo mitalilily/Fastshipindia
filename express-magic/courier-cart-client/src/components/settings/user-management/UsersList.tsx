@@ -1,5 +1,4 @@
 import {
-  alpha,
   Avatar,
   Box,
   Button,
@@ -21,6 +20,7 @@ import {
   useEmployees,
   useToggleEmployeeStatus,
 } from '../../../hooks/User/useUserManagement'
+import { glassStyles } from '../../UI/accordion/FormSectionAccordion'
 import StatusChip from '../../UI/chip/StatusChip'
 import CustomInput from '../../UI/inputs/CustomInput'
 import CustomSwitch from '../../UI/inputs/CustomSwitch'
@@ -74,9 +74,9 @@ const UsersList = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         p: 2,
-        background: '#FAF7F5',
-        border: '1px solid rgba(17, 17, 19, 0.08)',
-        borderRadius: 3,
+        background: 'rgb(108,89,137,0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        borderRadius: 2,
         gap: 2,
       }}
     >
@@ -108,11 +108,11 @@ const UsersList = () => {
   }
 
   const glass = {
-    background: '#FFFFFF',
-    border: '1px solid rgba(17, 17, 19, 0.08)',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    backdropFilter: 'blur(12px)',
     p: 2,
-    borderRadius: 3,
-    boxShadow: '0 18px 34px rgba(17, 17, 19, 0.08)',
+    borderRadius: 2,
   }
 
   return (
@@ -166,10 +166,7 @@ const UsersList = () => {
               justifyContent: 'space-between',
               p: 2,
               gap: 2,
-              borderRadius: 3,
-              border: '1px solid rgba(17, 17, 19, 0.08)',
-              background: 'linear-gradient(180deg, #FFFFFF 0%, #FAF7F5 100%)',
-              boxShadow: '0 12px 24px rgba(17, 17, 19, 0.04)',
+              ...glassStyles,
             }}
           >
             <Box display="flex" alignItems="center" gap={2} flex={1}>
@@ -230,7 +227,6 @@ const UsersList = () => {
               <Button
                 size="small"
                 variant="contained"
-                sx={{ borderRadius: 2 }}
                 onClick={() => {
                   setEditUser(user)
                   setOpenForm(true)
@@ -238,16 +234,7 @@ const UsersList = () => {
               >
                 Edit
               </Button>
-              <IconButton
-                size="small"
-                color="error"
-                sx={{
-                  borderRadius: 2,
-                  border: `1px solid ${alpha('#062A5B', 0.16)}`,
-                  backgroundColor: alpha('#062A5B', 0.05),
-                }}
-                onClick={(e) => openPopover(e, user)}
-              >
+              <IconButton size="small" color="error" onClick={(e) => openPopover(e, user)}>
                 {' '}
                 <TbTrashFilled />
               </IconButton>

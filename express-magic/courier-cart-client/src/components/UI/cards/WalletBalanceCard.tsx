@@ -5,9 +5,6 @@ import { BsWallet2 } from 'react-icons/bs'
 import AddMoneyDialog from '../../AddMoneyDialog'
 import StatusChip from '../chip/StatusChip'
 
-const BRAND_GREEN = '#062A5B'
-const BRAND_ORANGE = '#ED1C24'
-
 interface WalletBalanceCardProps {
   balance: number
   buttonText?: string
@@ -23,201 +20,157 @@ const WalletBalanceCard: React.FC<WalletBalanceCardProps> = ({
   description = '',
   additionalOffers = 0,
   showCashback = false,
-  cashbackText = '25% Cashback on min recharge of ₹200',
+  cashbackText = '25% cashback on minimum recharge of INR 200',
 }) => {
   const isRecharged = balance > 0
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm')) // e.g., <600px
-
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
     <>
       <Box
         sx={{
-          bgcolor: '#ffffff',
-          borderRadius: 3,
-          p: { xs: 2.5, md: 3 },
-          border: `1.5px solid ${alpha(BRAND_ORANGE, 0.2)}`,
-          boxShadow: `0 4px 16px ${alpha(BRAND_ORANGE, 0.12)}`,
+          borderRadius: '14px',
+          p: { xs: 2.7, md: 3.2 },
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+          boxShadow: `0 24px 46px ${alpha(theme.palette.text.primary, 0.08)}`,
           position: 'relative',
-          overflow: 'visible',
-          background: `linear-gradient(135deg, #FFFFFF 0%, ${alpha(BRAND_ORANGE, 0.03)} 100%)`,
+          overflow: 'hidden',
+          background: `
+            radial-gradient(circle at top left, ${alpha(theme.palette.primary.light, 0.18)} 0%, transparent 28%),
+            radial-gradient(circle at top right, ${alpha(theme.palette.secondary.main, 0.2)} 0%, transparent 24%),
+            linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,248,240,0.94) 100%)
+          `,
         }}
       >
-        {/* Status Badge */}
-        <Stack
-          direction="row"
-          spacing={1.5}
-          alignItems="flex-start"
-          justifyContent="space-between"
-          mb={2}
-        >
+        <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between" mb={2.4}>
           <Stack direction="row" spacing={1.5} alignItems="center" flex={1}>
             <Box
               sx={{
-                bgcolor: alpha(BRAND_ORANGE, 0.12),
-                borderRadius: 2,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.2)} 0%, ${alpha(theme.palette.secondary.main, 0.2)} 100%)`,
+                borderRadius: '10px',
                 p: 1.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                color: theme.palette.primary.main,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
               }}
             >
-              <BsWallet2 size={24} color={BRAND_ORANGE} />
+              <BsWallet2 size={24} />
             </Box>
-            <Stack spacing={0.5}>
-              <Stack direction="row" spacing={1} alignItems="center">
+            <Stack spacing={0.6}>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                 <Typography
                   variant="h6"
                   sx={{
-                    fontWeight: 700,
-                    color: BRAND_ORANGE,
-                    fontSize: { xs: '1rem', md: '1.125rem' },
+                    fontWeight: 800,
+                    color: theme.palette.text.primary,
+                    fontSize: { xs: '1rem', md: '1.14rem' },
                   }}
                 >
-                  Recharge Wallet
+                  Wallet balance
                 </Typography>
-                {isRecharged ? (
-                  <StatusChip status="success" label="Done" />
-                ) : (
-                  <StatusChip status="pending" label="Pending" />
-                )}
+                {isRecharged ? <StatusChip status="success" label="Live" /> : <StatusChip status="pending" label="Low" />}
               </Stack>
               <Typography
                 variant="body2"
                 sx={{
-                  color: '#6b6b6b',
-                  fontSize: { xs: '0.8rem', md: '0.875rem' },
+                  color: theme.palette.text.secondary,
+                  fontSize: { xs: '0.82rem', md: '0.9rem' },
+                  fontWeight: 500,
                 }}
               >
-                Add funds to pay for shipping
+                Available funds ready for your next shipping cycle
               </Typography>
             </Stack>
           </Stack>
 
-          {/* Floating Offers Chip */}
           {additionalOffers > 0 && (
             <Chip
-              label={`+${additionalOffers} Offers`}
+              label={`${additionalOffers} offers`}
               size="small"
               sx={{
-                bgcolor: BRAND_ORANGE,
-                color: '#fff',
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                height: 24,
-                boxShadow: `0 2px 8px ${alpha(BRAND_ORANGE, 0.3)}`,
+                bgcolor: alpha(theme.palette.secondary.main, 0.14),
+                color: theme.palette.secondary.dark,
+                fontWeight: 800,
+                borderRadius: '8px',
+                fontSize: '0.72rem',
+                border: `1px solid ${alpha(theme.palette.secondary.main, 0.24)}`,
               }}
             />
           )}
         </Stack>
 
-        {/* Balance Display */}
-        <Box
-          sx={{
-            bgcolor: alpha(BRAND_ORANGE, 0.06),
-            borderRadius: 2,
-            p: 2,
-            mb: 2,
-            border: `1px solid ${alpha(BRAND_ORANGE, 0.15)}`,
-          }}
-        >
-          <Typography
-            variant="caption"
-            sx={{
-              color: '#6b6b6b',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-              display: 'block',
-              mb: 0.5,
-            }}
-          >
-            Current Balance
-          </Typography>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              color: BRAND_ORANGE,
-              fontSize: { xs: '1.75rem', md: '2rem' },
-              lineHeight: 1.2,
-            }}
-          >
-            ₹
-            {balance.toLocaleString('en-IN', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Typography>
-        </Box>
-
-        {/* Cashback Offer */}
-        {showCashback && (
-          <Box
-            sx={{
-              bgcolor: alpha(BRAND_GREEN, 0.08),
-              borderRadius: 1.5,
-              p: 1.5,
-              mb: 2,
-              border: `1px solid ${alpha(BRAND_GREEN, 0.2)}`,
-            }}
-          >
+        <Stack spacing={2.5}>
+          <Box>
             <Typography
-              variant="body2"
+              variant={isMobile ? 'h4' : 'h3'}
               sx={{
-                color: BRAND_GREEN,
-                fontWeight: 600,
-                fontSize: '0.875rem',
+                fontWeight: 900,
+                color: theme.palette.text.primary,
+                letterSpacing: '-0.04em',
               }}
             >
-              🎉 {cashbackText}
+              INR {balance.toLocaleString('en-IN')}
             </Typography>
+            {description && (
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.6 }}>
+                {description}
+              </Typography>
+            )}
           </Box>
-        )}
 
-        {/* Description */}
-        {description && (
-          <Typography
-            variant="body2"
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => setDialogOpen(true)}
             sx={{
-              color: '#6b6b6b',
-              mb: 2,
-              fontSize: '0.875rem',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: '#ffffff',
+              borderRadius: '10px',
+              py: 1.25,
+              fontWeight: 800,
+              textTransform: 'none',
+              fontSize: '0.95rem',
+              boxShadow: `0 18px 30px ${alpha(theme.palette.primary.main, 0.28)}`,
+              '&:hover': {
+                transform: 'translateY(-1px)',
+              },
             }}
           >
-            {description}
-          </Typography>
-        )}
+            {buttonText}
+          </Button>
 
-        {/* Recharge Button */}
-        <Button
-          variant="contained"
-          fullWidth={isMobile}
-          onClick={() => setDialogOpen(true)}
-          sx={{
-            bgcolor: BRAND_ORANGE,
-            color: '#ffffff',
-            fontWeight: 600,
-            py: 1.25,
-            borderRadius: 2,
-            textTransform: 'none',
-            fontSize: { xs: '0.875rem', md: '0.9rem' },
-            boxShadow: `0 4px 12px ${alpha(BRAND_ORANGE, 0.3)}`,
-            '&:hover': {
-              bgcolor: '#d67e26',
-              boxShadow: `0 6px 16px ${alpha(BRAND_ORANGE, 0.4)}`,
-              transform: 'translateY(-1px)',
-            },
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {buttonText}
-        </Button>
+          {showCashback && (
+            <Box
+              sx={{
+                backgroundColor: alpha(theme.palette.secondary.main, 0.08),
+                p: 1.25,
+                borderRadius: '12px',
+                border: `1px dashed ${alpha(theme.palette.secondary.main, 0.28)}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.secondary.dark,
+                  fontWeight: 800,
+                  textAlign: 'center',
+                }}
+              >
+                {cashbackText}
+              </Typography>
+            </Box>
+          )}
+        </Stack>
       </Box>
-      <AddMoneyDialog currentBalance={balance ?? 0} open={dialogOpen} setOpen={setDialogOpen} />
+
+      <AddMoneyDialog open={dialogOpen} setOpen={setDialogOpen} currentBalance={balance} />
     </>
   )
 }

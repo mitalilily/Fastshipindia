@@ -1,5 +1,7 @@
-import { Box, Link, List, ListItem, ListItemText } from '@mui/material'
+import { Box, Link, List, ListItem, ListItemText, Typography } from '@mui/material'
 import PageHeading from '../../components/UI/heading/PageHeading'
+import { brandIdentity } from '../../theme/brand'
+import { TERMS_REFUND_POLICY_LINE } from '../../utils/constants'
 
 const CancellationPolicy = () => {
   return (
@@ -12,7 +14,9 @@ const CancellationPolicy = () => {
             primary={
               <>
                 You may cancel your account at any time by emailing us at{' '}
-                <Link href="mailto:support@fastship.in">support@fastship.in</Link>.
+                <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link>{' '}
+                or calling{' '}
+                <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
               </>
             }
           />
@@ -27,15 +31,33 @@ const CancellationPolicy = () => {
         </ListItem>
 
         <ListItem sx={{ display: 'list-item' }}>
-          <ListItemText primary="FastShip reserves the right to modify, suspend, or terminate the Service for any reason, without prior notice at any time." />
+          <ListItemText primary="Ship Aggregator (Ship Aggregator) reserves the right to modify, suspend, or terminate the Service for any reason, without prior notice at any time." />
         </ListItem>
 
         <ListItem sx={{ display: 'list-item' }}>
-          <ListItemText primary="Fraud Prevention: Without limiting any other remedies, FastShip may suspend or terminate your account if we suspect that you have engaged in fraudulent or unlawful activity in connection with the Platform." />
+          <ListItemText primary="Fraud Prevention: Without limiting any other remedies, Ship Aggregator may suspend or terminate your account if we suspect that you have engaged in fraudulent or unlawful activity in connection with the Platform." />
         </ListItem>
 
         <ListItem sx={{ display: 'list-item' }}>
-          <ListItemText primary="Note: No refunds are provided, even if a subscription or plan is cancelled mid-cycle." />
+          <ListItemText
+            primary={
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: 800,
+                  color: '#171310',
+                  bgcolor: 'rgba(245, 124, 0, 0.12)',
+                  borderLeft: '4px solid #F57C00',
+                  borderRadius: '8px',
+                  px: 1.25,
+                  py: 0.85,
+                  display: 'inline-block',
+                }}
+              >
+                {TERMS_REFUND_POLICY_LINE}
+              </Typography>
+            }
+          />
         </ListItem>
       </List>
     </Box>
@@ -43,3 +65,5 @@ const CancellationPolicy = () => {
 }
 
 export default CancellationPolicy
+
+

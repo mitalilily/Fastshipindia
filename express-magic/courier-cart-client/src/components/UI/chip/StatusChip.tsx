@@ -1,4 +1,4 @@
-import { Chip, type ChipProps } from '@mui/material'
+import { Chip, alpha, useTheme, type ChipProps } from '@mui/material'
 import React from 'react'
 import { FaCheckCircle } from 'react-icons/fa'
 import { MdError, MdInfo, MdPending } from 'react-icons/md'
@@ -8,69 +8,57 @@ interface StatusChipProps extends Partial<ChipProps> {
   label?: string
 }
 
-const STATUS_STYLES = {
+const STATUS_META = {
   success: {
-    bg: '#E8F7EE',
-    color: '#15803D',
+    defaultLabel: 'Active',
+    bg: '#E4F6EE',
+    fg: '#147A56',
     icon: <FaCheckCircle size={12} />,
-    defaultLabel: 'Success',
   },
-
   pending: {
-    bg: '#FFF7E6',
-    color: '#B45309',
-    icon: <MdPending size={14} />,
     defaultLabel: 'Pending',
+    bg: '#FFF0DE',
+    fg: '#C96D00',
+    icon: <MdPending size={14} />,
   },
-
   error: {
-    bg: '#FEECEC',
-    color: '#B91C1C',
+    defaultLabel: 'Needs attention',
+    bg: '#FCE6E6',
+    fg: '#B33A3A',
     icon: <MdError size={14} />,
-    defaultLabel: 'Failed',
   },
-
   info: {
-    bg: '#EEF2F7',
-    color: '#334155',
+    defaultLabel: 'In review',
+    bg: '#E8F0FF',
+    fg: '#225CA8',
     icon: <MdInfo size={14} />,
-    defaultLabel: 'Info',
   },
 }
 
 const StatusChip: React.FC<StatusChipProps> = ({ status, label, ...props }) => {
-  const style = STATUS_STYLES[status] || STATUS_STYLES.info
+  const theme = useTheme()
+  const meta = STATUS_META[status] || STATUS_META.info
 
   return (
     <Chip
       size="small"
-      icon={style.icon}
-      label={label || style.defaultLabel}
+      icon={meta.icon}
+      label={label || meta.defaultLabel}
       sx={{
         height: 28,
-        px: 0.4,
-        borderRadius: '8px',
-        backgroundColor: style.bg,
-        color: style.color,
+        px: 0.75,
         fontSize: '11px',
-        fontWeight: 700,
-        border: 'none',
-        letterSpacing: '0.02em',
-        textTransform: 'none',
-
-        '& .MuiChip-label': {
-          px: 1,
-        },
-
+        fontWeight: 600,
+        letterSpacing: 0,
+        backgroundColor: meta.bg,
+        color: meta.fg,
+        border: `1px solid ${alpha(meta.fg, 0.16)}`,
+        borderRadius: '999px',
+        boxShadow: `0 8px 18px ${alpha(theme.palette.text.primary, 0.05)}`,
         '& .MuiChip-icon': {
-          color: style.color,
-          ml: 0.7,
+          color: meta.fg,
+          ml: 0.6,
         },
-
-        '&:hover': {
-          opacity: 0.92,
-        },
-
         ...props.sx,
       }}
       {...props}

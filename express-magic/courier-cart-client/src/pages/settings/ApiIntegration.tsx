@@ -2,7 +2,7 @@ import { Box, Button, Stack } from '@mui/material'
 import { useState } from 'react'
 import { MdAdd, MdDownload } from 'react-icons/md'
 import type { WebhookSubscription } from '../../api/apiIntegration'
-import ListPageLayout from '../../components/UI/layout/ListPageLayout'
+import PageHeading from '../../components/UI/heading/PageHeading'
 import { SmartTabs } from '../../components/UI/tab/Tabs'
 import { toast } from '../../components/UI/Toast'
 import {
@@ -16,6 +16,7 @@ import {
   useUpdateWebhook,
   useWebhooks,
 } from '../../hooks/useApiIntegration'
+import { brand, brandGradients } from '../../theme/brand'
 import { ApiKeysTable } from './apiIntegration/ApiKeysTable'
 import { CreateApiKeyModal } from './apiIntegration/CreateApiKeyModal'
 import { SamplePayloadModal } from './apiIntegration/SamplePayloadModal'
@@ -256,39 +257,47 @@ const ApiIntegration = () => {
   const handleDownloadDocumentation = () => {
     const link = document.createElement('a')
     link.href = '/API_DOCUMENTATION.pdf'
-    link.download = 'DESPATCHLOGISTICS-API-Documentation-v1.pdf'
+    link.download = 'Ship Aggregator-Logistics-API-Documentation-v1.pdf'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
   }
 
-  const controls = (
-    <Box sx={{ px: 2 }}>
-      <SmartTabs
-        tabs={[
-          { label: 'API Keys', value: 'apiKeys' },
-          { label: 'Webhooks', value: 'webhooks' },
-        ]}
-        value={activeTab}
-        onChange={(value) => setActiveTab(value as 'apiKeys' | 'webhooks')}
-      />
-    </Box>
-  )
-
   return (
-    <ListPageLayout
-      title="API Integration"
-      description="Manage API keys, webhooks, and integrations"
-      actions={[
-        {
-          label: 'Download Documentation',
-          onClick: handleDownloadDocumentation,
-          icon: <MdDownload />,
-          variant: 'outlined',
-        },
-      ]}
-      controls={controls}
-    >
+    <Box sx={{ minHeight: '100vh', background: brandGradients.page, py: 4 }}>
+      <Stack spacing={4}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <PageHeading
+            title="API Integration"
+            subtitle="Manage API keys and webhook subscriptions inside the Ship Aggregator developer workspace."
+            eyebrow="Developer"
+          />
+          <Button
+            variant="outlined"
+            startIcon={<MdDownload />}
+            onClick={handleDownloadDocumentation}
+            sx={{
+              borderColor: brand.ink,
+              color: brand.ink,
+              '&:hover': {
+                borderColor: brand.ink,
+                bgcolor: 'rgba(255, 255, 255, 0.78)',
+              },
+            }}
+          >
+            Download v1 API Documentation
+          </Button>
+        </Stack>
+
+        {/* Tabs */}
+        <SmartTabs
+          tabs={[
+            { label: 'API Keys', value: 'apiKeys' },
+            { label: 'Webhooks', value: 'webhooks' },
+          ]}
+          value={activeTab}
+          onChange={(value) => setActiveTab(value as 'apiKeys' | 'webhooks')}
+        />
 
         {/* API Keys Tab */}
         {activeTab === 'apiKeys' && (
@@ -335,6 +344,22 @@ const ApiIntegration = () => {
                 webhooks={webhooks}
                 isLoading={webhooksLoading}
                 onEdit={handleEditWebhook}
+                onUpdate={(id, data) => {
+                  updateWebhook.mutate(
+                    { id, data },
+                    {
+                      onSuccess: () => {
+                        toast.open({ message: 'Webhook updated successfully', severity: 'success' })
+                      },
+                      onError: (error: unknown) => {
+                        const errorMessage =
+                          (error as { response?: { data?: { message?: string } } })?.response
+                            ?.data?.message || 'Failed to update webhook'
+                        toast.open({ message: errorMessage, severity: 'error' })
+                      },
+                    },
+                  )
+                }}
                 onDelete={handleDeleteWebhook}
                 onRegenerateSecret={handleRegenerateWebhookSecret}
               />
@@ -389,8 +414,11 @@ const ApiIntegration = () => {
           copiedSecret={copiedSecret}
           onCopy={handleCopySecret}
         />
-    </ListPageLayout>
+      </Stack>
+    </Box>
   )
 }
 
 export default ApiIntegration
+
+

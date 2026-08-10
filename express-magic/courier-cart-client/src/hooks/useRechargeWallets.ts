@@ -1,5 +1,6 @@
-import { useMutation } from '@tanstack/react-query'
-import { confirmRecharge, createRechargeOrder, fetchRechargeStatus } from '../api/wallet.api'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { confirmRecharge, createRechargeOrder } from '../api/wallet.api'
+import { toast } from '../components/UI/Toast'
 
 interface RechargeOptions {
   amount: number
@@ -10,13 +11,22 @@ interface RechargeOptions {
   }
 }
 
-interface WalletTopupStatusResponse {
-  ok: boolean
-  status: 'created' | 'processing' | 'success' | 'failed'
-  paymentId?: string | null
-  paymentStatus?: string
-  message?: string
-  alreadyProcessed?: boolean
+interface RechargeOrderResponse {
+  orderId: string
+  key: string
+  amount: number
+  currency?: string
+  name?: string
+  description?: string
+  prefill?: {
+    name?: string
+    email?: string
+    contact?: string
+  }
+  theme?: {
+    color?: string
+  }
+  themeColor?: string
 }
 
 interface RazorpayCheckoutOptions {
@@ -34,6 +44,10 @@ interface RazorpayCheckoutOptions {
   theme: {
     color: string
   }
+  retry?: {
+    enabled: boolean
+    max_count: number
+  }
   handler: (response: RazorpayPaymentResponse) => void | Promise<void>
   modal: {
     ondismiss: () => void
@@ -46,17 +60,21 @@ interface RazorpayPaymentResponse {
   razorpay_signature: string
 }
 
-interface RazorpayPaymentFailureResponse {
+interface RazorpayFailureResponse {
   error?: {
+    code?: string
     description?: string
     reason?: string
-    step?: string
+    metadata?: {
+      order_id?: string
+      payment_id?: string
+    }
   }
 }
 
 interface RazorpayInstance {
   open: () => void
-  on: (event: string, callback: (response: RazorpayPaymentFailureResponse) => void) => void
+  on: (event: string, callback: (response?: RazorpayFailureResponse) => void) => void
   close: () => void
 }
 
@@ -66,29 +84,33 @@ interface RazorpayConstructor {
 
 declare global {
   interface Window {
-    Razorpay: RazorpayConstructor
+    Razorpay?: RazorpayConstructor
   }
 }
 
 const RAZORPAY_CHECKOUT_SRC = 'https://checkout.razorpay.com/v1/checkout.js'
-let razorpayCheckoutPromise: Promise<void> | null = null
 
-const loadRazorpayCheckout = () => {
-  if (window.Razorpay) return Promise.resolve()
-  if (razorpayCheckoutPromise) return razorpayCheckoutPromise
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const err = error as { response?: { data?: { error?: string; message?: string } }; message?: string }
+  return err?.response?.data?.error || err?.response?.data?.message || err?.message || fallback
+}
 
-  razorpayCheckoutPromise = new Promise<void>((resolve, reject) => {
+const loadRazorpayCheckout = () =>
+  new Promise<void>((resolve, reject) => {
+    if (window.Razorpay) {
+      resolve()
+      return
+    }
+
     const existingScript = document.querySelector<HTMLScriptElement>(
       `script[src="${RAZORPAY_CHECKOUT_SRC}"]`,
     )
 
     if (existingScript) {
       existingScript.addEventListener('load', () => resolve(), { once: true })
-      existingScript.addEventListener(
-        'error',
-        () => reject(new Error('Razorpay Checkout failed to load. Please refresh and try again.')),
-        { once: true },
-      )
+      existingScript.addEventListener('error', () => reject(new Error('Razorpay checkout failed to load')), {
+        once: true,
+      })
       return
     }
 
@@ -96,191 +118,102 @@ const loadRazorpayCheckout = () => {
     script.src = RAZORPAY_CHECKOUT_SRC
     script.async = true
     script.onload = () => resolve()
-    script.onerror = () => {
-      razorpayCheckoutPromise = null
-      reject(new Error('Razorpay Checkout failed to load. Please refresh and try again.'))
-    }
-    document.head.appendChild(script)
+    script.onerror = () => reject(new Error('Razorpay checkout failed to load'))
+    document.body.appendChild(script)
   })
 
-  return razorpayCheckoutPromise
-}
+export const useRechargeWallet = () => {
+  const queryClient = useQueryClient()
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  const apiMessage =
-    typeof error === 'object' &&
-    error !== null &&
-    'response' in error &&
-    typeof (error as { response?: { data?: { error?: unknown } } }).response?.data?.error === 'string'
-      ? (error as { response?: { data?: { error?: string } } }).response?.data?.error
-      : ''
-
-  if (apiMessage) return apiMessage
-  if (error instanceof Error && error.message) return error.message
-  return fallback
-}
-
-export const useRechargeWallet = () =>
-  useMutation<void, Error, RechargeOptions>({
+  return useMutation<void, Error, RechargeOptions>({
     mutationFn: async (options) => {
-      const orderData = await createRechargeOrder({
+      await loadRazorpayCheckout()
+
+      const orderData = (await createRechargeOrder({
         amount: options.amount,
         name: options.prefill.name,
         email: options.prefill.email,
         phone: options.prefill.contact,
-      })
+      })) as RechargeOrderResponse
 
-      if (!orderData?.orderId || !orderData?.key) {
+      if (!orderData?.orderId || !orderData?.key || !orderData?.amount) {
         throw new Error('Invalid Razorpay order response')
       }
+      if (!window.Razorpay) {
+        throw new Error('Razorpay checkout is unavailable')
+      }
+      const RazorpayCheckout = window.Razorpay
 
-      await loadRazorpayCheckout()
+      await new Promise<void>((resolve, reject) => {
+        let finished = false
 
-      return new Promise<void>((resolve, reject) => {
-        let settled = false
-        let closingForSuccess = false
-        let statusPollTimer: number | undefined
-        let initialStatusCheckTimer: number | undefined
-        let hardTimeoutTimer: number | undefined
-        let razorpay: RazorpayInstance | null = null
-
-        const cleanup = () => {
-          if (statusPollTimer !== undefined) window.clearInterval(statusPollTimer)
-          if (initialStatusCheckTimer !== undefined) window.clearTimeout(initialStatusCheckTimer)
-          if (hardTimeoutTimer !== undefined) window.clearTimeout(hardTimeoutTimer)
-        }
-
-        const resolveAndReload = () => {
-          if (settled) return
-          settled = true
-          cleanup()
-          resolve()
-          window.setTimeout(() => window.location.reload(), 0)
-        }
-
-        const rejectWithMessage = (message: string) => {
-          if (settled) return
-          settled = true
-          cleanup()
-          reject(new Error(message))
-        }
-
-        const settleFromStatus = async (source: string) => {
-          if (settled) return
-
-          try {
-            const status = (await fetchRechargeStatus(orderData.orderId)) as WalletTopupStatusResponse
-
-            if (status.status === 'success') {
-              closingForSuccess = true
-              try {
-                razorpay?.close()
-              } catch (error) {
-                console.warn('Failed to close Razorpay checkout after success:', error)
-              }
-              resolveAndReload()
-              return
-            }
-
-            if (status.status === 'failed') {
-              rejectWithMessage(status.message || 'Payment failed.')
-              return
-            }
-
-            if (source === 'timeout') {
-              rejectWithMessage(
-                status.message ||
-                  'Payment confirmation is taking longer than usual. If money was debited, it should reflect shortly.',
-              )
-            }
-          } catch (error) {
-            console.error(`Wallet top-up status check failed during ${source}:`, error)
-
-            if (source === 'timeout') {
-              rejectWithMessage(
-                getErrorMessage(
-                  error,
-                  'We could not confirm the payment automatically. If money was debited, it should reflect shortly.',
-                ),
-              )
-            }
-          }
-        }
-
-        const optionsRazorpay: RazorpayCheckoutOptions = {
+        const checkoutOptions: RazorpayCheckoutOptions = {
           key: orderData.key,
-          amount: orderData.amount,
+          amount: Number(orderData.amount),
           currency: orderData.currency || 'INR',
-          name: orderData.name || 'FastShip',
+          name: orderData.name || 'Ship Aggregator',
           description: orderData.description || 'Wallet Recharge',
           order_id: orderData.orderId,
-          prefill: orderData.prefill,
-          theme: orderData.theme || { color: '#062A5B' },
+          prefill: {
+            name: orderData.prefill?.name || options.prefill.name || 'Ship Aggregator Customer',
+            email: orderData.prefill?.email || options.prefill.email || '',
+            contact: orderData.prefill?.contact || options.prefill.contact || '',
+          },
+          theme: { color: orderData.theme?.color || orderData.themeColor || '#0052CC' },
+          retry: {
+            enabled: true,
+            max_count: 2,
+          },
           handler: async (response: RazorpayPaymentResponse) => {
             try {
-              const confirmation = await confirmRecharge({
+              await confirmRecharge({
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
                 signature: response.razorpay_signature,
               })
 
-              if (confirmation?.status === 'success' || confirmation?.ok) {
-                resolveAndReload()
-                return
-              }
-
-              await settleFromStatus('handler')
+              finished = true
+              await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['walletBalance'] }),
+                queryClient.invalidateQueries({ queryKey: ['walletTransactions'] }),
+              ])
+              toast.open({ message: 'Wallet recharge successful', severity: 'success' })
+              resolve()
             } catch (error) {
+              finished = true
               console.error('Payment confirmation error:', error)
-              await settleFromStatus('handler-fallback')
-
-              if (!settled) {
-                rejectWithMessage(
+              reject(
+                new Error(
                   getErrorMessage(
                     error,
-                    'Payment succeeded but confirmation is still pending. If money was debited, it should reflect shortly.',
+                    'Payment successful but wallet confirmation failed. Please contact support.',
                   ),
-                )
-              }
+                ),
+              )
             }
           },
           modal: {
             ondismiss: () => {
-              if (closingForSuccess || settled) return
-
-              void settleFromStatus('dismiss').then(() => {
-                if (!settled) {
-                  rejectWithMessage(
-                    'Payment window was closed before confirmation. If money was debited, it should reflect in your wallet shortly.',
-                  )
-                }
-              })
+              if (!finished) {
+                reject(new Error('Payment cancelled'))
+              }
             },
           },
         }
 
-        razorpay = new window.Razorpay(optionsRazorpay)
-        razorpay.on('payment.failed', (response: RazorpayPaymentFailureResponse) => {
-          rejectWithMessage(
-            response?.error?.description ||
-              response?.error?.reason ||
-              'Payment failed. Please try again.',
+        const razorpay = new RazorpayCheckout(checkoutOptions)
+        razorpay.on('payment.failed', (response) => {
+          finished = true
+          reject(
+            new Error(
+              response?.error?.description ||
+                response?.error?.reason ||
+                'Razorpay payment failed',
+            ),
           )
         })
-
         razorpay.open()
-
-        initialStatusCheckTimer = window.setTimeout(() => {
-          void settleFromStatus('initial-check')
-        }, 3000)
-
-        statusPollTimer = window.setInterval(() => {
-          void settleFromStatus('poll')
-        }, 5000)
-
-        hardTimeoutTimer = window.setTimeout(() => {
-          void settleFromStatus('timeout')
-        }, 10 * 60 * 1000)
       })
     },
   })
+}

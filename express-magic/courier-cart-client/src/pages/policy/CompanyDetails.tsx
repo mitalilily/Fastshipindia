@@ -9,27 +9,23 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { FiClock, FiGlobe, FiMail, FiMapPin } from 'react-icons/fi'
+import { FiClock, FiMail, FiMapPin, FiPhone } from 'react-icons/fi'
 import PageHeading from '../../components/UI/heading/PageHeading'
 import MapViewer from '../../components/UI/map/MapViewer'
+import { brandIdentity } from '../../theme/brand'
 
 const CompanyDetails = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-
-  const coords = { lat: 26.8467, lng: 75.8267 }
+  const coords = { lat: 34.209, lng: 74.3429 }
 
   return (
     <Stack mt={2} gap={5}>
-      {/* Heading */}
       <PageHeading
         title="Contact Us"
-        subtitle="  We’re here to help! Whether you have questions about our services, need support with your
-        account, or want to know more about how FastShip can assist your business, feel free to
-        reach out to us."
+        subtitle="We’re here to help with bookings, account support, and courier operations. Reach out to Ship Aggregator whenever you need assistance."
       />
 
-      {/* Layout */}
       <Box
         sx={{
           display: 'flex',
@@ -37,64 +33,57 @@ const CompanyDetails = () => {
           gap: 5,
         }}
       >
-        {/* Left Column - Info */}
         <Paper
           elevation={4}
           sx={{
             flex: 1,
             p: 4,
-            borderRadius: 3,
+            borderRadius: 1,
             display: 'flex',
             flexDirection: 'column',
             gap: 3,
             bgcolor: theme.palette.background.paper,
+            border: '1px solid',
+            borderColor: 'divider',
           }}
         >
           <Typography variant="h6" fontWeight="bold" color="secondary" gutterBottom>
-            FastShip
+            {brandIdentity.name}
           </Typography>
 
-          {/* Address */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
             <FiMapPin size={22} color={theme.palette.primary.main} />
-            <Typography fontSize="1rem">
-              B-76 Shiv Shakti Nagar, Jagatpura Road, Malviya Nagar, Jaipur, Rajasthan, India 302017
-            </Typography>
+            <Typography fontSize="1rem">{brandIdentity.supportAddress}</Typography>
           </Box>
 
-          {/* Email */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <FiMail size={22} color={theme.palette.primary.main} />
             <Chip
               clickable
               component={Link}
-              href="mailto:support@fastship.in"
-              label="support@fastship.in"
+              href={`mailto:${brandIdentity.supportEmail}`}
+              label="Support Email"
               color="primary"
               variant="filled"
               icon={<FiMail size={16} />}
             />
           </Box>
 
-          {/* Website */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <FiGlobe size={22} color={theme.palette.primary.main} />
+            <FiPhone size={22} color={theme.palette.primary.main} />
             <Chip
               clickable
               component={Link}
-              href="https://www.fastship.in"
-              target="_blank"
-              rel="noreferrer"
-              label="www.fastship.in"
-              color="secondary"
+              href={`tel:${brandIdentity.supportPhone}`}
+              label={brandIdentity.supportPhone}
+              color="success"
               variant="filled"
-              icon={<FiGlobe size={16} />}
+              icon={<FiPhone size={16} />}
             />
           </Box>
 
           <Divider sx={{ my: 2 }} />
 
-          {/* Timing */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
             <FiClock size={22} color={theme.palette.primary.main} />
             <Box>
@@ -104,7 +93,6 @@ const CompanyDetails = () => {
           </Box>
         </Paper>
 
-        {/* Right Column - Map */}
         <Paper
           elevation={4}
           sx={{
@@ -119,7 +107,7 @@ const CompanyDetails = () => {
             width="100%"
             draggable={false}
             zoom={16}
-            popupText="FastShip"
+            popupText="Ship Aggregator"
             currentLocation={false}
           />
         </Paper>
@@ -129,3 +117,5 @@ const CompanyDetails = () => {
 }
 
 export default CompanyDetails
+
+

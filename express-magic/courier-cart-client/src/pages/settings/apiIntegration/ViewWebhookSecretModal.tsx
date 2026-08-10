@@ -3,6 +3,7 @@ import { saveAs } from 'file-saver'
 import { MdContentCopy, MdDownload } from 'react-icons/md'
 import CustomInput from '../../../components/UI/inputs/CustomInput'
 import CustomDialog from '../../../components/UI/modal/CustomModal'
+import { brand } from '../../../theme/brand'
 
 interface ViewWebhookSecretModalProps {
   open: boolean
@@ -26,20 +27,18 @@ export const ViewWebhookSecretModal = ({
   if (!webhook) return null
 
   const handleDownloadCredentials = () => {
-    if (!webhook) return
-
     const timestamp = new Date().toISOString()
-    const fileName = `fastship-webhook-secret-${(webhook.name || 'webhook').replace(
+    const fileName = `shipaggregator-webhook-secret-${(webhook.name || 'webhook').replace(
       /\s/g,
       '-',
     )}-${timestamp.split('T')[0]}.txt`
     const fileContent = `
-FastShip Webhook Secret
+Ship Aggregator Webhook Secret
 Generated: ${timestamp}
 Webhook Name: ${webhook.name || 'Unnamed'}
 Webhook URL: ${webhook.url}
 
-⚠️ IMPORTANT: Keep this secret secure and never share it publicly.
+IMPORTANT: Keep this secret secure and never share it publicly.
 Use this secret to verify webhook signatures using HMAC SHA256.
 
 Webhook Secret:
@@ -67,11 +66,11 @@ This file contains sensitive credentials. Store it securely and never commit it 
             startIcon={<MdDownload />}
             fullWidth
             sx={{
-              borderColor: '#062A5B',
-              color: '#062A5B',
+              borderColor: brand.ink,
+              color: brand.ink,
               '&:hover': {
-                borderColor: '#062A5B',
-                bgcolor: 'rgba(51, 51, 105, 0.08)',
+                borderColor: brand.ink,
+                bgcolor: 'rgba(255, 255, 255, 0.78)',
               },
             }}
           >
@@ -87,16 +86,16 @@ This file contains sensitive credentials. Store it securely and never commit it 
         <Box
           sx={{
             p: 2,
-            bgcolor: '#FFF4E6',
-            borderRadius: 1,
+            bgcolor: 'rgba(255, 248, 239, 0.96)',
+            borderRadius: '22px',
             border: '1px solid',
-            borderColor: '#FFA726',
+            borderColor: 'rgba(245, 158, 11, 0.24)',
           }}
         >
-          <Typography sx={{ fontWeight: 600, color: '#E65100', mb: 1, fontSize: '0.875rem' }}>
-            ⚠️ Important: Save this secret securely
+          <Typography sx={{ fontWeight: 600, color: brand.ink, mb: 1, fontSize: '0.875rem' }}>
+            Important: Save this secret securely
           </Typography>
-          <Typography sx={{ fontSize: '0.75rem', color: '#E65100', m: 0, mt: 1 }}>
+          <Typography sx={{ fontSize: '0.75rem', color: brand.inkSoft, m: 0, mt: 1 }}>
             You will not be able to view the webhook secret again after closing this dialog. Use
             this secret to verify webhook signatures using HMAC SHA256.
           </Typography>
@@ -105,7 +104,7 @@ This file contains sensitive credentials. Store it securely and never commit it 
           <Typography
             sx={{
               fontSize: '13px',
-              color: '#062A5B',
+              color: brand.ink,
               fontWeight: 500,
               mb: 0.5,
             }}
@@ -121,8 +120,8 @@ This file contains sensitive credentials. Store it securely and never commit it 
                 onClick={() => onCopy(webhook.secret, 'secret')}
                 size="small"
                 sx={{
-                  color: copiedSecret === 'secret' ? '#4CAF50' : '#062A5B',
-                  '&:hover': { bgcolor: 'rgba(51, 51, 105, 0.08)' },
+                  color: copiedSecret === 'secret' ? brand.success : brand.ink,
+                  '&:hover': { bgcolor: 'rgba(16, 50, 74, 0.08)' },
                 }}
               >
                 <MdContentCopy size={18} />
@@ -134,7 +133,7 @@ This file contains sensitive credentials. Store it securely and never commit it 
           <Typography
             sx={{
               fontSize: '13px',
-              color: '#062A5B',
+              color: brand.ink,
               fontWeight: 500,
               mb: 0.5,
             }}
@@ -147,3 +146,5 @@ This file contains sensitive credentials. Store it securely and never commit it 
     </CustomDialog>
   )
 }
+
+

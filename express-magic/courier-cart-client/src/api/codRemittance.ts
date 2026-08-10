@@ -16,7 +16,6 @@ export interface CodRemittance {
   status: 'pending' | 'credited'
   collectedAt?: string
   creditedAt?: string
-  walletTransactionId?: string
   notes?: string
   createdAt: string
   updatedAt: string

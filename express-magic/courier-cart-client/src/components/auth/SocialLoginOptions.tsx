@@ -4,8 +4,7 @@ import type React from 'react'
 import { FaWhatsapp } from 'react-icons/fa'
 import { FcGoogle } from 'react-icons/fc'
 
-const BRAND_GREEN = '#062A5B'
-const BRAND_ORANGE = '#ED1C24'
+const DE_BLUE = '#0052CC'
 
 interface ISocialLoginOptions {
   onSelect: (method: 'phone' | 'whatsapp' | 'google' | 'shopify') => void
@@ -23,19 +22,19 @@ export default function SocialLoginOptions({ onSelect, googleLoading }: ISocialL
     {
       aria: googleLoading ? 'Connecting to Google' : 'Continue with Google',
       icon: googleLoading ? (
-        <CircularProgress size={20} sx={{ color: BRAND_GREEN }} />
+        <CircularProgress size={20} sx={{ color: DE_BLUE }} />
       ) : (
         <FcGoogle size={20} />
       ),
       method: 'google',
       sx: {
-        color: BRAND_GREEN,
-        borderColor: alpha(BRAND_GREEN, 0.4),
-        backgroundColor: alpha('#ffffff', 0.8),
+        color: DE_BLUE,
+        borderColor: alpha(DE_BLUE, 0.2),
+        backgroundColor: '#ffffff',
         '&:hover': {
-          borderColor: BRAND_GREEN,
-          boxShadow: '0 10px 30px rgba(75, 142, 64, 0.15)',
-          backgroundColor: '#ffffff',
+          borderColor: DE_BLUE,
+          boxShadow: '0 8px 24px rgba(0, 82, 204, 0.12)',
+          backgroundColor: alpha(DE_BLUE, 0.02),
         },
       },
     },
@@ -44,13 +43,13 @@ export default function SocialLoginOptions({ onSelect, googleLoading }: ISocialL
       icon: <FaWhatsapp size={18} title="WhatsApp Login" />,
       method: 'whatsapp',
       sx: {
-        color: BRAND_ORANGE,
-        borderColor: alpha(BRAND_ORANGE, 0.4),
-        backgroundColor: alpha(BRAND_ORANGE, 0.08),
+        color: '#25D366',
+        borderColor: alpha('#25D366', 0.2),
+        backgroundColor: alpha('#25D366', 0.04),
         '&:hover': {
-          borderColor: BRAND_ORANGE,
-          backgroundColor: alpha(BRAND_ORANGE, 0.15),
-          boxShadow: '0 10px 30px rgba(248, 154, 58, 0.2)',
+          borderColor: '#25D366',
+          backgroundColor: alpha('#25D366', 0.08),
+          boxShadow: '0 8px 24px rgba(37, 211, 102, 0.12)',
         },
       },
     },
@@ -61,10 +60,10 @@ export default function SocialLoginOptions({ onSelect, googleLoading }: ISocialL
       <Divider sx={{ my: 1, width: '100%' }}>
         <Typography
           variant="subtitle2"
-          color={BRAND_GREEN}
-          sx={{ userSelect: 'none', fontWeight: 600 }}
+          color={alpha(DE_BLUE, 0.6)}
+          sx={{ userSelect: 'none', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}
         >
-          or continue with
+          or
         </Typography>
       </Divider>
 

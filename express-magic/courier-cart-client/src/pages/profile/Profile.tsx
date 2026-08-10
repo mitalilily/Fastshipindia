@@ -1,45 +1,20 @@
-import { alpha, Box, Paper, Stack, Typography } from '@mui/material'
+import { Box, Paper, Stack, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { Suspense } from 'react'
 import { FiCreditCard, FiFileText, FiShield, FiUser } from 'react-icons/fi'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import FullScreenLoader from '../../components/UI/loader/FullScreenLoader'
 
 type TopSection = 'user_profile' | 'company' | 'bank_details' | 'kyc_details'
 
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_WINE = '#ED1C24'
-const BRAND_TEXT = '#17171A'
-const BRAND_MUTED = '#6E6763'
+const DE_BLUE = '#0052CC'
+const DE_AMBER = '#FFAB00'
 
-const sectionTabs: Array<{
-  label: string
-  value: TopSection
-  icon: React.ReactNode
-  shortLabel: string
-}> = [
-  {
-    label: 'Personal details',
-    value: 'user_profile',
-    icon: <FiUser size={18} />,
-    shortLabel: 'Personal',
-  },
-  {
-    label: 'Company details',
-    value: 'company',
-    icon: <FiFileText size={18} />,
-    shortLabel: 'Company',
-  },
-  {
-    label: 'Bank accounts',
-    value: 'bank_details',
-    icon: <FiCreditCard size={18} />,
-    shortLabel: 'Bank',
-  },
-  {
-    label: 'KYC verification',
-    value: 'kyc_details',
-    icon: <FiShield size={18} />,
-    shortLabel: 'KYC',
-  },
+const sectionTabs: Array<{ label: string; value: TopSection; icon: React.ReactNode }> = [
+  { label: 'User', value: 'user_profile', icon: <FiUser size={15} /> },
+  { label: 'Company', value: 'company', icon: <FiFileText size={15} /> },
+  { label: 'Bank', value: 'bank_details', icon: <FiCreditCard size={15} /> },
+  { label: 'KYC', value: 'kyc_details', icon: <FiShield size={15} /> },
 ]
 
 function resolveActiveSection(pathname: string): TopSection {
@@ -52,112 +27,76 @@ function resolveActiveSection(pathname: string): TopSection {
 export default function ProfileLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+
   const active = resolveActiveSection(location.pathname)
 
   return (
-    <Stack spacing={1.2} sx={{ width: '100%' }}>
+    <Stack spacing={2.2} sx={{ width: '100%' }}>
       <Paper
         elevation={0}
         sx={{
-          p: { xs: 0.8, md: 1 },
-          borderRadius: 3,
-          border: `1px solid ${alpha('#111113', 0.08)}`,
-          background: 'rgba(255,255,255,0.96)',
-          boxShadow: '0 8px 22px rgba(17, 17, 19, 0.04)',
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 1,
+          border: `1px solid ${alpha(DE_BLUE, 0.14)}`,
+          background: `
+            radial-gradient(720px 220px at 0% 0%, ${alpha(DE_AMBER, 0.11)} 0%, transparent 70%),
+            radial-gradient(620px 200px at 100% 0%, ${alpha(DE_BLUE, 0.12)} 0%, transparent 65%),
+            #ffffff
+          `,
         }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 0.8,
-            overflowX: 'auto',
-            pb: 0.1,
-          }}
-        >
-          {sectionTabs.map((tab) => {
-            const isActive = tab.value === active
+        <Stack spacing={1.5}>
+          <Box>
+            <Typography sx={{ fontSize: '0.75rem', letterSpacing: 2, fontWeight: 700, color: DE_AMBER }}>
+              ACCOUNT CENTER
+            </Typography>
+            <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.6rem' }, fontWeight: 800, color: DE_BLUE }}>
+              Profile & Verification
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#5d769e', mt: 0.3 }}>
+              Manage personal details, business identity, bank accounts, and KYC status.
+            </Typography>
+          </Box>
 
-            return (
-              <Box
-                key={tab.value}
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/profile/${tab.value}`)}
-                onKeyUp={(e) => e.key === 'Enter' && navigate(`/profile/${tab.value}`)}
-                sx={{
-                  minWidth: { xs: 128, sm: 148, md: 168 },
-                  px: 1.05,
-                  py: 0.85,
-                  borderRadius: 2.5,
-                  border: `1px solid ${
-                    isActive ? alpha(BRAND_PRIMARY, 0.28) : alpha('#111113', 0.08)
-                  }`,
-                  backgroundColor: isActive ? alpha(BRAND_PRIMARY, 0.06) : '#ffffff',
-                  cursor: 'pointer',
-                  transition: 'all .18s ease',
-                  '&:hover': {
-                    borderColor: alpha(BRAND_PRIMARY, 0.22),
-                    backgroundColor: alpha(BRAND_PRIMARY, 0.035),
-                  },
-                }}
-              >
-                <Stack direction="row" spacing={0.8} alignItems="center">
-                  <Box
-                    sx={{
-                      width: 30,
-                      height: 30,
-                      flexShrink: 0,
-                      display: 'grid',
-                      placeItems: 'center',
-                      borderRadius: 2,
-                      backgroundColor: isActive ? alpha(BRAND_PRIMARY, 0.11) : '#F8F3F1',
-                      color: isActive ? BRAND_PRIMARY : BRAND_WINE,
-                    }}
-                  >
-                    {tab.icon}
-                  </Box>
-
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography
-                      sx={{
-                        fontSize: { xs: '0.8rem', sm: '0.84rem' },
-                        fontWeight: 800,
-                        color: BRAND_TEXT,
-                        lineHeight: 1.2,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {tab.shortLabel}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        mt: 0.15,
-                        fontSize: '0.68rem',
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        fontWeight: 800,
-                        color: isActive ? BRAND_PRIMARY : BRAND_MUTED,
-                      }}
-                    >
-                      {isActive ? 'Active' : 'Open'}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Box>
-            )
-          })}
-        </Box>
+          <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.2 }}>
+            {sectionTabs.map((tab) => {
+              const isActive = tab.value === active
+              return (
+                <Box
+                  key={tab.value}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/profile/${tab.value}`)}
+                  onKeyUp={(e) => e.key === 'Enter' && navigate(`/profile/${tab.value}`)}
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.8,
+                    px: 1.4,
+                    py: 0.8,
+                    borderRadius: 1,
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    border: `1px solid ${isActive ? alpha(DE_BLUE, 0.4) : alpha(DE_BLUE, 0.18)}`,
+                    backgroundColor: isActive ? alpha(DE_BLUE, 0.08) : '#fff',
+                    color: isActive ? DE_BLUE : '#5c759b',
+                    fontWeight: 700,
+                    fontSize: '0.86rem',
+                    transition: 'all .2s ease',
+                  }}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </Box>
+              )
+            })}
+          </Stack>
+        </Stack>
       </Paper>
 
       <Box sx={{ width: '100%' }}>
-        <Suspense
-          fallback={<Box key={`profile-fallback-${location.pathname}`} sx={{ minHeight: 120 }} />}
-        >
-          <Box key={location.pathname}>
-            <Outlet />
-          </Box>
+        <Suspense fallback={<FullScreenLoader />}>
+          <Outlet />
         </Suspense>
       </Box>
     </Stack>

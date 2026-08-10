@@ -1,62 +1,53 @@
 import { Box, Stack, TextField, Typography } from '@mui/material'
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { alpha } from '@mui/material/styles'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from 'react'
 import { FiEdit2, FiRefreshCcw } from 'react-icons/fi'
-import { BRAND } from '../../config/brand'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/auth/AuthContext'
 import { useRequestOtp, useVerifyOtp } from '../../hooks/useOTP'
-import { extractScreenOtp, type OtpResponseLike } from '../../utils/authOtp'
-import { applyApprovedMerchantAccess } from '../../utils/approvedMerchant'
-import { DEMO_OTP, getRegistrationDraft, isDemoLoginEnabled } from '../../utils/demoAuth'
-import { emptyUserProfile } from '../../utils/utility'
+import { getPostAuthRedirect } from '../../utils/authRedirect'
 import CustomIconLoadingButton from '../UI/button/CustomLoadingButton'
 import { toast } from '../UI/Toast'
+import { getAuthErrorMessage } from './getAuthErrorMessage'
 
 const OTP_LENGTH = 6
 const OTP_RESEND_DELAY_MS = 30000
-const BRAND_DARK = BRAND.colors.ink
-const BRAND_TEAL = BRAND.colors.teal
-const BRAND_RED = BRAND.colors.orange
-const isDemoLogin = isDemoLoginEnabled()
+const DE_BLUE = '#171310'
 
 const primaryButtonStyles = {
   width: '100%',
   borderRadius: 1,
-  background: `linear-gradient(135deg, ${BRAND_TEAL} 0%, #041A38 70%, ${BRAND_RED} 100%)`,
-  boxShadow: '0 16px 26px rgba(6, 42, 91, 0.18)',
-  minHeight: 48,
+  bgcolor: DE_BLUE,
+  boxShadow: `0 8px 24px ${alpha(DE_BLUE, 0.3)}`,
+  '&:hover': { bgcolor: '#0D0A08' },
 }
 
 const ghostButtonStyles = {
   width: '100%',
-  border: '1px solid rgba(91, 119, 150, 0.32)',
-  color: BRAND_DARK,
-  backgroundColor: '#ffffff',
+  border: `1px solid ${alpha(DE_BLUE, 0.2)}`,
+  color: DE_BLUE,
+  backgroundColor: alpha(DE_BLUE, 0.04),
   borderRadius: 1,
-  minHeight: 44,
 }
 
 type Props = {
   email: string
-  debugOtp?: string
-  onDebugOtpChange?: (otp: string) => void
   onEditEmail: () => void
+  keepMeSignedIn?: boolean
 }
 
-type OtpApiError = {
-  response?: {
-    data?: {
-      error?: string
-    }
-  }
-}
-
-const getOtpError = (error: unknown, fallback: string) =>
-  (error as OtpApiError)?.response?.data?.error || fallback
-
-export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail }: Props) {
+export default function OtpForm({ email, onEditEmail, keepMeSignedIn = false }: Props) {
   const { setTokens, setUserId } = useAuth()
+  const navigate = useNavigate()
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''))
-  const [error, setError] = useState('')
+  const [error, setError] = useState<string>('')
   const [resendEnabled, setResendEnabled] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(OTP_RESEND_DELAY_MS / 1000)
 
@@ -86,7 +77,10 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
     timerRef.current = setTimeout(() => {
       setResendEnabled(true)
       setSecondsLeft(0)
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
+
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current)
+      }
     }, OTP_RESEND_DELAY_MS)
 
     return () => {
@@ -95,36 +89,49 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
     }
   }, [email])
 
-  useEffect(() => {
-    if (/^\d{6}$/.test(debugOtp || '')) {
-      setOtpDigits(debugOtp!.split(''))
-      setError('')
-    }
-  }, [debugOtp])
-
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return
 
-    const nextDigits = [...otpDigits]
-    nextDigits[index] = value.slice(-1)
-    setOtpDigits(nextDigits)
+    const newDigits = [...otpDigits]
+    newDigits[index] = value.slice(-1)
+    setOtpDigits(newDigits)
     setError('')
 
     if (value && index < OTP_LENGTH - 1) {
-      document.getElementById(`otp-${index + 1}`)?.focus()
+      const next = document.getElementById(`otp-${index + 1}`)
+      next?.focus()
     }
   }
 
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus()
+      const prev = document.getElementById(`otp-${index - 1}`)
+      prev?.focus()
     }
+  }
+
+  const handlePaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    event.preventDefault()
+    const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH)
+
+    if (!pasted) return
+
+    const nextDigits = Array(OTP_LENGTH)
+      .fill('')
+      .map((_, index) => pasted[index] ?? '')
+
+    setOtpDigits(nextDigits)
+    setError('')
+
+    const nextFocusIndex = Math.min(pasted.length, OTP_LENGTH - 1)
+    const next = document.getElementById(`otp-${nextFocusIndex}`)
+    next?.focus()
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    const otp = otpDigits.join('')
+    const otp = otpDigits.join('').trim()
     if (otp.length !== OTP_LENGTH) {
       setError(`Enter the full ${OTP_LENGTH}-digit verification code.`)
       return
@@ -132,53 +139,31 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
 
     setError('')
 
-    if (isDemoLogin && debugOtp && otp === debugOtp) {
-      const registrationDraft = getRegistrationDraft()
-      const demoUser = applyApprovedMerchantAccess(
-        {
-          ...emptyUserProfile,
-          id: 'local-demo-user',
-          userId: 'local-demo-user',
-          onboardingComplete: true,
-          profileComplete: true,
-          companyInfo: {
-            ...emptyUserProfile.companyInfo,
-            businessName: registrationDraft?.name || 'FastShip Demo',
-            brandName: registrationDraft?.userType === 'business' ? registrationDraft.name : 'FastShip',
-            contactPerson: registrationDraft?.name || 'Merchant',
-            companyContactNumber: registrationDraft?.phone || '',
-            contactNumber: registrationDraft?.phone || '',
-            contactEmail: email,
-            companyEmail: email,
-          },
-        },
-        email,
-      )
-
-      sessionStorage.setItem('activeEmail', email)
-      setUserId(demoUser.id)
-      setTokens(`local-demo-access-${Date.now()}`, `local-demo-refresh-${Date.now()}`, demoUser)
-      return
-    }
-
     verifyOtp(
       { email, otp },
       {
         onSuccess: ({ token, refreshToken, user }) => {
           sessionStorage.setItem('activeEmail', email)
-          const approvedUser = applyApprovedMerchantAccess(user, email)
-          setUserId(approvedUser.id)
-          setTokens(token, refreshToken, approvedUser)
+          setUserId(user?.id)
+          setTokens(token, refreshToken, keepMeSignedIn)
+          navigate(getPostAuthRedirect(user), { replace: true })
         },
-        onError: (error: unknown) => {
-          const msg = getOtpError(error, 'OTP verification failed')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (err: any) => {
+          const msg = getAuthErrorMessage(err, 'OTP verification failed')
           setError(msg)
 
           if (msg.toLowerCase().includes('otp expired')) {
             setResendEnabled(true)
             setSecondsLeft(0)
-            if (timerRef.current) clearTimeout(timerRef.current)
-            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
+            if (timerRef.current) {
+              clearTimeout(timerRef.current)
+              timerRef.current = null
+            }
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current)
+              countdownIntervalRef.current = null
+            }
           }
         },
       },
@@ -189,9 +174,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
     if (!resendEnabled || resending) return
 
     resendOtp(email.toLowerCase().trim(), {
-      onSuccess: (data: OtpResponseLike) => {
-        const nextOtp = extractScreenOtp(data) || (isDemoLogin ? DEMO_OTP : '')
-        onDebugOtpChange?.(nextOtp)
+      onSuccess: () => {
         setOtpDigits(Array(OTP_LENGTH).fill(''))
         setError('')
         setResendEnabled(false)
@@ -216,162 +199,116 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
           if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
         }, OTP_RESEND_DELAY_MS)
 
-        toast.open({ message: 'Verification code generated again.', severity: 'success' })
+        toast.open({
+          message: 'A new verification code has been sent to your email.',
+          severity: 'success',
+        })
       },
-      onError: (error: unknown) => {
-        if (isDemoLogin) {
-          onDebugOtpChange?.(DEMO_OTP)
-          setOtpDigits(DEMO_OTP.split(''))
-          setError('')
-          toast.open({ message: 'Demo verification code generated again.', severity: 'success' })
-          return
-        }
-
-        setError(getOtpError(error, 'Failed to resend OTP'))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onError: (err: any) => {
+        const msg = getAuthErrorMessage(err, 'Failed to resend OTP')
+        setError(msg)
       },
     })
-  }, [email, onDebugOtpChange, resendOtp, resendEnabled, resending])
+  }, [email, resendOtp, resendEnabled, resending])
 
   return (
-    <Stack component="form" onSubmit={handleSubmit} width="100%" mt={0} gap={1.25}>
+    <Stack component="form" noValidate onSubmit={handleSubmit} width="100%" mt={1} gap={2}>
       <Box
         sx={{
-          p: 1.25,
-          borderRadius: 1.25,
-          background: 'linear-gradient(135deg, rgba(228,246,248,0.76), rgba(255,255,255,0.92))',
-          border: '1px solid rgba(6,42,91,0.16)',
+          p: 1.5,
+          borderRadius: 1,
+          backgroundColor: alpha(DE_BLUE, 0.04),
+          border: `1px solid ${alpha(DE_BLUE, 0.1)}`,
         }}
       >
-        <Typography variant="body2" sx={{ color: '#5F5A57', lineHeight: 1.7 }}>
-          We generated a 6-digit sign-in code for <strong>{email}</strong>.
-          <Box
-            component="span"
-            sx={{
-              ml: 0.7,
-              display: 'inline-flex',
-              alignItems: 'center',
-              cursor: 'pointer',
-              color: BRAND_TEAL,
-            }}
-            onClick={onEditEmail}
-          >
+        <Typography variant="body2" sx={{ color: '#6A616A', lineHeight: 1.6, fontWeight: 500 }}>
+          Enter the 6-digit code sent to <strong>{email}</strong>.
+          <Box component="span" sx={{ ml: 0.7, display: 'inline-flex', alignItems: 'center', cursor: 'pointer', color: DE_BLUE }} onClick={onEditEmail}>
             <FiEdit2 size={13} style={{ marginRight: 4 }} />
             Edit
           </Box>
         </Typography>
       </Box>
 
-      {debugOtp && (
-        <Box
-          role="status"
-          aria-live="polite"
-          sx={{
-            p: 1.05,
-            borderRadius: 1.25,
-            textAlign: 'center',
-            background: 'linear-gradient(135deg, rgba(6,42,91,0.08), rgba(237,28,36,0.11))',
-            border: '1px solid rgba(237,28,36,0.22)',
-          }}
-        >
-          <Typography sx={{ fontSize: '0.72rem', fontWeight: 800, color: BRAND_TEAL, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            Demo OTP visible on this screen
-          </Typography>
-          <Typography sx={{ mt: 0.3, fontSize: '1.35rem', fontWeight: 800, color: BRAND_DARK, letterSpacing: '0.18em' }}>
-            {debugOtp}
-          </Typography>
-          <Typography sx={{ mt: 0.35, fontSize: '0.72rem', fontWeight: 650, color: '#5F5A57' }}>
-            Fill this code to continue in demo mode.
-          </Typography>
-        </Box>
-      )}
-
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-          gap: { xs: 0.5, sm: 0.8 },
-          width: '100%',
-          maxWidth: 380,
-          mx: 'auto',
-        }}
-      >
+      <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ my: 1 }}>
         {otpDigits.map((digit, idx) => (
           <TextField
             key={idx}
             id={`otp-${idx}`}
-            type="text"
-            inputMode="numeric"
             value={digit}
             onChange={(e) => handleChange(idx, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(idx, e as KeyboardEvent<HTMLInputElement>)}
-            slotProps={{
-              htmlInput: {
-                maxLength: 1,
-                style: {
-                  textAlign: 'center',
-                  fontSize: '1.15rem',
-                  padding: 0,
-                  height: 42,
-                  fontWeight: 700,
-                },
+            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => handleKeyDown(idx, e)}
+            onPaste={handlePaste}
+            variant="outlined"
+            size="small"
+            inputProps={{
+              maxLength: 1,
+              style: {
+                textAlign: 'center',
+                fontWeight: 800,
+                fontSize: '1.25rem',
+                padding: '12px 0',
+                color: DE_BLUE,
               },
             }}
             sx={{
-              width: '100%',
+              width: { xs: 42, sm: 54 },
               '& .MuiOutlinedInput-root': {
-                height: 48,
                 borderRadius: 1,
-                backgroundColor: '#f8fcfd',
-                color: BRAND_DARK,
+                bgcolor: alpha(DE_BLUE, 0.02),
                 '& fieldset': {
-                  borderColor: 'rgba(6, 42, 91, 0.18)',
+                  borderColor: digit ? DE_BLUE : alpha(DE_BLUE, 0.15),
+                  borderWidth: digit ? 2 : 1,
                 },
                 '&:hover fieldset': {
-                  borderColor: BRAND_TEAL,
+                  borderColor: DE_BLUE,
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: BRAND_TEAL,
-                  borderWidth: 2,
+                  borderColor: DE_BLUE,
                 },
               },
             }}
-            error={!!error}
-            autoComplete="one-time-code"
-            aria-label={`OTP digit ${idx + 1}`}
           />
         ))}
-      </Box>
+      </Stack>
 
       {error && (
-        <Typography variant="caption" color="error" textAlign="center" sx={{ userSelect: 'none' }}>
+        <Typography variant="caption" color="error" sx={{ textAlign: 'center', fontWeight: 700 }}>
           {error}
         </Typography>
       )}
 
-      <Typography variant="caption" color="#6E6763" textAlign="center" sx={{ userSelect: 'none' }}>
-        Review the code, then continue to the merchant shipping workspace.
-      </Typography>
+      <Stack spacing={1.5}>
+        <CustomIconLoadingButton
+          type="submit"
+          styles={primaryButtonStyles}
+          textColor="#ffffff"
+          disabled={otpDigits.some((d) => !d) || verifying}
+          text="Verify and continue"
+          loading={verifying}
+          loadingText="Verifying..."
+        />
 
-      <CustomIconLoadingButton
-        type="submit"
-        text="Verify and continue"
-        styles={primaryButtonStyles}
-        disabled={otpDigits.join('').length !== OTP_LENGTH}
-        loading={verifying}
-        loadingText="Verifying..."
-        textColor="#fff"
-      />
-
-      <CustomIconLoadingButton
-        type="button"
-        onClick={handleResendOtp}
-        text={resendEnabled ? 'Resend verification code' : `Resend in ${secondsLeft}s`}
-        styles={ghostButtonStyles}
-        disabled={!resendEnabled || resending}
-        loading={resending}
-        loadingText="Resending..."
-        icon={<FiRefreshCcw size={14} />}
-      />
+        <Box sx={{ textAlign: 'center' }}>
+          {resendEnabled ? (
+            <CustomIconLoadingButton
+              type="button"
+              onClick={handleResendOtp}
+              styles={ghostButtonStyles}
+              textColor={DE_BLUE}
+              text="Resend code"
+              loading={resending}
+              loadingText="Sending..."
+              icon={<FiRefreshCcw size={14} style={{ marginRight: 8 }} />}
+            />
+          ) : (
+            <Typography variant="caption" sx={{ color: '#6A616A', fontWeight: 600 }}>
+              Resend available in {secondsLeft}s
+            </Typography>
+          )}
+        </Box>
+      </Stack>
     </Stack>
   )
 }

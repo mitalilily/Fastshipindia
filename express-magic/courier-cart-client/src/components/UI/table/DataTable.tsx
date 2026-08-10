@@ -1,13 +1,13 @@
 import type { JSX } from '@emotion/react/jsx-runtime'
 import {
-  type Breakpoint,
   alpha,
   Box,
+  Card,
   CardContent,
-  CircularProgress,
   Collapse,
+  Divider,
   IconButton,
-  LinearProgress,
+  Paper,
   Stack,
   Table,
   TableBody,
@@ -21,32 +21,23 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { MdExpandLess, MdExpandMore, MdKeyboardArrowDown, MdKeyboardArrowUp } from 'react-icons/md'
+import React, { useEffect, useRef } from 'react'
+import { MdExpandLess, MdExpandMore } from 'react-icons/md'
 import CustomCheckbox from '../inputs/CustomCheckbox'
-
-const TEXT_PRIMARY = '#111111'
-const TEXT_SECONDARY = '#6B7280'
-const BORDER = 'rgba(17,17,17,0.08)'
-const BG = '#FFFFFF'
-
-/* UPDATED HEADER */
-const HEADER_BG = '#e6e6e6'
-const HEADER_TEXT = 'black'
 
 export interface Column<T> {
   id: keyof T
-  label: JSX.Element | string
   label_desc?: string
-  align?: 'left' | 'right' | 'center'
+  label: JSX.Element | string
+  align?: 'right' | 'left' | 'center'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  render?: (value: any, row: T) => React.ReactNode
   minWidth?: number
   hiddenOnMobile?: boolean
-  hiddenBelow?: Breakpoint
   truncate?: boolean
-  sortable?: boolean
-  showCellTooltip?: boolean
-  stickyRight?: boolean
-  render?: (value: any, row: T) => React.ReactNode
+  sticky?: 'left' | 'right'
+  stickyOffset?: number
+  backgroundColor?: string
 }
 
 export interface DataTableProps<T extends { id: string | number }> {
@@ -57,23 +48,22 @@ export interface DataTableProps<T extends { id: string | number }> {
   maxHeight?: number
   pagination?: boolean
   selectable?: boolean
-  selectedRowIds?: Array<T['id']>
   onSelectRows?: (ids: Array<T['id']>) => void
+  selectedRowIds?: Array<T['id']>
   rowsPerPageOptions?: number[]
   defaultRowsPerPage?: number
-  totalCount?: number
+  bgOverlayImg?: string
+  renderExpandedRow?: (row: T) => React.ReactNode
+  expandable?: boolean
   currentPage?: number
   onPageChange?: (page: number) => void
   onRowsPerPageChange?: (rowsPerPage: number) => void
-  expandable?: boolean
-  renderExpandedRow?: (row: T) => React.ReactNode
+  totalCount?: number
   onRowClick?: (row: T) => void
-  loading?: boolean
-  loadingLabel?: string
-  emptyMessage?: string
+  selectionResetToken?: number | string
+  density?: 'regular' | 'compact'
+  tableVariant?: 'default' | 'shipment'
 }
-
-type SortDirection = 'asc' | 'desc'
 
 export default function DataTable<T extends { id: string | number }>(props: DataTableProps<T>) {
   const {
@@ -81,501 +71,711 @@ export default function DataTable<T extends { id: string | number }>(props: Data
     columns,
     title,
     subTitle,
-    maxHeight = 560,
-    pagination = true,
+    maxHeight = 500,
+    pagination = false,
     selectable = false,
-    selectedRowIds,
     onSelectRows,
-    rowsPerPageOptions = [10, 25, 50],
+    selectedRowIds,
+    rowsPerPageOptions = [5, 10, 25],
     defaultRowsPerPage = 10,
-    totalCount,
+    bgOverlayImg,
+    renderExpandedRow,
+    expandable,
     currentPage,
     onPageChange,
     onRowsPerPageChange,
-    expandable,
-    renderExpandedRow,
+    totalCount,
     onRowClick,
-    loading = false,
-    loadingLabel = 'Refreshing orders...',
-    emptyMessage = 'No records found.',
+    selectionResetToken,
+    density = 'regular',
+    tableVariant = 'default',
   } = props
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const isDownMd = useMediaQuery(theme.breakpoints.down('md'))
-  const isDownLg = useMediaQuery(theme.breakpoints.down('lg'))
-  const isDownXl = useMediaQuery(theme.breakpoints.down('xl'))
-  const isCompactDesktop = useMediaQuery(theme.breakpoints.down('xl'))
+  const isDark = theme.palette.mode === 'dark'
+  const primary = theme.palette.primary.main
+  const textPrimary = theme.palette.text.primary
+  const textSecondary = theme.palette.text.secondary
+  const borderColor = isDark ? alpha('#f8fafc', 0.12) : alpha(textPrimary, 0.1)
+  const softBorderColor = isDark ? alpha('#f8fafc', 0.08) : alpha(textPrimary, 0.06)
+  const surface = isDark ? '#151b23' : '#FFFFFF'
+  const surfaceMuted = isDark ? '#101720' : '#F5F6F8'
+  const isShipmentVariant = tableVariant === 'shipment'
+  const shipmentAccent = theme.palette.primary.main
+  const shipmentHeader = '#05BD7E'
+  const headerBg = isShipmentVariant
+    ? shipmentHeader
+    : isDark
+      ? '#1b2430'
+      : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,242,236,0.98) 100%)'
+  const tableBg = isDark ? '#101720' : isShipmentVariant ? '#F5F6F8' : '#FFFCF8'
+  const rowHover = alpha(primary, 0.045)
+  const mobileCardBg = isDark
+    ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
+    : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(249,244,238,0.96) 100%)'
+  const isCompact = density === 'compact'
 
-  const [localPage, setLocalPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage)
-  const [selectedIds, setSelectedIds] = useState<Array<T['id']>>([])
-  const [expandedId, setExpandedId] = useState<T['id'] | null>(null)
-
-  const [sortKey, setSortKey] = useState<keyof T | null>(null)
-  const [sortDir, setSortDir] = useState<SortDirection>('asc')
+  const [localPage, setLocalPage] = React.useState(0)
+  const [localRowsPerPage, setLocalRowsPerPage] = React.useState(defaultRowsPerPage)
+  const [selectedIds, setSelectedIds] = React.useState<Array<T['id']>>([])
+  const [expandedRowId, setExpandedRowId] = React.useState<T['id'] | null>(null)
 
   const expandedRef = useRef<HTMLDivElement | null>(null)
-
-  const isServerPagination = currentPage !== undefined || typeof onPageChange === 'function'
+  const onSelectRowsRef = useRef(onSelectRows)
 
   const page = currentPage ?? localPage
+  const rowsPerPage = localRowsPerPage
+  const paginationPage = currentPage !== undefined ? Math.max(page - 1, 0) : page
 
-  useEffect(() => {
-    if (selectedRowIds) setSelectedIds(selectedRowIds)
-  }, [selectedRowIds])
+  const handleChangePage = (_: unknown, newPage: number) => {
+    if (onPageChange) onPageChange(newPage + 1)
+    else setLocalPage(newPage)
+  }
 
-  const visibleColumns = columns.filter((col) => {
-    if (isMobile && col.hiddenOnMobile) return false
-    if (col.hiddenBelow === 'md' && isDownMd) return false
-    if (col.hiddenBelow === 'lg' && isDownLg) return false
-    if (col.hiddenBelow === 'xl' && isDownXl) return false
-    return true
-  })
-
-  const tableMinWidth =
-    visibleColumns.reduce((sum, column) => sum + (column.minWidth ?? 160), 0) +
-    (selectable ? 64 : 0) +
-    (expandable ? 64 : 0)
-
-  const sortedRows = useMemo(() => {
-    if (!sortKey) return rows
-
-    return [...rows].sort((a, b) => {
-      const av = a[sortKey]
-      const bv = b[sortKey]
-
-      if (typeof av === 'number' && typeof bv === 'number') {
-        return sortDir === 'asc' ? av - bv : bv - av
-      }
-
-      return sortDir === 'asc'
-        ? String(av ?? '').localeCompare(String(bv ?? ''))
-        : String(bv ?? '').localeCompare(String(av ?? ''))
-    })
-  }, [rows, sortKey, sortDir])
-
-  const pagedRows =
-    pagination && !isServerPagination
-      ? sortedRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-      : sortedRows
-
-  const allSelected = pagedRows.length > 0 && pagedRows.every((row) => selectedIds.includes(row.id))
-
-  const handleSort = (key: keyof T) => {
-    if (sortKey === key) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newRowsPerPage = +event.target.value
+    if (onRowsPerPageChange) onRowsPerPageChange(newRowsPerPage)
+    else {
+      setLocalRowsPerPage(newRowsPerPage)
+      setLocalPage(0)
     }
   }
 
-  const handleSelect = (id: T['id']) => {
-    const next = selectedIds.includes(id)
-      ? selectedIds.filter((x) => x !== id)
-      : [...selectedIds, id]
+  const isAllSelected = rows.length > 0 && rows.every((r) => selectedIds.includes(r.id))
 
-    setSelectedIds(next)
-    onSelectRows?.(next)
+  useEffect(() => {
+    onSelectRowsRef.current = onSelectRows
+  }, [onSelectRows])
+
+  const handleSelect = (id: T['id']) => {
+    const selected = selectedIds.includes(id)
+      ? selectedIds.filter((i) => i !== id)
+      : [...selectedIds, id]
+    setSelectedIds(selected)
+    onSelectRows?.(selected)
   }
 
   const handleSelectAll = (checked: boolean) => {
-    const next = checked ? pagedRows.map((r) => r.id) : []
-    setSelectedIds(next)
-    onSelectRows?.(next)
+    const allIds = checked ? rows.map((r) => r.id) : []
+    setSelectedIds(allIds)
+    onSelectRows?.(allIds)
   }
 
-  const toggleExpand = (id: T['id']) => {
-    const next = expandedId === id ? null : id
-    setExpandedId(next)
+  useEffect(() => {
+    if (!selectedRowIds) return
+    setSelectedIds(selectedRowIds)
+  }, [selectedRowIds])
 
-    setTimeout(() => {
-      expandedRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      })
-    }, 150)
+  useEffect(() => {
+    setSelectedIds((currentSelectedIds) => {
+      const visibleIds = new Set(rows.map((row) => row.id))
+      const nextSelectedIds = currentSelectedIds.filter((id) => visibleIds.has(id))
+      const isSameSelection =
+        nextSelectedIds.length === currentSelectedIds.length &&
+        nextSelectedIds.every((id, index) => id === currentSelectedIds[index])
+
+      if (!isSameSelection) {
+        onSelectRowsRef.current?.(nextSelectedIds)
+        return nextSelectedIds
+      }
+
+      return currentSelectedIds
+    })
+  }, [rows])
+
+  useEffect(() => {
+    if (selectionResetToken === undefined) return
+    setSelectedIds([])
+    onSelectRowsRef.current?.([])
+  }, [selectionResetToken])
+
+  const toggleExpand = (id: T['id']) => {
+    const isExpanding = id !== expandedRowId
+    setExpandedRowId(isExpanding ? id : null)
+    if (isExpanding && expandedRef.current) {
+      setTimeout(() => {
+        expandedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 160)
+    }
   }
 
   return (
     <CardContent
       sx={{
-        p: 0,
         position: 'relative',
         width: '100%',
-        minWidth: 0,
-        maxWidth: '100%',
-        borderRadius: { xs: 2, md: 3 },
-        border: `1px solid ${BORDER}`,
-        bgcolor: BG,
-        boxShadow: '0 12px 28px rgba(0,0,0,0.04)',
         overflow: 'hidden',
+        borderRadius: isShipmentVariant || isCompact ? '8px' : '14px',
+        border: `1px solid ${isShipmentVariant ? alpha(textPrimary, 0.08) : borderColor}`,
+        background: isShipmentVariant
+          ? tableBg
+          : isDark
+            ? surfaceMuted
+          : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(252,247,241,0.98) 100%)',
+        boxShadow: isShipmentVariant
+          ? `0 8px 18px ${alpha(textPrimary, 0.04)}`
+          : isCompact
+          ? `0 8px 20px ${alpha(textPrimary, 0.06)}`
+          : `0 20px 42px ${alpha(textPrimary, 0.07)}`,
+        p: 0,
       }}
     >
-      {(title || subTitle || pagination) && (
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-          justifyContent="space-between"
-          gap={2}
+      {bgOverlayImg && (
+        <Box
           sx={{
-            width: '100%',
-            minWidth: 0,
-            px: { xs: 1.5, sm: 2, md: 3 },
-            py: 1,
-            borderBottom: `1px solid ${BORDER}`,
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${bgOverlayImg})`,
+            backgroundSize: 'cover',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            opacity: 0.05,
+            zIndex: 1,
           }}
-        >
-          <Box>
-            {title && (
-              <Typography
-                sx={{
-                  fontWeight: 800,
-                  fontSize: isCompactDesktop ? '0.98rem' : '1.08rem',
-                  color: TEXT_PRIMARY,
-                }}
-              >
-                {title}
-              </Typography>
-            )}
-
-            {subTitle && (
-              <Typography
-                sx={{
-                  mt: 0.4,
-                  fontSize: isCompactDesktop ? '0.76rem' : '0.82rem',
-                  color: TEXT_SECONDARY,
-                }}
-              >
-                {subTitle}
-              </Typography>
-            )}
-          </Box>
-
-          {pagination && (
-            <TablePagination
-              component="div"
-              count={totalCount ?? rows.length}
-              page={page}
-              rowsPerPage={rowsPerPage}
-              onPageChange={(_, newPage) => {
-                if (onPageChange) onPageChange(newPage)
-                else setLocalPage(newPage)
-              }}
-              onRowsPerPageChange={(e) => {
-                const value = Number(e.target.value)
-                if (onRowsPerPageChange) onRowsPerPageChange(value)
-                else {
-                  setRowsPerPage(value)
-                  setLocalPage(0)
-                }
-              }}
-              rowsPerPageOptions={rowsPerPageOptions}
-              labelRowsPerPage={isMobile ? '' : 'Rows'}
-              sx={{
-                width: { xs: '100%', md: 'auto' },
-                maxWidth: '100%',
-                overflowX: 'auto',
-                '& .MuiTablePagination-toolbar': {
-                  minHeight: 40,
-                  px: { xs: 0, sm: 1 },
-                  flexWrap: 'nowrap',
-                },
-                '& .MuiTablePagination-spacer': {
-                  display: { xs: 'none', sm: 'block' },
-                },
-                '& .MuiTablePagination-selectLabel': {
-                  display: { xs: 'none', sm: 'block' },
-                },
-                '& .MuiTablePagination-displayedRows': {
-                  ml: { xs: 'auto', sm: 0 },
-                  whiteSpace: 'nowrap',
-                  fontSize: { xs: '0.75rem', sm: '0.82rem' },
-                },
-                '& .MuiTablePagination-actions': {
-                  ml: { xs: 0.5, sm: 2 },
-                  whiteSpace: 'nowrap',
-                },
-              }}
-            />
-          )}
-        </Stack>
+        />
       )}
 
-      <TableContainer
+      <Box
         sx={{
           position: 'relative',
-          maxHeight,
-          overflowX: 'auto',
-          overflowY: 'auto',
-          maxWidth: '100%',
-          overscrollBehaviorX: 'contain',
-          WebkitOverflowScrolling: 'touch',
-          '&::-webkit-scrollbar': {
-            width: 8,
-            height: 8,
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: '#D1D5DB',
-            borderRadius: 10,
-          },
+          zIndex: 2,
+          p: isShipmentVariant
+            ? { xs: 0.65, sm: 0.75, md: 0.85 }
+            : isCompact ? { xs: 1, sm: 1.15, md: 1.25 } : { xs: 1.6, sm: 2.1, md: 2.4 },
         }}
       >
-        {loading && (
-          <>
-            <LinearProgress
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                zIndex: 3,
-                height: 3,
-                '& .MuiLinearProgress-bar': {
-                  background: 'linear-gradient(90deg, #0F766E 0%, #14B8A6 100%)',
-                },
-              }}
-            />
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{
-                position: 'absolute',
-                top: 12,
-                right: 16,
-                zIndex: 3,
-                px: 1.25,
-                py: 0.75,
-                borderRadius: 999,
-                bgcolor: alpha('#0F172A', 0.76),
-                color: '#F8FAFC',
-                boxShadow: '0 10px 24px rgba(15, 23, 42, 0.18)',
-              }}
-            >
-              <CircularProgress size={14} sx={{ color: '#5EEAD4' }} thickness={5} />
-              <Typography sx={{ fontSize: '0.72rem', fontWeight: 700 }}>{loadingLabel}</Typography>
-            </Stack>
-          </>
-        )}
-        <Table stickyHeader sx={{ minWidth: tableMinWidth }}>
-          <TableHead>
-            <TableRow>
-              {selectable && (
-                <TableCell padding="checkbox" sx={{ bgcolor: HEADER_BG }}>
-                  <CustomCheckbox
-                    checked={allSelected}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
-                  />
-                </TableCell>
-              )}
-
-              {expandable && <TableCell sx={{ bgcolor: HEADER_BG }} />}
-
-              {visibleColumns.map((column) => {
-                const active = sortKey === column.id
-
-                return (
-                  <TableCell
-                    key={String(column.id)}
-                    align={column.align || 'left'}
-                    sx={{
-                      bgcolor: HEADER_BG,
-                      minWidth: column.minWidth,
-                      py: 1.6,
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      ...(column.stickyRight
-                        ? {
-                            position: 'sticky',
-                            right: 0,
-                            zIndex: 4,
-                            boxShadow: '-12px 0 18px -18px rgba(15,23,42,0.7)',
-                          }
-                        : {}),
-                    }}
-                  >
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      spacing={0.5}
-                      onClick={() => column.sortable && handleSort(column.id)}
-                      sx={{
-                        cursor: column.sortable ? 'pointer' : 'default',
-                        userSelect: 'none',
-                      }}
-                    >
-                      <Tooltip title={String(column.label)} arrow>
-                        <Typography
-                          sx={{
-                            fontSize: isCompactDesktop ? '0.68rem' : '0.74rem',
-                            fontWeight: 800,
-                            color: HEADER_TEXT,
-                            fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            maxWidth: 170,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {String(column.label)}
-                        </Typography>
-                      </Tooltip>
-
-                      {column.sortable &&
-                        (active && sortDir === 'asc' ? (
-                          <MdKeyboardArrowUp size={16} color="#ff4d5a" />
-                        ) : (
-                          <MdKeyboardArrowDown size={16} color={active ? '#ff4d5a' : '#B5B5B5'} />
-                        ))}
-                    </Stack>
-                  </TableCell>
-                )
-              })}
-            </TableRow>
-          </TableHead>
-
-          <TableBody>
-            {pagedRows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={visibleColumns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0)}
+        {(title || subTitle || pagination) && (
+          <Stack
+            mb={isShipmentVariant ? 0.45 : isCompact ? 1 : 2}
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+            spacing={isShipmentVariant ? 0.45 : isCompact ? 0.75 : 1.5}
+            sx={{
+              px: isShipmentVariant ? { xs: 0, sm: 0.05 } : isCompact ? { xs: 0.1, sm: 0.2 } : { xs: 0.4, sm: 0.6 },
+              py: isShipmentVariant ? 0 : isCompact ? { xs: 0.1, sm: 0.25 } : { xs: 0.5, sm: 0.8 },
+            }}
+          >
+            <Stack spacing={isCompact ? 0.3 : 0.8}>
+              {title && (
+                <Typography
                   sx={{
-                    py: 6,
-                    textAlign: 'center',
-                    borderBottom: 'none',
-                    color: TEXT_SECONDARY,
+                    fontSize: isShipmentVariant
+                      ? { xs: '0.9rem', sm: '0.96rem' }
+                      : isCompact ? { xs: '0.95rem', sm: '1.02rem' } : { xs: '1.02rem', sm: '1.18rem' },
+                    fontWeight: 600,
+                    letterSpacing: 0,
+                    color: textPrimary,
                   }}
                 >
-                  <Stack spacing={0.75} alignItems="center">
-                    {loading ? (
-                      <CircularProgress size={22} sx={{ color: '#0F766E' }} thickness={5} />
-                    ) : null}
-                    <Typography sx={{ fontSize: '0.92rem', fontWeight: 600, color: TEXT_PRIMARY }}>
-                      {loading ? loadingLabel : emptyMessage}
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.8rem', color: TEXT_SECONDARY }}>
-                      {loading
-                        ? 'Please wait while we load the latest rows.'
-                        : 'Try adjusting your filters or search terms.'}
-                    </Typography>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ) : (
-              pagedRows.map((row) => {
-                const expanded = expandedId === row.id
+                  {title}
+                </Typography>
+              )}
+              {subTitle && (
+                <Typography
+                  sx={{
+                    fontSize: '0.84rem',
+                    color: textSecondary,
+                    maxWidth: 640,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {subTitle}
+                </Typography>
+              )}
+            </Stack>
 
-                return (
-                  <React.Fragment key={row.id}>
-                    <TableRow
-                      hover
-                      onClick={() => onRowClick?.(row)}
-                      sx={{
-                        transition: 'all .18s ease',
-                        cursor: onRowClick ? 'pointer' : 'default',
-                        '&:hover': {
-                          bgcolor: '#FAFAFA',
-                        },
-                      }}
-                    >
+            {pagination && totalCount !== undefined && (
+              <TablePagination
+                component="div"
+                count={totalCount}
+                page={paginationPage}
+                rowsPerPage={rowsPerPage}
+                rowsPerPageOptions={rowsPerPageOptions}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                sx={{
+                  borderRadius: '10px',
+                  px: isShipmentVariant ? 0.2 : isCompact ? 0.4 : 1.2,
+                  backgroundColor: isDark ? alpha(surface, 0.96) : alpha('#ffffff', 0.92),
+                  border: `1px solid ${borderColor}`,
+                  boxShadow: isCompact ? 'none' : `0 10px 24px ${alpha(textPrimary, 0.05)}`,
+                  '& .MuiToolbar-root': {
+                    minHeight: isShipmentVariant ? 30 : isCompact ? 34 : undefined,
+                    px: isCompact ? 0.5 : undefined,
+                  },
+                  '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                    fontSize: isCompact ? '11px' : '12px',
+                    color: textSecondary,
+                    fontWeight: 500,
+                  },
+                  '& .MuiTablePagination-select': {
+                    color: textPrimary,
+                    fontWeight: 600,
+                  },
+                  '& .MuiTablePagination-actions button': {
+                    color: primary,
+                    '&:hover': {
+                      backgroundColor: alpha(primary, 0.08),
+                    },
+                  },
+                }}
+              />
+            )}
+          </Stack>
+        )}
+
+        {rows.length === 0 ? (
+          <Stack
+            alignItems="center"
+            justifyContent="center"
+            spacing={1.3}
+            sx={{
+              minHeight: isCompact ? 220 : 300,
+              py: isCompact ? 3 : 5,
+              borderRadius: isCompact ? '8px' : '12px',
+              border: `1px dashed ${alpha(primary, 0.16)}`,
+              background: isDark
+                ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
+                : 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(247,241,235,0.92) 100%)',
+            }}
+          >
+            <Box
+              component="img"
+              src="/images/empty-files.png"
+              alt="No data"
+              sx={{ width: 260, opacity: 0.78 }}
+            />
+            <Typography variant="body1" sx={{ fontSize: '14px', fontWeight: 600, color: textPrimary }}>
+              No records to display
+            </Typography>
+            <Typography variant="body2" sx={{ color: textSecondary }}>
+              Once activity starts, the operations feed will appear here.
+            </Typography>
+          </Stack>
+        ) : isMobile ? (
+          <Stack spacing={isCompact ? 1 : 1.6}>
+            {selectable && (
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{
+                  px: 0.5,
+                  py: 0.35,
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <CustomCheckbox
+                    checked={isAllSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                  />
+                  <Typography fontSize="12px" fontWeight={500} sx={{ color: textPrimary }}>
+                    Select all
+                  </Typography>
+                </Stack>
+                <Typography fontSize="12px" sx={{ color: textSecondary }}>
+                  {selectedIds.length} selected
+                </Typography>
+              </Stack>
+            )}
+            {rows.map((row) => {
+              const isExpanded = expandedRowId === row.id
+              return (
+                <Card
+                  key={row.id}
+                  variant="outlined"
+                  sx={{
+                    borderRadius: isCompact ? '8px' : '12px',
+                    border: `1px solid ${borderColor}`,
+                    background: mobileCardBg,
+                    boxShadow: `0 14px 28px ${alpha(textPrimary, 0.05)}`,
+                  }}
+                >
+                  <CardContent sx={{ px: isCompact ? 1.4 : 2, py: isCompact ? 1.25 : 1.8 }}>
+                    <Stack spacing={isCompact ? 1 : 1.35}>
                       {selectable && (
-                        <TableCell padding="checkbox">
-                          <CustomCheckbox
-                            checked={selectedIds.includes(row.id)}
-                            onChange={() => handleSelect(row.id)}
-                          />
-                        </TableCell>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <CustomCheckbox
+                              checked={selectedIds.includes(row.id)}
+                              onChange={() => handleSelect(row.id)}
+                            />
+                            <Typography fontSize="12px" fontWeight={500} sx={{ color: textPrimary }}>
+                              Select entry
+                            </Typography>
+                          </Stack>
+                        </Stack>
                       )}
-
-                      {expandable && (
-                        <TableCell>
-                          <IconButton size="small" onClick={() => toggleExpand(row.id)}>
-                            {expanded ? <MdExpandLess /> : <MdExpandMore />}
-                          </IconButton>
-                        </TableCell>
-                      )}
-
-                      {visibleColumns.map((column) => {
-                        const value = row[column.id]
-                        const showCellTooltip = column.showCellTooltip !== false
-                        const cellContent = (
-                          <Box
-                            sx={{
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {column.render ? column.render(value, row) : String(value ?? '-')}
+                      {columns.map((col) => {
+                        if (col.hiddenOnMobile) return null
+                        const value = col.render ? col.render(row[col.id], row) : row[col.id]
+                        return (
+                          <Box key={col.id as string}>
+                            <Typography
+                              fontSize="11px"
+                              fontWeight={600}
+                              sx={{ color: alpha(textSecondary, 0.92), textTransform: 'uppercase', letterSpacing: 0 }}
+                            >
+                              {col.label}
+                            </Typography>
+                            {col.label_desc ? (
+                              <Typography fontSize="10px" fontWeight={500} sx={{ color: textSecondary, opacity: 0.85 }}>
+                                {col.label_desc}
+                              </Typography>
+                            ) : null}
+                            <Typography fontSize="13px" sx={{ color: textPrimary, mt: 0.45 }}>
+                              {React.isValidElement(value)
+                                ? value
+                                : typeof value === 'object'
+                                  ? JSON.stringify(value)
+                                  : String(value)}
+                            </Typography>
+                            <Divider sx={{ mt: 1, borderColor: softBorderColor }} />
                           </Box>
                         )
-
-                        return (
-                          <TableCell
-                            key={`${row.id}-${String(column.id)}`}
-                            sx={{
-                              minWidth: column.minWidth,
-                              maxWidth: column.stickyRight ? (column.minWidth ?? 160) : 220,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              fontSize: isCompactDesktop ? '0.78rem' : '0.85rem',
-                              color: '#111111',
-                              py: isCompactDesktop ? 0.85 : 1,
-                              borderBottom: '1px solid rgba(17,17,17,0.05)',
-                              ...(column.stickyRight
-                                ? {
-                                    position: 'sticky',
-                                    right: 0,
-                                    zIndex: 2,
-                                    bgcolor: BG,
-                                    boxShadow: '-12px 0 18px -18px rgba(15,23,42,0.7)',
-                                  }
-                                : {}),
-                            }}
-                          >
-                            {showCellTooltip ? (
-                              <Tooltip title={String(value ?? '-')} arrow>
-                                {cellContent}
-                              </Tooltip>
-                            ) : (
-                              cellContent
-                            )}
-                          </TableCell>
-                        )
                       })}
-                    </TableRow>
+                    </Stack>
+
+                    {renderExpandedRow && (
+                      <IconButton
+                        size="small"
+                        onClick={() => toggleExpand(row.id)}
+                        sx={{
+                          mt: 1,
+                          color: primary,
+                          bgcolor: alpha(primary, 0.08),
+                          border: `1px solid ${alpha(primary, 0.14)}`,
+                          '&:hover': { backgroundColor: alpha(primary, 0.12) },
+                        }}
+                      >
+                        {isExpanded ? <MdExpandLess /> : <MdExpandMore />}
+                      </IconButton>
+                    )}
+
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <Box ref={expandedRef} mt={1.2}>
+                        {renderExpandedRow?.(row)}
+                      </Box>
+                    </Collapse>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </Stack>
+        ) : (
+          <Box sx={{ overflowX: isShipmentVariant ? 'hidden' : 'auto', borderRadius: isCompact ? '8px' : '14px' }}>
+            <TableContainer
+              component={Paper}
+              sx={{
+                background: tableBg,
+                border: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
+                minWidth: '100%',
+                maxHeight,
+                boxShadow: 'none',
+                borderRadius: isCompact ? '8px' : '12px',
+                backdropFilter: 'none',
+                overflowX: isShipmentVariant ? 'hidden' : 'auto',
+              }}
+            >
+              <Table
+                stickyHeader
+                size="small"
+                sx={
+                  isShipmentVariant
+                    ? {
+                        borderCollapse: 'separate',
+                        borderSpacing: '0 6px',
+                        tableLayout: 'fixed',
+                        width: '100%',
+                      }
+                    : undefined
+                }
+              >
+                <TableHead>
+                  <TableRow
+                    sx={
+                      isShipmentVariant
+                        ? {
+                            '& th:first-of-type': {
+                              borderTopLeftRadius: '8px',
+                              borderBottomLeftRadius: '8px',
+                            },
+                            '& th:last-of-type': {
+                              borderTopRightRadius: '8px',
+                              borderBottomRightRadius: '8px',
+                            },
+                          }
+                        : undefined
+                    }
+                  >
+                    {selectable && (
+                      <TableCell
+                        padding="checkbox"
+                        sx={{
+                          position: 'sticky',
+                          top: 0,
+                          background: headerBg,
+                          borderBottom: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
+                          zIndex: theme.zIndex.appBar + 1,
+                          width: isShipmentVariant ? 38 : undefined,
+                          minWidth: isShipmentVariant ? 38 : undefined,
+                          maxWidth: isShipmentVariant ? 38 : undefined,
+                          py: isShipmentVariant ? 0.95 : isCompact ? 0.75 : 1.4,
+                          px: isShipmentVariant ? 0.45 : undefined,
+                        }}
+                      >
+                        <CustomCheckbox
+                          checked={isAllSelected}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          color="primary"
+                        />
+                      </TableCell>
+                    )}
+
+                    {columns.map((col) =>
+                      col.hiddenOnMobile && isMobile ? null : (
+                        <TableCell
+                          key={col.id as string}
+                          align={col.align ?? 'left'}
+                          sx={{
+                            position: col.sticky ? 'sticky' : 'static',
+                            top: 0,
+                            background: headerBg,
+                            color: isShipmentVariant ? '#FFFFFF' : alpha(textPrimary, 0.86),
+                            minWidth: isShipmentVariant ? 0 : col.minWidth || (isCompact ? 80 : 100),
+                            width: isShipmentVariant ? col.minWidth || 100 : undefined,
+                            maxWidth: isShipmentVariant ? col.minWidth || 100 : undefined,
+                            fontWeight: 600,
+                            fontSize: isShipmentVariant ? '11.3px' : isCompact ? '10.5px' : '11px',
+                            textTransform: isShipmentVariant ? 'none' : 'uppercase',
+                            letterSpacing: 0,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            zIndex: col.sticky ? theme.zIndex.appBar + 3 : theme.zIndex.appBar + 1,
+                            borderBottom: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
+                            py: isShipmentVariant ? 0.95 : isCompact ? 0.75 : 1.4,
+                            px: isShipmentVariant ? 0.85 : isCompact ? 1 : 2,
+                            ...(col.sticky === 'right'
+                              ? {
+                                  right: col.stickyOffset ?? 0,
+                                  boxShadow:
+                                    col.stickyOffset === 0
+                                      ? `-6px 0 10px ${alpha(textPrimary, 0.08)}`
+                                      : undefined,
+                                }
+                              : {}),
+                            ...(col.sticky === 'left'
+                              ? {
+                                  left: col.stickyOffset ?? 0,
+                                  boxShadow: `6px 0 10px ${alpha(textPrimary, 0.08)}`,
+                                }
+                              : {}),
+                          }}
+                        >
+                          {col.label}
+                          {col.label_desc ? (
+                            <Typography fontSize="10px" fontWeight={500} sx={{ color: alpha(textSecondary, 0.92), mt: 0.45 }}>
+                              {col.label_desc}
+                            </Typography>
+                          ) : null}
+                        </TableCell>
+                      ),
+                    )}
 
                     {expandable && renderExpandedRow && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={visibleColumns.length + (selectable ? 1 : 0) + 1}
-                          sx={{ p: 0 }}
+                      <TableCell
+                        sx={{
+                          position: 'sticky',
+                          top: 0,
+                          background: headerBg,
+                          borderBottom: `1px solid ${borderColor}`,
+                          width: 40,
+                          zIndex: theme.zIndex.appBar + 1,
+                        }}
+                      />
+                    )}
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {rows.map((row) => {
+                    const isExpanded = expandedRowId === row.id
+                    return (
+                      <React.Fragment key={row.id}>
+                        <TableRow
+                          hover={!!onRowClick}
+                          onClick={onRowClick ? () => onRowClick(row) : undefined}
+                          sx={{
+                            borderBottom: isShipmentVariant ? 'none' : `1px solid ${softBorderColor}`,
+                            backgroundColor: isDark ? surface : isShipmentVariant ? '#FFFFFF' : '#fffdfa',
+                            transition: 'background-color .18s ease, box-shadow .18s ease',
+                            '&:nth-of-type(even)': isShipmentVariant
+                              ? undefined
+                              : {
+                              backgroundColor: isDark ? '#18212c' : alpha('#F7F1EB', 0.5),
+                            },
+                            ...(isShipmentVariant
+                              ? {
+                                  boxShadow: `0 1px 0 ${alpha(textPrimary, 0.08)}`,
+                                  '& > td:first-of-type': {
+                                    borderTopLeftRadius: '8px',
+                                    borderBottomLeftRadius: '8px',
+                                  },
+                                  '& > td:last-of-type': {
+                                    borderTopRightRadius: '8px',
+                                    borderBottomRightRadius: '8px',
+                                  },
+                                }
+                              : {}),
+                            '&:hover': onRowClick
+                              ? {
+                                  backgroundColor: rowHover,
+                                  cursor: 'pointer',
+                                }
+                              : {
+                                  backgroundColor: isShipmentVariant ? alpha(shipmentAccent, 0.045) : alpha(primary, 0.025),
+                                },
+                          }}
                         >
-                          <Collapse in={expanded} timeout="auto" unmountOnExit>
-                            <Box
-                              ref={expandedRef}
+                          {selectable && (
+                            <TableCell
+                              padding="checkbox"
                               sx={{
-                                p: 2,
-                                bgcolor: '#FAFAFA',
+                                width: isShipmentVariant ? 38 : undefined,
+                                minWidth: isShipmentVariant ? 38 : undefined,
+                                maxWidth: isShipmentVariant ? 38 : undefined,
+                                px: isShipmentVariant ? 0.45 : undefined,
                               }}
                             >
-                              {renderExpandedRow(row)}
-                            </Box>
-                          </Collapse>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                              <CustomCheckbox
+                                checked={selectedIds.includes(row.id)}
+                                onChange={() => handleSelect(row.id)}
+                                sx={{ color: primary }}
+                              />
+                            </TableCell>
+                          )}
+
+                          {columns.map((col) => {
+                            if (col.hiddenOnMobile && isMobile) return null
+                            const value = row[col.id]
+                            const cellContent = col.render ? col.render(value, row) : (value as React.ReactNode)
+                            const shouldTruncate = col.truncate !== false
+
+                            let tooltipTitle: string | undefined
+                            if (shouldTruncate && !React.isValidElement(cellContent)) {
+                              if (value !== null && value !== undefined && typeof value !== 'object') {
+                                tooltipTitle = String(value)
+                              }
+                            }
+
+                            return (
+                              <TableCell
+                                key={col.id as string}
+                                align={col.align ?? 'left'}
+                                sx={{
+                                  position: col.sticky ? 'sticky' : 'static',
+                                  color: textPrimary,
+                                  fontSize: isShipmentVariant ? '12.4px' : '13px',
+                                  fontWeight: 400,
+                                  width: isShipmentVariant ? col.minWidth || 100 : undefined,
+                                  minWidth: isShipmentVariant ? 0 : undefined,
+                                  maxWidth: isShipmentVariant
+                                    ? col.minWidth || 100
+                                    : shouldTruncate
+                                      ? isCompact ? 180 : 240
+                                      : 'none',
+                                  whiteSpace: shouldTruncate || isShipmentVariant ? 'nowrap' : 'normal',
+                                  overflow: shouldTruncate || isShipmentVariant ? 'hidden' : 'visible',
+                                  textOverflow: shouldTruncate || isShipmentVariant ? 'ellipsis' : 'clip',
+                                  py: isShipmentVariant ? 1.05 : isCompact ? 0.85 : 1.45,
+                                  px: isShipmentVariant ? 0.85 : isCompact ? 1 : 2,
+                                  borderBottom: 'none',
+                                  backgroundColor: col.sticky || isShipmentVariant ? (isDark ? surface : '#FFFFFF') : undefined,
+                                  zIndex: col.sticky ? 2 : 1,
+                                  ...(col.sticky === 'right'
+                                    ? {
+                                        right: col.stickyOffset ?? 0,
+                                        boxShadow:
+                                          col.stickyOffset === 0
+                                            ? `-6px 0 10px ${alpha(textPrimary, 0.08)}`
+                                            : undefined,
+                                      }
+                                    : {}),
+                                  ...(col.sticky === 'left'
+                                    ? {
+                                        left: col.stickyOffset ?? 0,
+                                        boxShadow: `6px 0 10px ${alpha(textPrimary, 0.08)}`,
+                                      }
+                                    : {}),
+                                }}
+                              >
+                                {tooltipTitle ? (
+                                  <Tooltip title={tooltipTitle} arrow disableInteractive>
+                                    <Box component="span">{cellContent}</Box>
+                                  </Tooltip>
+                                ) : (
+                                  <Box component="span">{cellContent}</Box>
+                                )}
+                              </TableCell>
+                            )
+                          })}
+
+                          {expandable && renderExpandedRow && (
+                            <TableCell sx={{ py: isCompact ? 0.75 : 1.5, px: isCompact ? 1 : 2 }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => toggleExpand(row.id)}
+                                sx={{
+                                  color: primary,
+                                  bgcolor: alpha(primary, 0.08),
+                                  border: `1px solid ${alpha(primary, 0.14)}`,
+                                  '&:hover': { backgroundColor: alpha(primary, 0.12) },
+                                }}
+                              >
+                                {isExpanded ? <MdExpandLess /> : <MdExpandMore />}
+                              </IconButton>
+                            </TableCell>
+                          )}
+                        </TableRow>
+
+                        {expandable && renderExpandedRow && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={columns.length + (selectable ? 2 : 1)}
+                              sx={{
+                                p: 0,
+                                backgroundColor: isDark ? alpha(primary, 0.08) : alpha(primary, 0.03),
+                                borderTop: `1px solid ${borderColor}`,
+                              }}
+                            >
+                              <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                <Box
+                                  ref={expandedRef}
+                                  p={isCompact ? 1.75 : 2.8}
+                                  sx={{
+                                    background: isDark
+                                      ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
+                                      : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,242,236,0.98) 100%)',
+                                  }}
+                                >
+                                  {renderExpandedRow(row)}
+                                </Box>
+                              </Collapse>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+      </Box>
     </CardContent>
   )
 }

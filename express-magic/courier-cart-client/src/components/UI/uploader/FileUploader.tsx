@@ -1,3 +1,11 @@
+// FileUploader.tsx — Glassmorphism Edition ✨
+// ---------------------------------------------------------------------------
+// Variants: "button" | "avatar" | "dnd"
+// Responsive paddings & avatar scaling
+// loadingPreview support
+// NEW: Remove icon to clear selection
+// ---------------------------------------------------------------------------
+
 import {
   Avatar,
   Box,
@@ -14,13 +22,11 @@ import {
   type ButtonProps,
 } from '@mui/material'
 import { keyframes, styled } from '@mui/material/styles'
-import axios from 'axios'
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { useDropzone, type Accept } from 'react-dropzone'
 import { IoCloudUploadOutline } from 'react-icons/io5'
 import { MdClose, MdEdit } from 'react-icons/md' // ← new
-import axiosInstance from '../../../api/axiosInstance'
-import { uploadFileToBackend, uploadKycPdfToBackend } from '../../../api/upload.api'
+import { uploadFileToStorage, type UploadStrategy } from '../../../api/upload.api'
 import { toast } from '../Toast'
 import styles from './uploader.module.css'
 
@@ -49,39 +55,62 @@ interface FileUploaderProps {
   label?: string
   fullWidth?: boolean
   required?: boolean
+  uploadStrategy?: UploadStrategy
+}
+
+const getUploadErrorMessage = (err: unknown) => {
+  const response = (err as { response?: { status?: number; data?: { message?: unknown } } })
+    ?.response
+  const responseMessage = response?.data?.message
+
+  if (typeof responseMessage === 'string' && responseMessage.trim()) {
+    return responseMessage
+  }
+
+  if (response?.status === 413) {
+    return 'File is too large. Please upload a smaller file.'
+  }
+
+  if (err instanceof Error && err.message) {
+    return err.message
+  }
+
+  return 'Upload failed. Please try again.'
 }
 
 /* ---------------------------------------------------------------- style */
 const cleanBox = (error?: boolean) => ({
   background: '#FFFFFF',
-  border: error ? `2px solid #E74C3C` : `1px solid rgba(17, 24, 39, 0.12)`,
-  boxShadow: 'none',
+  border: error ? `2px solid #E74C3C` : `1px solid #E0E6ED`,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
 })
 
 const pulse = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(217, 4, 22, .35); }
-  70% { box-shadow: 0 0 0 12px rgba(217, 4, 22, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(217, 4, 22, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(51, 51, 105,.6); }
+  70% { box-shadow: 0 0 0 12px rgba(51, 51, 105,0); }
+  100% { box-shadow: 0 0 0 0 rgba(51, 51, 105,0); }
 `
 
 const GlassDropZone = styled(Paper, {
   shouldForwardProp: (prop) => prop !== 'active' && prop !== 'dragging',
 })<{ active: boolean; dragging: boolean }>(({ active, dragging }) => ({
-  background: active || dragging ? 'rgba(217, 4, 22, 0.04)' : '#FFFFFF',
-  border: `1px dashed ${active || dragging ? '#062A5B' : 'rgba(17, 24, 39, 0.18)'}`,
-  borderRadius: 0,
+  background: active || dragging ? 'rgba(51, 51, 105, 0.05)' : '#F5F7FA',
+  border: `2px dashed ${active || dragging ? '#333369' : '#E0E6ED'}`,
+  borderRadius: 12,
   padding: '24px',
   width: '100%',
   textAlign: 'center',
   cursor: 'pointer',
   transition: 'all .3s ease',
   '&:hover': {
-    borderColor: '#062A5B',
-    background: 'rgba(217, 4, 22, 0.03)',
+    borderColor: '#333369',
+    background: 'rgba(51, 51, 105, 0.03)',
+    boxShadow: '0 4px 12px rgba(51, 51, 105, 0.12)',
   },
   ...(dragging && {
-    background: 'rgba(217, 4, 22, 0.05)',
-    borderColor: '#062A5B',
+    background: 'rgba(61, 213, 152, 0.1)',
+    borderColor: '#3DD598',
+    boxShadow: '0 4px 12px rgba(61, 213, 152, 0.2)',
   }),
 }))
 
@@ -93,27 +122,30 @@ const GlassButton = styled(Button, {
   shouldForwardProp: (prop) => prop !== 'error',
 })<GlassButtonProps>(({ theme, error, fullWidth }) => ({
   ...cleanBox(error),
-  borderRadius: 0,
+  borderRadius: 8,
   paddingInline: theme.spacing(2.5),
   paddingBlock: theme.spacing(1),
   width: fullWidth ? '100%' : 'auto',
   textTransform: 'none',
-  fontWeight: 700,
+  fontWeight: 600,
   fontSize: '0.875rem',
-  color: error ? '#E74C3C' : '#062A5B',
+  color: error ? '#E74C3C' : '#333369',
   [theme.breakpoints.down('sm')]: { width: '100%' },
   '&:hover': {
-    background: error ? 'rgba(231, 76, 60, 0.06)' : 'rgba(217, 4, 22, 0.04)',
-    borderColor: error ? '#E74C3C' : '#062A5B',
+    background: error ? 'rgba(231, 76, 60, 0.1)' : 'rgba(51, 51, 105, 0.08)',
+    borderColor: error ? '#E74C3C' : '#333369',
+    transform: 'translateY(-1px)',
+    boxShadow: error ? '0 4px 12px rgba(231, 76, 60, 0.2)' : '0 4px 12px rgba(51, 51, 105, 0.15)',
   },
   transition: 'all 0.3s ease',
 }))
 
 const PreviewImg = styled('img')(({ theme }) => ({
   maxWidth: 140,
-  borderRadius: 0,
+  borderRadius: 8,
   objectFit: 'contain',
-  border: '1px solid rgba(17, 24, 39, 0.12)',
+  border: '1px solid #E0E6ED',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
   [theme.breakpoints.down('sm')]: { maxWidth: 100 },
 }))
 
@@ -134,6 +166,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   required = false,
   showPlaceholderImgByDefault = false,
   loadingPreview = false,
+  uploadStrategy = 'auto',
 }) => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -176,11 +209,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     setPreviewFiles([])
   }
 
-  const resetUploadState = () => {
+  const resetUploadState = useCallback(() => {
     setProgress(0)
     setUploading(false)
     if (inputRef.current) inputRef.current.value = ''
-  }
+  }, [])
 
   const renderPlaceholder = () =>
     typeof placeholder === 'string' ? (
@@ -193,10 +226,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     async (files: File[] | FileList) => {
       const uploaded: UploadedFileInfo[] = []
       const arr = Array.from(files)
-      const getContentType = (file: File) => file.type || 'application/octet-stream'
       for (const file of arr) {
         if (file.size / 1024 / 1024 > maxSizeMb) {
-          alert(`${file.name} exceeds ${maxSizeMb} MB limit`)
+          toast.open({
+            message: `${file.name} exceeds ${maxSizeMb} MB limit`,
+            severity: 'error',
+          })
+          resetUploadState()
           return
         }
       }
@@ -205,72 +241,32 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
       try {
         for (const file of arr) {
-          const contentType = getContentType(file)
-          const fileName = String(file.name || '').toLowerCase()
-          const isPdfUpload =
-            contentType.toLowerCase().includes('pdf') || fileName.endsWith('.pdf')
-          const shouldStoreKycPdfLocally = folderKey === 'kyc' && isPdfUpload
-          const shouldProxyUploadThroughBackend = folderKey === 'ir' || isPdfUpload
+          const data = await uploadFileToStorage({
+            file,
+            folderKey,
+            uploadStrategy,
+            onUploadProgress: (nextProgress) => setProgress(nextProgress),
+          })
 
-          if (shouldStoreKycPdfLocally) {
-            const stored = await uploadKycPdfToBackend(file, (progressValue) =>
-              setProgress(progressValue),
-            )
+          uploaded.push({
+            url: data.publicUrl,
+            key: data.key,
+            originalName: file.name,
+            size: file.size,
+            mime: file.type,
+          })
 
-            uploaded.push({
-              url: stored.url,
-              key: stored.key,
-              originalName: stored.originalName,
-              size: stored.size,
-              mime: stored.mime,
-            })
-          } else if (shouldProxyUploadThroughBackend) {
-            const stored = await uploadFileToBackend(file, folderKey || 'userPp', (progressValue) =>
-              setProgress(progressValue),
-            )
-
-            uploaded.push({
-              url: stored.url,
-              key: stored.key,
-              originalName: stored.originalName,
-              size: stored.size,
-              mime: stored.mime,
-            })
-          } else {
-            const { data } = await axiosInstance.post('/uploads/presign', {
-              contentType,
-              filename: file.name,
-              folder: folderKey,
-            })
-
-            // Upload directly to R2 using presigned URL - no credentials needed
-            await axios.put(data.uploadUrl, file, {
-              withCredentials: false, // Don't send credentials for presigned URL uploads
-              headers: { 'Content-Type': contentType },
-              onUploadProgress: (e) =>
-                e.total && setProgress(Math.round((e.loaded * 100) / e.total)),
-            })
-
-            uploaded.push({
-              url: data.publicUrl,
-              key: data.key,
-              originalName: file.name,
-              size: file.size,
-              mime: contentType,
-            })
-          }
-
-          if (contentType.startsWith('image/') || contentType.startsWith('video/')) {
+          if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
             setPreviewUrl(URL.createObjectURL(file)) // optional
             const preview = {
               url: URL.createObjectURL(file),
               name: file.name,
-              type: contentType,
+              type: file.type,
             }
             setFileMeta(preview)
             if (multiple) setPreviewFiles((prev) => [...prev, preview])
           } else {
-            setFileMeta({ type: contentType, name: file.name })
+            setFileMeta({ type: file.type, name: file.name })
           }
 
           // setShowPlaceholder(false);
@@ -279,14 +275,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       } catch (err) {
         console.error(err)
         toast.open({
-          message: 'Upload failed - check console.',
+          message: getUploadErrorMessage(err),
           severity: 'error',
         })
       } finally {
         resetUploadState()
       }
     },
-    [maxSizeMb, folderKey, multiple, onUploaded],
+    [maxSizeMb, folderKey, multiple, onUploaded, resetUploadState, uploadStrategy],
   )
   const removeFile = (index: number) => {
     setPreviewFiles((prev) => {
@@ -354,10 +350,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               position: 'relative',
               mx: 'auto',
               background: '#FFFFFF',
-              border: '1px solid rgba(17, 24, 39, 0.12)',
+              border: '2px solid #E0E6ED',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               ...(uploading && {
                 animation: `${pulse} 1.6s ease-in-out infinite`,
-                borderColor: '#062A5B',
+                borderColor: '#333369',
               }),
             }}
           >
@@ -411,9 +408,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                 color: '#FFFFFF',
                 width: 28,
                 height: 28,
-                borderRadius: 0,
+                boxShadow: '0 2px 8px rgba(231, 76, 60, 0.3)',
                 '&:hover': {
                   bgcolor: '#C0392B',
+                  transform: 'translate(50%, -50%) scale(1.1)',
                 },
                 transition: 'all 0.3s ease',
               }}
@@ -435,13 +433,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               right: 27,
               transform: 'translate(50%, 50%)',
               zIndex: 2,
-              bgcolor: '#062A5B',
+              bgcolor: '#333369',
               color: '#FFFFFF',
               width: 28,
               height: 28,
-              borderRadius: 0,
+              boxShadow: '0 2px 8px rgba(51, 51, 105, 0.3)',
               '&:hover': {
-                bgcolor: '#5519A8',
+                bgcolor: '#2F3B5F',
+                transform: 'translate(50%, 50%) scale(1.1)',
               },
               transition: 'all 0.3s ease',
               '&:disabled': {
@@ -464,7 +463,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       <Stack spacing={1}>
         {label && (
           <Typography
-            sx={{ fontSize: '12px', color: '#374151', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}
+            sx={{ fontSize: '13px' }}
             className={`${styles.customLabel}`}
             onClick={() => inputRef.current?.focus()}
           >
@@ -488,7 +487,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             </Stack>
           ) : (
             <Stack alignItems="center" spacing={2}>
-              <IoCloudUploadOutline size={46} color="#062A5B" />
+              <IoCloudUploadOutline size={46} color="#333369" />
               <Typography variant="subtitle1" fontWeight={600} color="#1A1A1A">
                 Drag files here or click to upload
               </Typography>{' '}
@@ -510,9 +509,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                       color: '#FFFFFF',
                       width: 28,
                       height: 28,
-                      borderRadius: 0,
+                      boxShadow: '0 2px 8px rgba(231, 76, 60, 0.3)',
                       '&:hover': {
                         bgcolor: '#C0392B',
+                        transform: 'scale(1.1)',
                       },
                       transition: 'all 0.3s ease',
                     }}
@@ -531,8 +531,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                       controls
                       style={{
                         maxWidth: '140px',
-                        borderRadius: '0',
-                        border: '1px solid rgba(17, 24, 39, 0.12)',
+                        borderRadius: '8px',
+                        border: '1px solid #E0E6ED',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                       }}
                     />
                   ) : (
@@ -543,10 +544,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                       sx={{
                         px: 2,
                         py: 1,
-                        borderRadius: 0,
-                        backgroundColor: '#F9FAFB',
-                        border: '1px solid rgba(17, 24, 39, 0.12)',
+                        borderRadius: 2,
+                        backgroundColor: '#F5F7FA',
+                        border: '1px solid #E0E6ED',
                         minWidth: 160,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                       }}
                     >
                       <Typography fontSize={40}>
@@ -575,9 +577,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                       color: '#FFFFFF',
                       width: 28,
                       height: 28,
-                      borderRadius: 0,
+                      boxShadow: '0 2px 8px rgba(231, 76, 60, 0.3)',
                       '&:hover': {
                         bgcolor: '#C0392B',
+                        transform: 'scale(1.1)',
                       },
                       transition: 'all 0.3s ease',
                     }}
@@ -604,8 +607,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                           controls
                           style={{
                             maxWidth: '140px',
-                            borderRadius: '0',
-                            border: '1px solid rgba(17, 24, 39, 0.12)',
+                            borderRadius: '8px',
+                            border: '1px solid #E0E6ED',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                           }}
                         />
                       ) : (
@@ -616,10 +620,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                           sx={{
                             px: 2,
                             py: 1,
-                            borderRadius: 0,
-                            backgroundColor: '#F9FAFB',
-                            border: '1px solid rgba(17, 24, 39, 0.12)',
+                            borderRadius: 2,
+                            backgroundColor: '#F5F7FA',
+                            border: '1px solid #E0E6ED',
                             minWidth: 160,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                           }}
                         >
                           <Typography fontSize={40}>
@@ -648,9 +653,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                           color: '#FFFFFF',
                           width: 28,
                           height: 28,
-                          borderRadius: 0,
+                          boxShadow: '0 2px 8px rgba(231, 76, 60, 0.3)',
                           '&:hover': {
                             bgcolor: '#C0392B',
+                            transform: 'scale(1.1)',
                           },
                           transition: 'all 0.3s ease',
                         }}
@@ -673,7 +679,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     <Stack>
       {label && (
         <Typography
-          sx={{ fontSize: '12px', color: '#374151', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}
+          sx={{ fontSize: '13px' }}
           className={`${styles.customLabel}`}
           onClick={() => inputRef.current?.focus()}
         >
@@ -727,7 +733,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               variant="caption"
               sx={{
                 fontSize: '11px',
-                color: '#6B7280',
+                opacity: 0.7,
+                fontStyle: 'italic',
                 textAlign: 'right',
               }}
             >
@@ -755,11 +762,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             value={uploading ? progress : undefined}
             sx={{
               flex: 1,
-              borderRadius: 0,
+              borderRadius: 3,
               height: 8,
-              bgcolor: '#E5E7EB',
               '& .MuiLinearProgress-bar': {
-                borderRadius: 0,
+                borderRadius: 3,
                 background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
               },
             }}
@@ -779,9 +785,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                   color: '#FFFFFF',
                   width: 28,
                   height: 28,
-                  borderRadius: 0,
+                  boxShadow: '0 2px 8px rgba(231, 76, 60, 0.3)',
                   '&:hover': {
                     bgcolor: '#C0392B',
+                    transform: 'scale(1.1)',
                   },
                   transition: 'all 0.3s ease',
                 }}

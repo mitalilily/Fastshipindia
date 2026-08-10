@@ -1,60 +1,42 @@
-:root {
-  --brand-teal: #062A5B;
-  --brand-teal-dark: #041A38;
-  --brand-teal-soft: #EEF4FB;
-  --brand-orange: #ED1C24;
-  --brand-orange-dark: #B80F1A;
-  --brand-amber-soft: #FDE7EA;
-  --brand-sky-soft: #D9E6F7;
-  --brand-ink: #061A33;
-  --brand-text: #183153;
-  --brand-muted: #64748B;
-  --brand-surface: rgba(255, 255, 255, 0.92);
-  --brand-border: rgba(6, 42, 91, 0.16);
-  --brand-shadow: 0 24px 70px rgba(15, 44, 67, 0.08);
-}
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
 
 html,
 body,
 #root {
+  height: 100%;
   width: 100%;
-  max-width: 100%;
-  min-height: 100%;
   margin: 0;
   padding: 0;
-  overflow-x: clip;
+  background: #fafbfe;
+  background-attachment: scroll;
+  background-repeat: no-repeat;
+  color: #0f172a;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+html[data-client-theme='dark'] {
+  color-scheme: dark;
+}
+
+html[data-client-theme='dark'],
+html[data-client-theme='dark'] body,
+html[data-client-theme='dark'] #root {
+  background: #0f141b;
+  color: #f8fafc;
 }
 
 body {
-  min-width: 320px;
-  color: var(--brand-ink);
-  background:
-    radial-gradient(circle at 0 0, rgba(253, 231, 234, 0.82), transparent 28%),
-    radial-gradient(circle at 100% 0, rgba(217, 230, 247, 0.62), transparent 28%),
-    linear-gradient(180deg, #F5F8FC 0%, #fbfbfb 30%, #F5F8FC 64%, #fbfbfb 100%);
-  background-attachment: fixed;
-  font-family: "Inter", "Segoe UI", sans-serif;
-  font-weight: 400;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 14% 14%, rgba(255, 230, 160, 0.24), transparent 24%),
-    radial-gradient(circle at 86% 18%, rgba(253, 231, 234, 0.3), transparent 20%),
-    radial-gradient(circle at 74% 76%, rgba(217, 230, 247, 0.26), transparent 22%);
+  overscroll-behavior: auto;
 }
 
 a {
@@ -64,61 +46,85 @@ a {
 
 button,
 input,
-textarea,
-select {
+select,
+textarea {
   font: inherit;
 }
 
-button,
-[role="button"] {
-  touch-action: manipulation;
+.site-shell {
+  position: relative;
+  overflow-x: clip;
 }
 
-img {
-  max-width: 100%;
+.landing-marquee-left,
+.landing-marquee-right {
+  will-change: transform;
 }
 
-::selection {
-  color: #0b2232;
-  background: rgba(217, 230, 247, 0.92);
+.landing-marquee-left {
+  animation: landing-marquee-left 42s linear infinite;
+}
+
+.landing-marquee-right {
+  animation: landing-marquee-right 42s linear infinite;
+}
+
+@keyframes landing-marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.333%);
+  }
+}
+
+@keyframes landing-marquee-right {
+  from {
+    transform: translateX(-33.333%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(6, 42, 91, 0.04);
+  background-color: rgba(250, 251, 254, 0.9);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(6, 42, 91, 0.72), rgba(237, 28, 36, 0.72));
+  background: #94a3b8;
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border: 2px solid rgba(250, 251, 254, 0.9);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(6, 42, 91, 0.88), rgba(237, 28, 36, 0.88));
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: #64748b;
 }
 
 * {
   box-sizing: border-box;
   scrollbar-width: thin;
-  scrollbar-color: rgba(6, 42, 91, 0.72) rgba(6, 42, 91, 0.04);
+  scrollbar-color: #94a3b8 rgba(250, 251, 254, 0.9);
 }
 
-@media (max-width: 600px) {
-  body {
-    background-attachment: scroll;
-  }
+html[data-client-theme='dark'] ::-webkit-scrollbar-track {
+  background-color: #0f141b;
+}
 
-  img,
-  svg,
-  canvas {
-    max-width: 100%;
-  }
+html[data-client-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #3a4350;
+  border-color: #0f141b;
+}
+
+html[data-client-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: #586579;
+}
+
+html[data-client-theme='dark'] * {
+  scrollbar-color: #3a4350 #0f141b;
 }

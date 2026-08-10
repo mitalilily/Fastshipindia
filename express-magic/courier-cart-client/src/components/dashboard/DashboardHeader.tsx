@@ -1,5 +1,7 @@
-import { alpha, Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { MdDashboardCustomize, MdRefresh } from 'react-icons/md'
+import { dashboardButtonSx, dashboardIconSx, dashboardPalette } from './dashboardStyles'
 
 interface DashboardHeaderProps {
   isRefetching: boolean
@@ -7,36 +9,30 @@ interface DashboardHeaderProps {
   onCustomize?: () => void
 }
 
-const BRAND_PRIMARY = '#062A5B'
 export default function DashboardHeader({
   isRefetching,
   onRefresh,
   onCustomize,
 }: DashboardHeaderProps) {
-  const metricPills = ['Courier routing', 'NDR watchlist', 'Billing control', 'Shipment visibility']
-
   return (
     <Box
       sx={{
-        mb: 2.1,
-        p: { xs: 2.2, md: 2.8 },
-        borderRadius: 5,
-        border: `1px solid ${alpha(BRAND_PRIMARY, 0.18)}`,
-        background: `linear-gradient(135deg, ${alpha('#141416', 0.98)} 0%, ${alpha(
-          '#1D1D21',
-          0.98,
-        )} 48%, ${alpha(BRAND_PRIMARY, 0.9)} 100%)`,
-        color: '#fff',
-        boxShadow: '0 26px 56px rgba(20, 20, 20, 0.12)',
+        mb: 2.5,
+        p: { xs: 2, md: 2.4 },
         position: 'relative',
         overflow: 'hidden',
+        borderRadius: '16px',
+        border: `1px solid ${dashboardPalette.line}`,
+        background: dashboardPalette.surface,
+        boxShadow: '0 14px 34px rgba(15,23,42,0.06)',
         '&::before': {
           content: '""',
           position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(circle at top right, rgba(255,255,255,0.12) 0%, transparent 24%)',
-          pointerEvents: 'none',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          background: `linear-gradient(90deg, ${dashboardPalette.orange} 0%, #FFB15A 100%)`,
         },
       }}
     >
@@ -44,71 +40,46 @@ export default function DashboardHeader({
         direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"
         alignItems={{ xs: 'flex-start', md: 'center' }}
-        gap={1.8}
-        sx={{ position: 'relative', zIndex: 1 }}
+        gap={1.5}
       >
-        <Box sx={{ maxWidth: 860 }}>
-          <Typography
-            sx={{
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              color: alpha('#fff', 0.76),
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              mb: 0.8,
-            }}
-          >
-            Merchant Dashboard
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: { xs: '1.65rem', md: '2.2rem' },
-              fontWeight: 800,
-              mb: 0.7,
-              color: 'white',
-              letterSpacing: '-0.03em',
-            }}
-          >
-            Run shipping, finance, and exceptions from one cleaner FastShip workspace.
-          </Typography>
-          <Typography sx={{ fontSize: '0.95rem', color: alpha('#fff', 0.82), lineHeight: 1.6 }}>
-            Keep pickup readiness, courier allocation, remittance exposure, and delivery exceptions
-            visible without jumping across disconnected tools.
-          </Typography>
-          <Stack direction="row" spacing={0.9} useFlexGap flexWrap="wrap" sx={{ mt: 1.6 }}>
-            {metricPills.map((pill) => (
-              <Box
-                key={pill}
-                sx={{
-                  px: 1.15,
-                  py: 0.7,
-                  borderRadius: 999,
-                  border: `1px solid ${alpha('#fff', 0.18)}`,
-                  bgcolor: alpha('#fff', 0.08),
-                }}
-              >
-                <Typography sx={{ fontSize: '0.74rem', fontWeight: 700, color: '#fff' }}>
-                  {pill}
-                </Typography>
-              </Box>
-            ))}
-          </Stack>
-        </Box>
+        <Stack direction="row" spacing={1.4} alignItems="center">
+          <Box sx={dashboardIconSx(dashboardPalette.orange)}>
+            <MdDashboardCustomize size={19} />
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: { xs: '1.35rem', md: '1.8rem' },
+                fontWeight: 900,
+                background: `linear-gradient(90deg, ${dashboardPalette.ink} 0%, ${dashboardPalette.orange} 100%)`,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              Dashboard
+            </Typography>
+            <Typography sx={{ fontSize: '0.9rem', color: dashboardPalette.muted, fontWeight: 500 }}>
+              A clean view of orders, cash flow, courier health, and action queues.
+            </Typography>
+          </Box>
+        </Stack>
 
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
           {onCustomize && (
             <Button
               onClick={onCustomize}
               variant="outlined"
               startIcon={<MdDashboardCustomize size={18} />}
               sx={{
-                borderColor: alpha('#fff', 0.42),
-                color: 'black',
-                textTransform: 'none',
-                fontWeight: 700,
-                borderRadius: 999,
-                px: 1.5,
-                '&:hover': { borderColor: '#fff', bgcolor: alpha('#fff', 0.12) },
+                ...dashboardButtonSx,
+                borderColor: alpha(dashboardPalette.orange, 0.32),
+                color: dashboardPalette.orangeDark,
+                backgroundColor: dashboardPalette.tile,
+                '&:hover': {
+                  borderColor: dashboardPalette.orange,
+                  backgroundColor: alpha(dashboardPalette.orange, 0.08),
+                },
               }}
             >
               Customize
@@ -121,22 +92,22 @@ export default function DashboardHeader({
             variant="contained"
             startIcon={
               isRefetching ? (
-                <CircularProgress size={14} thickness={4} sx={{ color: '#fff' }} />
+                <CircularProgress size={14} thickness={4} sx={{ color: '#FFFFFF' }} />
               ) : (
                 <MdRefresh size={18} />
               )
             }
             sx={{
-              bgcolor: '#fff',
-              color: 'ButtonFace',
-              textTransform: 'none',
-              fontWeight: 800,
-              borderRadius: 999,
-              px: 1.7,
-              '&:hover': { bgcolor: alpha('#fff', 0.9) },
+              ...dashboardButtonSx,
+              background: `linear-gradient(135deg, ${dashboardPalette.orange} 0%, #FFB15A 100%)`,
+              color: '#FFFFFF',
+              '&:hover': {
+                background: `linear-gradient(135deg, ${dashboardPalette.orangeDark} 0%, ${dashboardPalette.orange} 100%)`,
+                boxShadow: `0 12px 26px ${alpha(dashboardPalette.orange, 0.22)}`,
+              },
             }}
           >
-            {isRefetching ? 'Refreshing' : 'Refresh'}
+            {isRefetching ? 'Updating' : 'Refresh'}
           </Button>
         </Stack>
       </Stack>

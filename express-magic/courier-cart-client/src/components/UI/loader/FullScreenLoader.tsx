@@ -1,7 +1,8 @@
-import { Box } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import React from 'react'
-import { BRAND } from '../../../config/brand'
 import './loader.css'
+import Logo from '/favicon.jpg'
+import { brandIdentity } from '../../../theme/brand'
 
 type Props = {
   night?: boolean
@@ -12,10 +13,19 @@ const FullScreenLoader: React.FC<Props> = ({ night = false }) => {
     <Box className={`loader-overlay ${night ? 'night' : ''}`}>
       <Box className="loader-content">
         <div className="logo-container">
-          <img src={BRAND.logo} alt={`${BRAND.name} Logo`} className="loader-logo" />
-          <div className="pulse-ring"></div>
-          <div className="pulse-ring pulse-ring-delay"></div>
+          <img src={Logo} alt={brandIdentity.name} className="loader-logo" />
         </div>
+        <Typography
+          sx={{
+            color: '#10324A',
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            fontSize: '0.72rem',
+            textTransform: 'uppercase',
+          }}
+        >
+          {brandIdentity.name}
+        </Typography>
       </Box>
     </Box>
   )

@@ -1,6 +1,5 @@
 import {
   Alert,
-  alpha,
   Box,
   Button,
   Card,
@@ -14,9 +13,9 @@ import {
   Typography,
 } from '@mui/material'
 import { useState } from 'react'
-import AWBLink from '../../components/UI/AWBLink'
 import { FiArrowLeft, FiCheckCircle, FiDownload, FiMessageSquare, FiXCircle } from 'react-icons/fi'
 import { RiScales3Line } from 'react-icons/ri'
+import PageHeading from '../../components/UI/heading/PageHeading'
 import { useNavigate, useParams } from 'react-router-dom'
 import FileUploader, { type UploadedFileInfo } from '../../components/UI/uploader/FileUploader'
 import {
@@ -25,17 +24,9 @@ import {
   useDiscrepancyDetails,
   useRejectDiscrepancy,
 } from '../../hooks/useWeightReconciliation'
+import { getCourierDisplayName } from '../../utils/courierDisplay'
 
 export default function DiscrepancyDetails() {
-  const BRAND_PURPLE = '#062A5B'
-  const BRAND_ORANGE = '#ED1C24'
-  const shellCardSx = {
-    borderRadius: 5,
-    border: `1px solid ${alpha(BRAND_PURPLE, 0.12)}`,
-    boxShadow: '0 18px 38px rgba(20, 20, 20, 0.08)',
-    background: '#FFFFFF',
-  }
-
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [showDisputeForm, setShowDisputeForm] = useState(false)
@@ -142,16 +133,8 @@ export default function DiscrepancyDetails() {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Stack gap={3}>
-        <Box
-          sx={{
-            p: { xs: 2.5, md: 3.2 },
-            borderRadius: 5,
-            border: `1px solid ${alpha(BRAND_PURPLE, 0.12)}`,
-            background:
-              'radial-gradient(circle at top right, rgba(217,4,22,0.14) 0%, transparent 24%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,243,240,0.98) 100%)',
-            boxShadow: '0 18px 38px rgba(20, 20, 20, 0.08)',
-          }}
-        >
+        {/* Header */}
+        <Box>
           <Button
             startIcon={<FiArrowLeft />}
             onClick={() => navigate('/reconciliation/weight')}
@@ -159,7 +142,7 @@ export default function DiscrepancyDetails() {
               color: '#6B7280',
               textTransform: 'none',
               mb: 2,
-              '&:hover': { color: '#062A5B' },
+              '&:hover': { color: '#333369' },
             }}
           >
             Back to Discrepancies
@@ -172,42 +155,12 @@ export default function DiscrepancyDetails() {
             gap={2}
           >
             <Box>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 800,
-                  color: '#17171A',
-                  fontSize: '24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                }}
-              >
-                <RiScales3Line size={28} color={BRAND_PURPLE} />
-                Weight Discrepancy Details
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#6B7280', mt: 0.5 }}>
-                Order #{discrepancy.order_number}
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.2} mt={2}>
-                {[
-                  `${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(3)} kg difference`,
-                  `₹${additionalCharge.toFixed(2)} billing impact`,
-                  `${discrepancy.courier_partner || 'Courier'} review`,
-                ].map((item) => (
-                  <Chip
-                    key={item}
-                    label={item}
-                    sx={{
-                      alignSelf: 'flex-start',
-                      bgcolor: alpha(BRAND_ORANGE, 0.1),
-                      color: BRAND_ORANGE,
-                      borderRadius: '999px',
-                      fontWeight: 700,
-                    }}
-                  />
-                ))}
-              </Stack>
+              <PageHeading
+                eyebrow="Discrepancy Panel"
+                title="Discrepancy Details"
+                subtitle={`Order #${discrepancy.order_number}`}
+                icon={<RiScales3Line size={12} />}
+              />
             </Box>
             <Stack direction="row" gap={2}>
               {discrepancy.status === 'pending' && (
@@ -249,7 +202,7 @@ export default function DiscrepancyDetails() {
         </Box>
 
         {/* Status Card */}
-        <Card sx={shellCardSx}>
+        <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <CardContent>
             <Stack
               direction="row"
@@ -291,7 +244,7 @@ export default function DiscrepancyDetails() {
                 <Typography variant="body2" sx={{ color: '#6B7280', mb: 0.5 }}>
                   Order Number
                 </Typography>
-                <Typography sx={{ fontWeight: 600, color: '#062A5B' }}>
+                <Typography sx={{ fontWeight: 600, color: '#333369' }}>
                   {discrepancy.order_number}
                 </Typography>
               </Box>
@@ -299,16 +252,16 @@ export default function DiscrepancyDetails() {
                 <Typography variant="body2" sx={{ color: '#6B7280', mb: 0.5 }}>
                   AWB Number
                 </Typography>
-                <Typography sx={{ fontWeight: 600, color: '#062A5B' }}>
-                  {discrepancy.awb_number ? <AWBLink awb={discrepancy.awb_number} /> : 'N/A'}
+                <Typography sx={{ fontWeight: 600, color: '#333369' }}>
+                  {discrepancy.awb_number || 'N/A'}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="body2" sx={{ color: '#6B7280', mb: 0.5 }}>
                   Courier
                 </Typography>
-                <Typography sx={{ fontWeight: 600, color: '#062A5B' }}>
-                  {discrepancy.courier_partner || 'N/A'}
+                <Typography sx={{ fontWeight: 600, color: '#333369' }}>
+                  {getCourierDisplayName(discrepancy.courier_partner, 'N/A')}
                 </Typography>
               </Box>
             </Stack>
@@ -318,7 +271,7 @@ export default function DiscrepancyDetails() {
         {/* Weight Comparison */}
         <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369', mb: 3 }}>
               Weight Comparison
             </Typography>
             <Box
@@ -332,7 +285,7 @@ export default function DiscrepancyDetails() {
                 <Typography variant="body2" sx={{ color: '#6B7280', mb: 1 }}>
                   Declared Weight
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369' }}>
                   {(Number(discrepancy.declared_weight) / 1000).toFixed(3)} kg
                 </Typography>
               </Box>
@@ -340,7 +293,7 @@ export default function DiscrepancyDetails() {
                 <Typography variant="body2" sx={{ color: '#6B7280', mb: 1 }}>
                   Actual Weight
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369' }}>
                   {discrepancy.actual_weight
                     ? `${(Number(discrepancy.actual_weight) / 1000).toFixed(3)} kg`
                     : 'N/A'}
@@ -350,7 +303,7 @@ export default function DiscrepancyDetails() {
                 <Typography variant="body2" sx={{ color: '#6B7280', mb: 1 }}>
                   Volumetric Weight
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369' }}>
                   {discrepancy.volumetric_weight
                     ? `${(Number(discrepancy.volumetric_weight) / 1000).toFixed(3)} kg`
                     : 'N/A'}
@@ -404,9 +357,9 @@ export default function DiscrepancyDetails() {
 
         {/* Dimensions Comparison (if available) */}
         {(discrepancy.declared_dimensions || discrepancy.actual_dimensions) && (
-          <Card sx={shellCardSx}>
+          <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369', mb: 3 }}>
                 Dimensions (cm)
               </Typography>
               <Stack direction={{ xs: 'column', md: 'row' }} gap={4}>
@@ -441,9 +394,9 @@ export default function DiscrepancyDetails() {
 
         {/* Billing Impact */}
         {(discrepancy.original_shipping_charge || discrepancy.revised_shipping_charge) && (
-          <Card sx={shellCardSx}>
+          <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369', mb: 3 }}>
                 Billing Impact
               </Typography>
               <Box
@@ -492,7 +445,7 @@ export default function DiscrepancyDetails() {
         {discrepancy.status === 'resolved' && discrepancy.has_dispute && dispute && (
           <Alert
             severity={dispute.status === 'approved' ? 'success' : 'warning'}
-            sx={{ ...shellCardSx, alignItems: 'flex-start' }}
+            sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
           >
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
               {dispute.status === 'approved'
@@ -517,9 +470,9 @@ export default function DiscrepancyDetails() {
 
         {/* Courier Remarks */}
         {discrepancy.courier_remarks && (
-          <Card sx={shellCardSx}>
+          <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369', mb: 2 }}>
                 Courier Remarks
               </Typography>
               <Typography sx={{ color: '#6B7280' }}>{discrepancy.courier_remarks}</Typography>
@@ -539,12 +492,12 @@ export default function DiscrepancyDetails() {
 
         {/* Dispute Section */}
         {!dispute && discrepancy.status === 'pending' && (
-          <Card sx={shellCardSx}>
+          <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent>
               {!showDisputeForm ? (
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                   <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B', mb: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369', mb: 1 }}>
                       Disagree with this discrepancy?
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#6B7280' }}>
@@ -556,8 +509,8 @@ export default function DiscrepancyDetails() {
                     startIcon={<FiMessageSquare />}
                     onClick={() => setShowDisputeForm(true)}
                     sx={{
-                      borderColor: '#062A5B',
-                      color: '#062A5B',
+                      borderColor: '#333369',
+                      color: '#333369',
                       textTransform: 'none',
                       '&:hover': {
                         borderColor: '#2F3B5F',
@@ -570,7 +523,7 @@ export default function DiscrepancyDetails() {
                 </Stack>
               ) : (
                 <Stack gap={3}>
-                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369' }}>
                     Raise a Dispute
                   </Typography>
 
@@ -583,7 +536,7 @@ export default function DiscrepancyDetails() {
                     SelectProps={{ native: true }}
                     sx={{
                       '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-                        borderColor: '#062A5B',
+                        borderColor: '#333369',
                       },
                     }}
                   >
@@ -605,7 +558,7 @@ export default function DiscrepancyDetails() {
                     placeholder="Explain why you're disputing this weight discrepancy..."
                     sx={{
                       '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-                        borderColor: '#062A5B',
+                        borderColor: '#333369',
                       },
                     }}
                   />
@@ -622,7 +575,7 @@ export default function DiscrepancyDetails() {
                     inputProps={{ step: 0.001, min: 0 }}
                     sx={{
                       '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-                        borderColor: '#062A5B',
+                        borderColor: '#333369',
                       },
                     }}
                   />
@@ -663,7 +616,7 @@ export default function DiscrepancyDetails() {
                       onClick={handleDisputeSubmit}
                       disabled={createDisputeMutation.isPending}
                       sx={{
-                        bgcolor: '#062A5B',
+                        bgcolor: '#333369',
                         textTransform: 'none',
                         '&:hover': { bgcolor: '#2F3B5F' },
                       }}
@@ -679,11 +632,11 @@ export default function DiscrepancyDetails() {
 
         {/* Existing Dispute */}
         {dispute && (
-          <Card sx={{ ...shellCardSx, borderLeft: `4px solid ${BRAND_PURPLE}` }}>
+          <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '4px solid #3498DB' }}>
             <CardContent>
               <Stack gap={2}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369' }}>
                     Dispute Details
                   </Typography>
                   <Chip label={dispute.status.toUpperCase()} color="info" />
@@ -727,9 +680,9 @@ export default function DiscrepancyDetails() {
 
         {/* Activity History */}
         {history && history.length > 0 && (
-          <Card sx={shellCardSx}>
+          <Card sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: '#062A5B', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: '#333369', mb: 3 }}>
                 Activity History
               </Typography>
               <Stack gap={2}>
@@ -740,11 +693,11 @@ export default function DiscrepancyDetails() {
                       p: 2,
                       borderRadius: '8px',
                       bgcolor: '#F9FAFB',
-                      borderLeft: '3px solid #062A5B',
+                      borderLeft: '3px solid #333369',
                     }}
                   >
                     <Stack direction="row" justifyContent="space-between" flexWrap="wrap" gap={1}>
-                      <Typography sx={{ fontWeight: 600, color: '#062A5B' }}>
+                      <Typography sx={{ fontWeight: 600, color: '#333369' }}>
                         {item.action_type.replace(/_/g, ' ').toUpperCase()}
                       </Typography>
                       <Typography variant="body2" sx={{ color: '#6B7280' }}>

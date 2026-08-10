@@ -5,7 +5,7 @@ import type { BusinessStructure, CompanyType } from '../../../../types/generic.t
 import CustomSelect from '../../../UI/inputs/CustomSelect'
 
 export interface BusinessStructureForm {
-  structure: BusinessStructure
+  structure?: BusinessStructure
   companyType?: CompanyType
 }
 
@@ -73,7 +73,7 @@ interface Props {
 export const BusinessStructureStep: React.FC<Props> = ({ defaultValue, onChange, value }) => {
   const { control, setValue, watch } = useForm<BusinessStructureForm>({
     defaultValues: {
-      structure: defaultValue?.structure ?? 'individual',
+      structure: defaultValue?.structure,
       ...(defaultValue?.companyType && {
         companyType: defaultValue.companyType,
       }),
@@ -87,7 +87,7 @@ export const BusinessStructureStep: React.FC<Props> = ({ defaultValue, onChange,
       setValue('structure', value?.structure)
       setValue('companyType', value?.companyType)
     }
-  }, [value])
+  }, [setValue, value?.companyType, value?.structure])
 
   const selectedStructure = watch('structure')
   const selectedCompanyType = watch('companyType')
@@ -118,7 +118,7 @@ export const BusinessStructureStep: React.FC<Props> = ({ defaultValue, onChange,
 
   return (
     <Box>
-      <Typography variant="h6" mb={3} fontWeight={700} color="#062A5B">
+      <Typography variant="h6" mb={3} fontWeight={700} color="#333369">
         Select your business structure
       </Typography>
 
@@ -133,7 +133,7 @@ export const BusinessStructureStep: React.FC<Props> = ({ defaultValue, onChange,
                   sx={{
                     border:
                       selectedStructure === option.value
-                        ? '2px solid #062A5B'
+                        ? '2px solid #333369'
                         : '1px solid #E0E6ED',
                     borderRadius: 2,
                     transition: 'all 0.3s ease',
@@ -143,17 +143,25 @@ export const BusinessStructureStep: React.FC<Props> = ({ defaultValue, onChange,
                     '&:hover': {
                       transform: 'translateY(-2px)',
                       boxShadow: '0 4px 12px rgba(51, 51, 105, 0.12)',
-                      borderColor: '#062A5B',
+                      borderColor: '#333369',
                     },
                   }}
-                  onClick={() => setValue('structure', option.value)}
+                  onClick={() => {
+                    setValue('structure', option.value, { shouldDirty: true, shouldValidate: true })
+                    if (option.value !== 'company') {
+                      setValue('companyType', undefined, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                  }}
                 >
                   <CardContent>
                     <Typography
                       minHeight={34}
                       variant="subtitle1"
                       fontWeight={700}
-                      color={selectedStructure === option.value ? '#062A5B' : '#1A1A1A'}
+                      color={selectedStructure === option.value ? '#333369' : '#1A1A1A'}
                     >
                       {option.title}
                     </Typography>

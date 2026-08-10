@@ -4,11 +4,8 @@ import {
   connectMagento,
   connectWooCommerce,
   integrateShopifyStore,
-  startShopifyOAuth,
   syncShopifyOrders,
-  syncWooCommerceOrders,
   integrateWixStore,
-  updateShopifySettings,
 } from "../api/integrations";
 import type { ShopifyForm } from "../components/integrations/ShopifyIntegration";
 import type { WooCommerceForm } from "../components/integrations/woocommerce/WooCommerceIntegration";
@@ -21,28 +18,9 @@ export const useIntegrateShopify = () => {
     mutationFn: (params: ShopifyForm) => integrateShopifyStore(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userInfo"] });
-      queryClient.invalidateQueries({ queryKey: ["stores"] });
     },
   });
 };
-
-export const useStartShopifyOAuth = () => {
-  return useMutation({
-    mutationFn: startShopifyOAuth,
-  })
-}
-
-export const useUpdateShopifySettings = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: updateShopifySettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stores'] })
-      queryClient.invalidateQueries({ queryKey: ['userInfo'] })
-    },
-  })
-}
 
 export const useIntegrateWooCommerce = () => {
   const queryClient = useQueryClient();
@@ -50,7 +28,6 @@ export const useIntegrateWooCommerce = () => {
     mutationFn: (payload: WooCommerceForm) => connectWooCommerce(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userInfo"] });
-      queryClient.invalidateQueries({ queryKey: ["stores"] });
     },
   });
 };
@@ -84,17 +61,6 @@ export const useSyncShopifyOrders = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload?: { limit?: number; storeId?: string }) => syncShopifyOrders(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] })
-      queryClient.invalidateQueries({ queryKey: ['b2cOrdersByUser'] })
-    },
-  })
-}
-
-export const useSyncWooCommerceOrders = () => {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (payload?: { limit?: number; storeId?: string }) => syncWooCommerceOrders(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['b2cOrdersByUser'] })

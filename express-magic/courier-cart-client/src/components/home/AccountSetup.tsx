@@ -1,24 +1,23 @@
-import { alpha, Box, Button, Grid, LinearProgress, Stack, Typography } from '@mui/material'
+import { alpha, Box, Grid, LinearProgress, Stack, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
 
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_ACCENT = '#ED1C24'
-const INK = '#111827'
-const MUTED = '#6B7280'
-
-const taskCard = {
-  borderRadius: 0,
-  p: { xs: 1.8, md: 2.1 },
-  border: '1px solid rgba(17, 24, 39, 0.08)',
-  bgcolor: '#ffffff',
-  boxShadow: 'none',
-  minHeight: 180,
-}
+const DE_BLUE = '#0C3B80'
+const DE_AMBER = '#F57C00'
+const TEXT_PRIMARY = '#241A1B'
+const TEXT_SECONDARY = '#6A5E59'
 
 const AccountSetup = () => {
-  const { checklist, progress, completedCount, totalCount, isReady, isLoading, assignedPlanName, assignedPlanId } =
-    useMerchantReadiness()
+  const {
+    checklist,
+    progress,
+    completedCount,
+    totalCount,
+    isReady,
+    isLoading,
+    assignedPlanName,
+    assignedPlanId,
+  } = useMerchantReadiness()
   const navigate = useNavigate()
   const assignedPlanLabel = isLoading
     ? 'Checking assigned plan...'
@@ -33,160 +32,100 @@ const AccountSetup = () => {
         gap={1.2}
       >
         <Box>
-          <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: INK }}>
-            Merchant Readiness
+          <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, color: TEXT_PRIMARY }}>
+            Panel Setup Checklist
           </Typography>
-          <Typography sx={{ fontSize: '0.84rem', color: MUTED, mt: 0.45 }}>
-            Complete all setup checks before order creation is enabled.
+          <Typography
+            sx={{ fontSize: '0.84rem', color: TEXT_SECONDARY, mt: 0.45, fontWeight: 500 }}
+          >
+            Complete these panel checks before order creation is enabled.
           </Typography>
-          <Typography sx={{ fontSize: '0.82rem', color: INK, mt: 0.55, fontWeight: 700 }}>
+          <Typography sx={{ fontSize: '0.82rem', color: DE_BLUE, mt: 0.55, fontWeight: 800 }}>
             Assigned Plan: {assignedPlanLabel}
           </Typography>
         </Box>
         <Box
           sx={{
             px: 1.2,
-            py: 0.5,
-            borderRadius: 0,
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: 0.4,
+            py: 0.6,
+            borderRadius: 999,
+            fontSize: '10px',
+            fontWeight: 800,
+            letterSpacing: 0.5,
             textTransform: 'uppercase',
-            bgcolor: isReady ? alpha(BRAND_PRIMARY, 0.12) : alpha(BRAND_ACCENT, 0.14),
-            color: isReady ? BRAND_PRIMARY : '#8a3e00',
-            border: `1px solid ${isReady ? alpha(BRAND_PRIMARY, 0.28) : alpha(BRAND_ACCENT, 0.35)}`,
+            bgcolor: isReady ? alpha('#178A68', 0.1) : alpha(DE_AMBER, 0.12),
+            color: isReady ? '#0D5D45' : '#9A4B00',
+            border: `1px solid ${isReady ? alpha('#178A68', 0.2) : alpha(DE_AMBER, 0.22)}`,
           }}
         >
-          {completedCount}/{totalCount} complete
+          {completedCount}/{totalCount} checks complete
         </Box>
       </Stack>
 
       <Box
         sx={{
           p: 1.5,
-          borderRadius: 0,
-          border: '1px solid rgba(17, 24, 39, 0.08)',
-          bgcolor: '#F8FAFC',
+          borderRadius: 4,
+          border: `1px solid ${alpha(DE_BLUE, 0.08)}`,
+          bgcolor: '#fffdf8',
         }}
       >
         <LinearProgress
           variant="determinate"
           value={progress}
           sx={{
-            height: 9,
-            borderRadius: 0,
-            bgcolor: '#E5E7EB',
+            height: 6,
+            borderRadius: 1,
+            bgcolor: alpha(DE_BLUE, 0.1),
             '& .MuiLinearProgress-bar': {
-              borderRadius: 0,
-              background: `linear-gradient(90deg, ${BRAND_PRIMARY} 0%, ${BRAND_ACCENT} 100%)`,
+              borderRadius: 1,
+              bgcolor: DE_BLUE,
             },
           }}
         />
-        <Typography sx={{ mt: 0.75, fontSize: '12px', color: MUTED, fontWeight: 700 }}>
-          {progress}% complete
+        <Typography sx={{ mt: 0.75, fontSize: '11px', color: TEXT_SECONDARY, fontWeight: 700 }}>
+          {progress}% panel ready
         </Typography>
       </Box>
 
-      <Box
-        sx={{
-          p: 1.6,
-          borderRadius: 0,
-          border: `1px solid ${alpha(BRAND_ACCENT, 0.2)}`,
-          bgcolor: '#FFF7ED',
-        }}
-      >
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-          justifyContent="space-between"
-          gap={1.2}
-        >
-          <Box>
-            <Typography sx={{ fontSize: '0.95rem', fontWeight: 800, color: INK }}>
-              Need a Custom Plan?
-            </Typography>
-            <Typography sx={{ mt: 0.45, fontSize: '0.83rem', color: MUTED, lineHeight: 1.5 }}>
-              Contact our admin team if you need a customised plan for higher volume, custom rates,
-              or special support.
-            </Typography>
-          </Box>
-          <Button
-            onClick={() => navigate('/support/tickets')}
-            variant="contained"
-            size="small"
-            sx={{
-              borderRadius: 0,
-              textTransform: 'none',
-              fontWeight: 700,
-              bgcolor: BRAND_PRIMARY,
-              '&:hover': { bgcolor: '#5519A8' },
-            }}
-          >
-            Contact Admin Team
-          </Button>
-        </Stack>
-      </Box>
-
       <Grid container spacing={2}>
-        {checklist.map((step) => (
-          <Grid key={step.key} size={{ xs: 12, md: 4 }}>
-            <Box sx={taskCard}>
-              <Stack spacing={1.3} height="100%" justifyContent="space-between">
-                <Stack spacing={1.1}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Box
-                      sx={{
-                        px: 1,
-                        py: 0.35,
-                        borderRadius: 0,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        letterSpacing: 0.35,
-                        textTransform: 'uppercase',
-                        bgcolor: step.done ? alpha(BRAND_PRIMARY, 0.12) : alpha(BRAND_ACCENT, 0.14),
-                        color: step.done ? BRAND_PRIMARY : '#8a3e00',
-                        border: `1px solid ${
-                          step.done ? alpha(BRAND_PRIMARY, 0.3) : alpha(BRAND_ACCENT, 0.35)
-                        }`,
-                      }}
-                    >
-                      {step.done ? 'Done' : 'Pending'}
-                    </Box>
-                  </Stack>
-
-                  <Typography sx={{ fontSize: '0.97rem', fontWeight: 700, color: INK }}>
-                    {step.title}
-                  </Typography>
-
-                  <Typography sx={{ fontSize: '0.84rem', color: MUTED, lineHeight: 1.5 }}>
-                    {step.description}
-                  </Typography>
-                </Stack>
-
-                <Button
-                  disabled={isLoading}
-                  onClick={() => navigate(step.path)}
-                  variant={step.done ? 'outlined' : 'contained'}
-                  size="small"
+        {checklist.map((step, idx) => (
+          <Grid size={{ xs: 12, sm: 6 }} key={idx}>
+            <Box
+              onClick={() => !step.done && navigate(step.path)}
+              sx={{
+                p: 1.8,
+                borderRadius: 4,
+                border: `1px solid ${step.done ? alpha('#178A68', 0.15) : alpha(DE_BLUE, 0.08)}`,
+                bgcolor: step.done ? alpha('#178A68', 0.04) : '#fffdf8',
+                cursor: step.done ? 'default' : 'pointer',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  borderColor: step.done ? alpha('#178A68', 0.3) : DE_BLUE,
+                  boxShadow: step.done ? 'none' : `0 4px 12px ${alpha(DE_BLUE, 0.08)}`,
+                },
+              }}
+            >
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Box
                   sx={{
-                    alignSelf: 'flex-start',
-                    borderRadius: 0,
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    ...(step.done
-                      ? {
-                          color: BRAND_PRIMARY,
-                          borderColor: alpha(BRAND_PRIMARY, 0.35),
-                          '&:hover': { borderColor: BRAND_PRIMARY, bgcolor: alpha(BRAND_PRIMARY, 0.08) },
-                        }
-                      : {
-                          bgcolor: BRAND_ACCENT,
-                          '&:hover': { bgcolor: '#D95C00' },
-                        }),
+                    width: 24,
+                    height: 24,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: step.done ? '#178A68' : alpha(DE_BLUE, 0.1),
+                    color: step.done ? '#ffffff' : DE_BLUE,
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
                   }}
                 >
-                  {step.done ? 'Review' : step.actionLabel}
-                </Button>
+                  {step.done ? 'OK' : idx + 1}
+                </Box>
+                <Typography sx={{ fontSize: '13px', fontWeight: 700, color: TEXT_PRIMARY }}>
+                  {step.title}
+                </Typography>
               </Stack>
             </Box>
           </Grid>

@@ -60,12 +60,12 @@ const SupportTicketList: React.FC<Props> = ({
     {
       label: 'Status',
       id: 'status',
-      render: (value) => <StatusChip label={value} status={statusColorMap[value]} />,
+      render: (value) => <StatusChip label={String(value)} status={statusColorMap[String(value)]} />,
     },
     {
       label: 'Created At',
       id: 'createdAt',
-      render: (value) => moment(value?.createdAt).format('DD MMM YYYY'),
+      render: (value) => moment(value).format('DD MMM YYYY'),
     },
     {
       label: 'Due Date',

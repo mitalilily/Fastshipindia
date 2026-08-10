@@ -1,6 +1,7 @@
-import { Box, Stack } from '@mui/material'
+import { Stack } from '@mui/material'
 import { Suspense } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import FullScreenLoader from '../../components/UI/loader/FullScreenLoader'
 import { SmartTabs } from '../../components/UI/tab/Tabs'
 // adjust this import if SmartTabs is in a different folder
 
@@ -36,10 +37,8 @@ const PoliciesLayout = () => {
 
       {/* Page content */}
       <div style={{ marginTop: '32px' }}>
-        <Suspense fallback={<Box key={`policy-fallback-${location.pathname}`} sx={{ minHeight: 80 }} />}>
-          <Box key={location.pathname}>
-            <Outlet />
-          </Box>
+        <Suspense fallback={<FullScreenLoader />}>
+          <Outlet />
         </Suspense>
       </div>
     </Stack>

@@ -1,4 +1,4 @@
-import { alpha, Box, Chip, Grid, Paper, Stack, Typography } from '@mui/material'
+import { Box, Button, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/material'
 import moment from 'moment'
 import { useState } from 'react'
 import {
@@ -10,127 +10,14 @@ import {
   MdTrendingUp,
 } from 'react-icons/md'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
-import AWBLink from '../../components/UI/AWBLink'
-import ListPageLayout from '../../components/UI/layout/ListPageLayout'
+import PageHeading from '../../components/UI/heading/PageHeading'
 import DataTable, { type Column } from '../../components/UI/table/DataTable'
 import {
   handleCodRemittancesExport,
   useCodRemittances,
   useCodStats,
 } from '../../hooks/useCodRemittance'
-
-const BRAND_SURFACE = '#16181D'
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_ORANGE = '#ED1C24'
-
-interface SummaryCardProps {
-  title: string
-  value: number
-  helper: string
-  icon: React.ReactNode
-  tone: 'dark' | 'primary' | 'wine' | 'light'
-}
-
-function SummaryCard({ title, value, helper, icon, tone }: SummaryCardProps) {
-  const toneStyles = {
-    dark: {
-      background: BRAND_SURFACE,
-      border: '1px solid rgba(255,255,255,0.06)',
-      titleColor: '#D8DEE8',
-      valueColor: '#FFFFFF',
-      helperColor: '#C7D0DD',
-      iconBg: 'rgba(255,255,255,0.08)',
-      iconColor: '#FFFFFF',
-    },
-    primary: {
-      background: '#FFFFFF',
-      border: `1px solid ${alpha(BRAND_PRIMARY, 0.14)}`,
-      titleColor: '#4B5563',
-      valueColor: BRAND_PRIMARY,
-      helperColor: '#6B7280',
-      iconBg: alpha(BRAND_PRIMARY, 0.08),
-      iconColor: BRAND_PRIMARY,
-    },
-    wine: {
-      background: '#FFFFFF',
-      border: `1px solid ${alpha(BRAND_ORANGE, 0.16)}`,
-      titleColor: '#4B5563',
-      valueColor: BRAND_ORANGE,
-      helperColor: '#6B7280',
-      iconBg: alpha(BRAND_ORANGE, 0.1),
-      iconColor: BRAND_ORANGE,
-    },
-    light: {
-      background: '#F8FAFC',
-      border: '1px solid rgba(15, 23, 42, 0.08)',
-      titleColor: '#4B5563',
-      valueColor: '#111827',
-      helperColor: '#6B7280',
-      iconBg: '#FFFFFF',
-      iconColor: '#111827',
-    },
-  }[tone]
-
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        height: '100%',
-        p: 2.2,
-        borderRadius: 0,
-        background: toneStyles.background,
-        border: toneStyles.border,
-        boxShadow: 'none',
-      }}
-    >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            sx={{
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: toneStyles.titleColor,
-            }}
-          >
-            {title}
-          </Typography>
-          <Typography
-            sx={{
-              mt: 1.1,
-              fontSize: { xs: '1.55rem', md: '1.9rem' },
-              fontWeight: 800,
-              lineHeight: 1.05,
-              color: toneStyles.valueColor,
-            }}
-          >
-            ₹{Number(value || 0).toLocaleString('en-IN')}
-          </Typography>
-          <Typography sx={{ mt: 1.1, fontSize: '0.84rem', color: toneStyles.helperColor }}>
-            {helper}
-          </Typography>
-        </Box>
-
-        <Box
-          sx={{
-            width: 44,
-            height: 44,
-            flexShrink: 0,
-            display: 'grid',
-            placeItems: 'center',
-            borderRadius: 0,
-            bgcolor: toneStyles.iconBg,
-            color: toneStyles.iconColor,
-            border: `1px solid ${alpha('#111827', tone === 'dark' ? 0.04 : 0.08)}`,
-          }}
-        >
-          {icon}
-        </Box>
-      </Stack>
-    </Paper>
-  )
-}
+import { getCourierDisplayName } from '../../utils/courierDisplay'
 
 export default function CodRemittancesList() {
   const [page, setPage] = useState(1)
@@ -176,7 +63,7 @@ export default function CodRemittancesList() {
       options: [
         { label: 'All', value: '' },
         { label: 'Processing', value: 'pending' },
-        { label: 'Settled', value: 'credited' },
+        { label: 'Settled Offline', value: 'credited' },
       ],
       placeholder: 'Select status',
     },
@@ -207,7 +94,7 @@ export default function CodRemittancesList() {
           </Typography>
           {row.awbNumber && (
             <Typography variant="caption" color="text.secondary">
-              AWB: <AWBLink awb={row.awbNumber} />
+              AWB: {row.awbNumber}
             </Typography>
           )}
         </Box>
@@ -217,7 +104,9 @@ export default function CodRemittancesList() {
       id: 'courierPartner',
       label: 'Courier',
       minWidth: 120,
-      render: (val) => <Typography variant="body2">{val || 'N/A'}</Typography>,
+      render: (val) => (
+        <Typography variant="body2">{getCourierDisplayName(String(val || ''), 'N/A')}</Typography>
+      ),
     },
     {
       id: 'codAmount',
@@ -277,72 +166,235 @@ export default function CodRemittancesList() {
     },
   ]
 
-  const summaryCardsSection = (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <SummaryCard
-          title="Remitted Till Date"
-          value={stats?.remittedTillDate || 0}
-          helper={`${stats?.creditedCount || 0} settled remittances`}
-          icon={<MdTrendingUp size={24} />}
-          tone="dark"
+  return (
+    <Box p={3}>
+      <Stack
+        direction={{ xs: 'column', lg: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'stretch', lg: 'center' }}
+        gap={2}
+        mb={3}
+      >
+        <PageHeading
+          eyebrow="Billing Panel"
+          title="COD Remittance"
+          subtitle="Track your cash-on-delivery settlements, settled batches, and payout progress in the shared workspace style."
         />
+        <Button variant="contained" startIcon={<MdDownload />} onClick={handleExport}>
+          Export CSV
+        </Button>
+      </Stack>
+
+      {/* Statistics Cards */}
+      <Grid container spacing={3} mb={4}>
+        {/* Remitted Till Date */}
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <Card
+            elevation={0}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -50,
+                right: -50,
+                width: 150,
+                height: 150,
+                borderRadius: '50%',
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+              },
+            }}
+          >
+            <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Box>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                    Remitted Till Date
+                  </Typography>
+                  <Typography variant="h4" fontWeight="bold">
+                    ₹{stats?.remittedTillDate.toLocaleString('en-IN') || 0}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: 2,
+                    p: 1,
+                    display: 'flex',
+                  }}
+                >
+                  <MdTrendingUp size={28} />
+                </Box>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  {stats?.creditedCount || 0} settled remittances
+                </Typography>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Last Remittance */}
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <Card
+            elevation={0}
+            sx={{
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                boxShadow: 3,
+                transform: 'translateY(-2px)',
+                transition: 'all 0.2s ease-in-out',
+              },
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" mb={0.5}>
+                    Last Remittance
+                  </Typography>
+                  <Typography variant="h4" fontWeight="bold" color="success.main">
+                    ₹{stats?.lastRemittance.toLocaleString('en-IN') || 0}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    bgcolor: 'success.lighter',
+                    color: 'success.main',
+                    borderRadius: 2,
+                    p: 1,
+                    display: 'flex',
+                  }}
+                >
+                  <MdCheckCircle size={28} />
+                </Box>
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                Most recent settlement
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Next Remittance (Expected) */}
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <Card
+            elevation={0}
+            sx={{
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -50,
+                right: -50,
+                width: 150,
+                height: 150,
+                borderRadius: '50%',
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+              },
+            }}
+          >
+            <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Box>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                    Next Remittance (Expected)
+                  </Typography>
+                  <Typography variant="h4" fontWeight="bold">
+                    ₹{stats?.nextRemittance.toLocaleString('en-IN') || 0}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: 2,
+                    p: 1,
+                    display: 'flex',
+                  }}
+                >
+                  <MdAccountBalanceWallet size={28} />
+                </Box>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  {stats?.pendingCount || 0} orders pending
+                </Typography>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Total Remittance Due */}
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <Card
+            elevation={0}
+            sx={{
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                boxShadow: 3,
+                transform: 'translateY(-2px)',
+                transition: 'all 0.2s ease-in-out',
+              },
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" mb={0.5}>
+                    Total Remittance Due
+                  </Typography>
+                  <Typography variant="h4" fontWeight="bold" color="warning.main">
+                    ₹{stats?.totalDue.toLocaleString('en-IN') || 0}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    bgcolor: 'warning.lighter',
+                    color: 'warning.main',
+                    borderRadius: 2,
+                    p: 1,
+                    display: 'flex',
+                  }}
+                >
+                  <MdAccessTime size={28} />
+                </Box>
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                Awaiting settlement
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <SummaryCard
-          title="Last Remittance"
-          value={stats?.lastRemittance || 0}
-          helper="Most recent settlement"
-          icon={<MdCheckCircle size={24} />}
-          tone="primary"
+      {/* Filters */}
+      <Box mb={3}>
+        <FilterBar
+          fields={filterFields}
+          onApply={(appliedFilters) => {
+            setFilters(appliedFilters)
+            setPage(1) // Reset to first page when filters change
+          }}
+          defaultValues={{
+            status: '',
+            fromDate: undefined,
+            toDate: undefined,
+          }}
         />
-      </Grid>
+      </Box>
 
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <SummaryCard
-          title="Next Remittance"
-          value={stats?.nextRemittance || 0}
-          helper={`${stats?.pendingCount || 0} orders pending`}
-          icon={<MdAccountBalanceWallet size={24} />}
-          tone="wine"
-        />
-      </Grid>
-
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <SummaryCard
-          title="Total Remittance Due"
-          value={stats?.totalDue || 0}
-          helper="Awaiting settlement"
-          icon={<MdAccessTime size={24} />}
-          tone="light"
-        />
-      </Grid>
-    </Grid>
-  )
-
-  const controls = (
-    <Box sx={{ px: 2 }}>
-      <FilterBar
-        fields={filterFields}
-        onApply={(appliedFilters) => {
-          setFilters(appliedFilters)
-          setPage(1)
-        }}
-        mode="button"
-        buttonLabel="Filters"
-        defaultValues={{
-          status: '',
-          fromDate: undefined,
-          toDate: undefined,
-        }}
-        appliedCount={Object.values(filters).filter(Boolean).length}
-      />
-    </Box>
-  )
-
-  const table = (
-    <>
+      {/* Data Table */}
       {isLoading ? (
         <Box display="flex" justifyContent="center" py={4}>
           <Typography>Loading remittances...</Typography>
@@ -363,25 +415,6 @@ export default function CodRemittancesList() {
           }}
         />
       )}
-    </>
-  )
-
-  return (
-    <ListPageLayout
-      title="COD Remittance"
-      description="Track your Cash on Delivery settlements"
-      actions={[
-        {
-          label: 'Export CSV',
-          onClick: handleExport,
-          icon: <MdDownload />,
-          variant: 'contained',
-        },
-      ]}
-      controls={controls}
-    >
-      <Box sx={{ px: 2 }}>{summaryCardsSection}</Box>
-      {table}
-    </ListPageLayout>
+    </Box>
   )
 }

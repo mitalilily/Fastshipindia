@@ -17,10 +17,6 @@ import CustomDialog from '../../../UI/modal/CustomModal'
 import FileUploader from '../../../UI/uploader/FileUploader'
 import { BRAND_GRADIENT } from '../UserProfileForm'
 
-type BankAccountFormValues = Partial<BankAccount> & {
-  chequeImageKey?: string
-}
-
 interface DialogProps {
   open: boolean
   onClose: () => void
@@ -29,28 +25,6 @@ interface DialogProps {
   initialData?: Partial<BankAccount> // 🆕 For edit mode
 }
 
-const extractStoredFileName = (value?: string | null) => {
-  const rawValue = String(value ?? '').trim()
-  if (!rawValue) return ''
-
-  const normalizedValue = rawValue.split('?')[0]
-  const segments = normalizedValue.split('/').filter(Boolean)
-  const lastSegment = segments.at(-1) ?? normalizedValue
-
-  try {
-    return decodeURIComponent(lastSegment)
-  } catch {
-    return lastSegment
-  }
-}
-
-const buildDefaultValues = (data?: Partial<BankAccount>): BankAccountFormValues => ({
-  accountType: data?.accountType ?? 'SAVINGS',
-  ...data,
-  chequeImageUrl: data?.chequeImageUrl ?? '',
-  chequeImageKey: extractStoredFileName(data?.chequeImageUrl),
-})
-
 export const AddBankAccountDialog: React.FC<DialogProps> = ({
   open,
   onClose,
@@ -58,9 +32,6 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
   addingAccount = false,
   initialData,
 }) => {
-  const resolveMode = (data?: Partial<BankAccount>): 'bank' | 'upi' =>
-    data?.accountNumber ? 'bank' : data?.upiId ? 'upi' : 'bank'
-
   const {
     register,
     handleSubmit,
@@ -71,65 +42,44 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
     clearErrors,
     reset,
     formState: { errors },
-  } = useForm<BankAccountFormValues>({
-    defaultValues: buildDefaultValues(initialData),
+  } = useForm({
+    defaultValues: initialData ?? {},
   })
 
-  const [mode, setMode] = useState<'bank' | 'upi'>(() => resolveMode(initialData))
+  const [mode, setMode] = useState<'bank' | 'upi'>(() => (initialData?.upiId ? 'upi' : 'bank'))
 
   useEffect(() => {
-    register('chequeImageUrl')
-    register('chequeImageKey')
-  }, [register])
-
-  useEffect(() => {
-    reset(buildDefaultValues(initialData))
-    setMode(resolveMode(initialData))
-  }, [initialData, reset])
+    if (initialData) {
+      reset(initialData)
+      setMode(initialData.upiId ? 'upi' : 'bank')
+      setValue(
+        'chequeImageKey' as keyof BankAccount,
+        initialData.chequeImageUrl?.split('/').pop() ?? '',
+      )
+    }
+  }, [initialData])
 
   const submit = handleSubmit(async (d) => {
-    const normalizedUpiId = String(d.upiId ?? '')
-      .trim()
-      .toLowerCase()
-    const normalizedAccountNumber = String(d.accountNumber ?? '').trim()
-    const normalizedChequeImageUrl = String(d.chequeImageUrl ?? '').trim()
-    const shouldUseBankDetails = mode === 'bank' && !!normalizedAccountNumber
-
-    if (!normalizedUpiId && !shouldUseBankDetails) {
-      setError('accountNumber', {
-        type: 'required',
-        message: 'Provide either bank account details or a UPI ID',
-      })
-      return setError('upiId', {
-        type: 'required',
-        message: 'Provide either UPI ID or bank account details',
-      })
-    }
-
-    if (shouldUseBankDetails && (!d.ifsc || !d.bankName || !d.branch)) return
-    if (shouldUseBankDetails && !normalizedChequeImageUrl)
+    if (mode === 'bank' && (!d.accountNumber || !d.ifsc || !d.bankName)) return
+    if (mode === 'bank' && !d?.chequeImageUrl)
       return setError('chequeImageUrl', {
         type: 'required',
         message: 'Cheque image is required',
       })
-    if (!shouldUseBankDetails && !normalizedUpiId)
-      return setError('upiId', {
-        type: 'required',
-        message: 'UPI ID is required',
-      })
+    if (mode === 'upi' && !d.upiId) return
 
     const newAcc = {
       ...initialData,
       status: 'pending',
       isPrimary: initialData?.isPrimary ?? false,
       accountHolder: d.accountHolder,
-      accountNumber: shouldUseBankDetails ? normalizedAccountNumber : null,
-      ifsc: shouldUseBankDetails ? d.ifsc ?? null : null,
-      bankName: shouldUseBankDetails ? d.bankName ?? null : null,
-      branch: shouldUseBankDetails ? d.branch ?? null : null,
-      accountType: shouldUseBankDetails ? d.accountType ?? 'SAVINGS' : undefined,
-      upiId: normalizedUpiId || null,
-      chequeImageUrl: shouldUseBankDetails ? normalizedChequeImageUrl || null : null,
+      accountNumber: mode === 'bank' ? d?.accountNumber : null,
+      ifsc: d.ifsc ?? null,
+      bankName: d.bankName ?? null,
+      branch: d.branch,
+      accountType: d.accountType ?? 'SAVINGS',
+      upiId: d.upiId ?? null,
+      chequeImageUrl: d.chequeImageUrl ?? null,
     } as BankAccount
 
     await onAdd(newAcc as BankAccount)
@@ -201,24 +151,6 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
             })}
           />
 
-          <CustomInput
-            label={mode === 'upi' ? 'UPI ID' : 'UPI ID (Optional)'}
-            placeholder="e.g., yourname@upi"
-            required={mode === 'upi'}
-            fullWidth
-            error={!!errors.upiId}
-            helperText={errors.upiId?.message as string}
-            {...register('upiId', {
-              required: mode === 'upi' && 'UPI ID is required',
-              onChange: (e) => {
-                setValue('upiId', e.target.value.toLowerCase(), {
-                  shouldValidate: true,
-                })
-                clearErrors(['upiId', 'accountNumber'])
-              },
-            })}
-          />
-
           {/* Bank Fields */}
           {mode === 'bank' && (
             <>
@@ -235,7 +167,6 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
                     value: /^[0-9]{9,18}$/,
                     message: '9–18 digits only',
                   },
-                  onChange: () => clearErrors(['accountNumber', 'upiId']),
                 })}
               />
               <CustomInput
@@ -290,7 +221,7 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
                         control={
                           <Radio
                             sx={{
-                              color: '#062A5B',
+                              color: '#333369',
                               '&.Mui-checked': {
                                 color: '#3DD598',
                               },
@@ -308,7 +239,7 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
                         control={
                           <Radio
                             sx={{
-                              color: '#062A5B',
+                              color: '#333369',
                               '&.Mui-checked': {
                                 color: '#3DD598',
                               },
@@ -335,27 +266,17 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
                 </Typography>
                 <FileUploader
                   variant="button"
-                  accept="image/*,.pdf"
-                  folderKey="ir"
-                  placeholder={watch('chequeImageKey')}
+                  accept="image/*"
+                  placeholder={watch('chequeImageKey' as keyof BankAccount)}
                   error={!!errors.chequeImageUrl}
                   onUploaded={(files) => {
-                    const uploadedFile = files[0]
-
-                    setValue('chequeImageUrl', uploadedFile?.url ?? '', {
+                    setValue('chequeImageUrl', files[0]?.url, {
                       shouldValidate: true,
                     })
-                    setValue(
-                      'chequeImageKey',
-                      uploadedFile?.originalName ??
-                        extractStoredFileName(uploadedFile?.url || uploadedFile?.key),
-                      {
-                        shouldValidate: true,
-                      },
-                    )
-                    if (uploadedFile) {
-                      clearErrors('chequeImageUrl')
-                    }
+                    setValue('chequeImageKey' as keyof BankAccount, files[0]?.key, {
+                      shouldValidate: true,
+                    })
+                    clearErrors('chequeImageUrl')
                   }}
                 />
                 {errors.chequeImageUrl && (
@@ -365,6 +286,22 @@ export const AddBankAccountDialog: React.FC<DialogProps> = ({
                 )}
               </Stack>
             </>
+          )}
+
+          {/* UPI ID field */}
+          {mode === 'upi' && (
+            <CustomInput
+              label="UPI ID"
+              placeholder="e.g., yourname@upi"
+              required
+              fullWidth
+              error={!!errors.upiId}
+              helperText={errors.upiId?.message as string}
+              {...register('upiId', {
+                required: mode === 'upi' && 'UPI ID is required',
+                onChange: (e) => setValue('upiId', e.target.value.toLowerCase()),
+              })}
+            />
           )}
 
           {/* Submit button */}

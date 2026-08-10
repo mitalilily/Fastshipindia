@@ -26,31 +26,22 @@ export interface UseAvailableCouriersParams {
   pickupPincode: string
   pickupName?: string
   pickupId?: string
-  pickupAddress?: string
-  pickupCity?: string
-  pickupState?: string
-  deliveryName?: string
-  deliveryPhone?: string
-  deliveryAddress?: string
-  deliveryCity?: string
-  deliveryState?: string
   deliveryPincode: string
   pickupAddressKey?: string
   deliveryAddressKey?: string
   weight?: number
   cod?: number
   orderAmount?: number
+  codChargeBasis?: number
   length?: number
   breadth?: number
   height?: number
-  numberOfBoxes?: number
   enabled?: boolean
   shipmentType?: 'b2b' | 'b2c'
   payment_type: 'cod' | 'prepaid'
   context?: string
   isCalculator?: boolean
-  shadowfax_forward_mode?: 'marketplace' | 'warehouse'
-  shadowfax_service_mode?: 'regular' | 'surface'
+  useGuest?: boolean
 }
 
 export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
@@ -63,6 +54,7 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
     weight,
     cod,
     orderAmount,
+    codChargeBasis,
     length,
     breadth,
     height,
@@ -73,20 +65,16 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
 
   const normalizedOrderAmount =
     typeof orderAmount === 'number' && orderAmount > 0 ? orderAmount : undefined
-  const isShipmentCourierSelection = params.context === 'shipment_courier_selection'
-  const hasPositiveWeight = Number(weight) > 0
-  const hasB2CPackageDimensions =
-    shipmentType !== 'b2c' ||
-    (Number(length) > 0 && Number(breadth) > 0 && Number(height) > 0)
-  const hasRequiredB2COrderAmount =
-    shipmentType !== 'b2c' || typeof normalizedOrderAmount === 'number'
-  const canFetchAvailableCouriers =
-    enabled &&
-    !!pickupPincode &&
-    !!deliveryPincode &&
-    hasPositiveWeight &&
-    hasB2CPackageDimensions &&
-    hasRequiredB2COrderAmount
+  const normalizedCodChargeBasis =
+    typeof codChargeBasis === 'number' && codChargeBasis >= 0
+      ? codChargeBasis
+      : normalizedOrderAmount
+  const normalizedWeight = Number(weight ?? 0)
+  const normalizedLength = Number(length ?? 0)
+  const normalizedBreadth = Number(breadth ?? 0)
+  const normalizedHeight = Number(height ?? 0)
+  const hasRequiredShipmentInputs =
+    !!pickupPincode && !!deliveryPincode && Number.isFinite(normalizedWeight) && normalizedWeight > 0
 
   return useQuery({
     queryKey: [
@@ -96,63 +84,39 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
       pickupId,
       pickupAddressKey,
       deliveryAddressKey,
-      weight,
+      normalizedWeight,
       cod,
-      payment_type,
       orderAmount,
-      length,
-      breadth,
-      height,
-      params?.numberOfBoxes,
+      codChargeBasis,
+      normalizedLength,
+      normalizedBreadth,
+      normalizedHeight,
       shipmentType,
+      params.useGuest,
       params?.pickupName,
-      params?.pickupAddress,
-      params?.pickupCity,
-      params?.pickupState,
-      params?.deliveryName,
-      params?.deliveryPhone,
-      params?.deliveryAddress,
-      params?.deliveryCity,
-      params?.deliveryState,
-      params?.context,
-      params?.isCalculator,
-      params?.shadowfax_forward_mode,
-      params?.shadowfax_service_mode,
     ],
     queryFn: () =>
       fetchAvailableCouriers({
         origin: pickupPincode,
         destination: deliveryPincode,
         pickupId,
-        pickupName: params.pickupName,
-        pickupAddress: params.pickupAddress,
-        pickupCity: params.pickupCity,
-        pickupState: params.pickupState,
-        deliveryName: params.deliveryName,
-        deliveryPhone: params.deliveryPhone,
-        deliveryAddress: params.deliveryAddress,
-        deliveryCity: params.deliveryCity,
-        deliveryState: params.deliveryState,
         payment_type: payment_type,
         order_amount: normalizedOrderAmount,
-        cod,
-        weight,
-        length,
-        number_of_boxes: params.numberOfBoxes,
+        cod_charge_basis: normalizedCodChargeBasis,
+        weight: normalizedWeight,
+        length: normalizedLength,
         ...(shipmentType && { shipment_type: shipmentType }),
-        context: params.context,
         isCalculator: params.isCalculator === true || params.context === 'rate_calculator',
-        shadowfax_forward_mode: params.shadowfax_forward_mode,
-        shadowfax_service_mode: params.shadowfax_service_mode,
-        breadth,
-        height,
-      }),
-    enabled: canFetchAvailableCouriers,
-    staleTime: isShipmentCourierSelection ? 1000 * 30 : 1000 * 60 * 5,
-    refetchOnMount: isShipmentCourierSelection ? 'always' : true,
+        breadth: normalizedBreadth,
+        height: normalizedHeight,
+        useGuest: params.useGuest === true,
+    }),
+    enabled: enabled && hasRequiredShipmentInputs,
+    staleTime: 60_000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
-    placeholderData: (previousData) => previousData,
-    retry: isShipmentCourierSelection ? 0 : 1,
+    refetchInterval: false,
+    retry: 1,
   })
 }
 
@@ -160,36 +124,26 @@ export const useAvailableCouriersMutation = () => {
   return useMutation({
     mutationFn: (params: UseAvailableCouriersParams) => {
       const normalizedOrderAmount =
-        typeof params.orderAmount === 'number' && params.orderAmount > 0
-          ? params.orderAmount
-          : undefined
+        typeof params.orderAmount === 'number' && params.orderAmount > 0 ? params.orderAmount : undefined
+      const normalizedCodChargeBasis =
+        typeof params.codChargeBasis === 'number' && params.codChargeBasis >= 0
+          ? params.codChargeBasis
+          : normalizedOrderAmount
 
       return fetchAvailableCouriers({
         origin: params.pickupPincode,
         destination: params.deliveryPincode,
         pickupId: params.pickupId,
-        pickupName: params.pickupName,
-        pickupAddress: params.pickupAddress,
-        pickupCity: params.pickupCity,
-        pickupState: params.pickupState,
-        deliveryName: params.deliveryName,
-        deliveryPhone: params.deliveryPhone,
-        deliveryAddress: params.deliveryAddress,
-        deliveryCity: params.deliveryCity,
-        deliveryState: params.deliveryState,
-        payment_type: params.payment_type,
+        payment_type: params.payment_type ?? (params.cod && params.cod > 0 ? 'cod' : 'prepaid'),
         order_amount: normalizedOrderAmount,
-        cod: params.cod,
+        cod_charge_basis: normalizedCodChargeBasis,
         weight: params.weight,
         length: params.length,
         breadth: params.breadth,
         height: params.height,
-        number_of_boxes: params.numberOfBoxes,
         shipment_type: params?.shipmentType,
-        context: params.context,
         isCalculator: params.isCalculator === true || params.context === 'rate_calculator',
-        shadowfax_forward_mode: params.shadowfax_forward_mode,
-        shadowfax_service_mode: params.shadowfax_service_mode,
+        useGuest: params.useGuest === true,
       })
     },
     retry: 1,
@@ -200,19 +154,22 @@ export const useShippingRates = (filters = {}) => {
   return useQuery({
     queryKey: ['getShippingRates', filters],
     queryFn: () => fetchShippingRates(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchInterval: 15000,
   })
 }
 
 export const useAllCouriers = () => {
-  return useQuery<any[]>({
+  return useQuery({
     queryKey: ['allCouriers'],
     queryFn: () => fetchAllCouriers(),
   })
 }
 
 export const useAllCouriersWithDetails = () => {
-  return useQuery<any[]>({
+  return useQuery({
     queryKey: ['allCouriers'],
     queryFn: () => fetchCouriersWithDetails(),
   })

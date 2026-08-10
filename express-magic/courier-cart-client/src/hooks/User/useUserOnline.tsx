@@ -1,40 +1,38 @@
 import { io, type Socket } from 'socket.io-client'
 
-const DEFAULT_PRODUCTION_API_URL = 'https://fastshipindia.onrender.com/api'
+const DEFAULT_SOCKET_URL = 'https://aggregator-backend-7gmk.onrender.com'
+const PLACEHOLDER_API_HOST = 'your-backend-url.onrender.com'
 
-const resolveApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
+const getSocketUrl = () => {
+  const rawSocketUrl = import.meta.env.VITE_APP_SOCKET_URL
 
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname.toLowerCase()
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-      return 'http://localhost:4000/api'
+  try {
+    if (!rawSocketUrl) return DEFAULT_SOCKET_URL
+
+    const candidate = new URL(rawSocketUrl, window.location.origin)
+    const currentHost = window.location.hostname
+    const isHostedFrontend =
+      currentHost.endsWith('netlify.app') ||
+      currentHost.endsWith('vercel.app') ||
+      currentHost.endsWith('up.railway.app')
+    const pointsBackToFrontend = candidate.hostname === currentHost
+    const pointsToPlaceholderApi = candidate.hostname === PLACEHOLDER_API_HOST
+
+    if ((isHostedFrontend && pointsBackToFrontend) || pointsToPlaceholderApi) {
+      return DEFAULT_SOCKET_URL
     }
+
+    return candidate.origin
+  } catch {
+    return DEFAULT_SOCKET_URL
   }
-
-  return DEFAULT_PRODUCTION_API_URL
-}
-
-const resolveSocketUrl = () => {
-  if (import.meta.env.VITE_APP_SOCKET_URL) return import.meta.env.VITE_APP_SOCKET_URL
-
-  const apiUrl = resolveApiBaseUrl()
-  if (apiUrl) {
-    try {
-      return new URL(apiUrl, window.location.origin).origin
-    } catch {
-      return apiUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '')
-    }
-  }
-
-  return DEFAULT_PRODUCTION_API_URL.replace(/\/api\/?$/, '')
 }
 
 let socket: Socket | null = null
 
 const getSocket = () => {
   if (!socket) {
-    socket = io(resolveSocketUrl(), { transports: ['websocket', 'polling'] })
+    socket = io(getSocketUrl(), { transports: ['websocket', 'polling'] })
   }
 
   return socket
@@ -45,15 +43,16 @@ let pingInterval: number | null = null
 export const registerUserSocket = (user: { id: string; role: string }) => {
   if (user.role !== 'employee') return
 
-  const activeSocket = getSocket()
-  activeSocket.emit('register', user.id)
+  const socketClient = getSocket()
+
+  socketClient.emit('register', user.id)
 
   // Ping every 10 seconds to maintain online status
   pingInterval = window.setInterval(() => {
-    activeSocket.emit('employee_ping', user.id)
+    socketClient.emit('employee_ping', user.id)
   }, 10000)
 
-  activeSocket.on('new_notification', (msg) => {
+  socketClient.on('new_notification', (msg) => {
     console.log('Received notification:', msg)
   })
 }
@@ -63,8 +62,11 @@ export const disconnectSocket = () => {
     clearInterval(pingInterval)
     pingInterval = null
   }
-  socket?.disconnect()
-  socket = null
+
+  if (socket) {
+    socket.disconnect()
+    socket = null
+  }
 }
 
 export default getSocket

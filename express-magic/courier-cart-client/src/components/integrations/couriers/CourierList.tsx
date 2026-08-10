@@ -71,6 +71,7 @@ const CourierList: FC<CourierListProps> = ({
       totalCount={totalCount}
       onPageChange={onPageChange}
       onRowsPerPageChange={onRowsPerPageChange}
+      bgOverlayImg="/images/logistics-bg.png"
     />
   )
 }

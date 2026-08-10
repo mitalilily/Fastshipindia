@@ -7,8 +7,8 @@ interface FancyDashedButtonProps {
   backgroundColor?: string
   textColor?: string
   shadowColor?: string
-  paddingX?: string // e.g. "3em"
-  paddingY?: string // e.g. "1em"
+  paddingX?: string
+  paddingY?: string
   fontSize?: string
   borderRadius?: string
   style?: React.CSSProperties
@@ -17,14 +17,14 @@ interface FancyDashedButtonProps {
 const FancyDashedButton: React.FC<FancyDashedButtonProps> = ({
   label,
   onClick,
-  borderColor = '#062A5B',
-  backgroundColor = '#062A5B',
+  borderColor = '#0C3B80',
+  backgroundColor = 'linear-gradient(135deg, #0C3B80 0%, #1457B0 100%)',
   textColor = '#ffffff',
-  shadowColor = '#062A5B',
-  paddingX = '3em',
-  paddingY = '1em',
-  fontSize = '1rem',
-  borderRadius = '15px',
+  shadowColor = 'rgba(12, 59, 128, 0.18)',
+  paddingX = '2.6em',
+  paddingY = '0.95em',
+  fontSize = '0.98rem',
+  borderRadius = '999px',
   style = {},
 }) => {
   return (
@@ -34,23 +34,29 @@ const FancyDashedButton: React.FC<FancyDashedButtonProps> = ({
         outline: 'none',
         color: textColor,
         padding: `${paddingY} ${paddingX}`,
-        border: `2px dashed ${borderColor}`,
-        borderRadius: borderRadius,
-        backgroundColor: backgroundColor,
-        boxShadow: `0 0 0 4px ${shadowColor}, 2px 2px 4px 2px rgba(0, 0, 0, 0.5)`,
-        transition: '.1s ease-in-out, .4s color',
-        fontSize: fontSize,
-        fontWeight: 500,
+        border: `1px solid ${borderColor}33`,
+        borderRadius,
+        background: backgroundColor,
+        boxShadow: `0 18px 30px ${shadowColor}`,
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease',
+        fontSize,
+        fontWeight: 800,
+        letterSpacing: '0.02em',
         cursor: 'pointer',
+        backdropFilter: 'blur(10px)',
         ...style,
       }}
       onMouseDown={(e) => {
-        e.currentTarget.style.transform = 'translate(0.1em, 0.1em)'
-        e.currentTarget.style.boxShadow = `0 0 0 4px ${shadowColor}, 1.5px 1.5px 2.5px 1.5px rgba(0, 0, 0, 0.5)`
+        e.currentTarget.style.transform = 'translateY(1px) scale(0.995)'
+        e.currentTarget.style.boxShadow = `0 10px 18px ${shadowColor}`
       }}
       onMouseUp={(e) => {
-        e.currentTarget.style.transform = 'none'
-        e.currentTarget.style.boxShadow = `0 0 0 4px ${shadowColor}, 2px 2px 4px 2px rgba(0, 0, 0, 0.5)`
+        e.currentTarget.style.transform = 'translateY(0) scale(1)'
+        e.currentTarget.style.boxShadow = `0 18px 30px ${shadowColor}`
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0) scale(1)'
+        e.currentTarget.style.boxShadow = `0 18px 30px ${shadowColor}`
       }}
     >
       {label}

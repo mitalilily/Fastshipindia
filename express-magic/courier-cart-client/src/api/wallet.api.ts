@@ -20,13 +20,12 @@ export async function confirmRecharge({
   paymentId: string
   signature: string
 }) {
-  const res = await axiosInstance.post('/payments/wallet/confirm', { orderId, paymentId, signature })
-  return res.data
-}
-
-export async function fetchRechargeStatus(orderId: string) {
-  const res = await axiosInstance.get(`/payments/wallet/topup/${encodeURIComponent(orderId)}/status`)
-  return res.data
+  const { data } = await axiosInstance.post('/payments/wallet/confirm', {
+    orderId,
+    paymentId,
+    signature,
+  })
+  return data
 }
 
 export const fetchWalletBalance = async (): Promise<{
@@ -47,27 +46,6 @@ export interface WalletTransaction {
   meta?: Record<string, any>
   currency?: string
   created_at: string
-  awb_number?: string | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  order?: Record<string, any> | null
-  shipment_order_type?: string | null
-  transaction_breakup?: {
-    masked?: boolean
-    currency?: string
-    total?: number
-    subtotal?: number | null
-    gstPercent?: number | null
-    gstAmount?: number | null
-    lines?: Array<{
-      key?: string
-      label: string
-      amount: number
-      kind?: 'charge' | 'tax' | 'subtotal' | 'total'
-      adminOnly?: boolean
-      source?: string
-    }>
-    facts?: Array<{ label: string; value: string }>
-  }
 }
 
 export interface WalletTransactionsResponse {
@@ -77,12 +55,16 @@ export interface WalletTransactionsResponse {
     currency: string
   }
   transactions: WalletTransaction[]
+  totalCount: number
+  page: number
+  limit: number
 }
 
 interface WalletTransactionsParams {
   limit?: number
   page?: number
   type?: 'credit' | 'debit'
+  reason?: string
   dateFrom?: string
   dateTo?: string
 }

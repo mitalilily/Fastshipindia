@@ -1,26 +1,19 @@
-import { useMediaQuery, useTheme, Box, Button } from '@mui/material'
-import { useState } from 'react'
-import { FiPlusCircle } from 'react-icons/fi'
+import { Button, CircularProgress, Stack, useMediaQuery, useTheme } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { MdDownload } from 'react-icons/md'
-import Papa from 'papaparse'
-import moment from 'moment'
+import { useLocation } from 'react-router-dom'
+import { fetchOrdersForCsvExport } from '../../api/order.service'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
+import { toast } from '../../components/UI/Toast'
 import CustomDrawer from '../../components/UI/drawer/CustomDrawer'
-import ListPageLayout from '../../components/UI/layout/ListPageLayout'
 import B2BOrderForm from '../../components/orders/b2b/B2BOrderForm'
 import B2BOrdersList from '../../components/orders/b2b/B2bOrdersList'
 import { statusColorMap } from '../../components/orders/b2c/B2COrdersList'
 import { useKycVerification } from '../../hooks/User/useKycVerification'
-import { useB2BOrdersByUser } from '../../hooks/Orders/useOrders'
-import { toast } from '../../components/UI/Toast'
-import type { B2BOrder } from '../../types/generic.types'
-import { fetchOrdersForCsvExport } from '../../api/order.service'
-import {
-  CLIENT_ORDER_ADDED_HEADERS,
-  downloadClientOrdersCsv,
-} from '../../utils/orderCsvExport'
+import { downloadClientOrdersCsv } from '../../utils/orderCsvExport'
 
 const B2bOrders = () => {
+  const location = useLocation()
   const [page, setPage] = useState(1)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -69,7 +62,10 @@ const B2bOrders = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { checkKycBeforeAction } = useKycVerification()
-  const { data } = useB2BOrdersByUser(page, rowsPerPage, filters)
+
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [location.pathname, location.search, location.hash])
 
   const handleCreateB2BOrder = () => {
     checkKycBeforeAction(() => {
@@ -77,110 +73,65 @@ const B2bOrders = () => {
     })
   }
 
-  const handleExportCSV = async () => {
-    if (exportingCsv) return
-
-    setExportingCsv(true)
+  const handleExportCsv = async () => {
     try {
-      const exportOrders = await fetchOrdersForCsvExport('b2b', filters)
-      if (!exportOrders.length) {
-        toast.open({ message: 'No orders to export', severity: 'warning' })
-        return
-      }
-
-      downloadClientOrdersCsv(exportOrders, 'b2b')
+      setExportingCsv(true)
+      const exportRows = await fetchOrdersForCsvExport('b2b', filters)
+      downloadClientOrdersCsv(exportRows, 'b2b')
       toast.open({
-        message: `Exported ${exportOrders.length} B2B orders with ${CLIENT_ORDER_ADDED_HEADERS.length} added columns.`,
+        message: `${exportRows.length} B2B order${exportRows.length === 1 ? '' : 's'} exported to CSV.`,
         severity: 'success',
       })
-    } catch {
-      toast.open({ message: 'Failed to export orders', severity: 'error' })
+    } catch (error) {
+      console.error('B2B order CSV export failed:', error)
+      toast.open({ message: 'Failed to export B2B orders CSV. Please try again.', severity: 'error' })
     } finally {
       setExportingCsv(false)
     }
-
-    if (Date.now() < 0) {
-    const orders = data?.orders || []
-    if (!orders.length) {
-      toast.open({ message: 'No orders to export', severity: 'warning' })
-      return
-    }
-
-    const csvData = orders.map((order: B2BOrder) => ({
-      'Order #': order.order_number || order.id,
-      'AWB': order.awb_number || '—',
-      'Buyer Name': order.buyer_name || '—',
-      'Amount': `₹${Number(order.order_amount ?? 0).toFixed(2)}`,
-      'Courier': order.courier_partner || '—',
-      'Source': order.is_external_api ? 'API' : 'Local',
-      'Status': order.order_status || '—',
-      'Created At': moment(order.order_date).format('DD MMM YYYY'),
-    }))
-
-    const csv = Papa.unparse(csvData)
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `b2b-orders-${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    toast.open({ message: 'Orders exported successfully', severity: 'success' })
-    }
   }
 
-  const controls = (
-    <Box sx={{ px: 2, display: 'flex', gap: 1.5, alignItems: 'center' }}>
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<MdDownload />}
-        onClick={handleExportCSV}
-        disabled={exportingCsv}
-        sx={{
-          textTransform: 'none',
-          borderRadius: 1.5,
-          fontSize: '0.9rem',
-        }}
+  return (
+    <Stack spacing={2}>
+      {/* Top row: Create button + Filters */}
+      <Stack
+        direction={isMobile ? 'column' : 'row'}
+        alignItems={isMobile ? 'stretch' : 'center'}
+        justifyContent="flex-end"
+        spacing={isMobile ? 1 : 2}
       >
-        {exportingCsv ? 'Exporting...' : 'Export'}
-      </Button>
+        <Button
+          variant="outlined"
+          startIcon={exportingCsv ? <CircularProgress size={14} /> : <MdDownload />}
+          onClick={handleExportCsv}
+          disabled={exportingCsv}
+          fullWidth={isMobile}
+        >
+          {exportingCsv ? 'Exporting' : 'Export CSV'}
+        </Button>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleCreateB2BOrder}
+          fullWidth={isMobile}
+        >
+          Create B2B Order
+        </Button>
+      </Stack>
+
       <FilterBar
         fields={filterFields}
         onApply={handleApplyFilters}
         defaultValues={{ status: '', fromDate: '', toDate: '', search: '' }}
-        mode="button"
-        buttonLabel="Filters"
         appliedCount={Object.values(filters).filter(Boolean).length}
       />
-    </Box>
-  )
 
-  return (
-    <>
-      <ListPageLayout
-        title="My B2B Orders"
-        description="Manage and track business-to-business orders"
-        actions={[
-          {
-            label: 'Create B2B Order',
-            onClick: handleCreateB2BOrder,
-            icon: <FiPlusCircle />,
-            variant: 'contained',
-          },
-        ]}
-        controls={controls}
-      >
-        <B2BOrdersList
-          page={page}
-          rowsPerPage={rowsPerPage}
-          setPage={setPage}
-          setRowsPerPage={setRowsPerPage}
-          filters={filters}
-        />
-      </ListPageLayout>
+      <B2BOrdersList
+        page={page}
+        rowsPerPage={rowsPerPage}
+        setPage={setPage}
+        setRowsPerPage={setRowsPerPage}
+        filters={filters}
+      />
 
       <CustomDrawer
         width={isMobile ? '100%' : 1400}
@@ -190,7 +141,7 @@ const B2bOrders = () => {
       >
         <B2BOrderForm onClose={() => setDrawerOpen(false)} />
       </CustomDrawer>
-    </>
+    </Stack>
   )
 }
 

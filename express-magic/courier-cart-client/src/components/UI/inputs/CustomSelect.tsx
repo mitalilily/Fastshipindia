@@ -1,5 +1,4 @@
 import {
-  alpha,
   Box,
   ClickAwayListener,
   Grow,
@@ -10,9 +9,12 @@ import {
   Paper,
   Popper,
   Typography,
+  alpha,
+  useTheme,
 } from '@mui/material'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { MdArrowDropDown, MdCheck } from 'react-icons/md'
+import React, { useMemo, useRef, useState } from 'react'
+import { MdArrowDropDown } from 'react-icons/md'
+import CustomInput from './CustomInput'
 
 interface DropdownItem {
   key: string | boolean
@@ -22,7 +24,7 @@ interface DropdownItem {
 }
 
 interface DropdownMenuProps {
-  label?: string
+  label: string
   items: DropdownItem[]
   onSelect: (key: string | boolean) => void
   value?: string | boolean
@@ -34,232 +36,60 @@ interface DropdownMenuProps {
   onInputChange?: (val: string) => void
   error?: boolean
   topMargin?: boolean
-  dense?: boolean
-  searchable?: boolean // 🔍 new prop
+  searchable?: boolean
 }
 
+const NAVY = '#0C3B80'
+const ORANGE = '#F57C00'
 export default function CustomSelect({
   label,
-  items,
+  items = [],
   onSelect,
   value,
-  width,
   placeholder,
   required,
   topMargin = true,
   helperText,
   error,
-  inputValue,
-  onInputChange,
   searchable = true,
-  dense = false,
 }: DropdownMenuProps) {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const anchorRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [highlightedIndex, setHighlightedIndex] = useState(0)
 
   const selectedItem = items.find((item) => item?.key === value)
-  const effectiveInputValue = inputValue ?? search
-
-  useEffect(() => {
-    if (!open) {
-      setSearch('')
-      setHighlightedIndex(0)
-    }
-  }, [open])
-
-  useEffect(() => {
-    const selectedIndex = items.findIndex((item) => item.key === value)
-    if (selectedIndex >= 0) {
-      setHighlightedIndex(selectedIndex)
-    }
-  }, [items, value])
-
-  const handleToggle = () => {
-    setOpen((prev) => !prev)
-  }
-
-  const handleClose = (event?: MouseEvent | TouchEvent) => {
-    if (
-      anchorRef.current &&
-      event?.target instanceof Node &&
-      anchorRef.current.contains(event.target)
-    ) {
-      return // Don't close if clicking inside input
-    }
-    setOpen(false)
-  }
-
-  const handleSelect = (key: string | boolean, label: string) => {
-    onSelect(key)
-    onInputChange?.(label)
-    setSearch('')
-    setOpen(false)
-  }
 
   const filteredItems = useMemo(() => {
-    if (!searchable || !effectiveInputValue.trim()) return items
-    const normalizedQuery = effectiveInputValue.toLowerCase()
+    if (!searchable || !search) return items
     return items.filter(
       (item) =>
-        item.label.toLowerCase().includes(normalizedQuery) ||
-        item.description?.toLowerCase().includes(normalizedQuery),
+        item.label.toLowerCase().includes(search.toLowerCase()) ||
+        item.description?.toLowerCase().includes(search.toLowerCase()),
     )
-  }, [effectiveInputValue, items, searchable])
-
-  useEffect(() => {
-    if (filteredItems.length === 0) {
-      setHighlightedIndex(0)
-      return
-    }
-
-    if (highlightedIndex > filteredItems.length - 1) {
-      setHighlightedIndex(0)
-    }
-  }, [filteredItems, highlightedIndex])
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!open && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
-      event.preventDefault()
-      setOpen(true)
-      return
-    }
-
-    if (!open) return
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      setHighlightedIndex((prev) => (prev + 1) % Math.max(filteredItems.length, 1))
-      return
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      setHighlightedIndex(
-        (prev) =>
-          (prev - 1 + Math.max(filteredItems.length, 1)) % Math.max(filteredItems.length, 1),
-      )
-      return
-    }
-
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      const item = filteredItems[highlightedIndex]
-      if (item) handleSelect(item.key, item.label)
-      return
-    }
-
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      setOpen(false)
-    }
-  }
+  }, [items, search, searchable])
 
   return (
-    <Box sx={{ width: width || '100%', mt: topMargin ? (dense ? 0.5 : 1.5) : 0 }}>
-      <Box>
-        {label && (
-          <Typography
-            sx={{
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: '#4f4f4f',
-              mb: dense ? 0.25 : 0.6,
-              display: 'flex',
-              gap: 0.3,
-            }}
-          >
-            {label}
-            {required && <span style={{ color: '#062A5B' }}>*</span>}
-          </Typography>
-        )}
-        <div ref={anchorRef}>
-          <Box
-            onClick={handleToggle}
-            onFocus={() => setOpen(true)}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              px: dense ? 0.9 : 1.5,
-              py: dense ? 0.45 : 1.1,
-              minHeight: dense ? 34 : undefined,
-              borderRadius: 1.2,
-              border: `1px solid ${error ? '#EF4444' : 'rgba(17, 24, 39, 0.16)'}`,
-              backgroundColor: '#FFFFFF',
-              cursor: 'pointer',
-              transition: 'all 200ms ease',
-              '&:hover': {
-                borderColor: error ? '#EF4444' : 'rgba(17, 24, 39, 0.25)',
-                backgroundColor: 'rgba(17, 24, 39, 0.01)',
-              },
-              '&:focus-within': {
-                borderColor: '#062A5B',
-                boxShadow: '0 0 0 3px rgba(217, 4, 22, 0.1)',
-              },
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: dense ? '0.82rem' : '0.95rem',
-                color: selectedItem ? '#111827' : '#9CA3AF',
-                fontWeight: selectedItem ? 500 : 400,
-                flex: 1,
-              }}
-            >
-              {open && searchable ? (
-                <input
-                  type="text"
-                  value={effectiveInputValue}
-                  onChange={(e) => {
-                    const nextValue = e.target.value
-                    onInputChange?.(nextValue)
-                    setSearch(nextValue)
-                    setHighlightedIndex(0)
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder={placeholder || ''}
-                  autoFocus
-                  style={{
-                    border: 'none',
-                    outline: 'none',
-                    width: '100%',
-                    fontSize: 'inherit',
-                    fontFamily: 'inherit',
-                    background: 'transparent',
-                    color: '#111827',
-                  }}
-                />
-              ) : (
-                selectedItem?.label || placeholder || ''
-              )}
-            </Typography>
-            <MdArrowDropDown
-              size={20}
-              style={{
-                transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s ease',
-                color: '#9CA3AF',
-                flexShrink: 0,
-                marginLeft: '8px',
-              }}
-            />
-          </Box>
-        </div>
-        {helperText && (
-          <Typography
-            sx={{
-              fontSize: '0.8rem',
-              color: error ? '#EF4444' : '#6B7280',
-              mt: dense ? 0.2 : 0.5,
-            }}
-          >
-            {helperText}
-          </Typography>
-        )}
-      </Box>
+    <Box>
+      <div ref={anchorRef}>
+        <CustomInput
+          fullWidth
+          required={required}
+          topMargin={topMargin}
+          error={error}
+          label={label}
+          value={search || selectedItem?.label || placeholder || ''}
+          onClick={() => setOpen((prev) => !prev)}
+          onChange={(e) => {
+            if (searchable) {
+              setSearch(e.target.value)
+              if (!open) setOpen(true)
+            }
+          }}
+          postfix={<MdArrowDropDown color={isDark ? theme.palette.text.secondary : NAVY} size={20} />}
+        />
+      </div>
 
       <Popper
         open={open}
@@ -272,79 +102,50 @@ export default function CustomSelect({
           <Grow {...TransitionProps} style={{ transformOrigin: 'top left' }}>
             <Box>
               {open && (
-                <ClickAwayListener onClickAway={handleClose}>
+                <ClickAwayListener onClickAway={() => setOpen(false)}>
                   <Paper
-                    elevation={0}
+                    elevation={8}
                     sx={{
-                      bgcolor: '#FFFFFF',
-                      borderRadius: 0,
-                      border: '1px solid rgba(17, 24, 39, 0.12)',
-                      boxShadow: '0 14px 28px rgba(15, 23, 42, 0.08)',
+                      bgcolor: isDark ? '#151b23' : '#ffffff',
+                      borderRadius: 2,
+                      border: `1px solid ${isDark ? alpha('#f8fafc', 0.12) : 'rgba(12,59,128,0.12)'}`,
+                      boxShadow: isDark ? '0 18px 36px rgba(0,0,0,0.34)' : '0 12px 24px rgba(12,59,128,0.12)',
                       width: anchorRef.current
                         ? anchorRef.current.getBoundingClientRect().width
                         : '100%',
                       maxHeight: 320,
                       overflowY: 'auto',
-                      mt: 0.75,
-                      '&::-webkit-scrollbar': {
-                        width: '6px',
-                      },
-                      '&::-webkit-scrollbar-track': {
-                        background: '#F3F4F6',
-                        borderRadius: 0,
-                      },
-                      '&::-webkit-scrollbar-thumb': {
-                        background: '#C4C9D4',
-                        borderRadius: 0,
-                        '&:hover': {
-                          background: '#9CA3AF',
-                        },
-                      },
+                      mt: 0.6,
+                      p: 0.4,
                     }}
                   >
-                    <List dense disablePadding sx={{ py: 0.5 }}>
+                    <List dense disablePadding sx={{ py: 0.3 }}>
                       {filteredItems.length > 0 ? (
-                        filteredItems.map((item, index) => (
+                        filteredItems.map((item) => (
                           <ListItemButton
                             key={String(item.key)}
                             selected={value === item.key}
-                            onClick={() => handleSelect(item.key, item.label)}
+                            onClick={() => {
+                              onSelect(item.key)
+                              setSearch(item.label)
+                              setOpen(false)
+                            }}
                             sx={{
-                              mx: 0.5,
-                              my: 0.15,
-                              minHeight: item.description ? 58 : 48,
-                              borderRadius: 0,
-                              transition: 'background-color 0.2s ease, border-color 0.2s ease',
-                              alignItems: 'center',
-                              borderLeft: `3px solid ${
-                                value === item.key
-                                  ? '#062A5B'
-                                  : highlightedIndex === index
-                                    ? alpha('#062A5B', 0.42)
-                                    : 'transparent'
-                              }`,
-                              bgcolor:
-                                value === item.key
-                                  ? alpha('#062A5B', 0.08)
-                                  : highlightedIndex === index
-                                    ? '#F8FAFC'
-                                    : 'transparent',
+                              mx: 0.3,
+                              my: 0.35,
+                              px: 1.2,
+                              py: 0.9,
+                              borderRadius: 2,
+                              transition: 'all 0.2s ease',
                               '&:hover': {
-                                bgcolor: '#F8FAFC',
-                                borderLeftColor: '#062A5B',
+                                bgcolor: alpha(item.key === value ? NAVY : ORANGE, isDark ? 0.14 : 0.06),
+                                transform: 'translateX(2px)',
                               },
                               '&.Mui-selected': {
-                                bgcolor: alpha('#062A5B', 0.08),
-                                borderLeft: '3px solid #062A5B',
+                                bgcolor: alpha(isDark ? '#8b7cf6' : NAVY, isDark ? 0.18 : 0.08),
+                                border: `1px solid ${isDark ? alpha('#8b7cf6', 0.24) : 'rgba(12,59,128,0.12)'}`,
                                 '&:hover': {
-                                  bgcolor: alpha('#062A5B', 0.12),
-                                },
-                                '& .MuiListItemIcon-root': {
-                                  color: '#062A5B',
-                                },
-                                '& .MuiListItemText-primary': {
-                                  color: '#062A5B',
-                                  fontWeight: 600,
+                                  bgcolor: alpha(isDark ? '#8b7cf6' : NAVY, isDark ? 0.24 : 0.1),
                                 },
                               },
                             }}
@@ -352,11 +153,11 @@ export default function CustomSelect({
                             {item.icon && (
                               <ListItemIcon
                                 sx={{
-                                  color: value === item.key ? '#062A5B' : '#4B5563',
-                                  minWidth: 36,
+                                  minWidth: 40,
+                                  color: value === item.key ? (isDark ? '#bdb5ff' : NAVY) : ORANGE,
                                 }}
                               >
-                                {React.createElement(item.icon, { size: 20 })}
+                                {React.createElement(item.icon, { size: 18 })}
                               </ListItemIcon>
                             )}
                             <ListItemText
@@ -364,8 +165,8 @@ export default function CustomSelect({
                                 <Typography
                                   variant="body2"
                                   sx={{
-                                    fontWeight: value === item.key ? 700 : 600,
-                                    color: '#111827',
+                                    fontWeight: 700,
+                                    color: theme.palette.text.primary,
                                   }}
                                 >
                                   {item.label}
@@ -376,11 +177,10 @@ export default function CustomSelect({
                                   <Typography
                                     variant="caption"
                                     sx={{
-                                      color: '#6B7280',
-                                      fontSize: '0.74rem',
+                                      color: theme.palette.text.secondary,
+                                      fontSize: '0.76rem',
                                       display: 'block',
-                                      mt: 0.25,
-                                      lineHeight: 1.45,
+                                      mt: 0.3,
                                     }}
                                   >
                                     {item.description}
@@ -388,18 +188,6 @@ export default function CustomSelect({
                                 ) : null
                               }
                             />
-                            {value === item.key ? (
-                              <Box
-                                sx={{
-                                  color: '#062A5B',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  pl: 1,
-                                }}
-                              >
-                                <MdCheck size={18} />
-                              </Box>
-                            ) : null}
                           </ListItemButton>
                         ))
                       ) : (
@@ -407,11 +195,11 @@ export default function CustomSelect({
                           <Typography
                             variant="body2"
                             sx={{
-                              color: '#6B7280',
+                              color: theme.palette.text.secondary,
                               fontWeight: 600,
                             }}
                           >
-                            No matching options
+                            No results found
                           </Typography>
                         </Box>
                       )}
@@ -423,6 +211,14 @@ export default function CustomSelect({
           </Grow>
         )}
       </Popper>
+
+      {helperText ? (
+        <Box sx={{ mt: 0.6, display: 'flex', justifyContent: 'flex-end' }}>
+          <Typography variant="caption" sx={{ fontSize: '11px', opacity: 0.76 }}>
+            {helperText}
+          </Typography>
+        </Box>
+      ) : null}
     </Box>
   )
 }

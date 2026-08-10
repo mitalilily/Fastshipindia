@@ -1,47 +1,56 @@
 import axiosInstance from "./axiosInstance";
 import { getAuthTokens } from "./tokenVault";
 
-export type RequestOtpResponse = {
-  message: string
-  devOtp?: string
-  otp?: string
-}
+export type AuthFlow = "login" | "signup";
 
-export type RegisterMerchantPayload = {
-  userType: 'individual' | 'business'
-  name: string
-  email: string
-  phone: string
-  password: string
-}
-
-export const registerMerchantApi = async (
-  payload: RegisterMerchantPayload,
-): Promise<RequestOtpResponse> => {
-  const { data } = await axiosInstance.post('/auth/register', payload)
-  return data
-}
-
-export const requestOtpApi = async (email: string): Promise<RequestOtpResponse> => {
-  const { data } = await axiosInstance.post("/auth/request-otp", { email });
+export const requestOtpApi = async (email: string) => {
+  const { data } = await axiosInstance.post("/auth/request-otp", {
+    email: email.trim().toLowerCase(),
+  });
   return data;
 };
 
 export const verifyOtpApi = async (email: string, otp: string) => {
   const { data } = await axiosInstance.post("/auth/verify-otp", {
-    email,
-    otp,
+    email: email.trim().toLowerCase(),
+    otp: otp.trim(),
   });
   return data;
 };
 
 export const requestPasswordLoginApi = async (
   email: string,
-  password?: string
+  password?: string,
+  flow: AuthFlow = "login",
+  name?: string,
+  phone?: string
 ) => {
   const { data } = await axiosInstance.post("/auth/request-password-login", {
-    email,
+    email: email.trim().toLowerCase(),
     password,
+    flow,
+    ...(name?.trim() ? { name: name.trim() } : {}),
+    ...(phone?.trim() ? { phone: phone.trim() } : {}),
+  });
+  return data;
+};
+
+export const requestPasswordResetApi = async (email: string) => {
+  const { data } = await axiosInstance.post("/auth/request-password-reset", {
+    email: email.trim().toLowerCase(),
+  });
+  return data;
+};
+
+export const resetPasswordApi = async (
+  email: string,
+  token: string,
+  newPassword: string
+) => {
+  const { data } = await axiosInstance.post("/auth/reset-password", {
+    email: email.trim().toLowerCase(),
+    token: token.trim().toUpperCase(),
+    newPassword,
   });
   return data;
 };
@@ -52,26 +61,10 @@ export const verifyEmailOtpApi = async (
   password: string
 ) => {
   const { data } = await axiosInstance.post("/auth/verify-user-email", {
-    email,
-    token: otp,
+    email: email.trim().toLowerCase(),
+    token: otp.trim().toUpperCase(),
     password,
   });
-  return data;
-};
-
-export const requestPasswordResetApi = async (email: string) => {
-  const { data } = await axiosInstance.post("/auth/request-password-reset", {
-    email,
-  });
-  return data;
-};
-
-export const resetPasswordApi = async (payload: {
-  email: string;
-  token: string;
-  newPassword: string;
-}) => {
-  const { data } = await axiosInstance.post("/auth/reset-password", payload);
   return data;
 };
 
@@ -93,15 +86,6 @@ export const logoutApi = async () => {
       headers: { "x-refresh-token": refreshToken },
     }
   );
-};
-
-export const logoutOtherDevicesApi = async () => {
-  const { data } = await axiosInstance.post<{
-    message: string;
-    accessToken: string;
-    refreshToken: string;
-  }>("/auth/logout-other-devices");
-  return data;
 };
 
 /** Payload accepted by the backend */

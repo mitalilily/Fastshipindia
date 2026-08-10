@@ -1,6 +1,6 @@
-import { Button, CircularProgress, Typography, type ButtonProps } from '@mui/material'
+import { Button, CircularProgress, Typography, alpha, type ButtonProps } from '@mui/material'
 import React from 'react'
-import { BRAND } from '../../../config/brand'
+import { brand, brandGradients } from '../../../theme/brand'
 
 type ButtonVisualVariant = 'solid' | 'text'
 
@@ -16,6 +16,7 @@ interface CustomIconLoadingButtonProps
   styles?: Record<string, unknown>
   variant?: ButtonVisualVariant
   textColor?: string
+  endIconNode?: React.ReactNode
 }
 
 export default function CustomIconLoadingButton({
@@ -28,13 +29,12 @@ export default function CustomIconLoadingButton({
   type = 'button',
   styles,
   textColor,
+  endIconNode,
   variant = 'solid',
   ...rest
 }: CustomIconLoadingButtonProps) {
-  const primary = BRAND.colors.teal
-  const primaryDark = BRAND.colors.tealDark
-  const disabledSolid = '#9fbfc4'
   const isDisabled = loading || disabled
+
   return (
     <Button
       type={type}
@@ -42,23 +42,35 @@ export default function CustomIconLoadingButton({
       disabled={isDisabled}
       sx={{
         px: 3,
-        py: 1.2,
+        py: 1.25,
+        position: 'relative',
         textTransform: 'none',
         fontWeight: 700,
         gap: 1,
-        borderRadius: 1.5,
-        backgroundColor: variant === 'solid' ? primary : 'transparent',
-        color: textColor ?? (variant === 'solid' ? '#fff' : '#111827'),
-        border: variant === 'text' ? `1px solid rgba(17, 24, 39, 0.12)` : 'none',
+        borderRadius: '10px',
+        background: variant === 'solid' ? brandGradients.button : 'rgba(255,255,255,0.72)',
+        color: textColor ?? (variant === 'solid' ? brand.ink : brand.ink),
+        border:
+          variant === 'text'
+            ? `1px solid ${alpha(brand.ink, 0.12)}`
+            : '1px solid rgba(255,255,255,0.3)',
+        boxShadow:
+          variant === 'solid'
+            ? '0 16px 32px rgba(130,194,255,0.24)'
+            : '0 10px 20px rgba(15,44,67,0.05)',
         '&:hover': {
-          backgroundColor: variant === 'solid' ? primaryDark : 'rgba(17, 24, 39, 0.04)',
+          background:
+            variant === 'solid'
+              ? brandGradients.button
+              : 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,251,255,1) 100%)',
+          transform: variant === 'solid' ? 'translateY(-1px)' : 'none',
         },
         '&:disabled': {
-          opacity: 1,
+          opacity: 0.58,
           cursor: 'not-allowed',
-          backgroundColor: variant === 'solid' ? disabledSolid : '#F9FAFB',
-          color: textColor ?? (variant === 'solid' ? '#FFFFFF' : '#6B7280'),
-          borderColor: variant === 'text' ? 'rgba(17, 24, 39, 0.14)' : 'none',
+          background: variant === 'solid' ? brandGradients.button : 'rgba(255,255,255,0.72)',
+          color: textColor ?? alpha(brand.ink, 0.62),
+          borderColor: variant === 'text' ? alpha(brand.ink, 0.08) : alpha('#FFFFFF', 0.18),
         },
         ...styles,
       }}
@@ -67,7 +79,7 @@ export default function CustomIconLoadingButton({
       {loading ? (
         <>
           <CircularProgress size={16} thickness={4} sx={{ color: 'currentColor' }} />
-          <Typography variant="body2" sx={{ color: 'inherit', fontWeight: 600 }}>
+          <Typography variant="body2" sx={{ color: 'inherit', fontWeight: 700 }}>
             {loadingText}
           </Typography>
         </>
@@ -77,6 +89,22 @@ export default function CustomIconLoadingButton({
           <Typography variant="body2" sx={{ color: 'inherit', fontWeight: 700 }}>
             {text}
           </Typography>
+          {endIconNode ? (
+            <Typography
+              component="span"
+              sx={{
+                position: 'absolute',
+                right: 22,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                color: 'inherit',
+              }}
+            >
+              {endIconNode}
+            </Typography>
+          ) : null}
         </>
       )}
     </Button>

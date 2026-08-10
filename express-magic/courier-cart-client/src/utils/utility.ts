@@ -81,11 +81,6 @@ export const emptyUserProfile: IUserProfileDB = {
   rejectionReason: null,
   currentPlanId: null,
   currentPlanName: null,
-  role: null,
-  employeeId: null,
-  employeeRole: null,
-  employeeIsActive: null,
-  moduleAccess: null,
 
   submittedAt: "",
   updatedAt: "",
@@ -93,7 +88,6 @@ export const emptyUserProfile: IUserProfileDB = {
 
 export const channelIntegrationImageMapping: Record<number, string> = {
   1: "/logo/integrations/shopify.webp",
-  2: "/logo/integrations/woocommerce.webp",
 };
 
 // Keyframe animation

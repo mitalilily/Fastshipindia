@@ -1,19 +1,8 @@
-import { Box, IconButton, InputAdornment, TextField, Typography } from '@mui/material'
+import { alpha, Box, IconButton, InputAdornment, TextField, Typography, useTheme } from '@mui/material'
 import type { TextFieldProps } from '@mui/material/TextField'
 import React, { forwardRef, useEffect, useRef, useState } from 'react'
 import { MdVisibility, MdVisibilityOff } from 'react-icons/md'
-import styles from './CustomInput.module.css'
-
-const LABEL_SX = {
-  fontSize: '12px',
-  color: '#374151',
-  fontWeight: 700,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-}
-
-const CONTROL_MIN_HEIGHT = 48
-const DENSE_CONTROL_MIN_HEIGHT = 34
+import { brand } from '../../../theme/brand'
 
 interface CustomInputProps extends Omit<TextFieldProps, 'variant' | 'prefix' | 'postfix'> {
   label?: string
@@ -25,7 +14,7 @@ interface CustomInputProps extends Omit<TextFieldProps, 'variant' | 'prefix' | '
   helpText?: string
   topMargin?: boolean
   maxLength?: number
-  dense?: boolean
+  authVariant?: 'reference'
 }
 
 const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
@@ -40,50 +29,57 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
       postfix,
       required = false,
       helperText,
-      className,
       width = '100%',
       helpText,
       topMargin = true,
       maxLength,
-      dense = false,
+      authVariant,
       ...props
     },
     ref,
   ) => {
+    const theme = useTheme()
+    const isDark = theme.palette.mode === 'dark'
     const [isFocused, setIsFocused] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
-
     const internalRef = useRef<HTMLInputElement>(null)
 
     const isPasswordType = type === 'password'
-
-    const handleFocus = () => setIsFocused(true)
-    const handleBlur = () => {
-      if (!internalRef.current?.value) setIsFocused(false)
-    }
+    const isReferenceAuth = authVariant === 'reference'
+    const labelColor = isReferenceAuth
+      ? isDark ? theme.palette.text.primary : '#111111'
+      : isFocused ? theme.palette.text.primary : theme.palette.text.secondary
+    const inputBg = isDark ? '#101720' : '#FFFFFF'
+    const inputBgImage = isDark
+      ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
+      : isReferenceAuth
+        ? 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(253,253,253,1) 100%)'
+        : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.98) 100%)'
+    const fieldBorder = isDark ? alpha('#f8fafc', 0.14) : alpha(brand.ink, 0.1)
+    const focusedBorder = isDark ? alpha('#8b7cf6', 0.72) : alpha(brand.ink, 0.28)
 
     useEffect(() => {
       if (value) setIsFocused(true)
     }, [value])
 
-    const togglePasswordVisibility = () => {
-      setShowPassword((prev) => !prev)
-    }
-
     return (
-      <div
-        className={`${styles.inputContainer} ${className ?? ''}`}
-        style={{ marginTop: topMargin ? (dense ? '8px' : '16px') : '0px' }}
-      >
+      <Box sx={{ mt: topMargin ? 2 : 0, width }}>
         {label && (
           <Typography
-            sx={LABEL_SX}
-            mb={dense ? 0.25 : 0.8}
-            className={`${styles.customLabel} ${isFocused ? styles.labelFocused : ''}`}
+            sx={{
+              mb: isReferenceAuth ? 0.7 : 0.9,
+              fontSize: isReferenceAuth ? '0.9rem' : '0.74rem',
+              fontWeight: isReferenceAuth ? 500 : 700,
+              letterSpacing: 0,
+              textTransform: isReferenceAuth ? 'none' : 'uppercase',
+              color: labelColor,
+              cursor: 'pointer',
+              transition: 'color 0.2s ease',
+            }}
             onClick={() => internalRef.current?.focus()}
           >
             {label}
-            {required && <span className={styles.required}>*</span>}
+            {required && <Box component="span" sx={{ ml: 0.5, color: brand.warning }}>*</Box>}
           </Typography>
         )}
 
@@ -93,64 +89,91 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
           onChange={onChange}
           helperText={helperText}
           fullWidth
-          sx={{
-            width,
-            '& .MuiOutlinedInput-root': {
-              minHeight: dense ? DENSE_CONTROL_MIN_HEIGHT : CONTROL_MIN_HEIGHT,
-              borderRadius: 0,
-              backgroundColor: '#FFFFFF',
-              alignItems: 'center',
-              '& fieldset': {
-                borderColor: 'rgba(17, 24, 39, 0.12)',
-              },
-              '&:hover fieldset': {
-                borderColor: 'rgba(17, 24, 39, 0.2)',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#062A5B',
-              },
-            },
-            '& .MuiOutlinedInput-input': {
-              padding: dense ? '5px 8px' : '12px 14px',
-              fontSize: dense ? '0.82rem' : '0.95rem',
-              color: '#111827',
-              boxSizing: 'border-box',
-            },
-            '& .MuiFormHelperText-root': {
-              marginLeft: 0,
-              marginRight: 0,
-              marginTop: dense ? '2px' : '6px',
-            },
-          }}
           placeholder={placeholder}
           inputRef={(el) => {
-            // assign to both forwardRef and internalRef
             if (typeof ref === 'function') ref(el)
             else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = el
             internalRef.current = el
           }}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          className={`${styles.textFieldRoot}`}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            if (!internalRef.current?.value) setIsFocused(false)
+          }}
+          sx={{
+            width,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: isReferenceAuth ? '7px' : '24px',
+              bgcolor: inputBg,
+              backgroundImage: inputBgImage,
+              boxShadow: isReferenceAuth
+                ? 'none'
+                : isFocused
+                  ? '0 0 0 4px rgba(198,231,255,0.34), 0 16px 30px rgba(15,44,67,0.08)'
+                  : '0 10px 24px rgba(15,44,67,0.045)',
+              transition: 'all 0.2s ease',
+              '& fieldset': {
+                borderColor: isReferenceAuth && !isDark
+                  ? isFocused
+                    ? alpha(brand.ink, 0.24)
+                    : 'transparent'
+                  : isFocused
+                    ? focusedBorder
+                    : fieldBorder,
+                borderWidth: isReferenceAuth ? 1 : isFocused ? 1.5 : 1,
+              },
+              '&:hover fieldset': {
+                borderColor: isDark ? alpha('#8b7cf6', 0.5) : isReferenceAuth ? alpha(brand.ink, 0.16) : alpha(brand.ink, 0.24),
+              },
+              '&.Mui-error': {
+                boxShadow: '0 0 0 3px rgba(209, 67, 67, 0.08)',
+              },
+              '&.Mui-error fieldset': {
+                borderColor: alpha(brand.danger, 0.4),
+              },
+              '&.Mui-focused.Mui-error fieldset': {
+                borderColor: alpha(brand.danger, 0.5),
+              },
+            },
+            '& .MuiInputBase-input': {
+              py: isReferenceAuth ? 0.82 : 1.12,
+              color: theme.palette.text.primary,
+              fontWeight: 600,
+              fontSize: isReferenceAuth ? '0.88rem' : '0.94rem',
+              lineHeight: 1.4,
+            },
+            '& .MuiFormHelperText-root': {
+              ml: 0.3,
+              mt: 0.75,
+              fontWeight: 600,
+              fontSize: '0.76rem',
+            },
+          }}
           slotProps={{
             input: {
               startAdornment: prefix ? (
-                <InputAdornment position="start" sx={{ color: '#6B7280', mr: 0.5 }}>
-                  {prefix}
+                <InputAdornment position="start">
+                  <Box sx={{ display: 'flex', color: isFocused ? theme.palette.text.primary : theme.palette.text.secondary }}>
+                    {prefix}
+                  </Box>
                 </InputAdornment>
               ) : undefined,
               endAdornment: (
-                <InputAdornment position="end" sx={{ color: '#6B7280', ml: 0.5 }}>
+                <InputAdornment position="end">
                   {isPasswordType ? (
-                    <IconButton onClick={togglePasswordVisibility} edge="end" sx={{ borderRadius: 0 }}>
-                      {showPassword ? (
-                        <MdVisibilityOff size={17} color="#6B7280" />
-                      ) : (
-                        <MdVisibility size={17} color="#6B7280" />
-                      )}
+                    <IconButton
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      edge="end"
+                      sx={{
+                        color: isFocused ? brand.warning : theme.palette.text.secondary,
+                        '&:hover': { bgcolor: alpha(brand.warning, 0.08) },
+                      }}
+                    >
+                      {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
                     </IconButton>
                   ) : (
-                    postfix
+                    <Box sx={{ display: 'flex', alignItems: 'center', color: theme.palette.text.secondary }}>
+                      {postfix}
+                    </Box>
                   )}
                 </InputAdornment>
               ),
@@ -161,20 +184,14 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
           }}
           {...props}
         />
+
         {helpText ? (
-          <Box
-            sx={{
-              mt: 0.5,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              width: '100%',
-            }}
-          >
+          <Box sx={{ mt: 0.8, display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
             <Typography
               variant="caption"
               sx={{
                 fontSize: '11px',
-                color: '#6B7280',
+                color: theme.palette.text.secondary,
                 textAlign: 'right',
               }}
             >
@@ -182,7 +199,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
             </Typography>
           </Box>
         ) : null}
-      </div>
+      </Box>
     )
   },
 )

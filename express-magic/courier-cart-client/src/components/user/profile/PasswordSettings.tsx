@@ -18,8 +18,7 @@ import { toast } from '../../UI/Toast'
 import { useChangePassword } from '../../../hooks/Auth/useChangePassword'
 import { useUserInfo } from '../../../hooks/useUserInfo'
 
-const BRAND_NAVY = '#062A5B'
-const BRAND_ORANGE = '#ED1C24'
+const DE_BLUE = '#0052CC'
 
 interface PasswordFormValues {
   currentPassword?: string
@@ -79,7 +78,7 @@ export default function PasswordSettingsForm() {
         aria-label={visible ? 'Hide password' : 'Show password'}
         onClick={() => setVisible(!visible)}
         edge="end"
-        sx={{ color: '#6b6b6b', '&:hover': { color: BRAND_NAVY, bgcolor: alpha(BRAND_NAVY, 0.08) } }}
+        sx={{ color: '#6b6b6b', '&:hover': { color: DE_BLUE, bgcolor: alpha(DE_BLUE, 0.08) } }}
       >
         {visible ? <BiHide /> : <BiShow />}
       </IconButton>
@@ -92,104 +91,94 @@ export default function PasswordSettingsForm() {
       elevation={0}
       sx={{
         p: { xs: 2, md: 2.8 },
-        borderRadius: 3,
-        border: `1px solid ${alpha(BRAND_NAVY, 0.13)}`,
+        borderRadius: 1,
+        border: `1px solid ${alpha(DE_BLUE, 0.13)}`,
         backgroundColor: '#fff',
-        boxShadow: '0 8px 24px rgba(13, 59, 142, 0.08)',
+        boxShadow: '0 8px 24px rgba(0, 82, 204, 0.08)',
       }}
       onSubmit={handleSubmit(onSubmit)}
     >
-      <Stack spacing={2}>
-        <Box>
-          <Typography sx={{ fontSize: '0.72rem', letterSpacing: 1.8, color: BRAND_ORANGE, fontWeight: 700 }}>
-            SECURITY SETTINGS
-          </Typography>
-          <Typography sx={{ fontSize: { xs: '1.12rem', md: '1.32rem' }, color: BRAND_NAVY, fontWeight: 800 }}>
-            {hasPassword ? 'Change Password' : 'Set Password'}
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#60789f', mt: 0.4 }}>
-            {hasPassword
-              ? 'Use a strong password and rotate it periodically for better security.'
-              : 'Create your first password to enable direct login.'}
-          </Typography>
-        </Box>
-
-        {hasPassword && (
-          <CustomInput
-            type={showCurrent ? 'text' : 'password'}
-            label="Current Password"
-            autoComplete="current-password"
-            {...register('currentPassword', { required: 'Current password is required' })}
-            error={!!errors.currentPassword}
-            helperText={errors.currentPassword?.message}
-            postfix={<PasswordToggle visible={showCurrent} setVisible={setShowCurrent} />}
-          />
-        )}
-
-        <CustomInput
-          type={showNew ? 'text' : 'password'}
-          label="New Password"
-          autoComplete="new-password"
-          {...register('newPassword', {
-            required: 'New password is required',
-            minLength: {
-              value: 8,
-              message: 'Must be at least 8 characters',
-            },
-            validate: (value) =>
-              /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value) || 'Must include upper, lower & number',
-          })}
-          error={!!errors.newPassword}
-          helperText={errors.newPassword?.message}
-          postfix={<PasswordToggle visible={showNew} setVisible={setShowNew} />}
-        />
-
-        <CustomInput
-          type={showConfirm ? 'text' : 'password'}
-          label="Confirm New Password"
-          autoComplete="new-password"
-          {...register('confirmPassword', {
-            required: 'Please confirm the new password',
-            validate: (value) => value === newPassword || 'Passwords do not match',
-          })}
-          error={!!errors.confirmPassword}
-          helperText={errors.confirmPassword?.message}
-          postfix={<PasswordToggle visible={showConfirm} setVisible={setShowConfirm} />}
-        />
-
-        <Box
-          sx={{
-            p: 1.4,
-            borderRadius: 2,
-            border: `1px solid ${alpha(BRAND_ORANGE, 0.24)}`,
-            backgroundColor: alpha(BRAND_ORANGE, 0.08),
-          }}
-        >
-          <Stack direction="row" spacing={0.8} alignItems="center">
-            <FiLock size={14} color="#9b4d00" />
-            <Typography variant="body2" sx={{ color: '#9b4d00' }}>
-              Use at least 8 characters with uppercase, lowercase, and numbers.
-            </Typography>
-          </Stack>
-        </Box>
-
-        <Divider sx={{ borderColor: alpha(BRAND_NAVY, 0.1) }} />
-
-        <Stack direction="row" justifyContent="flex-end">
-          <CustomIconLoadingButton
-            type="submit"
-            disabled={saving}
-            text={hasPassword ? 'Update Password' : 'Set Password'}
-            loading={saving}
-            loadingText="Saving..."
-            styles={{
-              minWidth: 170,
-              borderRadius: '10px',
-              background: `linear-gradient(135deg, ${BRAND_NAVY} 0%, #062A5B 100%)`,
-              color: '#fff',
+      <Stack spacing={2.5}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box
+            sx={{
+              p: 1.2,
+              borderRadius: 1,
+              bgcolor: alpha(DE_BLUE, 0.08),
+              color: DE_BLUE,
+              display: 'flex',
             }}
+          >
+            <FiLock size={22} />
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: DE_BLUE }}>
+              Password Security
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#5e759a' }}>
+              Update your account password regularly to keep your business data secure.
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Divider sx={{ opacity: 0.6 }} />
+
+        <Stack spacing={2.2}>
+          {hasPassword && (
+            <CustomInput
+              label="Current Password"
+              type={showCurrent ? 'text' : 'password'}
+              {...register('currentPassword', { required: 'Current password is required.' })}
+              error={!!errors.currentPassword}
+              helperText={errors.currentPassword?.message}
+              fullWidth
+              prefix={<FiLock color={DE_BLUE} size={15} />}
+              postfix={<PasswordToggle visible={showCurrent} setVisible={setShowCurrent} />}
+            />
+          )}
+
+          <CustomInput
+            label="New Password"
+            type={showNew ? 'text' : 'password'}
+            {...register('newPassword', {
+              required: 'New password is required.',
+              minLength: { value: 6, message: 'Minimum 6 characters.' },
+            })}
+            error={!!errors.newPassword}
+            helperText={errors.newPassword?.message}
+            fullWidth
+            prefix={<FiLock color={DE_BLUE} size={15} />}
+            postfix={<PasswordToggle visible={showNew} setVisible={setShowNew} />}
+          />
+
+          <CustomInput
+            label="Confirm New Password"
+            type={showConfirm ? 'text' : 'password'}
+            {...register('confirmPassword', {
+              required: 'Confirm your new password.',
+              validate: (value) => value === newPassword || 'Passwords do not match.',
+            })}
+            error={!!errors.confirmPassword}
+            helperText={errors.confirmPassword?.message}
+            fullWidth
+            prefix={<FiLock color={DE_BLUE} size={15} />}
+            postfix={<PasswordToggle visible={showConfirm} setVisible={setShowConfirm} />}
           />
         </Stack>
+
+        <Box sx={{ pt: 1, alignSelf: 'flex-start' }}>
+          <CustomIconLoadingButton
+            type="submit"
+            text={hasPassword ? 'Update Password' : 'Set Password'}
+            loading={saving}
+            styles={{
+              px: 4,
+              borderRadius: 1,
+              bgcolor: DE_BLUE,
+              '&:hover': { bgcolor: '#0043A4' },
+            }}
+          />
+        </Box>
       </Stack>
     </Paper>
   )

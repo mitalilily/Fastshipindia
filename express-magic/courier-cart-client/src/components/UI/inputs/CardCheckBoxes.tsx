@@ -9,7 +9,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 
-const BRAND_GREEN = '#062A5B'
+const DE_BLUE = '#0052CC'
 
 interface CardCheckboxProps {
   label: string;
@@ -46,26 +46,26 @@ export default function CardCheckbox({
         py: { xs: 1.5, sm: 2 },
         width: '100%',
         minHeight: { xs: 160, sm: 180, md: 200 },
-        borderRadius: 3,
+        borderRadius: 1,
         border: `2px solid`,
-        borderColor: checked ? BRAND_GREEN : alpha(BRAND_GREEN, 0.2),
+        borderColor: checked ? DE_BLUE : alpha(DE_BLUE, 0.1),
         background: checked
-          ? alpha(BRAND_GREEN, 0.08)
+          ? alpha(DE_BLUE, 0.04)
           : '#ffffff',
         boxShadow: checked
-          ? `0 8px 24px ${alpha(BRAND_GREEN, 0.2)}`
-          : '0 2px 8px rgba(0, 0, 0, 0.06)',
-        transition: 'all 0.25s ease-in-out',
+          ? `0 8px 24px ${alpha(DE_BLUE, 0.15)}`
+          : '0 2px 8px rgba(0, 0, 0, 0.04)',
+        transition: 'all 0.2s ease',
         transform: isFocused ? 'scale(1.01)' : 'scale(1)',
         '&:hover': {
-          transform: 'scale(1.02)',
-          borderColor: checked ? BRAND_GREEN : alpha(BRAND_GREEN, 0.4),
+          transform: 'translateY(-2px)',
+          borderColor: checked ? DE_BLUE : alpha(DE_BLUE, 0.3),
           boxShadow: checked
-            ? `0 12px 32px ${alpha(BRAND_GREEN, 0.25)}`
-            : `0 4px 16px ${alpha(BRAND_GREEN, 0.15)}`,
+            ? `0 12px 32px ${alpha(DE_BLUE, 0.2)}`
+            : `0 4px 16px ${alpha(DE_BLUE, 0.08)}`,
         },
         '&:focus-visible': {
-          outline: `2px solid ${BRAND_GREEN}`,
+          outline: `2px solid ${DE_BLUE}`,
           outlineOffset: 2,
         },
       }}
@@ -92,9 +92,9 @@ export default function CardCheckbox({
           top: 12,
           right: 12,
           zIndex: 50,
-          color: checked ? BRAND_GREEN : '#9e9e9e',
+          color: checked ? DE_BLUE : '#9e9e9e',
           '&.Mui-checked': {
-            color: BRAND_GREEN,
+            color: DE_BLUE,
           },
         }}
       />
@@ -127,7 +127,7 @@ export default function CardCheckbox({
           variant="subtitle2"
           fontWeight={600}
           noWrap
-          color={checked ? BRAND_GREEN : '#1a1a1a'}
+          color={checked ? DE_BLUE : '#1a1a1a'}
           sx={{ transition: 'color 0.2s ease' }}
         >
           {label}

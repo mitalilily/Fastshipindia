@@ -11,7 +11,7 @@ import { TbPercentage } from 'react-icons/tb'
 import CustomInput from '../../UI/inputs/CustomInput'
 import type { B2CFormData } from './B2COrderForm'
 
-const ACCENT = '#062A5B'
+const ACCENT = '#0D3B8E'
 
 interface PackageDetailsFormProps {
   control: Control<B2CFormData>
@@ -22,21 +22,21 @@ interface PackageDetailsFormProps {
 
 const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsFormProps) => {
   return (
-    <Stack gap={0.65}>
+    <Stack gap={2}>
       {fields.map((item, index) => (
         <Paper
           key={item.id}
           elevation={0}
           sx={{
-            p: { xs: 0.7, sm: 0.8 },
-            borderRadius: 2,
+            p: { xs: 1.5, sm: 2 },
+            borderRadius: 3,
             border: `1px solid ${alpha(ACCENT, 0.12)}`,
             background: '#FFFFFF',
           }}
         >
-          <Stack gap={0.6}>
+          <Stack gap={1.5}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2" fontWeight={700} sx={{ color: '#17171A' }}>
+              <Typography variant="body2" fontWeight={700} sx={{ color: '#102A54' }}>
                 Product {index + 1}
               </Typography>
               <IconButton
@@ -44,18 +44,16 @@ const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsF
                 color="error"
                 onClick={() => remove(index)}
                 sx={{
-                  width: 24,
-                  height: 24,
                   border: `1px solid ${alpha('#ef4444', 0.35)}`,
                   backgroundColor: alpha('#ef4444', 0.06),
                 }}
               >
-                <FaTrash size={12} />
+                <FaTrash size={14} />
               </IconButton>
             </Stack>
 
-            <Grid container spacing={0.65} alignItems="flex-start">
-              <Grid size={{ xs: 12, md: 4, xl: 3 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Controller
                   name={`products.${index}.productName` as const}
                   control={control}
@@ -67,14 +65,12 @@ const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsF
                       {...field}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
-                      topMargin={false}
-                      dense
                     />
                   )}
                 />
               </Grid>
 
-              <Grid size={{ xs: 6, md: 2, xl: 1.5 }}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Controller
                   name={`products.${index}.price` as const}
                   control={control}
@@ -84,20 +80,18 @@ const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsF
                   }}
                   render={({ field, fieldState }) => (
                     <CustomInput
-                      label="Price ₹"
+                      label="Price (₹)"
                       type="number"
                       required
                       {...field}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
-                      topMargin={false}
-                      dense
                     />
                   )}
                 />
               </Grid>
 
-              <Grid size={{ xs: 6, md: 2, xl: 1.5 }}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Controller
                   name={`products.${index}.quantity` as const}
                   control={control}
@@ -113,58 +107,50 @@ const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsF
                       {...field}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
-                      topMargin={false}
-                      dense
                     />
                   )}
                 />
               </Grid>
 
-              <Grid size={{ xs: 6, md: 2, xl: 1.5 }}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Controller
                   name={`products.${index}.discount` as const}
                   control={control}
                   render={({ field }) => (
                     <CustomInput
                       prefix={<BiRupee />}
-                      label="Discount ₹"
+                      label="Discount (Optional ₹)"
                       type="number"
-                      topMargin={false}
-                      dense
                       {...field}
                     />
                   )}
                 />
               </Grid>
 
-              <Grid size={{ xs: 6, md: 2, xl: 1.5 }}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Controller
                   name={`products.${index}.taxRate` as const}
                   control={control}
                   render={({ field }) => (
                     <CustomInput
                       postfix={<TbPercentage />}
-                      label="Tax Rate %"
+                      label="Tax Rate (Optional %)"
                       type="number"
-                      topMargin={false}
-                      dense
                       {...field}
                     />
                   )}
                 />
               </Grid>
 
-              <Grid size={{ xs: 6, md: 3, xl: 1.5 }}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <Controller
                   name={`products.${index}.hsnCode` as const}
                   control={control}
-                  render={({ field }) => (
-                    <CustomInput label="HSN Code (Optional)" topMargin={false} dense {...field} />
-                  )}
+                  render={({ field }) => <CustomInput label="HSN Code (Optional)" {...field} />}
                 />
               </Grid>
 
-              <Grid size={{ xs: 6, md: 3, xl: 1.5 }}>
+              <Grid size={{ xs: 12, md: 3 }}>
                 <Controller
                   name={`products.${index}.sku` as const}
                   control={control}
@@ -174,8 +160,6 @@ const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsF
                       {...field}
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
-                      topMargin={false}
-                      dense
                     />
                   )}
                 />
@@ -191,14 +175,12 @@ const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsF
           startIcon={<FaPlus />}
           onClick={() => append({ productName: '', price: 0, quantity: 1 })}
           sx={{
-            mt: 0.25,
+            mt: 0.5,
             borderStyle: 'solid',
             borderWidth: 1,
             borderColor: alpha(ACCENT, 0.35),
             color: ACCENT,
             fontWeight: 700,
-            minHeight: 28,
-            fontSize: '0.78rem',
             px: 2,
             '&:hover': {
               borderColor: ACCENT,

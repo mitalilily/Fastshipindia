@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { BiCheckCircle } from 'react-icons/bi'
 import { CiEdit } from 'react-icons/ci'
 import { useUpdatePickupAddress } from '../../hooks/Pickup/usePickupAddresses'
-import useEmployeePermissions from '../../hooks/User/useEmployeePermissions'
 import type { HydratedPickup } from '../../types/generic.types'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
 import CustomSwitch from '../UI/inputs/CustomSwitch'
@@ -17,7 +16,6 @@ interface IPickupAddressListProps {
   totalCount: number
   page: number
   rowsPerPage: number
-  loading?: boolean
   onPageChange: (page: number) => void
   onRowsPerPageChange: (limit: number) => void
 }
@@ -27,154 +25,110 @@ const PickupAddressesList = ({
   totalCount,
   page,
   rowsPerPage,
-  loading = false,
   onPageChange,
   onRowsPerPageChange,
 }: IPickupAddressListProps) => {
   const { mutate: updatePickupAddress } = useUpdatePickupAddress()
-  const { canCreateWarehouse, canEditWarehouse } = useEmployeePermissions()
   const theme = useTheme()
-  const isXs = useMediaQuery(theme.breakpoints.down('sm'))
-  const isSm = useMediaQuery(theme.breakpoints.between('sm', 'md'))
-  const isMd = useMediaQuery(theme.breakpoints.between('md', 'lg'))
-  const isLgUp = useMediaQuery(theme.breakpoints.up('lg'))
+  const isXs = useMediaQuery(theme.breakpoints.down('sm')) // mobile
+  const isSm = useMediaQuery(theme.breakpoints.between('sm', 'md')) // tablet
+  const isMd = useMediaQuery(theme.breakpoints.between('md', 'lg')) // small desktop
+  const isLgUp = useMediaQuery(theme.breakpoints.up('lg')) // large desktop
 
-  let drawerWidth: string | number = '100%'
-  if (isXs) drawerWidth = '100%'
-  else if (isSm) drawerWidth = '95%'
-  else if (isMd) drawerWidth = '95%'
-  else if (isLgUp) drawerWidth = 1120
-
+  let drawerWidth: string | number = '100%' // default full width
+  if (isXs) drawerWidth = '100%' // mobile full width
+  else if (isSm) drawerWidth = '95%' // tablets
+  else if (isMd) drawerWidth = '95%' // small desktops
+  else if (isLgUp) drawerWidth = 1200 // large desktop fixed width
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedAddress, setSelectedAddress] = useState<HydratedPickup | undefined>(undefined)
 
   const handleMakePrimary = (id: string) => {
-    if (!canEditWarehouse) return
     updatePickupAddress({ id, payload: { isPrimary: true } })
   }
 
   const handleEdit = (address: HydratedPickup) => {
-    if (!canEditWarehouse) return
     setSelectedAddress(address)
     setDrawerOpen(true)
   }
 
   const handleStatusToggle = (id: string, enabled: boolean) => {
-    if (!canEditWarehouse) return
     updatePickupAddress({ id, payload: { isPickupEnabled: enabled } })
   }
 
   const columns: Column<HydratedPickup>[] = [
     {
       id: 'pickup',
-      label: 'Warehouse',
-      minWidth: 250,
+      label: 'Pickup Point',
+      minWidth: 200,
       render: (_, row) => (
-        <Stack spacing={0.55}>
-          <Stack direction="row" alignItems="center" gap={0.8} flexWrap="wrap">
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 800, color: '#111827' }}>
-              {row.pickup?.addressNickname || 'Unnamed warehouse'}
-            </Typography>
-            {row.isPrimary ? (
+        <Box>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography fontWeight={600}>{row?.pickup?.addressNickname}</Typography>
+            {row.isPrimary && (
               <Chip
                 label="Primary"
+                color="success"
                 size="small"
                 icon={<BiCheckCircle style={{ fontSize: 16 }} />}
                 sx={{
-                  fontWeight: 700,
-                  bgcolor: 'rgba(16, 185, 129, 0.12)',
-                  color: '#047857',
-                  '& .MuiChip-icon': { color: '#047857' },
+                  fontWeight: 600,
+                  letterSpacing: 0.3,
+                  borderRadius: '8px',
+                  px: 1,
+                  py: 0.2,
+                  bgcolor: 'success.light',
+                  color: 'success.dark',
+                  '& .MuiChip-icon': {
+                    color: 'success.dark',
+                  },
                 }}
               />
-            ) : null}
-          </Stack>
-          <Typography sx={{ fontSize: '0.76rem', color: '#6B7280' }}>
-            {row.pickup?.contactName || 'No contact'} • {row.pickup?.contactPhone || 'No phone'}
+            )}
+          </Box>
+          <Typography variant="body2" color="text.secondary">
+            {row.pickup?.contactName} - {row.pickup?.contactPhone}
           </Typography>
-        </Stack>
+        </Box>
       ),
     },
     {
       id: 'pickup',
-      label: 'Pickup Address',
-      minWidth: 290,
-      hiddenBelow: 'xl',
+      label: 'Address',
+      minWidth: 250,
       render: (_, row) => (
-        <Stack spacing={0.45}>
-          <Typography sx={{ fontSize: '0.8rem', color: '#111827' }}>
-            {row.pickup?.addressLine1}
-            {row.pickup?.addressLine2 ? `, ${row.pickup.addressLine2}` : ''}
-            {row.pickup?.landmark ? `, ${row.pickup.landmark}` : ''}
-          </Typography>
-          <Typography sx={{ fontSize: '0.74rem', color: '#6B7280' }}>
-            {row.pickup?.city}, {row.pickup?.state} • {row.pickup?.pincode}
-          </Typography>
-        </Stack>
-      ),
-    },
-    {
-      id: 'pickup',
-      label: 'Coverage',
-      minWidth: 170,
-      render: (_, row) => (
-        <Stack spacing={0.35}>
-          <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#111827' }}>
-            {row.pickup?.city || '-'}, {row.pickup?.state || '-'}
-          </Typography>
-          <Typography sx={{ fontSize: '0.74rem', color: '#6B7280' }}>
-            PIN {row.pickup?.pincode || '-'}
-          </Typography>
-        </Stack>
+        <Typography variant="body2" color="text.secondary">
+          {row.pickup?.addressLine1}
+          {row.pickup?.addressLine2 ? `, ${row.pickup?.addressLine2}` : ''}
+          {row.pickup?.landmark ? `, ${row.pickup?.landmark}` : ''}
+          <br />
+          {row.pickup?.city}, {row.pickup?.state} - {row.pickup?.pincode}
+          <br />
+          {row?.pickup?.gstNumber && (
+            <Typography variant="caption">{row?.pickup?.gstNumber}</Typography>
+          )}
+        </Typography>
       ),
     },
     {
       id: 'rto',
-      label: 'RTO Setup',
-      minWidth: 180,
+      label: 'RTO Warehouse name',
+      minWidth: 250,
       render: (_, row) => (
-        <Stack spacing={0.35}>
-          <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#111827' }}>
-            {row.isRTOSame ? 'Same as pickup' : row.rto?.addressNickname || 'Separate RTO'}
-          </Typography>
-          <Typography sx={{ fontSize: '0.74rem', color: '#6B7280' }}>
-            {row.isRTOSame ? 'Returns use pickup origin' : `${row.rto?.city || '-'}, ${row.rto?.state || '-'}`}
-          </Typography>
-        </Stack>
+        <Typography variant="body2" color="text.secondary">
+          {row?.rto?.addressNickname ?? '-'}
+        </Typography>
       ),
     },
     {
       id: 'isPickupEnabled',
       label: 'Status',
-      minWidth: 145,
+      minWidth: 120,
       render: (value, row) => (
-        <Stack spacing={0.7} alignItems="flex-start">
-          <Chip
-            label={value ? 'Active' : 'Inactive'}
-            size="small"
-            sx={{
-              bgcolor: value ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.12)',
-              color: value ? '#047857' : '#4B5563',
-              fontWeight: 700,
-            }}
-          />
-          <CustomSwitch
-            onChange={(event) => handleStatusToggle(row.pickupId, event?.target?.checked)}
-            checked={Boolean(value)}
-            disabled={!canEditWarehouse}
-          />
-        </Stack>
-      ),
-    },
-    {
-      id: 'updatedAt',
-      label: 'Updated',
-      minWidth: 160,
-      hiddenBelow: 'lg',
-      render: (value) => (
-        <Typography sx={{ fontSize: '0.78rem', color: '#6B7280' }}>
-          {moment(String(value)).format('DD MMM YYYY, hh:mm A')}
-        </Typography>
+        <CustomSwitch
+          onChange={(event) => handleStatusToggle(row.pickupId, event.target.checked)}
+          checked={Boolean(value)}
+        />
       ),
     },
     {
@@ -182,27 +136,23 @@ const PickupAddressesList = ({
       label: 'Actions',
       minWidth: 180,
       align: 'right',
-      showCellTooltip: false,
       render: (_, row) => (
-        <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="wrap">
-          {!row.isPrimary ? (
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          {!row.isPrimary && (
             <Button
               size="small"
               variant="outlined"
-              onClick={() => handleMakePrimary(row.pickupId)}
-              disabled={!canEditWarehouse}
-              sx={{ textTransform: 'none', fontSize: '0.76rem' }}
+              onClick={() => handleMakePrimary(row?.pickupId)}
             >
               Make Primary
             </Button>
-          ) : null}
+          )}
           <Button
             size="small"
-            variant="contained"
+            variant="outlined"
+            sx={{ color: '#333369' }}
             onClick={() => handleEdit(row)}
-            disabled={!canEditWarehouse}
             startIcon={<CiEdit />}
-            sx={{ textTransform: 'none', fontSize: '0.76rem', boxShadow: 'none' }}
           >
             Edit
           </Button>
@@ -216,12 +166,10 @@ const PickupAddressesList = ({
       <DataTable<HydratedPickup>
         rows={listData}
         columns={columns}
-        title="Pickup Warehouse Directory"
-        subTitle="Search, activate, promote, and edit warehouse origins without leaving the table."
-        maxHeight={560}
-        loading={loading}
-        loadingLabel="Updating warehouse list..."
-        emptyMessage="No pickup addresses match the current filters."
+        title="Pickup Addresses"
+        subTitle="Manage your pickup locations"
+        maxHeight={500}
+        bgOverlayImg="/images/locations-bg.png"
         pagination
         currentPage={page}
         defaultRowsPerPage={rowsPerPage}
@@ -230,53 +178,129 @@ const PickupAddressesList = ({
         onPageChange={onPageChange}
         onRowsPerPageChange={onRowsPerPageChange}
         renderExpandedRow={(row) => (
-          <Box mt={1} mb={1}>
+          <Box mt={2} mb={2}>
             <Grid container spacing={2}>
+              {/* Pickup Section */}
               <Grid size={12}>
-                <Typography variant="subtitle2" mb={1} fontWeight={800}>
-                  Pickup Origin Details
+                <Typography variant="subtitle2" mb={1} fontWeight={700}>
+                  Pickup Address
                 </Typography>
               </Grid>
 
-              {row.pickup?.contactName ? (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Typography fontSize={12} color="text.secondary">Contact Name</Typography>
-                  <Typography fontWeight={600} fontSize={13}>{row.pickup.contactName}</Typography>
-                </Grid>
-              ) : null}
-              {row.pickup?.contactPhone ? (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Typography fontSize={12} color="text.secondary">Contact Phone</Typography>
-                  <Typography fontWeight={600} fontSize={13}>{row.pickup.contactPhone}</Typography>
-                </Grid>
-              ) : null}
-              {row.pickup?.contactEmail ? (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Typography fontSize={12} color="text.secondary">Contact Email</Typography>
-                  <Typography fontWeight={600} fontSize={13}>{row.pickup.contactEmail}</Typography>
-                </Grid>
-              ) : null}
-              {row.pickup?.addressLine1 ? (
-                <Grid size={{ xs: 12, md: 8 }}>
-                  <Typography fontSize={12} color="text.secondary">Address</Typography>
-                  <Typography fontWeight={600} fontSize={13}>
-                    {row.pickup.addressLine1}
-                    {row.pickup.addressLine2 ? `, ${row.pickup.addressLine2}` : ''}
-                    {row.pickup.landmark ? `, ${row.pickup.landmark}` : ''}
+              {row.pickup?.contactName && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Contact Name
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.contactName}
                   </Typography>
                 </Grid>
-              ) : null}
-              {row.pickup?.gstNumber ? (
-                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Typography fontSize={12} color="text.secondary">GST Number</Typography>
-                  <Typography fontWeight={600} fontSize={13}>{row.pickup.gstNumber}</Typography>
-                </Grid>
-              ) : null}
+              )}
 
-              {row.pickup?.latitude && row.pickup?.longitude ? (
-                <Grid size={{ xs: 12, md: 5 }}>
-                  <Typography fontSize={13} mb={1.2} fontWeight={700}>
-                    Pickup Map
+              {row.pickup?.contactPhone && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Contact Phone
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.contactPhone}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.addressNickname && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Address Nickname
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.addressNickname}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.contactEmail && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Contact Email
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.contactEmail}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.addressLine1 && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Address Line 1
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.addressLine1}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.addressLine2 && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Address Line 2
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.addressLine2}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.city && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    City
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.city}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.state && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    State
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.state}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.country && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Country
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.country}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.pincode && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Pincode
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.pickup.pincode}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.pickup?.latitude && row.pickup?.longitude && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={13} mb={1.2} fontWeight={600}>
+                    Pickup Location
                   </Typography>
                   <MapViewer
                     coords={{
@@ -286,45 +310,148 @@ const PickupAddressesList = ({
                     currentLocation={false}
                     draggable={false}
                     setCoords={() => {}}
-                    height="160px"
-                    width="100%"
+                    height="140px"
+                    width="240px"
                     zoom={15}
                   />
                 </Grid>
-              ) : null}
+              )}
 
-              {row.rto ? (
-                <>
-                  <Grid size={12}>
-                    <Typography variant="subtitle2" mt={2} mb={1} fontWeight={800}>
-                      RTO Details
-                    </Typography>
-                  </Grid>
+              {/* Divider */}
+              {row.rto && (
+                <Grid size={12}>
+                  <Typography variant="subtitle2" mt={2} mb={1} fontWeight={700}>
+                    RTO Address
+                  </Typography>
+                </Grid>
+              )}
 
-                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                    <Typography fontSize={12} color="text.secondary">RTO Warehouse</Typography>
-                    <Typography fontWeight={600} fontSize={13}>
-                      {row.rto.addressNickname || 'Separate RTO'}
-                    </Typography>
-                  </Grid>
-                  {row.rto.contactName ? (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                      <Typography fontSize={12} color="text.secondary">RTO Contact</Typography>
-                      <Typography fontWeight={600} fontSize={13}>{row.rto.contactName}</Typography>
-                    </Grid>
-                  ) : null}
-                  {row.rto.contactPhone ? (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                      <Typography fontSize={12} color="text.secondary">RTO Phone</Typography>
-                      <Typography fontWeight={600} fontSize={13}>{row.rto.contactPhone}</Typography>
-                    </Grid>
-                  ) : null}
-                </>
-              ) : null}
+              {/* Repeat the same block for RTO */}
+              {row.rto?.contactName && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Contact Name
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.contactName}
+                  </Typography>
+                </Grid>
+              )}
 
-              <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-                <Typography fontSize={12} color="text.secondary">Last Updated</Typography>
-                <Typography fontWeight={600} fontSize={13}>
+              {row.rto?.contactPhone && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Contact Phone
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.contactPhone}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.contactEmail && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Contact Email
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.contactEmail}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.addressLine1 && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Address Line 1
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.addressLine1}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.addressLine2 && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Address Line 2
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.addressLine2}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.city && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    City
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.city}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.state && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    State
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.state}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.country && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Country
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.country}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.pincode && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={12} color="text.secondary">
+                    Pincode
+                  </Typography>
+                  <Typography fontWeight={500} fontSize={13}>
+                    {row.rto.pincode}
+                  </Typography>
+                </Grid>
+              )}
+
+              {row.rto?.latitude && row.rto?.longitude && (
+                <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                  <Typography fontSize={13} mb={1.2} fontWeight={600}>
+                    RTO Location
+                  </Typography>
+                  <MapViewer
+                    coords={{
+                      lat: parseFloat(String(row.rto.latitude)),
+                      lng: parseFloat(String(row.rto.longitude)),
+                    }}
+                    currentLocation={false}
+                    draggable={false}
+                    setCoords={() => {}}
+                    height="140px"
+                    width="240px"
+                    zoom={15}
+                  />
+                </Grid>
+              )}
+
+              {/* Last Updated */}
+              <Grid size={{ sm: 6, md: 4, xs: 12 }}>
+                <Typography fontSize={12} color="text.secondary">
+                  Last Updated
+                </Typography>
+                <Typography fontWeight={500} fontSize={13}>
                   {moment(row.updatedAt).format('DD MMM YYYY, hh:mm A')}
                 </Typography>
               </Grid>
@@ -333,9 +460,11 @@ const PickupAddressesList = ({
         )}
       />
 
+      {/* Drawer for editing */}
+
       <CustomDrawer
         width={drawerWidth}
-        open={canCreateWarehouse && canEditWarehouse && drawerOpen}
+        open={drawerOpen}
         onClose={() => {
           setDrawerOpen(false)
           setSelectedAddress(undefined)

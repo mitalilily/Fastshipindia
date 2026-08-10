@@ -1,29 +1,69 @@
-import { Box, ClickAwayListener, Grow, IconButton, Paper, Popper, Typography } from '@mui/material'
-import { useRef, useState, type ReactNode } from 'react'
+import {
+  alpha,
+  Box,
+  ClickAwayListener,
+  Grow,
+  IconButton,
+  Paper,
+  Popper,
+  Stack,
+  Typography,
+} from '@mui/material'
+import { useRef, useState } from 'react'
 import { AiTwotoneThunderbolt } from 'react-icons/ai'
 import { CgCalculator, CgTrack } from 'react-icons/cg'
+import { FaTicket } from 'react-icons/fa6'
+import { MdLockOutline } from 'react-icons/md'
 import { TbTruckDelivery } from 'react-icons/tb'
 import { useNavigate } from 'react-router-dom'
+import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
 
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_INK = '#17171A'
+const INK = '#172033'
+const TEXT = '#243146'
+const TEXT_SECONDARY = '#66758D'
+const ACCENT = '#D66F3D'
+const SKY = '#2E79D3'
+const TEAL = '#1E8B6B'
 
-interface QuickActionsProps {
-  compact?: boolean
-  iconOverride?: ReactNode
-}
-
-const QuickActions = ({ compact = false, iconOverride }: QuickActionsProps) => {
+const QuickActions = () => {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLDivElement | null>(null)
   const navigate = useNavigate()
+  const { isReady, firstIncompleteStep } = useMerchantReadiness()
 
   const actions = [
-    { icon: <CgCalculator size={18} />, name: 'Rate Calculator', path: '/tools/rate-calculator' },
-    { icon: <TbTruckDelivery size={18} />, name: 'Shipping Notification', path: '/settings/shipping-notification' },
-    { icon: <TbTruckDelivery size={18} />, name: 'Quick Add Order', path: '/orders/create' },
-    { icon: <TbTruckDelivery size={18} />, name: 'Add Order', path: '/orders/new' },
-    { icon: <CgTrack size={18} />, name: 'Track Order', path: '/tools/track-order' },
+    {
+      icon: <TbTruckDelivery size={18} />,
+      name: 'Create Shipment',
+      caption: 'Start a new order flow',
+      path: '/orders/create',
+      color: ACCENT,
+      bg: alpha(ACCENT, 0.12),
+    },
+    {
+      icon: <CgCalculator size={18} />,
+      name: 'Rate Calculator',
+      caption: 'Estimate courier charges',
+      path: '/tools/rate_calculator',
+      color: INK,
+      bg: alpha(INK, 0.08),
+    },
+    {
+      icon: <CgTrack size={18} />,
+      name: 'Track AWB',
+      caption: 'Locate a shipment fast',
+      path: '/tools/order_tracking',
+      color: SKY,
+      bg: alpha(SKY, 0.12),
+    },
+    {
+      icon: <FaTicket size={17} />,
+      name: 'Support Ticket',
+      caption: 'Raise an issue or request',
+      path: '/support/tickets',
+      color: TEAL,
+      bg: alpha(TEAL, 0.12),
+    },
   ]
 
   return (
@@ -31,25 +71,23 @@ const QuickActions = ({ compact = false, iconOverride }: QuickActionsProps) => {
       <Box ref={anchorRef} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
         <IconButton
           aria-label="Quick actions"
-          onClick={() => setOpen((current) => !current)}
           sx={{
-            width: compact ? 36 : 40,
-            height: compact ? 36 : 40,
-            borderRadius: 2,
-            bgcolor: 'rgba(0, 0, 0, 0.02)',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            color: BRAND_INK,
-            transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+            width: 42,
+            height: 42,
+            borderRadius: 3,
+            border: `1px solid ${alpha(INK, 0.08)}`,
+            bgcolor: alpha('#FFFFFF', 0.82),
+            color: ACCENT,
+            boxShadow: `0 10px 20px ${alpha(INK, 0.05)}`,
+            transition: 'all 0.2s ease',
             '&:hover': {
-              bgcolor: `rgba(217, 4, 22, 0.08)`,
-              borderColor: `rgba(217, 4, 22, 0.2)`,
-              color: BRAND_PRIMARY,
-              boxShadow: `0 4px 12px rgba(217, 4, 22, 0.12)`,
-              transform: 'translateY(-2px)',
+              bgcolor: alpha(ACCENT, 0.1),
+              borderColor: alpha(ACCENT, 0.24),
+              transform: 'translateY(-1px)',
             },
           }}
         >
-          {iconOverride || <AiTwotoneThunderbolt size={18} />}
+          <AiTwotoneThunderbolt size={18} />
         </IconButton>
       </Box>
 
@@ -59,10 +97,10 @@ const QuickActions = ({ compact = false, iconOverride }: QuickActionsProps) => {
         placement="bottom-end"
         transition
         sx={{ zIndex: 2200 }}
-        modifiers={[{ name: 'offset', options: { offset: [0, 8] } }]}
+        modifiers={[{ name: 'offset', options: { offset: [0, 10] } }]}
       >
         {({ TransitionProps }) => (
-          <Grow {...TransitionProps} timeout={200} style={{ transformOrigin: 'right top' }}>
+          <Grow {...TransitionProps} timeout={200}>
             <Box>
               <ClickAwayListener onClickAway={() => setOpen(false)}>
                 <Paper
@@ -70,71 +108,95 @@ const QuickActions = ({ compact = false, iconOverride }: QuickActionsProps) => {
                   onMouseEnter={() => setOpen(true)}
                   onMouseLeave={() => setOpen(false)}
                   sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 0.4,
-                    minWidth: 240,
-                    p: 0.6,
-                    borderRadius: 3.5,
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
-                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.05)',
-                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.99) 0%, rgba(255, 255, 255, 0.96) 100%)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
+                    minWidth: 280,
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    border: `1px solid ${alpha(INK, 0.08)}`,
+                    background:
+                      'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)',
+                    boxShadow: `0 20px 40px ${alpha(INK, 0.12)}`,
                   }}
                 >
-                  {actions.map((action, index) => {
-                    return (
-                      <Box
-                        key={action.name}
-                        onClick={() => {
-                          navigate(action.path)
-                          setOpen(false)
-                        }}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.0,
-                          px: 1.0,
-                          py: 0.75,
-                          borderRadius: 2.5,
-                          cursor: 'pointer',
-                          color: BRAND_INK,
-                          border: '1px solid transparent',
-                          transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-                          animation: open ? `slideUp 250ms cubic-bezier(0.4, 0, 0.2, 1) ${index * 40}ms both` : 'none',
-                          '@keyframes slideUp': {
-                            from: { opacity: 0, transform: 'translateY(8px)' },
-                            to: { opacity: 1, transform: 'translateY(0)' },
-                          },
-                          '&:hover': {
-                            bgcolor: `rgba(217, 4, 22, 0.08)`,
-                            borderColor: `rgba(217, 4, 22, 0.2)`,
-                            transform: 'translateX(2px)',
-                          },
-                        }}
-                      >
+                  <Box
+                    sx={{
+                      px: 1.5,
+                      py: 1.2,
+                      borderBottom: `1px solid ${alpha(INK, 0.06)}`,
+                      bgcolor: alpha(INK, 0.02),
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.14em',
+                        color: alpha(INK, 0.5),
+                      }}
+                    >
+                      Quick Actions
+                    </Typography>
+                    <Typography sx={{ mt: 0.35, fontSize: '0.82rem', fontWeight: 600, color: TEXT_SECONDARY }}>
+                      Shortcuts for common shipping workflows
+                    </Typography>
+                  </Box>
+
+                  <Stack spacing={0.45} sx={{ p: 1 }}>
+                    {actions.map((action) => {
+                      const locked = action.path === '/orders/create' && !isReady
+
+                      return (
                         <Box
+                          key={action.name}
+                          onClick={() => {
+                            navigate(locked ? firstIncompleteStep?.path || '/home' : action.path)
+                            setOpen(false)
+                          }}
                           sx={{
-                            width: 32,
-                            height: 32,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.2,
+                            px: 1.2,
+                            py: 1.05,
                             borderRadius: 2,
-                            display: 'grid',
-                            placeItems: 'center',
-                            bgcolor: `rgba(217, 4, 22, 0.08)`,
-                            color: BRAND_INK,
-                            transition: 'all 200ms ease',
-                            flexShrink: 0,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              bgcolor: alpha(action.color, 0.08),
+                            },
                           }}
                         >
-                          {action.icon}
+                          <Box
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: locked ? alpha(INK, 0.06) : action.bg,
+                              color: locked ? alpha(INK, 0.34) : action.color,
+                              border: `1px solid ${locked ? alpha(INK, 0.08) : alpha(action.color, 0.12)}`,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {action.icon}
+                          </Box>
+
+                          <Stack spacing={0.12} sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography sx={{ fontSize: '0.86rem', fontWeight: 800, color: TEXT }}>
+                              {action.name}
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.76rem', fontWeight: 600, color: TEXT_SECONDARY }} noWrap>
+                              {locked ? 'Complete merchant setup to unlock' : action.caption}
+                            </Typography>
+                          </Stack>
+
+                          {locked ? <MdLockOutline size={15} color={alpha(INK, 0.4)} /> : null}
                         </Box>
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, flex: 1 }}>
-                          {action.name}
-                        </Typography>
-                      </Box>
-                    )
-                  })}
+                      )
+                    })}
+                  </Stack>
                 </Paper>
               </ClickAwayListener>
             </Box>

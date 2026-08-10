@@ -13,7 +13,6 @@ import { useEffect, useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { usePresignedDownloadUrls } from '../../hooks/Uploads/usePresignedDownloadUrls'
 import { useInvoicePreferences } from '../../hooks/User/useInvoicePreferences'
-import { extractGSTDetails } from '../../utils/gstin'
 import PageHeading from '../UI/heading/PageHeading'
 import CustomInput from '../UI/inputs/CustomInput'
 import CustomSelect from '../UI/inputs/CustomSelect'
@@ -43,13 +42,10 @@ export default function InvoicePreferences() {
 
   const {
     handleSubmit,
-    clearErrors,
     control,
-    setError,
     setValue,
     reset,
-    watch,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = useForm<InvoicePreferencesForm>({
     defaultValues: {
       prefix: 'INV',
@@ -69,7 +65,6 @@ export default function InvoicePreferences() {
       termsAndConditions: '',
     },
   })
-  const gstNumberValue = watch('gstNumber')
 
   // Collect keys for logo & signature
   const fileKeys = useMemo(() => {
@@ -104,37 +99,6 @@ export default function InvoicePreferences() {
       reset(preferences)
     }
   }, [preferences, reset])
-
-  useEffect(() => {
-    const normalizedGstin = String(gstNumberValue || '').trim().toUpperCase()
-
-    if (!normalizedGstin) {
-      clearErrors(['gstNumber', 'stateCode'])
-      return
-    }
-
-    const timeout = window.setTimeout(() => {
-      const gstDetails = extractGSTDetails(normalizedGstin)
-
-      setValue('gstNumber', normalizedGstin, { shouldDirty: true })
-
-      if (!gstDetails.isValid) {
-        setError('gstNumber', { type: 'manual', message: gstDetails.error })
-        if (gstDetails.error === 'Invalid State Code') {
-          setError('stateCode', { type: 'manual', message: gstDetails.error })
-        } else {
-          clearErrors('stateCode')
-        }
-        return
-      }
-
-      clearErrors(['gstNumber', 'stateCode'])
-      setValue('panNumber', gstDetails.pan, { shouldDirty: true, shouldValidate: true })
-      setValue('stateCode', gstDetails.stateCode, { shouldDirty: true, shouldValidate: true })
-    }, 350)
-
-    return () => window.clearTimeout(timeout)
-  }, [clearErrors, gstNumberValue, setError, setValue])
 
   const onSubmit = async (data: InvoicePreferencesForm) => {
     try {
@@ -292,29 +256,14 @@ export default function InvoicePreferences() {
                         name="gstNumber"
                         control={control}
                         render={({ field }) => (
-                          <CustomInput
-                            {...field}
-                            label="GST Number"
-                            width="100%"
-                            value={field.value ?? ''}
-                            onChange={(event) => field.onChange(event.target.value.toUpperCase())}
-                            helperText={errors.gstNumber?.message || 'Enter a valid 15-character GSTIN'}
-                            error={!!errors.gstNumber}
-                          />
+                          <CustomInput {...field} label="GST Number" width="100%" />
                         )}
                       />
                       <Controller
                         name="panNumber"
                         control={control}
                         render={({ field }) => (
-                          <CustomInput
-                            {...field}
-                            label="PAN Number (Auto-filled from GST)"
-                            width="100%"
-                            value={field.value ?? ''}
-                            disabled
-                            helperText="Automatically extracted from GSTIN"
-                          />
+                          <CustomInput {...field} label="PAN Number" width="100%" />
                         )}
                       />
                     </Stack>
@@ -335,14 +284,7 @@ export default function InvoicePreferences() {
                       name="stateCode"
                       control={control}
                       render={({ field }) => (
-                        <CustomInput
-                          {...field}
-                          label="State Code (Auto-filled from GST)"
-                          value={field.value ?? ''}
-                          disabled
-                          helperText={errors.stateCode?.message || 'Automatically extracted from GSTIN'}
-                          error={!!errors.stateCode}
-                        />
+                        <CustomInput {...field} label="State Code" helperText="Use vendor state code (e.g., KA)" />
                       )}
                     />
                   </Stack>

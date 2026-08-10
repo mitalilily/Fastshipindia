@@ -15,12 +15,22 @@ export async function submitNdrReattempt(payload: {
   orderId?: string
   nextAttemptDate: string
   comments?: string
+  attachmentKey?: string
+  attachmentName?: string
+  attachmentMime?: string
 }) {
   const res = await axiosInstance.post(`/ndr/reattempt`, payload)
   return res.data
 }
 
-export async function submitNdrChangePhone(payload: { awb?: string; orderId?: string; phone: string }) {
+export async function submitNdrChangePhone(payload: {
+  awb?: string
+  orderId?: string
+  phone: string
+  attachmentKey?: string
+  attachmentName?: string
+  attachmentMime?: string
+}) {
   const res = await axiosInstance.post(`/ndr/change-phone`, payload)
   return res.data
 }
@@ -32,6 +42,9 @@ export async function submitNdrChangeAddress(payload: {
   address_1: string
   address_2?: string
   pincode?: string
+  attachmentKey?: string
+  attachmentName?: string
+  attachmentMime?: string
 }) {
   const res = await axiosInstance.post(`/ndr/change-address`, payload)
   return res.data
@@ -39,5 +52,10 @@ export async function submitNdrChangeAddress(payload: {
 
 export async function fetchMyNdrTimeline(params: { awb?: string; orderId?: string }) {
   const res = await axiosInstance.get(`/ndr/timeline`, { params })
+  return res.data
+}
+
+export async function fetchAdminNdrTimeline(params: { awb?: string; orderId?: string }) {
+  const res = await axiosInstance.get(`/admin/ndr/timeline`, { params })
   return res.data
 }

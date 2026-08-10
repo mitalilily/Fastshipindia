@@ -1,7 +1,9 @@
+import type React from 'react'
 import { alpha, Box, Card, CardContent, Stack, Typography } from '@mui/material'
 import { MdKeyboardReturn, MdNotificationsActive } from 'react-icons/md'
 import { TbAlertTriangle, TbInvoice } from 'react-icons/tb'
 import { useNavigate } from 'react-router-dom'
+import { dashboardCardSx, dashboardIconSx, dashboardPalette } from './dashboardStyles'
 
 interface ActionItemsCardProps {
   actions: {
@@ -12,9 +14,6 @@ interface ActionItemsCardProps {
   }
   formatCurrency: (amount: number) => string
 }
-
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_ACCENT = '#ED1C24'
 
 export default function ActionItemsCard({ actions, formatCurrency }: ActionItemsCardProps) {
   const navigate = useNavigate()
@@ -27,8 +26,7 @@ export default function ActionItemsCard({ actions, formatCurrency }: ActionItems
           title: `${actions.ndrCount} NDR Pending`,
           subtitle: 'Review failed attempts',
           icon: <TbAlertTriangle size={18} />,
-          color: '#b42318',
-          bg: alpha('#b42318', 0.08),
+          color: dashboardPalette.red,
           path: '/ops/ndr',
         }
       : null,
@@ -37,18 +35,16 @@ export default function ActionItemsCard({ actions, formatCurrency }: ActionItems
           title: `${actions.rtoCount} RTO Cases`,
           subtitle: 'Manage return flow',
           icon: <MdKeyboardReturn size={18} />,
-          color: '#8a3e00',
-          bg: alpha(BRAND_ACCENT, 0.12),
+          color: dashboardPalette.amber,
           path: '/ops/rto',
         }
       : null,
     actions.pendingInvoices > 0
       ? {
-          title: `${actions.pendingInvoices} Invoice Pending`,
-          subtitle: `Amount ${formatCurrency(actions.pendingInvoiceAmount || 0)}`,
+          title: `${actions.pendingInvoices} Invoices`,
+          subtitle: `Due: ${formatCurrency(actions.pendingInvoiceAmount || 0)}`,
           icon: <TbInvoice size={18} />,
-          color: BRAND_PRIMARY,
-          bg: alpha(BRAND_PRIMARY, 0.08),
+          color: dashboardPalette.blue,
           path: '/billing/invoice_management',
         }
       : null,
@@ -57,41 +53,54 @@ export default function ActionItemsCard({ actions, formatCurrency }: ActionItems
     subtitle: string
     icon: React.ReactNode
     color: string
-    bg: string
     path: string
   }>
 
   return (
-    <Card sx={{ height: '100%', borderRadius: 2.6, border: `1px solid ${alpha(BRAND_PRIMARY, 0.14)}`, boxShadow: `0 8px 20px ${alpha(BRAND_PRIMARY, 0.08)}` }}>
-      <CardContent sx={{ p: 1.8 }}>
-        <Stack direction="row" spacing={0.9} alignItems="center" mb={1.35}>
-          <Box sx={{ width: 30, height: 30, borderRadius: 1.5, display: 'grid', placeItems: 'center', bgcolor: alpha(BRAND_PRIMARY, 0.12), color: BRAND_PRIMARY }}>
-            <MdNotificationsActive size={18} />
+    <Card sx={dashboardCardSx}>
+      <CardContent sx={{ p: 2.4 }}>
+        <Stack direction="row" spacing={1.2} alignItems="center" mb={2.2}>
+          <Box sx={dashboardIconSx(dashboardPalette.red)}>
+            <MdNotificationsActive size={20} />
           </Box>
-          <Typography sx={{ fontSize: '0.94rem', fontWeight: 800, color: '#17171A' }}>Action Required</Typography>
+          <Box>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+              Action Required
+            </Typography>
+            <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
+              Queues waiting on you
+            </Typography>
+          </Box>
         </Stack>
 
-        <Stack spacing={0.85}>
+        <Stack spacing={1.3}>
           {items.map((item) => (
             <Box
               key={item.title}
               onClick={() => navigate(item.path)}
               sx={{
-                p: 0.95,
-                borderRadius: 2,
-                border: `1px solid ${alpha(item.color, 0.28)}`,
-                bgcolor: item.bg,
+                p: 1.45,
+                borderRadius: '12px',
+                border: `1px solid ${alpha(item.color, 0.2)}`,
+                bgcolor: alpha(item.color, 0.055),
                 cursor: 'pointer',
-                transition: 'all .2s ease',
-                '&:hover': { transform: 'translateX(3px)' },
+                transition: 'background-color .18s ease, border-color .18s ease',
+                '&:hover': {
+                  bgcolor: alpha(item.color, 0.085),
+                  borderColor: alpha(item.color, 0.36),
+                },
               }}
             >
-              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography sx={{ fontSize: '12.5px', color: '#17171A', fontWeight: 700 }}>{item.title}</Typography>
-                  <Typography sx={{ fontSize: '11.5px', color: '#496189' }}>{item.subtitle}</Typography>
+              <Stack direction="row" spacing={1.2} alignItems="center" justifyContent="space-between">
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '0.84rem', color: dashboardPalette.ink, fontWeight: 800 }}>
+                    {item.title}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: dashboardPalette.muted, fontWeight: 500, mt: 0.2 }}>
+                    {item.subtitle}
+                  </Typography>
                 </Box>
-                <Box sx={{ color: item.color }}>{item.icon}</Box>
+                <Box sx={{ color: item.color, display: 'flex', flex: '0 0 auto' }}>{item.icon}</Box>
               </Stack>
             </Box>
           ))}

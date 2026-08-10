@@ -1,20 +1,61 @@
-import { alpha, Box, Skeleton, Stack, Typography } from '@mui/material'
+import { Box, Skeleton } from '@mui/material'
 import { useState } from 'react'
-import { BRAND } from '../../../../config/brand'
-import { useAuth } from '../../../../context/auth/AuthContext'
+import type { CompanyType } from '../../../../types/generic.types'
+import type { KycDetails } from '../../../../types/user.types'
 import { useUserKyc } from '../../../../hooks/User/Kyc/UseKyc'
 import { useUserProfile } from '../../../../hooks/User/useUserProfile'
+import { requiredKycDetails } from '../../../../utils/constants'
 import KycDetailsCard from './KycDetailsCard'
 import KYCVerificationStep from './KycVerificationSection'
 
+const resolveRequiredFields = (kyc?: Partial<KycDetails> | null) => {
+  if (!kyc?.structure) return []
+
+  const config = requiredKycDetails[kyc.structure]
+
+  if (
+    kyc.structure === 'company' &&
+    kyc.companyType &&
+    typeof config === 'object' &&
+    !Array.isArray(config)
+  ) {
+    return config[kyc.companyType as CompanyType] ?? []
+  }
+
+  return Array.isArray(config) ? config : []
+}
+
+const hasValue = (value: unknown) =>
+  typeof value === 'string' ? value.trim().length > 0 : Boolean(value)
+
+const isKycSubmissionComplete = (kyc?: Partial<KycDetails> | null) => {
+  if (!kyc?.structure || kyc.status === 'rejected') return false
+
+  const requiredFields = resolveRequiredFields(kyc)
+
+  if (!hasValue(kyc.selfieUrl)) return false
+
+  return requiredFields.every((field) => {
+    if (
+      (field === 'aadhaarFrontUrl' || field === 'aadhaarBackUrl') &&
+      !hasValue(kyc.aadhaarFrontUrl) &&
+      !hasValue(kyc.aadhaarBackUrl) &&
+      hasValue(kyc.aadhaarUrl)
+    ) {
+      return true
+    }
+
+    return hasValue(kyc[field])
+  })
+}
+
 const KycSection = () => {
   // Always fetch the authenticated user's profile inside protected routes
-  const { isAuthenticated, user } = useAuth()
-  const { isLoading } = useUserProfile(isAuthenticated, user?.id)
+  const { isLoading } = useUserProfile(true)
   const [editingKyc, setEditingKyc] = useState(false)
   const { data: kycData, isLoading: loadingKyc } = useUserKyc()
 
-  const hasKycDetails = !!kycData?.kyc && Object.keys(kycData.kyc).length > 0
+  const hasKycDetails = isKycSubmissionComplete(kycData?.kyc)
 
   // Once KYC is submitted, always show the details card (even if status is "pending"),
   // and only show the multi-step form when there are no details yet or when explicitly editing.
@@ -41,43 +82,22 @@ const KycSection = () => {
   }
 
   return (
-    <Stack spacing={2.25} width="100%">
-      <Box
-        sx={{
-          p: 2,
-          border: `1px solid ${alpha(BRAND.colors.teal, 0.14)}`,
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,251,252,0.98) 100%)',
-        }}
-      >
-        <Typography sx={{ fontSize: '0.72rem', letterSpacing: '0.16em', fontWeight: 800, color: BRAND.colors.orange, textTransform: 'uppercase' }}>
-          Compliance review
-        </Typography>
-        <Typography sx={{ fontSize: '1.15rem', fontWeight: 800, color: BRAND.colors.ink }}>
-          KYC verification and document readiness
-        </Typography>
-        <Typography sx={{ fontSize: '0.92rem', color: BRAND.colors.muted, mt: 0.35 }}>
-          Submit, review, and maintain verification documents required for payouts and account access.
-        </Typography>
-      </Box>
-
-      <Box display="flex" justifyContent="center" width="100%">
-        {showDetailsCard ? (
-          <KycDetailsCard
-            kyc={kycData?.kyc ?? {}}
-            isLoading={loadingKyc}
-            onEdit={() => setEditingKyc(true)}
-          />
-        ) : (
-          <KYCVerificationStep
-            existingKyc={kycData?.kyc ?? {}}
-            editing={editingKyc}
-            onCancelEdit={() => setEditingKyc(false)}
-            onComplete={() => setEditingKyc(false)}
-          />
-        )}
-      </Box>
-    </Stack>
+    <Box display="flex" justifyContent="center" width="100%">
+      {showDetailsCard ? (
+        <KycDetailsCard
+          kyc={kycData?.kyc ?? {}}
+          isLoading={loadingKyc}
+          onEdit={() => setEditingKyc(true)}
+        />
+      ) : (
+        <KYCVerificationStep
+          existingKyc={kycData?.kyc ?? {}}
+          editing={editingKyc}
+          onCancelEdit={() => setEditingKyc(false)}
+          onComplete={() => setEditingKyc(false)}
+        />
+      )}
+    </Box>
   )
 }
 

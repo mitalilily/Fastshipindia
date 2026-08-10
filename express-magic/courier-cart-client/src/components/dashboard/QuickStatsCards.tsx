@@ -1,12 +1,12 @@
-import { alpha, Box, Card, CardContent, Grid, Stack, Typography } from '@mui/material'
+import { Box, Card, CardContent, Grid, Stack, Typography } from '@mui/material'
 import {
   MdAccountBalance,
-  MdShoppingCart,
+  MdAccountBalanceWallet,
   MdLocalShipping,
-  MdTrendingDown,
-  MdTrendingUp,
+  MdShoppingCart,
 } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
+import { dashboardCardSx, dashboardIconSx, dashboardPalette } from './dashboardStyles'
 
 interface QuickStatsCardsProps {
   todayOps: {
@@ -16,6 +16,7 @@ interface QuickStatsCardsProps {
     delivered: number
   }
   financial: {
+    walletBalance: number
     codRemittanceDue: number
   }
   trends: {
@@ -24,103 +25,98 @@ interface QuickStatsCardsProps {
   formatCurrency: (amount: number) => string
 }
 
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_ACCENT = '#ED1C24'
-const BRAND_DARK = '#041A38'
-
 export default function QuickStatsCards({
   todayOps,
   financial,
-  trends,
   formatCurrency,
 }: QuickStatsCardsProps) {
   const navigate = useNavigate()
 
   const stats = [
     {
-      title: 'Orders Today',
+      title: 'Active Shipments',
       value: todayOps.orders?.toLocaleString() || '0',
-      subtitle: `${todayOps.delivered || 0} delivered`,
-      icon: <MdShoppingCart size={20} />,
-      color: BRAND_PRIMARY,
+      subtitle: `${todayOps.delivered || 0} delivered today`,
+      icon: <MdShoppingCart size={19} />,
+      color: dashboardPalette.blue,
       onClick: () => navigate('/orders/list'),
     },
     {
       title: 'In Transit',
       value: todayOps.inTransit?.toLocaleString() || '0',
-      subtitle: `${todayOps.pending || 0} pending`,
-      icon: <MdLocalShipping size={20} />,
-      color: BRAND_ACCENT,
+      subtitle: `${todayOps.pending || 0} pending pickup`,
+      icon: <MdLocalShipping size={19} />,
+      color: '#0F766E',
       onClick: () => navigate('/orders/list'),
     },
     {
-      title: 'COD Due',
+      title: 'Wallet Funds',
+      value: formatCurrency(financial.walletBalance || 0),
+      subtitle: financial.walletBalance < 500 ? 'Recharge required' : 'Sufficient funds',
+      icon: <MdAccountBalanceWallet size={19} />,
+      color: dashboardPalette.amber,
+      onClick: () => navigate('/billing/wallet_transactions'),
+    },
+    {
+      title: 'COD Remittance',
       value: formatCurrency(financial.codRemittanceDue || 0),
-      subtitle: 'Pending remittance',
-      icon: <MdAccountBalance size={20} />,
-      color: BRAND_DARK,
+      subtitle: 'Awaiting bank transfer',
+      icon: <MdAccountBalance size={19} />,
+      color: '#475569',
       onClick: () => navigate('/cod-remittance'),
     },
   ]
 
   return (
-    <Grid container spacing={1.8} mb={2.2}>
-      {stats.map((stat, index) => (
-        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
+    <Grid container spacing={2} mb={2.5}>
+      {stats.map((stat) => (
+        <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
           <Card
             onClick={stat.onClick}
             sx={{
-              borderRadius: 4,
-              border: `1px solid ${alpha(BRAND_PRIMARY, 0.12)}`,
-              background:
-                'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(238,244,251,0.98) 100%)',
-              boxShadow: '0 18px 34px rgba(6, 26, 51, 0.07)',
+              ...dashboardCardSx,
               cursor: 'pointer',
-              transition: 'all .2s ease',
+              transition: 'border-color .18s ease, box-shadow .18s ease',
               '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: `0 22px 38px ${alpha(BRAND_PRIMARY, 0.12)}`,
-                borderColor: alpha(stat.color, 0.35),
+                borderColor: stat.color,
+                boxShadow: '0 16px 36px rgba(15,23,42,0.09)',
               },
             }}
           >
-            <CardContent sx={{ p: 2 }}>
-              <Stack spacing={1}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography sx={{ fontSize: '11px', fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', color: alpha('#1B1B1F', 0.7) }}>
+            <CardContent sx={{ p: 2.2 }}>
+              <Stack spacing={1.6}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Typography sx={{ fontSize: '0.84rem', fontWeight: 800, color: dashboardPalette.ink }}>
                     {stat.title}
                   </Typography>
-                  <Box
+                  <Box sx={dashboardIconSx(stat.color)}>{stat.icon}</Box>
+                </Stack>
+
+                <Box>
+                  <Typography
                     sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 1.6,
-                      display: 'grid',
-                      placeItems: 'center',
-                      color: stat.color,
-                      bgcolor: alpha(stat.color, 0.12),
+                      fontSize: { xs: '1.45rem', md: '1.65rem' },
+                      fontWeight: 900,
+                      color: dashboardPalette.ink,
+                      lineHeight: 1.05,
                     }}
                   >
-                    {stat.icon}
-                  </Box>
-                </Stack>
-
-                <Typography sx={{ fontSize: '1.22rem', fontWeight: 800, color: BRAND_DARK, lineHeight: 1.2 }}>
-                  {stat.value}
-                </Typography>
-
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography sx={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>{stat.subtitle}</Typography>
-                  {index === 0 && trends.ordersGrowth !== 0 && (
-                    <Stack direction="row" spacing={0.3} alignItems="center" sx={{ color: trends.ordersGrowth > 0 ? BRAND_PRIMARY : '#b42318' }}>
-                      {trends.ordersGrowth > 0 ? <MdTrendingUp size={13} /> : <MdTrendingDown size={13} />}
-                      <Typography sx={{ fontSize: '11px', fontWeight: 700 }}>
-                        {trends.ordersGrowth > 0 ? '+' : ''}
-                        {trends.ordersGrowth}%
-                      </Typography>
-                    </Stack>
-                  )}
-                </Stack>
+                    {stat.value}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color:
+                        stat.subtitle.includes('Recharge') || stat.subtitle.includes('pending')
+                          ? dashboardPalette.red
+                          : dashboardPalette.green,
+                      fontWeight: 700,
+                      fontSize: '0.76rem',
+                      mt: 0.6,
+                    }}
+                  >
+                    {stat.subtitle}
+                  </Typography>
+                </Box>
               </Stack>
             </CardContent>
           </Card>

@@ -14,6 +14,7 @@ import {
 import moment from 'moment'
 import {
   MdAccountBalance,
+  MdAccountBox,
   MdBadge,
   MdBusiness,
   MdDescription,
@@ -33,22 +34,23 @@ import { BRAND_GRADIENT } from '../UserProfileForm'
 import type { AdditionalKYCForm } from './AdditionalInfoStep'
 
 const iconMap: Record<string, JSX.Element> = {
-  gstin: <MdBadge />,
-  panNumber: <MdBadge />,
   panCardUrl: <MdBadge />,
   aadhaarUrl: <MdVerifiedUser />,
+  aadhaarFrontUrl: <MdVerifiedUser />,
+  aadhaarBackUrl: <MdVerifiedUser />,
   cancelledChequeUrl: <MdAccountBalance />,
   partnershipDeedUrl: <MdGavel />,
   boardResolutionUrl: <MdDescription />,
+  selfieUrl: <MdAccountBox />,
   cin: <MdBusiness />,
 }
 
 const getLabel = (key: string) => {
   const map: Record<string, string> = {
-    gstin: 'GST Number',
-    panNumber: 'PAN Number',
     panCardUrl: 'PAN Card',
     aadhaarUrl: 'Aadhaar Card',
+    aadhaarFrontUrl: 'Aadhaar Front Side',
+    aadhaarBackUrl: 'Aadhaar Back Side',
     businessPanUrl: 'Business PAN',
     llpAgreementUrl: 'LLP Agreement',
     gstCertificateUrl: 'GST Certificate',
@@ -57,6 +59,7 @@ const getLabel = (key: string) => {
     partnershipDeedUrl: 'Partnership Deed',
     boardResolutionUrl: 'Board Resolution',
     structure: 'Business Structure',
+    selfieUrl: 'Selfie',
     cin: 'CIN',
     createdAt: 'Submitted On',
     updatedAt: 'Last Updated',
@@ -100,11 +103,13 @@ const StatusChip = ({ status }: { status?: string }) => {
 const PreviewBlock = ({
   labelKey,
   url,
+  mime,
   loading,
   kyc,
 }: {
   labelKey: string
   url?: string | null
+  mime?: string | null
   loading?: boolean
   kyc?: KycDetails
 }) => {
@@ -112,7 +117,7 @@ const PreviewBlock = ({
   const icon = iconMap[labelKey] || <MdImage />
   const status = getStatus(kyc, labelKey)
   const rejectionReason = getRejection(kyc, labelKey)
-  const mimeType = url ? getMimeType(url) : ''
+  const mimeType = mime || (url ? getMimeType(url) : '')
   const isPdf = mimeType.includes('pdf')
 
   if (loading) {
@@ -132,7 +137,7 @@ const PreviewBlock = ({
     <Grid size={{ md: 4, sm: 12 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
         <Box display="flex" alignItems="center" gap={1}>
-          <Box sx={{ color: '#062A5B', display: 'flex', alignItems: 'center' }}>{icon}</Box>
+          <Box sx={{ color: '#333369', display: 'flex', alignItems: 'center' }}>{icon}</Box>
           <Typography variant="subtitle2" fontWeight={700} color="#1A1A1A">
             {label}
           </Typography>
@@ -282,21 +287,18 @@ const KycDetailsCard = ({
   const structure = kyc?.structure ?? 'company'
   const companyType = kyc?.companyType
   const config = requiredKycDetails[structure]
-  const configuredFields =
+  const allFields =
     structure === 'company' && typeof config === 'object' && !Array.isArray(config)
       ? config[companyType as CompanyType] ?? []
       : Array.isArray(config)
       ? config
       : []
-  const optionalFieldsToShow: (keyof AdditionalKYCForm)[] =
-    structure === 'individual' && kyc?.gstin ? ['gstin'] : []
-  const allFields = [
-    ...configuredFields,
-    ...optionalFieldsToShow.filter((field) => !configuredFields.includes(field)),
-  ]
   const isFileField = (f: keyof AdditionalKYCForm) =>
     [
       'aadhaarUrl',
+      'aadhaarFrontUrl',
+      'aadhaarBackUrl',
+      'selfieUrl',
       'panCardUrl',
       'partnershipDeedUrl',
       'boardResolutionUrl',
@@ -307,14 +309,19 @@ const KycDetailsCard = ({
       'gstCertificateUrl',
     ].includes(f)
 
-  const fileFieldsToShow = allFields.filter(isFileField)
+  const legacyAadhaarFields =
+    !kyc?.aadhaarFrontUrl && !kyc?.aadhaarBackUrl && kyc?.aadhaarUrl
+      ? (['aadhaarUrl'] as (keyof AdditionalKYCForm)[])
+      : []
+  const fileFieldsToShow = Array.from(new Set([...legacyAadhaarFields, ...allFields.filter(isFileField)]))
   const textFieldsToShow = allFields.filter(
     (f: keyof AdditionalKYCForm) => !isFileField(f) && f !== 'cin',
   )
 
-  const keys = fileFieldsToShow
-    .map((f: keyof AdditionalKYCForm) => kyc?.[f as keyof typeof kyc])
-    .filter(Boolean) as string[]
+  const keys = [
+    kyc?.selfieUrl,
+    ...fileFieldsToShow.map((f: keyof AdditionalKYCForm) => kyc?.[f as keyof typeof kyc]),
+  ].filter(Boolean) as string[]
 
   const { data: presignedUrls } = usePresignedDownloadUrls({
     keys,
@@ -328,14 +335,16 @@ const KycDetailsCard = ({
 
   if (presignedUrls && Array.isArray(presignedUrls)) {
     let index = 0
+    if (kyc?.selfieUrl) {
+      urlMap['selfieUrl'] = presignedUrls[index]
+      mimeMap['selfieUrl'] = kyc.selfieMime || ''
+      index++
+    }
     for (const key of fileFieldsToShow) {
       if (kyc?.[key]) {
-        const signedUrl = presignedUrls[index]
-        if (signedUrl) {
-          urlMap[key] = signedUrl
-          const mimeKey = `${key.replace('Url', '')}Mime` as keyof KycDetails
-          mimeMap[key] = (kyc[mimeKey] as string) || ''
-        }
+        urlMap[key] = presignedUrls[index]
+        const mimeKey = `${key.replace('Url', '')}Mime` as keyof KycDetails
+        mimeMap[key] = (kyc[mimeKey] as string) || ''
         index++
       }
     }
@@ -374,7 +383,7 @@ const KycDetailsCard = ({
           mb={2}
         >
           <Box display="flex" alignItems="center" gap={2}>
-            <Typography variant="h6" fontWeight={700} color="#062A5B">
+            <Typography variant="h6" fontWeight={700} color="#333369">
               {loading ? <Skeleton width={120} /> : 'KYC Details'}
             </Typography>
             {!loading && (
@@ -393,7 +402,7 @@ const KycDetailsCard = ({
           fontWeight={700}
           sx={{
             mb: 2.5,
-            color: '#062A5B',
+            color: '#333369',
             display: 'flex',
             alignItems: 'center',
             gap: 1,
@@ -413,6 +422,13 @@ const KycDetailsCard = ({
           {allFields.includes('cin') && (
             <LabelValue labelKey="cin" value={kyc?.cin} loading={loading} />
           )}
+          <PreviewBlock
+            labelKey="selfieUrl"
+            url={urlMap['selfieUrl']}
+            mime={mimeMap['selfieUrl']}
+            loading={loading}
+            kyc={kyc}
+          />
         </Grid>
 
         {fileFieldsToShow.length > 0 && (
@@ -423,7 +439,7 @@ const KycDetailsCard = ({
               fontWeight={700}
               sx={{
                 mb: 2.5,
-                color: '#062A5B',
+                color: '#333369',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
@@ -444,6 +460,7 @@ const KycDetailsCard = ({
                   key={field}
                   labelKey={field}
                   url={urlMap[field]}
+                  mime={mimeMap[field]}
                   loading={loading}
                   kyc={kyc}
                 />
@@ -460,7 +477,7 @@ const KycDetailsCard = ({
               fontWeight={700}
               sx={{
                 mb: 2.5,
-                color: '#062A5B',
+                color: '#333369',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,

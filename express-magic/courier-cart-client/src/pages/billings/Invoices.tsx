@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Alert, Button, Chip, Divider, IconButton, Stack, Typography, Box } from '@mui/material'
+import { Alert, Button, Chip, Divider, IconButton, Stack, Typography } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { FaCheckCircle, FaExclamationTriangle, FaFileCsv, FaFilePdf } from 'react-icons/fa'
@@ -7,7 +7,6 @@ import { FaListUl, FaReceipt } from 'react-icons/fa6'
 import type { BillingInvoice, InvoiceStatement } from '../../api/invoice.api'
 import { getInvoiceStatement } from '../../api/invoice.api'
 import { FilterBar } from '../../components/FilterBar'
-import ListPageLayout from '../../components/UI/layout/ListPageLayout'
 import CustomInput from '../../components/UI/inputs/CustomInput'
 import CustomDialog from '../../components/UI/modal/CustomModal'
 import type { Column } from '../../components/UI/table/DataTable'
@@ -117,7 +116,7 @@ const Invoices = () => {
         // If it's not already a URL, get presigned URL first
         if (!isHttpUrl(urlOrKey)) {
           const result = await presignMutation.mutateAsync({ keys: [urlOrKey] })
-          downloadUrl = result?.[0] || ''
+          downloadUrl = result?.[0]
           if (!downloadUrl) throw new Error('No signed URL returned')
         }
 
@@ -375,8 +374,22 @@ const Invoices = () => {
     }
   }
 
-  const controls = (
-    <Box sx={{ px: 2 }}>
+  return (
+    <Stack spacing={2}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="h5" fontWeight={600} color="primary.contrastText">
+          Invoices
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setIsGenerateModalOpen(true)}
+          startIcon={<FaFilePdf />}
+        >
+          Generate Invoice
+        </Button>
+      </Stack>
+
       <FilterBar
         fields={[
           {
@@ -395,44 +408,24 @@ const Invoices = () => {
           setFilters(f)
           setPage(1)
         }}
-        mode="button"
-        buttonLabel="Filters"
         appliedCount={Object.keys(filters).filter((k) => filters[k as keyof typeof filters]).length}
       />
-    </Box>
-  )
 
-  const table = isLoading ? (
-    <TableSkeleton />
-  ) : (
-    <DataTable
-      title="All Invoices"
-      rows={(data?.data || []).map((inv) => ({ ...inv }))}
-      columns={invoiceColumns}
-      pagination
-      currentPage={page}
-      onPageChange={(newPage) => setPage(newPage + 1)}
-      onRowsPerPageChange={(val) => setRowsPerPage(val)}
-      totalCount={(data?.totalPages || 0) * rowsPerPage}
-      defaultRowsPerPage={rowsPerPage}
-    />
-  )
-
-  return (
-    <ListPageLayout
-      title="Invoices"
-      description="Manage and track your billing invoices"
-      actions={[
-        {
-          label: 'Generate Invoice',
-          onClick: () => setIsGenerateModalOpen(true),
-          icon: <FaFilePdf />,
-          variant: 'contained',
-        },
-      ]}
-      controls={controls}
-    >
-      {table}
+      {isLoading ? (
+        <TableSkeleton />
+      ) : (
+        <DataTable
+          title="All Invoices"
+          rows={(data?.data || []).map((inv) => ({ ...inv }))}
+          columns={invoiceColumns}
+          pagination
+          currentPage={page}
+          onPageChange={(newPage) => setPage(newPage + 1)}
+          onRowsPerPageChange={(val) => setRowsPerPage(val)}
+          totalCount={(data?.totalPages || 0) * rowsPerPage}
+          defaultRowsPerPage={rowsPerPage}
+        />
+      )}
 
       <CustomDialog
         open={isDisputeModalOpen}
@@ -1054,7 +1047,7 @@ const Invoices = () => {
           </Typography>
         </Stack>
       </CustomDialog>
-    </ListPageLayout>
+    </Stack>
   )
 }
 

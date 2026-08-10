@@ -1,27 +1,28 @@
+// components/wallet/AddMoneyDialog.tsx
 import {
-  Alert,
-  alpha,
   Box,
   Button,
-  Divider,
+  CircularProgress,
+  Dialog,
+  IconButton,
   InputAdornment,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { useState, type Dispatch, type SetStateAction } from 'react'
-import { BiWallet } from 'react-icons/bi'
+import { FiX } from 'react-icons/fi'
 import { useAuth } from '../context/auth/AuthContext'
 import { useUserProfile } from '../hooks/User/useUserProfile'
 import { usePaymentOptions } from '../hooks/usePaymentOptions'
 import { useRechargeWallet } from '../hooks/useRechargeWallets'
+import { brand } from '../theme/brand'
 import { toast } from './UI/Toast'
-import CustomIconLoadingButton from './UI/button/CustomLoadingButton'
-import CustomDialog from './UI/modal/CustomModal'
 
-const BRAND_ORANGE = '#062A5B'
-const BRAND_ORANGE_DARK = '#041A38'
-const BRAND_SURFACE = '#FCF8F7'
+const WALLET_ORANGE = brand.accent
+const WALLET_TEXT = brand.ink
+const WALLET_MUTED = '#6F7480'
 
 interface AddMoneyDialogProps {
   open: boolean
@@ -29,59 +30,19 @@ interface AddMoneyDialogProps {
   currentBalance: number
 }
 
-const quickAmounts = [500, 1000, 2000, 10000]
+const quickAmounts = [300, 500, 1000, 2000, 5000]
 
-const getRechargeErrorMessage = (error: unknown) => {
-  const apiMessage =
-    typeof error === 'object' &&
-    error !== null &&
-    'response' in error &&
-    typeof (error as { response?: { data?: { error?: unknown } } }).response?.data?.error === 'string'
-      ? (error as { response?: { data?: { error?: string } } }).response?.data?.error
-      : ''
-
-  if (apiMessage) return apiMessage
-
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-
-  return 'Recharge failed. Please try again.'
-}
-
-const AddMoneyDialog: React.FC<AddMoneyDialogProps> = ({ open, setOpen, currentBalance }) => {
-  const { user, isAuthenticated } = useAuth()
+const AddMoneyDialog: React.FC<AddMoneyDialogProps> = ({ open, setOpen }) => {
+  const { user } = useAuth()
   const [amount, setAmount] = useState<number>(500)
   const recharge = useRechargeWallet()
-  const { data: paymentOptions } = usePaymentOptions()
-  const { data: profile } = useUserProfile(isAuthenticated, user?.id)
+  const { data: paymentOptions, refetch: refetchPaymentOptions } = usePaymentOptions()
+  const { data: profile } = useUserProfile(true)
 
   const minWalletRecharge = paymentOptions?.minWalletRecharge ?? 0
-
   const effectiveAmount = amount || 0
-  const isBelowMin = minWalletRecharge > 0 && effectiveAmount < minWalletRecharge
   const kycStatus = profile?.domesticKyc?.status
   const isKycBlocked = kycStatus !== 'verified'
-  const resolvedName =
-    profile?.companyInfo?.businessName ||
-    user?.companyInfo?.businessName ||
-    profile?.companyInfo?.brandName ||
-    user?.companyInfo?.brandName ||
-    profile?.companyInfo?.contactPerson ||
-    user?.companyInfo?.contactPerson ||
-    'FastShip Customer'
-  const resolvedEmail =
-    profile?.companyInfo?.contactEmail ||
-    user?.companyInfo?.contactEmail ||
-    profile?.companyInfo?.companyEmail ||
-    user?.companyInfo?.companyEmail ||
-    ''
-  const resolvedContact =
-    profile?.companyInfo?.contactNumber ||
-    user?.companyInfo?.contactNumber ||
-    profile?.companyInfo?.companyContactNumber ||
-    user?.companyInfo?.companyContactNumber ||
-    ''
 
   const handleRecharge = async () => {
     if (isKycBlocked) {
@@ -95,9 +56,15 @@ const AddMoneyDialog: React.FC<AddMoneyDialogProps> = ({ open, setOpen, currentB
       return
     }
 
-    if (isBelowMin) {
+    const latestPaymentOptions = await refetchPaymentOptions()
+    const latestMinWalletRecharge =
+      latestPaymentOptions.data?.minWalletRecharge ?? minWalletRecharge ?? 0
+    const isBelowLatestMin =
+      latestMinWalletRecharge > 0 && effectiveAmount < latestMinWalletRecharge
+
+    if (isBelowLatestMin) {
       toast.open({
-        message: `Minimum wallet recharge amount is ₹${minWalletRecharge.toLocaleString('en-IN')}`,
+        message: `Minimum wallet recharge amount is ₹${latestMinWalletRecharge.toLocaleString('en-IN')}`,
         severity: 'warning',
       })
       return
@@ -107,103 +74,185 @@ const AddMoneyDialog: React.FC<AddMoneyDialogProps> = ({ open, setOpen, currentB
       await recharge.mutateAsync({
         amount,
         prefill: {
-          name: resolvedName,
-          email: resolvedEmail,
-          contact: resolvedContact,
+          name:
+            user?.companyInfo?.businessName ||
+            user?.companyInfo?.contactPerson ||
+            user?.name ||
+            'Ship Aggregator Customer',
+          email: user?.companyInfo?.contactEmail ?? '',
+          contact: user?.companyInfo?.contactNumber ?? '',
         },
       })
+      setOpen(false)
     } catch (err: unknown) {
-      console.error('Recharge error:', err)
-      toast.open({ message: getRechargeErrorMessage(err), severity: 'error' })
+      const message = err instanceof Error ? err.message : 'Recharge failed!'
+      toast.open({
+        message,
+        severity: message === 'Payment cancelled' ? 'warning' : 'error',
+      })
     }
   }
 
   return (
-    <CustomDialog
-      maxWidth="xs"
-      title={
-        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" fontWeight={800} sx={{ color: '#141414' }}>
-            Add Money to Wallet
-          </Typography>
-
-          <Box
-            display="flex"
-            gap={1}
-            alignItems="center"
-            sx={{
-              bgcolor: '#FFF3F4',
-              px: 2,
-              py: 1,
-              borderRadius: 3,
-              border: `1px solid ${alpha(BRAND_ORANGE, 0.12)}`,
-            }}
-          >
-            <BiWallet size={18} color={BRAND_ORANGE} />
-            <Typography variant="body2" fontWeight={800} color={BRAND_ORANGE_DARK}>
-              ₹{currentBalance.toLocaleString('en-IN')}
-            </Typography>
-          </Box>
-        </Stack>
-      }
+    <Dialog
       open={open}
       onClose={() => setOpen(false)}
+      fullWidth
+      maxWidth={false}
+      BackdropProps={{
+        sx: {
+          backgroundColor: alpha('#0B0F18', 0.55),
+          backdropFilter: 'blur(9px)',
+        },
+      }}
+      PaperProps={{
+        sx: {
+          width: { xs: 'calc(100vw - 32px)', sm: 460 },
+          maxWidth: 'calc(100vw - 32px)',
+          m: 2,
+          border: 'none',
+          borderRadius: { xs: '22px', sm: '24px' },
+          background: '#FFFFFF',
+          boxShadow: '0 22px 60px rgba(13, 27, 77, 0.2)',
+          overflow: 'hidden',
+        },
+      }}
     >
-      <Box display="flex" flexDirection="column" width="100%">
-        <Box
-          width="100%"
-          display="flex"
-          justifyContent="center"
+      <Box
+        sx={{
+          position: 'relative',
+          boxSizing: 'border-box',
+          width: '100%',
+          px: { xs: 2.5, sm: 3.2 },
+          pt: { xs: 3.4, sm: 3.8 },
+          pb: { xs: 2.8, sm: 3.2 },
+        }}
+      >
+        <IconButton
+          aria-label="Close wallet recharge dialog"
+          onClick={() => setOpen(false)}
           sx={{
-            bgcolor: BRAND_SURFACE,
-            borderRadius: 5,
-            p: 3,
-            mb: 3,
-            border: '1px solid rgba(20, 20, 20, 0.08)',
+            position: 'absolute',
+            top: { xs: 16, sm: 18 },
+            right: { xs: 16, sm: 18 },
+            width: { xs: 38, sm: 40 },
+            height: { xs: 38, sm: 40 },
+            borderRadius: '50%',
+            color: '#747781',
+            bgcolor: '#F3F3F4',
+            '&:hover': {
+              bgcolor: '#ECECEF',
+              color: WALLET_TEXT,
+            },
           }}
         >
+          <FiX size={21} />
+        </IconButton>
+
+        <Typography
+          sx={{
+            pr: { xs: 5.5, sm: 7 },
+            color: WALLET_TEXT,
+            fontSize: { xs: '1.36rem', sm: '1.46rem' },
+            lineHeight: 1.1,
+            fontWeight: 500,
+            letterSpacing: 0,
+          }}
+        >
+          Recharge your wallet
+        </Typography>
+        <Typography
+          sx={{
+            mt: 1.2,
+            color: WALLET_MUTED,
+            fontSize: { xs: '0.9rem', sm: '0.94rem' },
+            lineHeight: 1.25,
+            fontWeight: 400,
+            letterSpacing: 0,
+          }}
+        >
+          Enter the amount you want to recharge
+        </Typography>
+
+        <Box sx={{ mt: { xs: 2.1, sm: 2.3 } }}>
           <TextField
             type="number"
             value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            onChange={(event) => setAmount(Number(event.target.value))}
             variant="standard"
             placeholder="Enter Amount"
+            fullWidth
             slotProps={{
               input: {
                 disableUnderline: true,
                 startAdornment: (
-                  <InputAdornment position="start" sx={{ fontSize: '2.5rem', color: BRAND_ORANGE }}>
-                    ₹
+                  <InputAdornment position="start">
+                    <Typography
+                      component="span"
+                      sx={{
+                        color: '#747A84',
+                        fontSize: { xs: '1.18rem', sm: '1.28rem' },
+                        fontWeight: 500,
+                        lineHeight: 1,
+                      }}
+                    >
+                      ₹
+                    </Typography>
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Typography
+                      component="span"
+                      sx={{
+                        color: '#747A84',
+                        fontSize: { xs: '1.14rem', sm: '1.24rem' },
+                        fontWeight: 500,
+                        lineHeight: 1,
+                      }}
+                    >
+                      .00
+                    </Typography>
                   </InputAdornment>
                 ),
                 sx: {
-                  fontSize: '2rem',
-                  fontWeight: 800,
-                  borderBottom: `2px solid ${alpha(BRAND_ORANGE, 0.18)}`,
                   width: '100%',
-                  maxWidth: 280,
-                  color: '#141414',
-                  pb: 1,
-                  mx: 'auto',
-                  transition: 'all 0.3s ease',
-                  '&:focus-within': {
-                    borderBottomColor: BRAND_ORANGE,
+                  height: { xs: 62, sm: 66 },
+                  px: { xs: 1.8, sm: 2 },
+                  borderRadius: { xs: '16px', sm: '18px' },
+                  bgcolor: '#F7F7F8',
+                  border: '2px solid #E4E4E6',
+                  boxShadow: 'inset 0 2px 4px rgba(13, 27, 77, 0.04)',
+                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                  '&.Mui-focused': {
+                    borderColor: alpha(WALLET_TEXT, 0.22),
+                    boxShadow: `0 0 0 4px ${alpha(WALLET_TEXT, 0.04)}, inset 0 2px 4px rgba(13, 27, 77, 0.04)`,
                   },
                 },
                 inputProps: {
                   inputMode: 'numeric',
                   pattern: '[0-9]*',
                   style: {
-                    textAlign: 'center',
-                    color: '#141414',
+                    color: WALLET_TEXT,
+                    fontWeight: 500,
                     MozAppearance: 'textfield',
                   },
                 },
               },
             }}
             sx={{
+              '& .MuiInputBase-input': {
+                px: { xs: 0.9, sm: 1.1 },
+                py: 0,
+                height: 'auto',
+                color: WALLET_TEXT,
+                fontSize: { xs: '1.34rem', sm: '1.42rem' },
+                lineHeight: 1,
+                fontWeight: 500,
+                letterSpacing: 0,
+              },
               '& .MuiInputBase-input::placeholder': {
-                color: '#8D8783',
+                color: alpha(WALLET_TEXT, 0.36),
                 opacity: 0.7,
               },
               '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
@@ -215,109 +264,110 @@ const AddMoneyDialog: React.FC<AddMoneyDialogProps> = ({ open, setOpen, currentB
           />
         </Box>
 
-        <Box mb={3}>
-          <Typography variant="body2" fontWeight={700} sx={{ color: '#6E6A66', mb: 1.5, textAlign: 'center' }}>
-            Quick Select Amount
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1.5} width="100%" justifyContent="center">
-            {quickAmounts.map((v) => (
-              <Button
-                key={v}
-                variant={amount === v ? 'contained' : 'outlined'}
-                onClick={() => setAmount(v)}
-                sx={{
-                  borderRadius: 3.5,
-                  minWidth: 92,
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  px: 3,
-                  py: 1.2,
-                  bgcolor: amount === v ? '#141414' : '#FFFFFF',
-                  color: amount === v ? '#FFFFFF' : '#141414',
-                  border: `1px solid ${amount === v ? '#141414' : 'rgba(20, 20, 20, 0.1)'}`,
-                  boxShadow: 'none',
-                  '&:hover': {
-                    bgcolor: amount === v ? '#1F1F22' : BRAND_SURFACE,
-                    borderColor: amount === v ? '#141414' : 'rgba(20, 20, 20, 0.14)',
-                  },
-                }}
-              >
-                ₹{v.toLocaleString('en-IN')}
-              </Button>
-            ))}
-          </Stack>
-        </Box>
+        <Stack
+          direction="row"
+          flexWrap="wrap"
+          gap={{ xs: 1, sm: 1.2 }}
+          sx={{ mt: { xs: 1.9, sm: 2.1 } }}
+        >
+          {quickAmounts.map((value) => (
+            <Button
+              key={value}
+              type="button"
+              onClick={() => setAmount(value)}
+              sx={{
+                minWidth: { xs: value === 5000 ? 106 : 92, sm: value === 5000 ? 108 : 94 },
+                height: { xs: 42, sm: 44 },
+                px: { xs: 1.25, sm: 1.35 },
+                borderRadius: '12px',
+                border: '1px solid #E7E8EB',
+                bgcolor: '#FFFFFF',
+                color: WALLET_TEXT,
+                boxShadow: '0 4px 12px rgba(13, 27, 77, 0.02)',
+                fontSize: { xs: '0.88rem', sm: '0.92rem' },
+                fontWeight: 500,
+                lineHeight: 1,
+                letterSpacing: 0,
+                textTransform: 'none',
+                '&:hover': {
+                  bgcolor: '#FFFFFF',
+                  borderColor: alpha(WALLET_TEXT, 0.18),
+                  boxShadow: '0 10px 22px rgba(13, 27, 77, 0.08)',
+                },
+              }}
+            >
+              + ₹{value.toLocaleString('en-IN')}
+            </Button>
+          ))}
+        </Stack>
 
-        <Divider sx={{ my: 3, borderColor: 'rgba(20, 20, 20, 0.08)' }} />
-
-        {isKycBlocked && (
-          <Alert
-            severity="warning"
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          gap={{ xs: 1.1, sm: 1.4 }}
+          sx={{ mt: { xs: 2.6, sm: 2.8 } }}
+        >
+          <Button
+            type="button"
+            onClick={() => setOpen(false)}
             sx={{
-              mb: 2,
-              borderRadius: 4,
-              border: '1px solid rgba(201, 122, 18, 0.25)',
-              bgcolor: 'rgba(201, 122, 18, 0.06)',
-              color: '#8D560E',
-              fontSize: '0.85rem',
-              '& .MuiAlert-icon': { color: '#C97A12' },
+              flex: 1,
+              height: { xs: 50, sm: 52 },
+              borderRadius: '14px',
+              border: '1px solid #E6E7EA',
+              bgcolor: '#FFFFFF',
+              color: WALLET_TEXT,
+              boxShadow: 'none',
+              fontSize: { xs: '0.96rem', sm: '1rem' },
+              fontWeight: 500,
+              lineHeight: 1,
+              letterSpacing: 0,
+              textTransform: 'none',
+              '&:hover': {
+                bgcolor: '#FFFFFF',
+                borderColor: alpha(WALLET_TEXT, 0.16),
+              },
             }}
           >
-            {kycStatus === 'pending' || kycStatus === 'verification_in_progress'
-              ? 'Your KYC is under review. You will be able to recharge once it is verified.'
-              : 'Please complete your KYC to recharge your wallet.'}
-          </Alert>
-        )}
-
-        <Box
-          sx={{
-            bgcolor: BRAND_SURFACE,
-            border: '1px solid rgba(20, 20, 20, 0.08)',
-            borderRadius: 5,
-            p: 2.5,
-            mb: 3,
-          }}
-        >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="body2" sx={{ color: '#6E6A66', fontWeight: 700 }}>
-              Amount to Pay
-            </Typography>
-            <Typography variant="h6" sx={{ color: BRAND_ORANGE_DARK, fontWeight: 800 }}>
-              ₹{effectiveAmount.toLocaleString('en-IN')}
-            </Typography>
-          </Stack>
-          <Typography variant="caption" sx={{ color: '#7D7773', fontSize: '0.8rem' }}>
-            {minWalletRecharge > 0
-              ? `Minimum recharge amount is ₹${minWalletRecharge.toLocaleString(
-                  'en-IN',
-                )}. This amount will be added to your wallet instantly.`
-              : 'This amount will be added to your wallet instantly.'}
-          </Typography>
-        </Box>
-
-        <CustomIconLoadingButton
-          onClick={handleRecharge}
-          disabled={recharge.isPending || effectiveAmount <= 0 || isBelowMin || isKycBlocked}
-          text={`Proceed to Pay ₹${effectiveAmount.toLocaleString('en-IN')}`}
-          loadingText="Processing Payment..."
-          loading={recharge.isPending}
-          styles={{
-            width: '100%',
-            py: 1.8,
-            fontSize: '1rem',
-            fontWeight: 700,
-            textTransform: 'none',
-            boxShadow: 'none',
-            background: `linear-gradient(135deg, ${BRAND_ORANGE} 0%, ${BRAND_ORANGE_DARK} 100%)`,
-            color: '#FFFFFF',
-            borderRadius: 3.5,
-            '&:hover': {
-              background: `linear-gradient(135deg, ${BRAND_ORANGE_DARK} 0%, #041A38 100%)`,
-            },
-          }}
-        />
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleRecharge}
+            disabled={recharge.isPending || effectiveAmount <= 0}
+            sx={{
+              flex: 1,
+              height: { xs: 50, sm: 52 },
+              borderRadius: '14px',
+              bgcolor: WALLET_ORANGE,
+              color: '#FFFFFF',
+              boxShadow: `0 16px 30px ${alpha(WALLET_ORANGE, 0.22)}`,
+              fontSize: { xs: '0.96rem', sm: '1rem' },
+              fontWeight: 500,
+              lineHeight: 1,
+              letterSpacing: 0,
+              textTransform: 'none',
+              '&:hover': {
+                bgcolor: '#F17818',
+                boxShadow: `0 18px 34px ${alpha(WALLET_ORANGE, 0.28)}`,
+              },
+              '&:disabled': {
+                bgcolor: alpha(WALLET_ORANGE, 0.46),
+                color: alpha('#FFFFFF', 0.86),
+              },
+            }}
+          >
+            {recharge.isPending ? (
+              <Stack direction="row" alignItems="center" gap={1}>
+                <CircularProgress size={20} thickness={4} sx={{ color: 'currentColor' }} />
+                <Box component="span">Recharging...</Box>
+              </Stack>
+            ) : (
+              'Recharge'
+            )}
+          </Button>
+        </Stack>
       </Box>
-    </CustomDialog>
+    </Dialog>
   )
 }
 

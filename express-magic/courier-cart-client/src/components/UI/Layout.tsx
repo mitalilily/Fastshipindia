@@ -1,219 +1,167 @@
-import { Box, Drawer, Stack, useMediaQuery, useTheme } from '@mui/material'
-import { Suspense, useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../../context/auth/AuthContext'
+import { Box, Container, Drawer, Stack, useMediaQuery, useTheme } from '@mui/material'
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { useLocation, useOutlet } from 'react-router-dom'
+import { DRAWER_WIDTH } from '../../utils/constants'
 import Navbar from '../Navbar/Navbar'
 import KeyboardShortcuts from './keyboard/KeyboardShortcuts'
 import FullScreenLoader from './loader/FullScreenLoader'
-import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_EXPANDED_WIDTH } from './Sidebar'
-import { useEmployeeSocket } from '../../hooks/useEmployeeSocket'
+import Sidebar, { COLLAPSED_WIDTH } from './Sidebar'
 
 export default function Layout() {
-  useEmployeeSocket()
   const theme = useTheme()
   const location = useLocation()
+  const outlet = useOutlet()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const mainScrollRef = useRef<HTMLDivElement | null>(null)
+  const [pinned, setPinned] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [sidebarHovered, setSidebarHovered] = useState(false)
-  const [sidebarPinned, setSidebarPinned] = useState(false)
-  const sidebarExpanded = sidebarPinned || sidebarHovered
-  const sidebarSpacerWidth = sidebarPinned ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH
-  const { user } = useAuth()
-  const isAdminWorkspace = user.role === 'admin' || user.role === 'employee' || Boolean(user.employeeId)
-  const isDensePanelPage =
-    location.pathname === '/orders/create' ||
-    location.pathname === '/orders/new' ||
-    location.pathname === '/orders/list' ||
-    location.pathname === '/dashboard' ||
-    location.pathname.startsWith('/dashboard/') ||
-    location.pathname.startsWith('/billing/') ||
-    location.pathname.startsWith('/shipments/') ||
-    location.pathname.startsWith('/ops/') ||
-    location.pathname.startsWith('/tools/') ||
-    location.pathname.startsWith('/reports/') ||
-    location.pathname.startsWith('/settings/') ||
-    location.pathname.startsWith('/integration/') ||
-    location.pathname.startsWith('/other/') ||
-    location.pathname === '/support' ||
-    location.pathname === '/profile' ||
-    location.pathname === '/user-agreements' ||
-    location.pathname === '/warehouse'
+  const [hovered, setHovered] = useState(false)
+  const isDark = theme.palette.mode === 'dark'
+  const shellBg = isDark ? '#0f141b' : '#f6f8fc'
+  const drawerBg = isDark ? '#151b23' : '#ffffff'
+  const drawerText = isDark ? '#f8fafc' : '#11182d'
+  const drawerBorder = isDark ? '#2a313a' : 'rgba(15, 23, 42, 0.1)'
+  const routeContentKey = [location.key, location.pathname, location.search, location.hash]
+    .filter(Boolean)
+    .join(':')
 
   const handleDrawerToggle = () => {
-    if (isMobile) {
-      setMobileOpen((prev) => !prev)
-      return
-    }
-
-    setSidebarPinned((prev) => !prev)
+    if (isMobile) setMobileOpen(!mobileOpen)
+    else setPinned((prev) => !prev)
   }
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false)
-  }, [location.pathname, isMobile])
+    setHovered(false)
+  }, [routeContentKey])
+
+  useEffect(() => {
+    mainScrollRef.current?.scrollTo({ top: 0, left: 0 })
+    document.body.style.removeProperty('overflow')
+    document.body.style.removeProperty('padding-right')
+  }, [routeContentKey])
 
   return (
     <Box
       sx={{
         display: 'flex',
-        minHeight: '100vh',
         width: '100%',
-        maxWidth: '100dvw',
-        overflowX: 'hidden',
-        background: '#f4f7fb',
-        scrollbarGutter: 'stable',
+        height: '100dvh',
+        minHeight: '100dvh',
+        minWidth: 0,
+        overflow: 'hidden',
+        background: shellBg,
       }}
     >
       <KeyboardShortcuts />
 
       {isMobile ? (
         <Drawer
+          variant="temporary"
           open={mobileOpen}
           onClose={() => setMobileOpen(false)}
-          variant="temporary"
           ModalProps={{ keepMounted: true }}
           sx={{
             '& .MuiDrawer-paper': {
-              width: SIDEBAR_EXPANDED_WIDTH,
-              maxWidth: '88vw',
-              border: 0,
-              background: '#FFFFFF',
-              boxShadow: '0 18px 48px rgba(7, 25, 35, 0.14)',
+              width: DRAWER_WIDTH,
+              maxWidth: '86vw',
+              top: 'var(--client-navbar-offset, 88px)',
+              height: 'calc(100dvh - var(--client-navbar-offset, 88px))',
+              bgcolor: drawerBg,
+              color: drawerText,
+              borderRight: `1px solid ${drawerBorder}`,
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
+              overflow: 'hidden',
             },
           }}
         >
-          <Box sx={{ width: '100%', height: '100dvh', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ flex: 1, overflowY: 'auto' }}>
-              <Sidebar role={isAdminWorkspace ? 'admin' : 'customer'} pinned />
-            </Box>
-          </Box>
+          <Sidebar
+            hovered={hovered}
+            setHovered={setHovered}
+            pinned
+            temporary
+            handleDrawerToggle={handleDrawerToggle}
+            onNavigate={() => setMobileOpen(false)}
+          />
         </Drawer>
       ) : (
         <Box
           sx={{
-            width: sidebarSpacerWidth,
-            minWidth: sidebarSpacerWidth,
+            width: pinned ? DRAWER_WIDTH : COLLAPSED_WIDTH,
+            minWidth: pinned ? DRAWER_WIDTH : COLLAPSED_WIDTH,
             flexShrink: 0,
-            transition: 'width 220ms ease, min-width 220ms ease',
+            transition: 'width 240ms ease',
+            willChange: 'width',
+            position: 'relative',
           }}
         >
           <Sidebar
-            role={isAdminWorkspace ? 'admin' : 'customer'}
-            pinned={sidebarExpanded}
-            onMouseEnter={() => setSidebarHovered(true)}
-            onMouseLeave={() => setSidebarHovered(false)}
-            fixed
+            hovered={hovered}
+            setHovered={setHovered}
+            pinned={pinned}
+            handleDrawerToggle={handleDrawerToggle}
           />
         </Box>
       )}
 
       <Stack
         sx={{
-          flex: 1,
-          width: { xs: '100%', md: 'auto' },
+          flexGrow: 1,
           minWidth: 0,
-          maxWidth: '100%',
-          minHeight: '100vh',
-          p: 0,
-          gap: 0,
-          scrollbarGutter: 'stable',
+          position: 'relative',
+          height: '100dvh',
+          minHeight: 0,
+          overflow: 'hidden',
+          bgcolor: shellBg,
         }}
       >
-        <Navbar handleDrawerToggle={handleDrawerToggle} pinned={sidebarPinned} onPinChange={setSidebarPinned} />
-
-        <Box
-          component="main"
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            width: '100%',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            p: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.72)',
-          }}
-        >
+        <Stack sx={{ flexGrow: 1, height: '100%', minHeight: 0, overflow: 'hidden', bgcolor: shellBg }}>
           <Box
             sx={{
-              maxWidth: 'none',
-              mx: 'auto',
-              width: '100%',
-              minWidth: 0,
-              boxSizing: 'border-box',
-              px: isDensePanelPage ? 0 : { xs: 1.25, sm: 1.5, md: 2, lg: 2.5 },
-              py: isDensePanelPage ? 0 : { xs: 0.6, sm: 1, md: 1.5 },
+              flexShrink: 0,
+              position: 'relative',
+              zIndex: (layoutTheme) => layoutTheme.zIndex.drawer + 2,
             }}
           >
-            <Suspense
-              fallback={
-                <Box key={`layout-fallback-${location.pathname}`} sx={{ minHeight: 300 }}>
-                  <FullScreenLoader />
-                </Box>
-              }
-            >
-              <Box
-                key={location.pathname}
-                sx={{
-                  width: '100%',
-                  minWidth: 0,
-                  maxWidth: '100%',
-                  minHeight: '300px',
-                }}
-              >
-                <Outlet />
-              </Box>
-            </Suspense>
+            <Navbar handleDrawerToggle={handleDrawerToggle} pinned={pinned} />
           </Box>
-        </Box>
 
-        {!isDensePanelPage && (
           <Box
+            component="main"
+            ref={mainScrollRef}
             sx={{
-              maxWidth: 1700,
-              mx: 'auto',
-              width: '100%',
-              px: { xs: 1.25, sm: 1.5, md: 2 },
-              pt: 0.4,
-              borderTop: '1px solid rgba(6, 42, 91, 0.12)',
+              flexGrow: 1,
+              overflow: 'auto',
+              bgcolor: shellBg,
+              position: 'relative',
+              zIndex: 0,
+              px: { xs: 1.5, md: 3 },
+              pb: { xs: 1.5, md: 3 },
+              height: '100%',
+              minHeight: 0,
+              overscrollBehavior: 'auto',
+              scrollbarGutter: 'stable',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
-            <Box
+            <Container
+              maxWidth="xl"
               sx={{
-                display: 'flex',
-                justifyContent: { xs: 'center', md: 'space-between' },
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: 1,
-                py: 1.5,
-                color: 'text.secondary',
-                fontSize: '0.72rem',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
+                bgcolor: 'transparent',
+                pt: { xs: 2, md: 3 },
+                px: { xs: 0, md: 0 },
+                overflowX: 'visible',
               }}
             >
-              <Box
-                component="a"
-                href="https://searchcraftdigital.com/"
-                target="_blank"
-                rel="noreferrer"
-                sx={{
-                  color: 'inherit',
-                  textDecoration: 'none',
-                  fontWeight: 700,
-                  fontSize: '6px',
-                  fontStyle: 'italic',
-                  transition: 'color 180ms ease',
-                  '&:hover': {
-                    color: 'primary.main',
-                  },
-                }}
-              >
-                Crafted by SearchCraft Digital
-              </Box>
-            </Box>
+              <Suspense fallback={<FullScreenLoader />}>
+                <Box key={routeContentKey} sx={{ display: 'contents' }}>
+                  {outlet}
+                </Box>
+              </Suspense>
+            </Container>
           </Box>
-        )}
+        </Stack>
       </Stack>
     </Box>
   )

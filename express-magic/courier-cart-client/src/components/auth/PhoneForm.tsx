@@ -1,99 +1,58 @@
 import {
   Box,
-  Button,
-  CircularProgress,
-  Divider,
+  Chip,
   FormControlLabel,
-  InputAdornment,
-  Link,
   Stack,
-  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useCallback, useEffect, useState } from 'react'
-import { FiFileText, FiLock, FiMail, FiSend, FiShield } from 'react-icons/fi'
-import { BRAND } from '../../config/brand'
+import { FiMail, FiShield } from 'react-icons/fi'
 import { useRequestOtp } from '../../hooks/useOTP'
-import { extractScreenOtp, type OtpResponseLike } from '../../utils/authOtp'
-import { TERMS_AND_CONDITIONS } from '../../utils/constants'
-import { DEMO_OTP, isDemoLoginEnabled } from '../../utils/demoAuth'
+import { TEXT } from '../../theme/theme'
+import CustomIconLoadingButton from '../UI/button/CustomLoadingButton'
 import CustomCheckbox from '../UI/inputs/CustomCheckbox'
+import CustomInput from '../UI/inputs/CustomInput'
 import CustomModal from '../UI/modal/CustomModal'
+import TermsAndConditionsText from '../terms/TermsAndConditionsText'
 import { toast } from '../UI/Toast'
 import OtpForm from './OtpForm'
 import PasswordLoginForm from './PasswordLoginForm'
+import { getAuthErrorMessage } from './getAuthErrorMessage'
 
-const { teal, tealDark, orange, ink, paper, tealSoft } = BRAND.colors
-const isDemoLogin = isDemoLoginEnabled()
+const DE_BLUE = '#171310'
 
-type AuthMode = 'otp' | 'password'
-
-const fieldSx = {
-  '& .MuiOutlinedInput-root': {
-    minHeight: 42,
-    borderRadius: 1.25,
-    background: paper,
-    color: ink,
-    boxShadow: `inset 0 1px 0 ${alpha('#ffffff', 0.9)}`,
-    '& fieldset': {
-      borderColor: alpha('#5b7796', 0.28),
-    },
-    '&:hover fieldset': {
-      borderColor: alpha(teal, 0.55),
-    },
-    '&.Mui-focused fieldset': {
-      borderColor: teal,
-      borderWidth: 1.5,
-    },
-  },
-  '& .MuiOutlinedInput-input': {
-    py: 0.8,
-    fontSize: 16,
-    color: ink,
-    fontWeight: 500,
-    '&::placeholder': {
-      color: '#7890ad',
-      opacity: 0.82,
-    },
-  },
-  '& .MuiFormHelperText-root': {
-    ml: 0,
-    mt: 0.65,
-    fontWeight: 600,
-  },
+const primaryButtonStyles = {
+  width: '100%',
+  borderRadius: 1,
+  bgcolor: DE_BLUE,
+  boxShadow: `0 8px 24px ${alpha(DE_BLUE, 0.3)}`,
+  '&:hover': { bgcolor: '#0D0A08' },
 }
 
-const tabButtonSx = {
-  minHeight: 40,
-  minWidth: 0,
+const secondaryButtonStyles = {
+  width: '100%',
+  border: `1px solid ${alpha(DE_BLUE, 0.2)}`,
+  backgroundColor: alpha(DE_BLUE, 0.04),
+  color: DE_BLUE,
   borderRadius: 1,
-  textTransform: 'none',
-  fontWeight: 900,
-  fontSize: { xs: 13, sm: 15 },
-  gap: { xs: 0.65, sm: 1 },
-  px: { xs: 0.75, sm: 1.4 },
-  whiteSpace: 'nowrap',
-  '& svg': {
-    flexShrink: 0,
-  },
 }
 
 export default function PhoneForm() {
   const activeEmail = sessionStorage.getItem('activeEmail')
-  const [authMode, setAuthMode] = useState<AuthMode>('otp')
-  const [otpStep, setOtpStep] = useState<number>(0)
-  const [passwordStep, setPasswordStep] = useState<number>(0)
+  const [step, setStep] = useState<number>(0)
+  const [preferredLoginMethod, setPreferredLoginMethod] = useState<'phone' | 'password'>('phone')
   const [email, setEmail] = useState('')
-  const [termsChecked, setTermsChecked] = useState(false)
+  const [keepMeSignedIn, setKeepMeSignedIn] = useState(false)
   const [openTerms, setOpenTerms] = useState(false)
-  const [debugOtp, setDebugOtp] = useState('')
 
   const { mutate: sendOtpRequest, isPending } = useRequestOtp()
 
   const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value.trim())
-    setDebugOtp('')
+    const value = e.target.value.trim()
+    setEmail(value)
   }, [])
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -103,290 +62,171 @@ export default function PhoneForm() {
     (e: React.FormEvent) => {
       e.preventDefault()
 
-      if (!termsChecked) {
-        toast.open({
-          message: 'Please accept the Terms and Conditions to continue.',
-          severity: 'warning',
-          position: { vertical: 'top', horizontal: 'center' },
-        })
-        return
-      }
+      setPreferredLoginMethod('phone')
+      sessionStorage.setItem('preferredMethod', 'phone')
 
-      const normalizedEmail = email.toLowerCase().trim()
-
-      sendOtpRequest(normalizedEmail, {
-        onSuccess: (data: OtpResponseLike) => {
-          const otpFromResponse = extractScreenOtp(data) || (isDemoLogin ? DEMO_OTP : '')
-          setDebugOtp(otpFromResponse)
-          sessionStorage.setItem('preferredMethod', 'email_otp')
-          setOtpStep(1)
-        },
-        onError: (err: any) => {
-          const msg = err?.response?.data?.error || 'OTP request failed'
+      sendOtpRequest(email.toLowerCase().trim(), {
+        onSuccess: () => {
           toast.open({
-            message: `${msg}. Local demo code is available on screen.`,
-            severity: 'warning',
+            message: 'Verification code sent to your email.',
+            severity: 'success',
             position: { vertical: 'top', horizontal: 'center' },
           })
-          if (isDemoLogin) {
-            setDebugOtp(DEMO_OTP)
-            sessionStorage.setItem('preferredMethod', 'email_otp')
-            setOtpStep(1)
-          }
+          setStep(1)
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (err: any) => {
+          const msg = getAuthErrorMessage(err, 'OTP request failed')
+          toast.open({
+            message: msg,
+            severity: 'error',
+            position: { vertical: 'top', horizontal: 'center' },
+          })
         },
       })
     },
-    [email, termsChecked, sendOtpRequest],
+    [email, sendOtpRequest],
   )
 
   useEffect(() => {
     if (activeEmail) setEmail(activeEmail)
   }, [activeEmail])
 
-  const termsLabel = (
-    <Typography component="span" fontSize="15px" color="#263a59" sx={{ lineHeight: 1.45 }}>
-      I agree to{' '}
-      <Link
-        component="button"
-        type="button"
-        underline="hover"
-        onClick={(event) => {
-          event.preventDefault()
-          setOpenTerms(true)
-        }}
-        sx={{
-          cursor: 'pointer',
-          color: teal,
-          fontWeight: 900,
-          verticalAlign: 'baseline',
-        }}
-      >
-        Terms and Conditions
-      </Link>
-    </Typography>
-  )
+  const renderOtpEntry = () =>
+    step === 0 ? (
+      <Box component="form" noValidate onSubmit={handleSubmit} width="100%">
+        <CustomInput
+          type="email"
+          label="Work Email"
+          value={email}
+          name="email"
+          id="email"
+          onChange={handleEmailChange}
+          required
+          error={email.length > 0 && !isValidEmail}
+          helperText={email.length > 0 && !isValidEmail ? 'Enter a valid email address.' : ''}
+          autoFocus
+          prefix={<FiMail color={DE_BLUE} size={15} />}
+        />
 
-  const termsModal = (
-    <CustomModal open={openTerms} onClose={() => setOpenTerms(false)} title="Terms and Conditions">
-      <Typography
-        variant="body2"
-        sx={{
-          whiteSpace: 'pre-line',
-          maxHeight: '60vh',
-          overflowY: 'auto',
-          pr: 1,
-          color: ink,
-        }}
-      >
-        {TERMS_AND_CONDITIONS}
-      </Typography>
-    </CustomModal>
-  )
+        <FormControlLabel
+          sx={{ mt: 1.2, mb: 2.3, alignItems: 'flex-start' }}
+          control={
+            <CustomCheckbox
+              checked={keepMeSignedIn}
+              onChange={(e) => setKeepMeSignedIn(e.target.checked)}
+              color="primary"
+            />
+          }
+          label={
+            <Typography mt={0.5} variant="body2" color="#6A616A">
+              Keep me signed in on this device
+            </Typography>
+          }
+        />
 
-  if (authMode === 'otp' && otpStep === 1) {
-    return (
-      <>
-        <OtpForm email={email} debugOtp={debugOtp} onDebugOtpChange={setDebugOtp} onEditEmail={() => setOtpStep(0)} />
-        {termsModal}
-      </>
+        <CustomIconLoadingButton
+          type="submit"
+          styles={primaryButtonStyles}
+          textColor="#ffffff"
+          disabled={!email || isPending || !isValidEmail}
+          text="Send verification code"
+          loading={isPending}
+          loadingText="Sending..."
+        />
+      </Box>
+    ) : (
+      <OtpForm
+        email={email}
+        keepMeSignedIn={keepMeSignedIn}
+        onEditEmail={() => {
+          setStep(0)
+        }}
+      />
     )
-  }
 
   return (
-    <Stack spacing={{ xs: 0.85, md: 0.8 }} alignItems="stretch" sx={{ minWidth: 0 }}>
-      <Box
+    <Stack spacing={2.2} alignItems="stretch">
+      <Stack spacing={1.2}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: DE_BLUE }}>
+          Secure Authentication
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#6A616A', lineHeight: 1.6, fontWeight: 500 }}>
+          Access your logistics dashboard using your registered work email. Verification codes
+          are sent through the actual login flow to your email.
+        </Typography>
+
+        <Chip
+          icon={<FiShield size={14} />}
+          label="Enterprise-grade security"
+          size="small"
+          sx={{
+            alignSelf: 'flex-start',
+            mt: 0.2,
+            backgroundColor: alpha('#36B37E', 0.1),
+            color: '#00875A',
+            fontWeight: 700,
+            borderRadius: 1,
+            '& .MuiChip-icon': { color: '#00875A' },
+          }}
+        />
+      </Stack>
+
+      <ToggleButtonGroup
+        value={preferredLoginMethod}
+        exclusive
+        onChange={(_, value) => {
+          if (!value) return
+          setPreferredLoginMethod(value)
+          setStep(0)
+        }}
+        fullWidth
         sx={{
-          width: 'fit-content',
-          maxWidth: '100%',
-          alignSelf: 'center',
-          textAlign: 'center',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 1,
-          px: 1.55,
-          py: 0.48,
+          p: 0.5,
           borderRadius: 1,
-          color: orange,
-          border: `1px solid ${alpha(orange, 0.18)}`,
-          background: `linear-gradient(135deg, ${alpha(orange, 0.1)}, ${alpha(teal, 0.04)})`,
-          fontSize: { xs: 13, sm: 14 },
-          fontWeight: 900,
+          backgroundColor: alpha(DE_BLUE, 0.04),
+          border: `1px solid ${alpha(DE_BLUE, 0.08)}`,
+          '& .MuiToggleButton-root': {
+            textTransform: 'none',
+            fontWeight: 800,
+            border: 'none',
+            borderRadius: 0.5,
+            color: alpha(TEXT, 0.6),
+            '&.Mui-selected': {
+              backgroundColor: '#FFFFFF',
+              color: DE_BLUE,
+              boxShadow: '0 4px 12px rgba(138, 31, 67, 0.12)',
+              '&:hover': {
+                backgroundColor: '#FFFFFF',
+              },
+            },
+          },
         }}
       >
-        <FiShield size={18} />
-        Same-screen demo OTP login enabled
-      </Box>
+        <ToggleButton value="phone">One-Time Passcode</ToggleButton>
+        <ToggleButton value="password">Email + Password</ToggleButton>
+      </ToggleButtonGroup>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
-          minWidth: 0,
-          gap: 0.45,
-          p: 0.22,
-          borderRadius: 1.35,
-          border: `1px solid ${alpha(teal, 0.18)}`,
-          background: alpha(teal, 0.045),
-        }}
-      >
-        <Button
-          type="button"
-          onClick={() => setAuthMode('otp')}
-          sx={{
-            ...tabButtonSx,
-            color: authMode === 'otp' ? paper : teal,
-            border: `1px solid ${authMode === 'otp' ? teal : 'transparent'}`,
-            background: authMode === 'otp' ? teal : 'transparent',
-            boxShadow: authMode === 'otp' ? `0 12px 22px ${alpha(teal, 0.08)}` : 'none',
-            '&:hover': {
-              background: authMode === 'otp' ? tealDark : alpha(tealSoft, 0.6),
-            },
-          }}
-        >
-          <FiMail size={20} />
-          Email OTP
-        </Button>
-        <Button
-          type="button"
-          onClick={() => setAuthMode('password')}
-          sx={{
-            ...tabButtonSx,
-            color: authMode === 'password' ? paper : teal,
-            border: `1px solid ${authMode === 'password' ? teal : 'transparent'}`,
-            background: authMode === 'password' ? teal : 'transparent',
-            boxShadow: authMode === 'password' ? `0 12px 22px ${alpha(teal, 0.08)}` : 'none',
-            '&:hover': {
-              background: authMode === 'password' ? tealDark : alpha(tealSoft, 0.6),
-            },
-          }}
-        >
-          <FiLock size={19} />
-          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-            Email + Password
-          </Box>
-          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-            Password
-          </Box>
-        </Button>
-      </Box>
-
-      {authMode === 'otp' ? (
-        <Box component="form" onSubmit={handleSubmit} width="100%">
-          <Stack spacing={{ xs: 0.9, md: 0.9 }}>
-            <Box>
-              <Typography sx={{ color: '#081932', fontSize: 14, fontWeight: 900, mb: 0.45 }}>
-                Work Email <Box component="span" sx={{ color: '#e1261c' }}>*</Box>
-              </Typography>
-              <TextField
-                type="email"
-                value={email}
-                name="email"
-                id="email"
-                onChange={handleEmailChange}
-                required
-                error={email.length > 0 && !isValidEmail}
-                helperText={email.length > 0 && !isValidEmail ? 'Enter a valid email address.' : ''}
-                placeholder="you@company.com"
-                autoFocus
-                fullWidth
-                sx={fieldSx}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start" sx={{ color: '#385373', mr: 0.7 }}>
-                        <FiMail size={22} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-            </Box>
-
-            <FormControlLabel
-              sx={{ m: 0, alignItems: 'center' }}
-              control={
-                <CustomCheckbox
-                  checked={termsChecked}
-                  onChange={(e) => setTermsChecked(e.target.checked)}
-                  color="primary"
-                  sx={{ ml: -1 }}
-                />
-              }
-              label={termsLabel}
-            />
-
-            <Button
-              type="submit"
-              disabled={!email || !termsChecked || isPending || !isValidEmail}
-              sx={{
-                width: '100%',
-                minHeight: 44,
-                borderRadius: 1,
-                textTransform: 'none',
-                color: paper,
-                fontSize: 15.5,
-                fontWeight: 900,
-                gap: 1.1,
-                background: `linear-gradient(135deg, ${teal} 0%, ${tealDark} 70%, ${orange} 100%)`,
-                boxShadow: `0 16px 26px ${alpha(teal, 0.18)}`,
-                '&:hover': {
-                  background: `linear-gradient(135deg, ${tealDark} 0%, ${teal} 72%, ${orange} 100%)`,
-                },
-                '&:disabled': {
-                  color: paper,
-                  background: '#9ca9ba',
-                  boxShadow: 'none',
-                },
-              }}
-            >
-              {isPending ? <CircularProgress size={18} thickness={4} sx={{ color: 'currentColor' }} /> : <FiSend size={20} />}
-              {isPending ? 'Generating...' : 'Send verification code'}
-            </Button>
-
-            <Divider
-              sx={{
-                my: -0.15,
-                color: '#263a59',
-                fontSize: 14,
-                '&::before, &::after': {
-                  borderColor: alpha('#9eb2c8', 0.34),
-                },
-              }}
-            >
-              or
-            </Divider>
-
-            <Button
-              type="button"
-              onClick={() => setOpenTerms(true)}
-              sx={{
-                width: '100%',
-                minHeight: 44,
-                borderRadius: 1,
-                textTransform: 'none',
-                color: '#102344',
-                fontSize: 15.5,
-                fontWeight: 900,
-                gap: 1,
-                border: `1px solid ${alpha('#9eb2c8', 0.42)}`,
-                background: paper,
-                '&:hover': {
-                  borderColor: alpha(teal, 0.45),
-                  background: alpha(tealSoft, 0.32),
-                },
-              }}
-            >
-              <FiFileText size={20} />
-              View terms and policies
-            </Button>
-
-          </Stack>
-        </Box>
+      {preferredLoginMethod === 'phone' ? (
+        renderOtpEntry()
       ) : (
-        <PasswordLoginForm setStep={setPasswordStep} step={passwordStep} setOpenTerms={setOpenTerms} />
+        <PasswordLoginForm step={step} setStep={setStep} />
       )}
 
-      {termsModal}
+      <CustomIconLoadingButton
+        styles={secondaryButtonStyles}
+        onClick={() => setOpenTerms(true)}
+        variant="text"
+        text="View terms and policies"
+      />
+
+      <CustomModal
+        open={openTerms}
+        onClose={() => setOpenTerms(false)}
+        title="Terms and Conditions"
+      >
+        <TermsAndConditionsText />
+      </CustomModal>
     </Stack>
   )
 }

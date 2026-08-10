@@ -1,5 +1,6 @@
-import { Box, Link, List, ListItem, ListItemText, Typography } from '@mui/material'
+﻿import { Box, Link, List, ListItem, ListItemText, Typography } from '@mui/material'
 import PageHeading from '../../components/UI/heading/PageHeading'
+import { brandIdentity } from '../../theme/brand'
 
 const PrivacyPolicy = () => {
   return (
@@ -18,7 +19,7 @@ const PrivacyPolicy = () => {
         <ListItem sx={{ display: 'list-item' }}>
           <ListItemText
             primary={
-              'Definitions: “Personal Information” means any data that can identify you directly or indirectly. “Sensitive Personal Data” includes passwords, payment details, health data, and biometric information (excluding publicly available data or that disclosed under legal obligations).'
+              'Definitions: â€œPersonal Informationâ€ means any data that can identify you directly or indirectly. â€œSensitive Personal Dataâ€ includes passwords, payment details, health data, and biometric information (excluding publicly available data or that disclosed under legal obligations).'
             }
           />
         </ListItem>
@@ -53,7 +54,9 @@ const PrivacyPolicy = () => {
               <>
                 Your Privacy Rights: You may review, update, or correct your details, or withdraw
                 consent by contacting us at{' '}
-                <Link href="mailto:support@fastship.in">support@fastship.in</Link>.
+                <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link>{' '}
+                or{' '}
+                <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
               </>
             }
           />
@@ -73,12 +76,14 @@ const PrivacyPolicy = () => {
               <>
                 Grievance Officer: If you have queries or complaints, reach out to us at{' '}
                 <a
-                  href="mailto:support@fastship.in"
-                  style={{ color: '#fccf5e', textDecoration: 'none' }}
+                  href={`mailto:${brandIdentity.supportEmail}`}
+                  style={{ color: '#0052CC', textDecoration: 'none' }}
                 >
-                  support@fastship.in
+                  {brandIdentity.supportEmail}
                 </a>
-                .
+                {' '}
+                or call{' '}
+                <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
               </>
             }
           />
@@ -89,3 +94,4 @@ const PrivacyPolicy = () => {
 }
 
 export default PrivacyPolicy
+

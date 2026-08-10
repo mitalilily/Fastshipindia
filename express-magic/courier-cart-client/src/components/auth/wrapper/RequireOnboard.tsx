@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import FullScreenLoader from "../../UI/loader/FullScreenLoader";
 import type { JSX } from "@emotion/react/jsx-runtime";
 import { useAuth } from "../../../context/auth/AuthContext";
+import { isOnboardingComplete } from "../../../utils/authRedirect";
 
 export default function RequireOnboard({
   children,
@@ -20,11 +21,11 @@ export default function RequireOnboard({
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  /* 3️⃣  Logged-in BUT NOT onboarded → let them see onboarding page */
-  if (user?.onboardingComplete === false) {
-    return children;
+  /* 3️⃣  Logged‑in AND already onboarded → send to main app */
+  if (isOnboardingComplete(user)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  /* 4️⃣  Logged-in AND already onboarded → send to main app */
-  return <Navigate to="/home" replace />;
+  /* 4️⃣  Logged‑in BUT NOT onboarded → let them see onboarding page */
+  return children;
 }

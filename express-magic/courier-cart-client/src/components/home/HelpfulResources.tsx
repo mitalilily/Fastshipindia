@@ -10,14 +10,14 @@ const HelpfulResources = () => {
 
   const cards = [
     {
-      image: '/images/blog.webp',
+      image: '/images/blog.png',
       title: 'Explore Our Blog',
       description: 'Get insights, product updates, and how-to guides to stay̦ ahead.',
       buttonText: 'Read Blogs',
-      onClick: () => window.open('https://fastship.in/blogs', '_blank'),
+      onClick: () => window.open('https://www.shipaggregator.com/blogs', '_blank'),
     },
     {
-      image: '/images/keyboard.webp',
+      image: '/images/keyboard.png',
       title: 'Keyboard Shortcuts',
       description: 'Speed up your workflow with handy keyboard combinations.',
       buttonText: 'View Shortcuts',
@@ -43,7 +43,7 @@ const HelpfulResources = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 2,
-                color: '#062A5B',
+                color: '#333369',
                 height: '100%',
                 border: '1px solid #3DD598',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
@@ -51,7 +51,7 @@ const HelpfulResources = () => {
                 '&:hover': {
                   transform: 'translateY(-4px)',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                  border: '1px solid #062A5B',
+                  border: '1px solid #333369',
                 },
               }}
             >
@@ -87,7 +87,8 @@ const HelpfulResources = () => {
                     position: 'absolute',
                     width: '100%',
                     height: '100%',
-                    background: 'radial-gradient(circle at center, rgba(59, 74, 116, 0.15), transparent 70%)',
+                    background:
+                      'radial-gradient(circle at center, rgba(59, 74, 116, 0.15), transparent 70%)',
                     filter: 'blur(40px)',
                     zIndex: 1,
                   }}
@@ -97,8 +98,6 @@ const HelpfulResources = () => {
                 <img
                   src={card.image}
                   alt={card.title}
-                  loading="lazy"
-                  decoding="async"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -111,19 +110,14 @@ const HelpfulResources = () => {
               </Box>
 
               {/* Title */}
-              <Typography fontWeight={600} fontSize="16px" sx={{ color: '#062A5B' }}>
+              <Typography fontWeight={600} fontSize="16px" sx={{ color: '#333369' }}>
                 {card.title}
               </Typography>
 
               {/* Description */}
               <Typography
                 variant="body2"
-                sx={{
-                  color: '#062A5B',
-                  fontSize: '13px',
-                  lineHeight: 1.6,
-                  opacity: 0.8,
-                }}
+                sx={{ color: '#333369', fontSize: '13px', lineHeight: 1.6, opacity: 0.8 }}
               >
                 {card.description}
               </Typography>
@@ -135,7 +129,7 @@ const HelpfulResources = () => {
                 sx={{
                   mt: 'auto',
                   alignSelf: isMobile ? 'center' : 'flex-start',
-                  bgcolor: '#062A5B',
+                  bgcolor: '#333369',
                   color: '#FFFFFF',
                   fontWeight: 600,
                   '&:hover': {
@@ -154,3 +148,4 @@ const HelpfulResources = () => {
 }
 
 export default HelpfulResources
+

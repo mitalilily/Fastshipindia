@@ -1,34 +1,24 @@
-import {
-  alpha,
-  Box,
-  Button,
-  Chip,
-  Divider,
-  Grid,
-  Paper,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material'
+import { alpha, Box, Button, Chip, Divider, Grid, Paper, Stack, Typography } from '@mui/material'
 import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { BiCheckCircle, BiErrorCircle } from 'react-icons/bi'
-import { FiCamera, FiMail, FiPhone, FiSave, FiUser } from 'react-icons/fi'
+import { FiSave } from 'react-icons/fi'
 import { useAuth } from '../../../context/auth/AuthContext'
-import { usePresignedDownloadUrls } from '../../../hooks/Uploads/usePresignedDownloadUrls'
 import { useUpdateUserProfile } from '../../../hooks/User/useUpdateUserProfile'
+import { usePresignedDownloadUrls } from '../../../hooks/Uploads/usePresignedDownloadUrls'
 import type { CompanyInfo, IUserProfileDB } from '../../../types/user.types'
+import type { UploadedFileInfo } from '../../UI/uploader/FileUploader'
 import CustomIconLoadingButton from '../../UI/button/CustomLoadingButton'
+import StatusChip from '../../UI/chip/StatusChip'
 import CustomInput from '../../UI/inputs/CustomInput'
 import { toast } from '../../UI/Toast'
-import type { UploadedFileInfo } from '../../UI/uploader/FileUploader'
 import FileUploader from '../../UI/uploader/FileUploader'
 import ProfileEmailVerificationModal from './ProfileEmailVerificationModal'
 import PhoneVerificationModal from './ProfilePhoneVerificationModal'
 
-export const BRAND_GREEN = '#062A5B'
-export const BRAND_ORANGE = '#ED1C24'
-export const BRAND_GRADIENT = `linear-gradient(135deg, ${BRAND_GREEN} 0%, ${BRAND_ORANGE} 100%)`
+export const DE_BLUE = '#0052CC'
+export const DE_AMBER = '#FFAB00'
+export const BRAND_GRADIENT = `linear-gradient(135deg, ${DE_BLUE} 0%, #2a5fbe 100%)`
 
 export default function UserProfileForm() {
   const { user, loading } = useAuth()
@@ -49,7 +39,7 @@ export default function UserProfileForm() {
   const watchedEmail = watch('contactEmail')
   const watchedPhone = watch('contactNumber')
   const avatarKey = watch('profilePicture')
-  const accountStatus = user?.approved ?? ''
+  const accountStatus = user?.approved ? 'success' : 'pending'
 
   useEffect(() => {
     if (user && !loading) {
@@ -96,11 +86,11 @@ export default function UserProfileForm() {
         label="Verified"
         size="small"
         sx={{
-          bgcolor: alpha(BRAND_GREEN, 0.12),
-          color: BRAND_GREEN,
-          border: `1px solid ${alpha(BRAND_GREEN, 0.3)}`,
+          bgcolor: alpha(DE_BLUE, 0.12),
+          color: DE_BLUE,
+          border: `1px solid ${alpha(DE_BLUE, 0.3)}`,
           fontWeight: 700,
-          '& .MuiChip-icon': { color: BRAND_GREEN },
+          '& .MuiChip-icon': { color: DE_BLUE },
         }}
       />
     ) : (
@@ -109,395 +99,149 @@ export default function UserProfileForm() {
         label="Unverified"
         size="small"
         sx={{
-          bgcolor: alpha(BRAND_ORANGE, 0.12),
-          color: '#9b4d00',
-          border: `1px solid ${alpha(BRAND_ORANGE, 0.35)}`,
+          bgcolor: alpha(DE_AMBER, 0.12),
+          color: DE_AMBER,
+          border: `1px solid ${alpha(DE_AMBER, 0.3)}`,
           fontWeight: 700,
-          '& .MuiChip-icon': { color: '#9b4d00' },
+          '& .MuiChip-icon': { color: DE_AMBER },
         }}
       />
     )
 
   return (
-    <>
-      <Paper
-        component="form"
-        elevation={0}
-        onSubmit={handleSubmit(onSubmit)}
-        sx={{
-          p: { xs: 2, md: 2.8 },
-          borderRadius: 0,
-          border: `1px solid ${alpha(BRAND_GREEN, 0.13)}`,
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(251,245,242,0.98) 100%)',
-          boxShadow: '0 14px 32px rgba(17, 17, 19, 0.06)',
-        }}
-      >
-        <Stack spacing={2}>
-          <Stack
-            direction={{ xs: 'column', lg: 'row' }}
-            justifyContent="space-between"
-            spacing={1.8}
-          >
-            <Box sx={{ maxWidth: 640 }}>
-              <Typography
-                sx={{
-                  fontSize: '0.72rem',
-                  letterSpacing: 1.8,
-                  color: BRAND_ORANGE,
-                  fontWeight: 700,
-                }}
-              >
-                PERSONAL PROFILE
-              </Typography>
-            </Box>
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Box
-                sx={{
-                  minWidth: 150,
-                  p: 1.25,
-                  border: `1px solid ${alpha('#111827', 0.08)}`,
-                  bgcolor: alpha('#ffffff', 0.82),
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: '0.72rem',
-                    color: '#6E6763',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  Account review
-                </Typography>
-                <Typography sx={{ mt: 0.6, fontWeight: 800, color: '#17171A' }}>
-                  {accountStatus ? 'Approved' : 'Pending'}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  minWidth: 150,
-                  p: 1.25,
-                  border: `1px solid ${alpha('#111827', 0.08)}`,
-                  bgcolor: alpha('#ffffff', 0.82),
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: '0.72rem',
-                    color: '#6E6763',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  Verification
-                </Typography>
-                <Typography sx={{ mt: 0.6, fontWeight: 800, color: '#17171A' }}>
-                  {user?.companyInfo?.POCEmailVerified && user?.companyInfo?.POCPhoneVerified
-                    ? 'Complete'
-                    : 'Action needed'}
-                </Typography>
-              </Box>
-            </Stack>
-          </Stack>
-
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2,
-                  borderRadius: 0,
-                  border: `1px solid ${alpha(BRAND_GREEN, 0.12)}`,
-                  background:
-                    'linear-gradient(180deg, rgba(217,4,22,0.04) 0%, rgba(255,255,255,0.92) 100%)',
-                  height: '100%',
-                }}
-              >
-                <Stack spacing={1.4} alignItems="center">
-                  <Box
-                    sx={{
-                      width: 52,
-                      height: 52,
-                      display: 'grid',
-                      placeItems: 'center',
-                      bgcolor: alpha(BRAND_GREEN, 0.08),
-                      color: BRAND_GREEN,
-                      border: `1px solid ${alpha(BRAND_GREEN, 0.12)}`,
-                    }}
-                  >
-                    <FiCamera size={18} />
-                  </Box>
-                  <Box textAlign="center">
-                    <Typography sx={{ fontWeight: 800, color: '#17171A' }}>
-                      Profile image
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#6E6763', mt: 0.4 }}>
-                      Add the primary contact avatar used across the account center.
-                    </Typography>
-                  </Box>
-                  <FileUploader
-                    variant="avatar"
-                    accept="image/*"
-                    avatarSize={122}
-                    placeholder={
-                      avatarUrl && typeof avatarUrl === 'string'
-                        ? avatarUrl
-                        : '/images/blank-avatar.jpg'
-                    }
-                    onUploaded={handleAvatarUploaded}
-                  />
-                </Stack>
-              </Paper>
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 8 }}>
-              <Stack spacing={1.6}>
-                <Paper
-                  elevation={0}
-                  sx={{ p: 1.6, borderRadius: 0, border: `1px solid ${alpha(BRAND_GREEN, 0.12)}` }}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.2 }}>
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        display: 'grid',
-                        placeItems: 'center',
-                        bgcolor: alpha(BRAND_GREEN, 0.08),
-                        color: BRAND_GREEN,
-                      }}
-                    >
-                      <FiUser size={16} />
-                    </Box>
-                    <Box>
-                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 800, color: '#17171A' }}>
-                        Primary contact name
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.78rem', color: '#6E6763' }}>
-                        The person responsible for account operations and approvals.
-                      </Typography>
-                    </Box>
-                  </Stack>
-                  <CustomInput
-                    label="Full Name"
-                    {...register('contactPerson', {
-                      required: 'Name is required',
-                      minLength: { value: 2, message: 'Name too short' },
-                    })}
-                    error={!!errors.contactPerson}
-                    helperText={errors.contactPerson?.message}
-                  />
-                </Paper>
-
-                <Paper
-                  elevation={0}
-                  sx={{ p: 1.6, borderRadius: 0, border: `1px solid ${alpha(BRAND_GREEN, 0.12)}` }}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.2 }}>
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        display: 'grid',
-                        placeItems: 'center',
-                        bgcolor: alpha(BRAND_GREEN, 0.08),
-                        color: BRAND_GREEN,
-                      }}
-                    >
-                      <FiMail size={16} />
-                    </Box>
-                    <Box>
-                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 800, color: '#17171A' }}>
-                        Email verification
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.78rem', color: '#6E6763' }}>
-                        Keep the main support and login contact verified.
-                      </Typography>
-                    </Box>
-                  </Stack>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.4}>
-                    <Box flex={1}>
-                      <CustomInput
-                        label="Email"
-                        {...register('contactEmail', {
-                          required: 'E-mail is required',
-                          pattern: {
-                            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                            message: 'Invalid e-mail',
-                          },
-                        })}
-                        error={!!errors.contactEmail}
-                        helperText={errors.contactEmail?.message}
-                      />
-                    </Box>
-
-                    <Stack
-                      direction="row"
-                      spacing={1.2}
-                      alignItems="center"
-                      sx={{ minWidth: { sm: 190 } }}
-                    >
-                      <Tooltip
-                        title={
-                          user?.companyInfo?.POCEmailVerified
-                            ? 'Email verified'
-                            : 'Email not verified'
-                        }
-                      >
-                        <span>
-                          <VerifiedChip ok={!!user?.companyInfo?.POCEmailVerified} />
-                        </span>
-                      </Tooltip>
-                      {!user?.companyInfo?.POCEmailVerified && (
-                        <Button
-                          onClick={() => setShowEmailModal(true)}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            borderRadius: 0,
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            borderColor: BRAND_GREEN,
-                            color: BRAND_GREEN,
-                            '&:hover': {
-                              borderColor: BRAND_GREEN,
-                              bgcolor: alpha(BRAND_GREEN, 0.08),
-                            },
-                          }}
-                        >
-                          Verify
-                        </Button>
-                      )}
-                    </Stack>
-                  </Stack>
-                </Paper>
-
-                <Paper
-                  elevation={0}
-                  sx={{ p: 1.6, borderRadius: 0, border: `1px solid ${alpha(BRAND_GREEN, 0.12)}` }}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.2 }}>
-                    <Box
-                      sx={{
-                        width: 36,
-                        height: 36,
-                        display: 'grid',
-                        placeItems: 'center',
-                        bgcolor: alpha(BRAND_GREEN, 0.08),
-                        color: BRAND_GREEN,
-                      }}
-                    >
-                      <FiPhone size={16} />
-                    </Box>
-                    <Box>
-                      <Typography sx={{ fontSize: '0.88rem', fontWeight: 800, color: '#17171A' }}>
-                        Phone verification
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.78rem', color: '#6E6763' }}>
-                        Keep the registered operations number ready for alerts and validation.
-                      </Typography>
-                    </Box>
-                  </Stack>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.4}>
-                    <Box flex={1}>
-                      <CustomInput
-                        label="Phone"
-                        {...register('contactNumber', {
-                          pattern: {
-                            value: /^\d{10}$/,
-                            message: 'Must be 10 digits',
-                          },
-                        })}
-                        error={!!errors.contactNumber}
-                        helperText={errors.contactNumber?.message}
-                      />
-                    </Box>
-
-                    <Stack
-                      direction="row"
-                      spacing={1.2}
-                      alignItems="center"
-                      sx={{ minWidth: { sm: 190 } }}
-                    >
-                      <Tooltip
-                        title={
-                          user?.companyInfo?.POCPhoneVerified
-                            ? 'Phone verified'
-                            : 'Phone not verified'
-                        }
-                      >
-                        <span>
-                          <VerifiedChip ok={!!user?.companyInfo?.POCPhoneVerified} />
-                        </span>
-                      </Tooltip>
-                      {!user?.companyInfo?.POCPhoneVerified && (
-                        <Button
-                          onClick={() => setShowPhoneModal(true)}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            borderRadius: 0,
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            borderColor: alpha('#111827', 0.16),
-                            color: '#111827',
-                            '&:hover': {
-                              borderColor: alpha('#111827', 0.22),
-                              bgcolor: '#F8FAFC',
-                            },
-                          }}
-                        >
-                          Verify
-                        </Button>
-                      )}
-                    </Stack>
-                  </Stack>
-                  {!user?.companyInfo?.POCPhoneVerified && (
-                    <Typography sx={{ mt: 1, fontSize: '0.8rem', color: '#6B7280' }}>
-                      Phone verification is active. Verification codes are currently delivered to
-                      the registered email address.
-                    </Typography>
-                  )}
-                </Paper>
-              </Stack>
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ borderColor: alpha(BRAND_GREEN, 0.1) }} />
-
-          <Stack direction="row" justifyContent="flex-end">
-            <CustomIconLoadingButton
-              type="submit"
-              disabled={saving}
-              text="Save Changes"
-              icon={<FiSave size={14} />}
-              loading={saving}
-              loadingText="Saving..."
-              styles={{
-                minWidth: 160,
-                borderRadius: '0px',
-                background: BRAND_GRADIENT,
-                color: '#fff',
-              }}
+    <Paper
+      elevation={0}
+      sx={{
+        p: { xs: 2, md: 3 },
+        borderRadius: 1,
+        border: `1px solid ${alpha(DE_BLUE, 0.1)}`,
+        background: `radial-gradient(circle at 100% 0%, ${alpha(DE_BLUE, 0.03)} 0%, transparent 40%), #fff`,
+      }}
+    >
+      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} alignItems="flex-start">
+          {/* Left: Avatar Upload */}
+          <Box sx={{ textAlign: 'center', width: { xs: '100%', md: 200 } }}>
+            <FileUploader
+              variant="avatar"
+              accept="image/*,.png,.jpg,.jpeg"
+              placeholder={avatarUrl?.[0]}
+              showPlaceholderImgByDefault
+              loadingPreview={loading}
+              onUploaded={handleAvatarUploaded}
             />
+            <Typography variant="caption" sx={{ color: '#6b778c', mt: 1.5, display: 'block', fontWeight: 600 }}>
+              Profile Picture
+            </Typography>
+          </Box>
+
+          {/* Right: Form Fields */}
+          <Stack spacing={3} flex={1} width="100%">
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: DE_BLUE }}>
+                  Account Information
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#5e759a' }}>
+                  Update your contact details and identity.
+                </Typography>
+              </Box>
+              <StatusChip status={accountStatus} label={user?.approved ? 'Approved' : 'Pending'} />
+            </Stack>
+
+            <Divider sx={{ opacity: 0.6 }} />
+
+            <Grid container spacing={2.5} component="div">
+              <Grid size={{ xs: 12, md: 6 }} component="div">
+                <CustomInput
+                  label="Contact Name"
+                  {...register('contactPerson', { required: 'Name is required' })}
+                  error={!!errors.contactPerson}
+                  helperText={errors.contactPerson?.message}
+                  fullWidth
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }} component="div">
+                <Stack spacing={1}>
+                  <CustomInput
+                    label="Work Email"
+                    {...register('contactEmail', {
+                      required: 'Email is required',
+                      pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' },
+                    })}
+                    error={!!errors.contactEmail}
+                    helperText={errors.contactEmail?.message}
+                    disabled
+                    fullWidth
+                    postfix={<VerifiedChip ok={!!user?.companyInfo?.POCEmailVerified} />}
+                  />
+                  {!user?.companyInfo?.POCEmailVerified && (
+                    <Button
+                      size="small"
+                      onClick={() => setShowEmailModal(true)}
+                      sx={{ alignSelf: 'flex-start', color: DE_BLUE, fontWeight: 700, fontSize: '0.75rem' }}
+                    >
+                      Verify Email
+                    </Button>
+                  )}
+                </Stack>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }} component="div">
+                <Stack spacing={1}>
+                  <CustomInput
+                    label="Phone Number"
+                    {...register('contactNumber', { required: 'Phone is required' })}
+                    error={!!errors.contactNumber}
+                    helperText={errors.contactNumber?.message}
+                    fullWidth
+                    disabled
+                    postfix={<VerifiedChip ok={!!user?.companyInfo?.POCPhoneVerified} />}
+                  />
+                  {!user?.companyInfo?.POCPhoneVerified && (
+                    <Button
+                      size="small"
+                      onClick={() => setShowPhoneModal(true)}
+                      sx={{ alignSelf: 'flex-start', color: DE_BLUE, fontWeight: 700, fontSize: '0.75rem' }}
+                    >
+                      Verify Phone
+                    </Button>
+                  )}
+                </Stack>
+              </Grid>
+            </Grid>
+
+            <Box sx={{ pt: 2, alignSelf: 'flex-start' }}>
+              <CustomIconLoadingButton
+                type="submit"
+                text="Save Changes"
+                loading={saving}
+                icon={<FiSave size={18} />}
+                styles={{
+                  px: 4,
+                  borderRadius: 1,
+                  bgcolor: DE_BLUE,
+                  boxShadow: `0 8px 20px ${alpha(DE_BLUE, 0.3)}`,
+                  '&:hover': { bgcolor: '#0043A4' },
+                }}
+              />
+            </Box>
           </Stack>
         </Stack>
-      </Paper>
+      </Box>
 
+      {/* Verification Modals */}
       <ProfileEmailVerificationModal
         open={showEmailModal}
         onClose={() => setShowEmailModal(false)}
-        email={watchedEmail ?? ''}
+        email={watchedEmail || ''}
       />
       <PhoneVerificationModal
         open={showPhoneModal}
         onClose={() => setShowPhoneModal(false)}
-        phone={watchedPhone ?? ''}
+        phone={watchedPhone || ''}
       />
-    </>
+    </Paper>
   )
 }

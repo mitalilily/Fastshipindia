@@ -1,15 +1,15 @@
 import {
-  alpha,
   Box,
   Divider,
   Drawer,
   IconButton,
   Typography,
+  alpha,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
 import React from 'react'
-import { IoClose } from 'react-icons/io5'
+import { IoCloseCircleOutline } from 'react-icons/io5'
 
 interface GlassDrawerProps {
   open: boolean
@@ -19,9 +19,6 @@ interface GlassDrawerProps {
   anchor?: 'left' | 'right'
   children: React.ReactNode
 }
-
-const BRAND = '#062A5B'
-const TEXT = '#141414'
 
 const CustomDrawer: React.FC<GlassDrawerProps> = ({
   open,
@@ -34,8 +31,6 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
-  const isFullWidth = width === '100%' || width === '100vw' || width === '100dvw'
-
   return (
     <Drawer
       anchor={anchor}
@@ -44,90 +39,119 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
       slotProps={{
         paper: {
           sx: {
-            width: isMobile || isFullWidth ? '100dvw' : width,
-            maxWidth: '100dvw',
+            width: isMobile ? '100%' : width,
+            maxWidth: '100vw',
             height: '100dvh',
-            bgcolor: '#fff',
-            color: TEXT,
+            maxHeight: '100dvh',
+            display: 'flex',
+            flexDirection: 'column',
+            color: theme.palette.text.primary,
             overflow: 'hidden',
-            borderLeft:
-              anchor === 'right' && !isFullWidth ? `1px solid ${alpha('#000', 0.06)}` : 'none',
-            borderRight:
-              anchor === 'left' && !isFullWidth ? `1px solid ${alpha('#000', 0.06)}` : 'none',
-            boxShadow: isFullWidth ? 'none' : '0 12px 36px rgba(0,0,0,0.08)',
+            touchAction: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            background: `
+              radial-gradient(circle at top left, ${alpha(theme.palette.primary.light, 0.2)} 0%, transparent 28%),
+              radial-gradient(circle at top right, ${alpha(theme.palette.secondary.main, 0.16)} 0%, transparent 24%),
+              linear-gradient(180deg, rgba(255, 251, 245, 0.98) 0%, rgba(255, 246, 236, 0.96) 100%)
+            `,
+            borderLeft: anchor === 'right' ? `1px solid ${alpha(theme.palette.primary.main, 0.12)}` : 'none',
+            borderRight: anchor === 'left' ? `1px solid ${alpha(theme.palette.primary.main, 0.12)}` : 'none',
+            boxShadow: `0 32px 72px ${alpha(theme.palette.text.primary, 0.16)}`,
           },
         },
       }}
     >
-      {/* Header */}
       <Box
         sx={{
-          px: { xs: 1.5, sm: 2.5 },
-          py: 1.8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          minHeight: 68,
-          bgcolor: '#fff',
+          position: 'relative',
+          px: { xs: 2.5, sm: 3.5 },
+          py: { xs: 2.25, sm: 2.8 },
+          overflow: 'hidden',
+          flexShrink: 0,
         }}
       >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            noWrap
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: '0 auto auto 0',
+            width: 120,
+            height: 120,
+            background: alpha(theme.palette.secondary.main, 0.18),
+            filter: 'blur(44px)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 'auto 0 0 auto',
+            width: 140,
+            height: 140,
+            background: alpha(theme.palette.primary.light, 0.18),
+            filter: 'blur(50px)',
+          }}
+        />
+
+        <Box display="flex" alignItems="center" justifyContent="space-between" position="relative" zIndex={1}>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: '0.74rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.16em',
+                fontWeight: 800,
+                color: theme.palette.text.secondary,
+                mb: 0.5,
+              }}
+            >
+              Ship Aggregator workspace
+            </Typography>
+            <Typography variant="h6" fontWeight={800} color={theme.palette.text.primary}>
+              {title}
+            </Typography>
+          </Box>
+
+          <IconButton
+            onClick={onClose}
             sx={{
-              fontSize: '1rem',
-              fontWeight: 800,
-              color: TEXT,
-              letterSpacing: 0,
+              color: theme.palette.primary.main,
+              backgroundColor: alpha('#ffffff', 0.7),
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.08),
+                transform: 'rotate(90deg)',
+              },
+              transition: 'all 0.3s ease',
             }}
           >
-            {title}
-          </Typography>
+            <IoCloseCircleOutline size={24} />
+          </IconButton>
         </Box>
-
-        <IconButton
-          onClick={onClose}
-          size="small"
-          sx={{
-            width: 34,
-            height: 34,
-            color: alpha(TEXT, 0.75),
-            border: `1px solid ${alpha('#000', 0.06)}`,
-            bgcolor: '#fff',
-            '&:hover': {
-              bgcolor: alpha(BRAND, 0.04),
-              color: BRAND,
-            },
-          }}
-        >
-          <IoClose size={18} />
-        </IconButton>
       </Box>
 
-      <Divider sx={{ borderColor: alpha('#000', 0.06) }} />
+      <Divider sx={{ borderColor: alpha(theme.palette.primary.main, 0.08) }} />
 
-      {/* Content */}
       <Box
+        p={{ xs: 2.5, sm: 3.5 }}
         sx={{
-          px: { xs: 1.5, sm: 2.5 },
-          py: 2,
-          height: 'calc(100% - 69px)',
+          flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
           overflowX: 'hidden',
-          bgcolor: '#fff',
-
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          touchAction: 'auto',
+          scrollbarGutter: 'stable',
+          backgroundColor: alpha('#ffffff', 0.42),
           '&::-webkit-scrollbar': {
-            width: 6,
+            width: '8px',
+            height: '8px',
           },
           '&::-webkit-scrollbar-track': {
-            background: 'transparent',
+            background: alpha(theme.palette.primary.main, 0.05),
           },
           '&::-webkit-scrollbar-thumb': {
-            background: alpha('#000', 0.12),
-            borderRadius: 10,
-          },
-          '&::-webkit-scrollbar-thumb:hover': {
-            background: alpha('#000', 0.22),
+            background: alpha(theme.palette.primary.main, 0.28),
+            borderRadius: '999px',
           },
         }}
       >
@@ -138,3 +162,5 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
 }
 
 export default CustomDrawer
+
+

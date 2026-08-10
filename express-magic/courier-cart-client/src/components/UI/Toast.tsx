@@ -27,19 +27,18 @@ export const toast = {
   open: (options: ToastOptions) => openToastFn(options),
 }
 
-// Background & accent colors per severity (solid, non‑glass)
 const bgMap: Record<AlertColor, string> = {
-  success: '#064E3B',
-  error: '#7F1D1D',
-  warning: '#78350F',
-  info: '#1E3A8A',
+  success: 'linear-gradient(135deg, #D6F5EC 0%, #FFFFFF 100%)',
+  error: 'linear-gradient(135deg, #FDE2E2 0%, #FFFFFF 100%)',
+  warning: 'linear-gradient(135deg, #FDE7C5 0%, #FFFFFF 100%)',
+  info: 'linear-gradient(135deg, #D4F6FF 0%, #FFFFFF 100%)',
 }
 
 const accentMap: Record<AlertColor, string> = {
-  success: '#34D399',
-  error: '#F97373',
-  warning: '#FBBF24',
-  info: '#60A5FA',
+  success: '#56C0A5',
+  error: '#D14343',
+  warning: '#F59E0B',
+  info: '#4E90CA',
 }
 
 const iconMap: Record<AlertColor, React.ReactNode> = {
@@ -49,13 +48,13 @@ const iconMap: Record<AlertColor, React.ReactNode> = {
   info: <MdInfo size={20} />,
 }
 
-const GlassAlert = styled(Alert)<{ severity: AlertColor }>(({ theme, severity }) => ({
+const GlassAlert = styled(Alert)<{ severity: AlertColor }>(({ severity }) => ({
   background: bgMap[severity] ?? bgMap.info,
-  boxShadow: '0 14px 30px rgba(15,23,42,0.45)',
-  borderRadius: 18,
+  boxShadow: '0 20px 42px rgba(15,44,67,0.12)',
+  borderRadius: 12,
   padding: '10px 16px',
-  border: '1px solid rgba(15,23,42,0.8)',
-  color: '#E5E7EB',
+  border: '1px solid rgba(255,255,255,0.72)',
+  color: '#10324A',
   fontSize: '0.9rem',
   display: 'flex',
   alignItems: 'center',
@@ -66,22 +65,21 @@ const GlassAlert = styled(Alert)<{ severity: AlertColor }>(({ theme, severity })
     content: '""',
     position: 'absolute',
     left: 0,
-    top: 4,
-    bottom: 4,
+    top: 6,
+    bottom: 6,
     width: 4,
-    borderRadius: 999,
+    borderRadius: 4,
     background: accentMap[severity] ?? accentMap.info,
   },
   '& .MuiAlert-icon': {
-    color: accentMap[severity] ?? theme.palette[severity]?.main,
+    color: accentMap[severity],
     opacity: 0.98,
     marginRight: 8,
     marginLeft: 4,
   },
   '& .MuiAlert-message': {
     padding: 0,
-    fontWeight: 500,
-    letterSpacing: 0.01,
+    fontWeight: 600,
     zIndex: 1,
     maxWidth: 320,
     whiteSpace: 'pre-line',
@@ -107,13 +105,10 @@ export const ToastProvider: React.FC = () => {
     position: { vertical: 'bottom', horizontal: 'right' },
   })
 
-  /* expose toast.open globally */
   React.useEffect(() => {
     openToastFn = (o: ToastOptions) => {
-      // Close any current toast so MUI remounts it with new position
       setOpen(false)
       setOpts((prev) => ({ ...prev, ...o }))
-      // Slight delay ensures Snackbar remounts with fresh key below
       setTimeout(() => setOpen(true), 0)
     }
   }, [])
@@ -149,9 +144,7 @@ export const ToastProvider: React.FC = () => {
               size="small"
               onClick={() => setOpen(false)}
               sx={{
-                color: '#E5E7EB',
-                ml: 0.5,
-                '&:hover': { bgcolor: 'rgba(15,23,42,0.45)' },
+                color: '#10324A',
               }}
             >
               <MdClose size={18} />

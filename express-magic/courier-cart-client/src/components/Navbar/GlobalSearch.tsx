@@ -4,6 +4,7 @@ import {
   CircularProgress,
   ClickAwayListener,
   Grow,
+  IconButton,
   InputAdornment,
   List,
   ListItem,
@@ -11,116 +12,113 @@ import {
   ListItemText,
   Paper,
   Popper,
+  Stack,
   TextField,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import React, { useRef, useState, type KeyboardEvent } from 'react'
 import { CiSearch } from 'react-icons/ci'
 import { useNavigate } from 'react-router-dom'
 import type { GlobalSearchResult } from '../../api/globalSearch.api'
 import { useGlobalSearch } from '../../hooks/useGlobalSearch'
-import { getClientAwbTrackingPath, isValidAwb, normalizeAwb } from '../../utils/awb'
 
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_INVOICE = '#ED1C24'
-const BRAND_INK = '#17171A'
-const BRAND_MUTED = '#6E6763'
+const INK = '#171310'
+const CLAY = '#D97943'
+const SURFACE = '#FFFDF8'
 
-interface GlobalSearchProps {
-  compact?: boolean
+const getMetadataAwb = (metadata?: Record<string, unknown>) => {
+  const value = metadata?.awb ?? metadata?.awb_number ?? metadata?.awbNumber
+  return typeof value === 'string' ? value.trim() : ''
 }
 
-const GlobalSearch = ({ compact = false }: GlobalSearchProps) => {
+const getClientTrackingPathFromLegacyLink = (link: string) => {
+  try {
+    const url = new URL(link, window.location.origin)
+    if (url.pathname === '/tracking') {
+      return `/tools/order_tracking${url.search || ''}`
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
+const GlobalSearch = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [popperReady, setPopperReady] = useState(false)
-
-  const [placeholderIndex, setPlaceholderIndex] = useState(0)
-  const [animatePlaceholder, setAnimatePlaceholder] = useState(true)
-
   const anchorRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
-  const placeholders = useMemo(
-    () => [
-      'Search orders...',
-      'Track by AWB number...',
-      'Find invoices instantly...',
-      'Search NDR cases...',
-      'Locate RTO shipments...',
-      'Check weight discrepancies...',
-    ],
-    [],
-  )
-
   const shouldSearch = open && searchQuery.trim().length >= 2
-
   const { data: searchResults, isLoading, isFetching } = useGlobalSearch(searchQuery, shouldSearch)
 
-  useEffect(() => {
+  // Delay popper rendering to ensure DOM is ready
+  React.useEffect(() => {
     if (open && anchorRef.current) {
-      const timer = setTimeout(() => setPopperReady(true), 20)
-
+      // Small delay to ensure DOM is ready before transition
+      const timer = setTimeout(() => {
+        setPopperReady(true)
+      }, 10)
       return () => {
         clearTimeout(timer)
         setPopperReady(false)
       }
+    } else {
+      setPopperReady(false)
     }
-
-    setPopperReady(false)
   }, [open])
 
-  useEffect(() => {
-    if (searchQuery.trim()) return
+  const handleClickAway = () => {
+    setOpen(false)
+  }
 
-    const interval = setInterval(() => {
-      setAnimatePlaceholder(false)
-
-      setTimeout(() => {
-        setPlaceholderIndex((prev) => (prev + 1) % placeholders.length)
-
-        setAnimatePlaceholder(true)
-      }, 400)
-    }, 4000)
-
-    return () => clearInterval(interval)
-  }, [searchQuery, placeholders.length])
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchQuery(value)
+    // Keep dropdown open when typing
+    if (value.trim().length >= 2 || open) {
+      setOpen(true)
+    }
+  }
 
   const handleResultClick = (result: GlobalSearchResult) => {
-    const awb = result.metadata?.awb
+    const awb = getMetadataAwb(result.metadata)
+    const legacyTrackingPath = getClientTrackingPathFromLegacyLink(result.link)
 
-    if (typeof awb === 'string' && awb && result.type === 'order') {
-      navigate(getClientAwbTrackingPath(awb))
+    if (result.type === 'order' && awb) {
+      navigate(`/tools/order_tracking?awb=${encodeURIComponent(awb)}`)
+    } else if (legacyTrackingPath) {
+      navigate(legacyTrackingPath)
     } else {
       navigate(result.link)
     }
-
     setSearchQuery('')
     setOpen(false)
   }
 
-  const searchOrNavigate = () => {
-    const trimmedQuery = searchQuery.trim()
+  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const trimmedQuery = searchQuery.trim()
+      if (!trimmedQuery) return
 
-    if (!trimmedQuery) return
-
-    const normalizedQuery = normalizeAwb(trimmedQuery)
-    if (isValidAwb(normalizedQuery)) {
-      navigate(getClientAwbTrackingPath(normalizedQuery))
-    } else if (searchResults?.results?.length) {
-      handleResultClick(searchResults.results[0])
-    } else {
-      navigate(`/orders/list?search=${encodeURIComponent(trimmedQuery)}`)
+      // If it looks like an AWB number, navigate to tracking
+      if (trimmedQuery.length >= 8 && /^[A-Z0-9]+$/.test(trimmedQuery.toUpperCase())) {
+        navigate(`/tools/order_tracking?awb=${encodeURIComponent(trimmedQuery.toUpperCase())}`)
+      } else if (searchResults?.results && searchResults.results.length > 0) {
+        // Navigate to first result
+        handleResultClick(searchResults.results[0])
+      } else {
+        // Fallback to orders list search
+        navigate(`/orders/list?search=${encodeURIComponent(trimmedQuery)}`)
+      }
+      setSearchQuery('')
+      setOpen(false)
     }
-
-    setSearchQuery('')
-    setOpen(false)
-  }
-
-  const handleKeyPress = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') searchOrNavigate()
-
-    if (event.key === 'Escape') setOpen(false)
+    if (e.key === 'Escape') {
+      setOpen(false)
+    }
   }
 
   const getTypeLabel = (type: string) => {
@@ -131,414 +129,212 @@ const GlobalSearch = ({ compact = false }: GlobalSearchProps) => {
       rto: 'RTO',
       weight_discrepancy: 'Weight Discrepancy',
     }
-
     return labels[type] || type
   }
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      order: BRAND_PRIMARY,
-      invoice: BRAND_INVOICE,
-      ndr: '#F59E0B',
-      rto: '#D73A49',
-      weight_discrepancy: BRAND_MUTED,
+      order: INK,
+      invoice: '#56C0A5',
+      ndr: CLAY,
+      rto: '#DE350B',
+      weight_discrepancy: '#74685D',
     }
-
-    return colors[type] || BRAND_MUTED
+    return colors[type] || '#74685D'
   }
 
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        minWidth: 0,
-        width: compact
-          ? {
-              xs: 108,
-              sm: 180,
-              md: 230,
-            }
-          : {
-              xs: 170,
-              sm: 340,
-              md: 430,
-            },
-
-        maxWidth: compact
-          ? {
-              xs: '34vw',
-              md: 230,
-            }
-          : {
-              xs: '50vw',
-              sm: 'none',
-            },
-      }}
-    >
+    <Box sx={{ position: 'relative', width: { xs: '100%', sm: '380px', md: '520px' } }}>
       <div ref={anchorRef}>
         <TextField
           value={searchQuery}
-          onChange={(event) => {
-            const value = event.target.value
-
-            setSearchQuery(value)
-
-            if (value.trim().length >= 2 || open) {
-              setOpen(true)
-            }
-          }}
+          onChange={handleInputChange}
           onKeyDown={handleKeyPress}
-          onFocus={() => setOpen(true)}
-          placeholder={placeholders[placeholderIndex]}
+          onFocus={() => {
+            setOpen(true)
+          }}
+          placeholder="Search by Order ID, Order Number, AWB, Invoice..."
           size="small"
           fullWidth
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: '14px',
-
-              minHeight: compact
-                ? {
-                    xs: 38,
-                    sm: 40,
-                    md: 42,
-                  }
-                : {
-                    xs: 44,
-                    sm: 48,
-                  },
-
-              px: compact ? 1 : 1.2,
-              pr: compact ? 0.8 : 1.1,
-
-              bgcolor: '#FFFFFF',
-
-              border: '1px solid rgba(23,23,26,0.08)',
-
-              boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 6px 18px rgba(0,0,0,0.03)',
-
-              transition: 'all 220ms cubic-bezier(0.4,0,0.2,1)',
-
+              bgcolor: alpha(SURFACE, 0.96),
+              borderRadius: 999,
+              border: `1px solid ${alpha(INK, 0.1)}`,
+              boxShadow: `0 10px 24px ${alpha(INK, 0.05)}`,
+              transition: 'all 0.2s ease',
               '& fieldset': {
-                border: 'none',
+                borderColor: 'transparent',
               },
-
               '&:hover': {
-                borderColor: 'rgba(23,23,26,0.16)',
-
-                boxShadow: '0 2px 6px rgba(0,0,0,0.05), 0 10px 24px rgba(0,0,0,0.05)',
-
-                transform: 'translateY(-1px)',
+                bgcolor: '#ffffff',
+                borderColor: alpha(INK, 0.18),
               },
-
               '&.Mui-focused': {
-                borderColor: BRAND_PRIMARY,
-
-                boxShadow: `
-                    0 0 0 4px rgba(217,4,22,0.08),
-                    0 10px 26px rgba(217,4,22,0.08)
-                  `,
-
-                transform: 'translateY(-1px)',
+                bgcolor: '#ffffff',
+                borderColor: INK,
+                boxShadow: `0 0 0 3px ${alpha(INK, 0.08)}`,
               },
             },
-
             '& .MuiOutlinedInput-input': {
-              py: compact ? 1 : 1.15,
-
-              px: 0,
-
-              fontSize: compact
-                ? {
-                    xs: '0.8rem',
-                    sm: '0.84rem',
-                  }
-                : {
-                    xs: '0.92rem',
-                    sm: '0.96rem',
-                  },
-
-              fontWeight: 500,
-              letterSpacing: '0.01em',
-
-              color: BRAND_INK,
-
+              py: 1.1,
+              fontSize: '14px',
+              fontWeight: 600,
+              color: INK,
               '&::placeholder': {
-                color: '#8A8A94',
-
-                opacity: animatePlaceholder ? 1 : 0,
-
-                transform: animatePlaceholder ? 'translateY(0px)' : 'translateY(6px)',
-
-                transition: 'all 220ms ease',
+                color: alpha(INK, 0.48),
+                opacity: 1,
               },
             },
           }}
           InputProps={{
-            startAdornment: (
-              <InputAdornment
-                position="start"
-                sx={{
-                  mr: 1,
-                  ml: 0.2,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: '10px',
-                    display: 'grid',
-                    placeItems: 'center',
-                    bgcolor: 'rgba(217,4,22,0.06)',
-                  }}
-                >
-                  <CiSearch
-                    size={17}
-                    style={{
-                      color: BRAND_PRIMARY,
-                    }}
-                  />
-                </Box>
-              </InputAdornment>
-            ),
-
             endAdornment: (
               <InputAdornment position="end">
                 {isLoading || isFetching ? (
-                  <CircularProgress
-                    size={16}
-                    thickness={5}
-                    sx={{
-                      color: BRAND_PRIMARY,
-                      mr: 0.4,
+                  <CircularProgress size={20} sx={{ color: INK }} />
+                ) : (
+                  <IconButton
+                    onClick={() => {
+                      const trimmedQuery = searchQuery.trim()
+                      if (
+                        trimmedQuery.length >= 8 &&
+                        /^[A-Z0-9]+$/.test(trimmedQuery.toUpperCase())
+                      ) {
+                        navigate(`/tools/order_tracking?awb=${encodeURIComponent(trimmedQuery.toUpperCase())}`)
+                      } else if (searchResults?.results && searchResults.results.length > 0) {
+                        handleResultClick(searchResults.results[0])
+                      } else {
+                        navigate(`/orders/list?search=${encodeURIComponent(trimmedQuery)}`)
+                      }
+                      setSearchQuery('')
+                      setOpen(false)
                     }}
-                  />
-                ) : !searchQuery ? (
-                  <Box
+                    edge="end"
                     sx={{
-                      display: { xs: 'none', sm: 'block' },
-                      px: 0.8,
-                      py: 0.35,
-                      borderRadius: '8px',
-                      fontSize: '0.68rem',
-                      fontWeight: 700,
-                      color: '#6E6763',
-                      bgcolor: '#F6F6F7',
-                      border: '1px solid rgba(0,0,0,0.05)',
+                      color: INK,
+                      '&:hover': {
+                        bgcolor: alpha(CLAY, 0.1),
+                        color: INK,
+                      },
                     }}
                   >
-                    ⏎
-                  </Box>
-                ) : null}
+                    <CiSearch size={20} />
+                  </IconButton>
+                )}
               </InputAdornment>
             ),
           }}
         />
       </div>
 
-      {open && anchorRef.current && (
-        <Popper
-          open={open && popperReady}
-          anchorEl={anchorRef.current}
-          placement="bottom-start"
-          transition
-          style={{
-            zIndex: 9999,
-          }}
-          modifiers={[
-            {
-              name: 'offset',
-              options: {
-                offset: [0, 10],
-              },
-            },
-          ]}
-        >
-          {({ TransitionProps }) => (
-            <Grow
-              {...TransitionProps}
-              in={popperReady}
-              timeout={180}
-              style={{
-                transformOrigin: 'top left',
-              }}
-            >
-              <Box>
-                <ClickAwayListener onClickAway={() => setOpen(false)}>
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      width: {
-                        xs: 'min(340px, calc(100vw - 24px))',
-                        sm: anchorRef.current?.offsetWidth ?? 430,
-                      },
+      <Popper
+        open={popperReady && shouldSearch}
+        anchorEl={anchorRef.current}
+        placement="bottom-start"
+        transition
+        sx={{
+          zIndex: 2200,
+          width: anchorRef.current?.offsetWidth,
+        }}
+      >
+        {({ TransitionProps }) => (
+          <Grow {...TransitionProps} style={{ transformOrigin: 'top left' }}>
+            <Box>
+              <ClickAwayListener onClickAway={handleClickAway}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mt: 1,
+                    borderRadius: 3,
+                    bgcolor: SURFACE,
+                    border: `1px solid ${alpha(INK, 0.08)}`,
+                    boxShadow: `0 18px 34px ${alpha(INK, 0.1)}`,
+                    overflow: 'hidden',
+                    maxHeight: '450px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <Box sx={{ p: 1.5, bgcolor: alpha(INK, 0.03) }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 800,
+                        color: alpha(INK, 0.5),
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                      }}
+                    >
+                      {isFetching ? 'Refreshing Network...' : 'Global Results'}
+                    </Typography>
+                  </Box>
 
-                      maxWidth: 'calc(100vw - 24px)',
-
-                      maxHeight: 420,
-
-                      overflow: 'auto',
-
-                      mt: 0.8,
-                      p: 1,
-
-                      borderRadius: '16px',
-
-                      bgcolor: '#FFFFFF',
-
-                      border: '1px solid rgba(0,0,0,0.06)',
-
-                      boxShadow: '0 16px 40px rgba(0,0,0,0.08)',
-                    }}
-                  >
-                    {searchQuery.trim().length < 2 ? (
-                      <Box
-                        sx={{
-                          px: 1.2,
-                          py: 1.4,
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: '0.92rem',
-                            fontWeight: 700,
-                            color: BRAND_INK,
-                          }}
-                        >
-                          Start typing to search
+                  <List sx={{ p: 0.5, overflowY: 'auto' }}>
+                    {searchResults?.results?.length === 0 ? (
+                      <ListItem sx={{ py: 4, justifyContent: 'center' }}>
+                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                          No matches found for "{searchQuery}"
                         </Typography>
-
-                        <Typography
-                          sx={{
-                            fontSize: '0.8rem',
-                            color: BRAND_MUTED,
-                            mt: 0.4,
-                          }}
-                        >
-                          Search by orders, invoice, AWB or shipment IDs.
-                        </Typography>
-                      </Box>
-                    ) : searchResults?.results?.length ? (
-                      <List disablePadding>
-                        {searchResults.results.map((result) => (
-                          <ListItem
-                            key={`${result.type}-${result.link}`}
-                            disablePadding
-                            sx={{
-                              mb: 0.5,
-                            }}
-                          >
-                            <ListItemButton
-                              onClick={() => handleResultClick(result)}
-                              sx={{
-                                borderRadius: '14px',
-
-                                px: 1.2,
-                                py: 1,
-
-                                alignItems: 'flex-start',
-
-                                transition: 'all 180ms ease',
-
-                                '&:hover': {
-                                  bgcolor: '#F8FAFC',
-
-                                  transform: 'translateX(2px)',
-                                },
-                              }}
-                            >
-                              <ListItemText
-                                primary={
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      justifyContent: 'space-between',
-                                      alignItems: 'center',
-                                      gap: 1,
-                                    }}
-                                  >
-                                    <Typography
-                                      sx={{
-                                        fontSize: '0.9rem',
-                                        fontWeight: 700,
-                                        color: BRAND_INK,
-                                      }}
-                                    >
-                                      {result.title}
-                                    </Typography>
-
-                                    <Box
-                                      sx={{
-                                        px: 1,
-                                        py: 0.35,
-                                        borderRadius: 999,
-
-                                        bgcolor: alpha(getTypeColor(result.type), 0.08),
-
-                                        color: getTypeColor(result.type),
-
-                                        fontSize: '0.66rem',
-
-                                        fontWeight: 800,
-
-                                        textTransform: 'uppercase',
-                                      }}
-                                    >
-                                      {getTypeLabel(result.type)}
-                                    </Box>
-                                  </Box>
-                                }
-                                secondary={
-                                  <Typography
-                                    sx={{
-                                      mt: 0.4,
-                                      fontSize: '0.78rem',
-                                      color: BRAND_MUTED,
-                                    }}
-                                  >
-                                    {result.subtitle || result.link}
-                                  </Typography>
-                                }
-                              />
-                            </ListItemButton>
-                          </ListItem>
-                        ))}
-                      </List>
+                      </ListItem>
                     ) : (
-                      <Box
-                        sx={{
-                          px: 1.2,
-                          py: 1.4,
-                        }}
-                      >
-                        <Typography
+                      searchResults?.results?.map((result, idx) => (
+                        <ListItemButton
+                          key={`${result.type}-${idx}`}
+                          onClick={() => handleResultClick(result)}
                           sx={{
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                            color: BRAND_INK,
+                            borderRadius: 2.5,
+                            py: 1.25,
+                            px: 1.5,
+                            mb: 0.5,
+                            '&:hover': {
+                              bgcolor: alpha(CLAY, 0.08),
+                              '& .MuiListItemText-primary': { color: INK },
+                            },
                           }}
                         >
-                          No results found
-                        </Typography>
-
-                        <Typography
-                          sx={{
-                            mt: 0.4,
-                            fontSize: '0.8rem',
-                            color: BRAND_MUTED,
-                          }}
-                        >
-                          Press Enter to search across orders.
-                        </Typography>
-                      </Box>
+                          <ListItemText
+                            primary={
+                              <Stack direction="row" spacing={1} alignItems="center">
+                                <Box
+                                  sx={{
+                                    px: 0.8,
+                                    py: 0.2,
+                                    borderRadius: 0.5,
+                                    fontSize: '10px',
+                                    fontWeight: 800,
+                                    bgcolor: alpha(getTypeColor(result.type), 0.1),
+                                    color: getTypeColor(result.type),
+                                    textTransform: 'uppercase',
+                                  }}
+                                >
+                                  {getTypeLabel(result.type)}
+                                </Box>
+                                <Typography variant="body2" fontWeight={700}>
+                                  {result.title}
+                                </Typography>
+                              </Stack>
+                            }
+                            secondary={result.subtitle}
+                            primaryTypographyProps={{
+                              component: 'div',
+                            }}
+                            secondaryTypographyProps={{
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              noWrap: true,
+                              sx: { mt: 0.5 },
+                            }}
+                          />
+                        </ListItemButton>
+                      ))
                     )}
-                  </Paper>
-                </ClickAwayListener>
-              </Box>
-            </Grow>
-          )}
-        </Popper>
-      )}
+                  </List>
+                </Paper>
+              </ClickAwayListener>
+            </Box>
+          </Grow>
+        )}
+      </Popper>
     </Box>
   )
 }

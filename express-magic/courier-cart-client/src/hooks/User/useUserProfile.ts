@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchUserProfile } from '../../api/userProfile.api'
-import { getUserProfileQueryKey } from '../../utils/authQueryKeys'
 
 /**
  * Centralised hook for loading the currently‑logged in user's profile.
@@ -15,9 +14,9 @@ import { getUserProfileQueryKey } from '../../utils/authQueryKeys'
  *    avoid surprise refetches; call `refetchUser()` from `AuthContext` when
  *    you explicitly need to refresh.
  */
-export const useUserProfile = (authenticated?: boolean, authScope?: string) =>
+export const useUserProfile = (authenticated?: boolean) =>
   useQuery({
-    queryKey: getUserProfileQueryKey(authScope),
+    queryKey: ['userProfile'],
     queryFn: fetchUserProfile,
     enabled: !!authenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes

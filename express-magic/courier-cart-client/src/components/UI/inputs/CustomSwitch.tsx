@@ -30,7 +30,7 @@ const CustomStyledSwitch = styled(MuiSwitch)(({ theme }) => ({
       transform: 'translateX(16px)',
       color: '#fff',
       '& + .MuiSwitch-track': {
-        background: 'linear-gradient(90deg, #062A5B, #4A5A84)',
+        background: 'linear-gradient(90deg, #333369, #4A5A84)',
         opacity: 1,
       },
     },
@@ -72,7 +72,7 @@ const CustomSwitch = ({
       component="fieldset"
       sx={{
         width: '100%',
-        border: '1px solid #062A5B',
+        border: '1px solid #333369',
         borderRadius: '10px',
         padding: 1,
       }}

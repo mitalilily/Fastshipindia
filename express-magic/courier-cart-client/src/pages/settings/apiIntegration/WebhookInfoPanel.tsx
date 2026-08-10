@@ -11,10 +11,27 @@ const WEBHOOK_EVENTS = [
   'order.cancelled',
   'order.return_created',
   'order.ndr',
+  'order.weight_discrepancy',
   'shipment.label_generated',
   'shipment.manifest_generated',
   'tracking.updated',
 ]
+
+const WEBHOOK_EVENT_LABELS: Record<string, string> = {
+  'order.created': 'Order created',
+  'order.updated': 'Order updated',
+  'order.shipped': 'Order shipped',
+  'order.delivered': 'Order delivered',
+  'order.failed': 'Order failed',
+  'order.rto': 'Order RTO',
+  'order.cancelled': 'Order cancelled',
+  'order.return_created': 'Return created',
+  'order.ndr': 'Order NDR',
+  'order.weight_discrepancy': 'Weight discrepancy',
+  'shipment.label_generated': 'Label generated',
+  'shipment.manifest_generated': 'Manifest generated',
+  'tracking.updated': 'Tracking updated',
+}
 
 interface WebhookInfoPanelProps {
   onViewSamplePayloads: () => void
@@ -33,8 +50,8 @@ export const WebhookInfoPanel = ({
         <Stack spacing={3}>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <MdInfo size={20} color="#062A5B" />
-              <Typography variant="h6" fontWeight={600} color="#062A5B">
+              <MdInfo size={20} color="#333369" />
+              <Typography variant="h6" fontWeight={600} color="#333369">
                 Webhook Information
               </Typography>
             </Stack>
@@ -112,11 +129,11 @@ export const WebhookInfoPanel = ({
                     fontSize: '0.75rem',
                     '&:hover': {
                       bgcolor: '#F5F7FA',
-                      color: '#062A5B',
+                      color: '#333369',
                     },
                   }}
                 >
-                  {event}
+                  {WEBHOOK_EVENT_LABELS[event] || event}
                 </Button>
               ))}
             </Stack>

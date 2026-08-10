@@ -1,5 +1,6 @@
-import { alpha, Box, Button, Chip, Divider, Paper, Stack, Typography } from '@mui/material'
+import { alpha, Box, Button, Chip, Divider, Link, Paper, Stack, Typography } from '@mui/material'
 import { useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { FaFilePdf } from 'react-icons/fa'
 import {
   MdInventory2,
@@ -9,10 +10,11 @@ import {
   MdReceipt,
   MdShoppingBag,
 } from 'react-icons/md'
-import useEmployeePermissions from '../../hooks/User/useEmployeePermissions'
 import { usePresignedDownloadMutation } from '../../hooks/Uploads/usePresignedDownloadUrls'
-import AWBLink from '../UI/AWBLink'
+import { useRegenerateOrderDocuments } from '../../hooks/Orders/useOrders'
+import { getCourierDisplayName } from '../../utils/courierDisplay'
 import { toast } from '../UI/Toast'
+import { downloadFile, getDocumentReference } from './bulkActionUtils'
 
 interface OrderExpandedRowProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,32 +24,40 @@ interface OrderExpandedRowProps {
 
 export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) => {
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
-  const ACCENT = '#062A5B'
+  const ACCENT = '#0D3B8E'
   const sortCodeValue = String(row?.sort_code || '').trim()
-  const { canExportOrders, canViewCustomerDetails } = useEmployeePermissions()
+  const awbValue = String(row?.awb_number || '').trim()
 
   const { mutateAsync, isPending } = usePresignedDownloadMutation()
+  const { mutateAsync: regenerateDocuments, isPending: isRegeneratingDocuments } =
+    useRegenerateOrderDocuments()
 
-  const maskedPhone = row?.buyer_phone ? 'Hidden by access policy' : 'Not available'
-  const maskedAddress = 'Customer address is hidden for this employee account.'
-
-  const getFriendlyMissingMessage = (fileType: 'label' | 'invoice' | 'manifest') =>
-    `${
-      fileType === 'label' ? 'Label' : fileType === 'invoice' ? 'Invoice' : 'Manifest'
-    } is not available yet. Please try again in a few minutes or regenerate it if needed.`
+  const labelRef = getDocumentReference(row, 'label')
+  const manifestRef = getDocumentReference(row, 'manifest')
+  const invoiceRef = getDocumentReference(row, 'invoice')
+  const hasLabelDocument = Boolean(labelRef.key || labelRef.url)
+  const hasInvoiceDocument = Boolean(invoiceRef.key || invoiceRef.url)
+  const normalizedStatus = String(row?.order_status || '').trim().toLowerCase()
+  const isManifestedOrOperational =
+    Boolean(manifestRef.key || manifestRef.url || String(row?.awb_number || '').trim()) ||
+    [
+      'booked',
+      'shipment_created',
+      'pickup_initiated',
+      'in_transit',
+      'out_for_delivery',
+      'delivered',
+      'ndr',
+      'undelivered',
+      'rto',
+      'rto_in_transit',
+      'rto_delivered',
+    ].includes(normalizedStatus)
 
   const handleDownload = async (
     key: string,
     fileType: 'label' | 'invoice' | 'manifest' = 'label',
   ) => {
-    if (!canExportOrders) {
-      toast.open({
-        message: 'You do not have permission to download shipment documents.',
-        severity: 'error',
-      })
-      return
-    }
-
     try {
       setDownloadingKey(key)
       const urls = await mutateAsync({ keys: [key] })
@@ -55,18 +65,15 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
 
       if (!url) {
         toast.open({
-          message: getFriendlyMissingMessage(fileType),
+          message: `${
+            fileType === 'label' ? 'Label' : fileType === 'invoice' ? 'Invoice' : 'Manifest'
+          } file not found. It may not have been generated yet.`,
           severity: 'error',
         })
         return
       }
 
-      const link = document.createElement('a')
-      link.href = url
-      link.download = key.split('/').pop() ?? ''
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      await downloadFile(url, key.split('/').pop() ?? '')
     } catch (err: unknown) {
       console.error('Download failed', err)
       const error = err as { response?: { data?: { message?: string } }; message?: string }
@@ -75,7 +82,9 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
       toast.open({
         message:
           errorMessage.includes('not found') || errorMessage.includes('404')
-            ? getFriendlyMissingMessage(fileType)
+            ? `${
+                fileType === 'label' ? 'Label' : fileType === 'invoice' ? 'Invoice' : 'Manifest'
+              } file not found. It may not have been generated yet.`
             : `Failed to download ${fileType}: ${errorMessage}`,
         severity: 'error',
       })
@@ -88,17 +97,8 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
     url: string,
     fileType: 'label' | 'invoice' | 'manifest' = 'label',
   ) => {
-    if (!canExportOrders) {
-      toast.open({
-        message: 'You do not have permission to download shipment documents.',
-        severity: 'error',
-      })
-      return
-    }
-
     try {
-      // Validate URL before attempting download
-      if (!url || !url.startsWith('http')) {
+      if (!url) {
         toast.open({
           message: `Invalid ${fileType} URL`,
           severity: 'error',
@@ -106,13 +106,14 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
         return
       }
 
-      const link = document.createElement('a')
-      link.href = url
-      link.target = '_blank'
-      link.download = url.split('/').pop() ?? ''
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      const fileName = url.split('/').pop() ?? `${fileType}.pdf`
+      void downloadFile(url, fileName).catch((error) => {
+        console.error('Direct download failed', error)
+        toast.open({
+          message: `Failed to download ${fileType}`,
+          severity: 'error',
+        })
+      })
     } catch (err) {
       console.error('Direct download failed', err)
       toast.open({
@@ -191,6 +192,26 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
     )
   }
 
+  const handleRegenerateMissingDocuments = async () => {
+    try {
+      const regenerateLabel = !hasLabelDocument
+      const regenerateInvoice = !hasInvoiceDocument
+
+      if (!regenerateLabel && !regenerateInvoice) {
+        toast.open({ message: 'Label and invoice are already available.', severity: 'info' })
+        return
+      }
+
+      await regenerateDocuments({
+        orderId: String(row.id),
+        regenerateLabel,
+        regenerateInvoice,
+      })
+    } catch (err) {
+      console.error('Document regeneration failed', err)
+    }
+  }
+
   return (
     <Stack spacing={2} p={1.5}>
       <Typography fontWeight={700} fontSize={16}>
@@ -202,8 +223,7 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
       <Stack direction="row" spacing={1} alignItems="center">
         <MdPerson size={20} />
         <Typography>
-          <strong>Customer:</strong> {row.buyer_name}{' '}
-          ({canViewCustomerDetails ? row.buyer_phone : maskedPhone})
+          <strong>Customer:</strong> {row.buyer_name} ({row.buyer_phone})
         </Typography>
       </Stack>
 
@@ -211,10 +231,7 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
       <Stack direction="row" spacing={1} alignItems="center">
         <MdLocationOn size={20} />
         <Typography>
-          <strong>Address:</strong>{' '}
-          {canViewCustomerDetails
-            ? `${row.address}, ${row.city}, ${row.state} - ${row.pincode}`
-            : maskedAddress}
+          <strong>Address:</strong> {row.address}, {row.city}, {row.state} - {row.pincode}
         </Typography>
       </Stack>
 
@@ -269,13 +286,30 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
         <Stack direction="row" spacing={1} alignItems="center">
           <MdReceipt size={20} />
           <Typography>
-            <strong>AWB:</strong> <AWBLink awb={row.awb_number} />
+            <strong>AWB:</strong>{' '}
+            {awbValue ? (
+              <Link
+                component={RouterLink}
+                to={`/tools/order_tracking?awb=${encodeURIComponent(awbValue)}`}
+                underline="hover"
+                sx={{ fontWeight: 800 }}
+              >
+                {awbValue}
+              </Link>
+            ) : (
+              '-'
+            )}
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1} alignItems="center">
           <MdLocalShipping size={20} />
           <Typography>
-            <strong>Courier:</strong> {row.courier_partner}
+            <strong>Courier:</strong>{' '}
+            {getCourierDisplayName({
+              name: row.courier_partner,
+              courier_id: row.courier_id,
+              integration_type: row.integration_type,
+            })}
           </Typography>
         </Stack>
       </Stack>
@@ -292,36 +326,19 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
         </Stack>
       )}
 
-      {(String(row?.order_status || '').toLowerCase() === 'manifest_failed' ||
-        (String(row?.manifest || '').trim().length > 0 &&
-          String(row?.manifest_error || '').trim().length > 0)) && (
+      {String(row?.order_status || '').toLowerCase() === 'manifest_failed' && (
         <Paper
           elevation={0}
           sx={{
             p: 1.5,
             borderRadius: 2,
-            border:
-              String(row?.order_status || '').toLowerCase() === 'manifest_failed'
-                ? '1px solid rgba(211, 47, 47, 0.18)'
-                : '1px solid rgba(245, 158, 11, 0.24)',
-            backgroundColor:
-              String(row?.order_status || '').toLowerCase() === 'manifest_failed'
-                ? '#FFF7F7'
-                : '#FFF9ED',
+            border: '1px solid rgba(211, 47, 47, 0.18)',
+            backgroundColor: '#FFF7F7',
           }}
         >
           <Stack spacing={0.75}>
-            <Typography
-              fontWeight={700}
-              color={
-                String(row?.order_status || '').toLowerCase() === 'manifest_failed'
-                  ? 'error.main'
-                  : 'warning.main'
-              }
-            >
-              {String(row?.order_status || '').toLowerCase() === 'manifest_failed'
-                ? 'Manifest failed'
-                : 'Manifest warning'}
+            <Typography fontWeight={700} color="error.main">
+              Manifest failed
             </Typography>
             <Typography fontSize={13} color="text.secondary">
               {row?.manifest_error || 'The courier rejected the manifest request.'}
@@ -337,16 +354,15 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
       )}
 
       {/* Documents */}
-      {canExportOrders &&
-        (row.label ||
-          row.label_url ||
-          row.label_key ||
-          row.manifest ||
-          row.manifest_url ||
-          row.manifest_key ||
-          row.invoice_link ||
-          row.invoice_url ||
-          row.invoice_key) && (
+      {(row.label ||
+        row.label_url ||
+        row.label_key ||
+        row.manifest ||
+        row.manifest_url ||
+        row.manifest_key ||
+        row.invoice_link ||
+        row.invoice_url ||
+        row.invoice_key) && (
         <Paper
           elevation={0}
           sx={{
@@ -360,31 +376,76 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
           <Typography fontWeight={700} fontSize={14} mb={1.25}>
             Documents
           </Typography>
+          {isManifestedOrOperational && (!hasLabelDocument || !hasInvoiceDocument) && (
+            <Button
+              size="small"
+              variant="contained"
+              sx={{ alignSelf: 'flex-start', mb: 1.25, textTransform: 'none' }}
+              onClick={handleRegenerateMissingDocuments}
+              disabled={isRegeneratingDocuments}
+            >
+              {isRegeneratingDocuments ? 'Generating...' : 'Generate Missing Documents'}
+            </Button>
+          )}
           <Stack spacing={1}>
             {renderDocAction({
               title: 'Label',
-              keyValue: row.label_key || row.label,
-              urlValue: row.label_url && /^https?:\/\//i.test(row.label_url) ? row.label_url : undefined,
+              keyValue: labelRef.key ?? undefined,
+              urlValue: labelRef.url ?? undefined,
               type: 'label',
             })}
 
             {renderDocAction({
               title: 'Manifest',
-              keyValue: row.manifest_key || row.manifest,
-              urlValue:
-                row.manifest_url && /^https?:\/\//i.test(row.manifest_url) ? row.manifest_url : undefined,
+              keyValue: manifestRef.key ?? undefined,
+              urlValue: manifestRef.url ?? undefined,
               type: 'manifest',
             })}
 
             {renderDocAction({
               title: 'Invoice',
-              keyValue: row.invoice_key || row.invoice_link,
-              urlValue: row.invoice_url && /^https?:\/\//i.test(row.invoice_url) ? row.invoice_url : undefined,
+              keyValue: invoiceRef.key ?? undefined,
+              urlValue: invoiceRef.url ?? undefined,
               type: 'invoice',
             })}
           </Stack>
         </Paper>
       )}
+
+      {!(row.label ||
+        row.label_url ||
+        row.label_key ||
+        row.manifest ||
+        row.manifest_url ||
+        row.manifest_key ||
+        row.invoice_link ||
+        row.invoice_url ||
+        row.invoice_key) &&
+        isManifestedOrOperational && (
+          <Paper
+            elevation={0}
+            sx={{
+              mt: 0.5,
+              p: 2,
+              borderRadius: 2.5,
+              border: `1px solid ${alpha(ACCENT, 0.16)}`,
+              backgroundColor: alpha(ACCENT, 0.03),
+            }}
+          >
+            <Typography fontWeight={700} fontSize={14} mb={1.25}>
+              Documents
+            </Typography>
+            <Button
+              size="small"
+              variant="contained"
+              sx={{ textTransform: 'none' }}
+              onClick={handleRegenerateMissingDocuments}
+              disabled={isRegeneratingDocuments}
+            >
+              {isRegeneratingDocuments ? 'Generating...' : 'Generate Label & Invoice'}
+            </Button>
+          </Paper>
+        )}
 
       {/* Actions moved to Actions column in list */}
     </Stack>

@@ -9,18 +9,17 @@ export const emptyErrors: FormErrors = {
     companyName: "",
     email: "",
     pincode: "",
-    phone: "",
   },
   businessLegal: {
     brandName: "",
-    businessCategory: [],
+    businessCategory: "",
     gstNumber: "",
     panNumber: "",
   },
   platformIntegration: {},
   warehouseSetup: {
     packagingType: "",
-    preferredCouriers: [],
+    preferredCouriers: "",
     deliverySpeedPreference: "",
   },
 };
@@ -56,9 +55,7 @@ export const validateOnboardingFields = (
       errors.basicInfo.email = "Enter a valid email";
     }
 
-    if (!pincode?.trim()) {
-      errors.basicInfo.pincode = "Pincode is required";
-    } else if (!/^\d{6}$/.test(pincode)) {
+    if (pincode && !/^\d{6}$/.test(pincode)) {
       errors.basicInfo.pincode = "Pincode must be 6 digits";
     }
 
@@ -67,6 +64,8 @@ export const validateOnboardingFields = (
     } else if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) {
       errors.basicInfo.phone = "Enter a valid 10-digit phone number";
     }
+    // Pincode lookup is helpful, but it should not block onboarding when
+    // the external postal API is slow or unavailable.
   }
 
   // Step 2: Business Legal
@@ -129,9 +128,24 @@ import { matchPath } from "react-router-dom";
  * Returns true if `pathname` starts with `pattern`, while respecting
  * React‑Router patterns like `/orders/:id`.
  */
-export function isActive(pattern: string, pathname: string) {
+export function isActive(pathname: string, pattern: string) {
   return !!matchPath({ path: pattern, end: false }, pathname);
 }
+
+export const dataUrlToFile = (
+  dataUrl: string,
+  fileName = "selfie.jpg"
+): File => {
+  const arr = dataUrl.split(",");
+  const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], fileName, { type: mime });
+};
 
 export const getMimeType = (filename: string): string => {
   const clean = filename.split("?")[0]; // Remove query params

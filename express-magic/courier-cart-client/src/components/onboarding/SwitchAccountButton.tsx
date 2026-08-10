@@ -33,16 +33,15 @@ export default function SwitchAccountButton() {
     navigate('/')
   }
 
-  const BRAND_GREEN = '#062A5B'
-  const BRAND_ORANGE = '#ED1C24'
+  const DE_BLUE = '#0052CC'
 
   /* ---------- styles (glass) ----- */
   const glass = {
     backdropFilter: 'blur(17px)',
     background: '#ffffff',
-    border: `1px solid ${alpha(BRAND_GREEN, 0.2)}`,
-    boxShadow: '0 12px 40px rgba(75, 142, 64, 0.15)',
-    borderRadius: 3,
+    border: `1px solid ${alpha(DE_BLUE, 0.15)}`,
+    boxShadow: `0 12px 40px ${alpha(DE_BLUE, 0.1)}`,
+    borderRadius: 1,
     p: 3,
     width: { xs: 280, sm: 320 },
   }
@@ -55,18 +54,21 @@ export default function SwitchAccountButton() {
         startIcon={!isMobile && <AiOutlineUserSwitch />}
         sx={{
           textTransform: 'none',
-          borderColor: alpha(BRAND_GREEN, 0.3),
-          color: BRAND_GREEN,
+          borderColor: alpha(DE_BLUE, 0.25),
+          color: DE_BLUE,
+          fontWeight: 800,
+          borderRadius: 1,
+          px: 2,
           '&:hover': {
-            borderColor: BRAND_GREEN,
-            backgroundColor: alpha(BRAND_GREEN, 0.08),
+            borderColor: DE_BLUE,
+            backgroundColor: alpha(DE_BLUE, 0.06),
           },
         }}
         onClick={openPopover}
         aria-haspopup="dialog"
         aria-label="Switch account"
       >
-        {isMobile ? <AiOutlineUserSwitch /> : 'Switch account'}
+        {isMobile ? <AiOutlineUserSwitch /> : 'Switch Account'}
       </Button>
 
       <Popover
@@ -80,55 +82,56 @@ export default function SwitchAccountButton() {
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{ paper: { sx: glass } }}
       >
-        <Stack spacing={2}>
+        <Stack spacing={2.5}>
           {/* Header */}
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography fontWeight={600} color="#1a1a1a">
-              Use a different account?
+            <Typography variant="subtitle1" fontWeight={800} color="#172B4D">
+              Switch Account?
             </Typography>
             <IconButton
               size="small"
               onClick={closePopover}
               aria-label="Close"
-              sx={{ color: '#6b6b6b' }}
+              sx={{ color: '#6B778C', bgcolor: alpha('#6B778C', 0.08) }}
             >
               <MdClose size={18} />
             </IconButton>
           </Box>
 
           {/* Body */}
-          <Typography variant="body2" color="#6b6b6b">
-            You'll be signed out and can log in with another email&nbsp;/&nbsp;phone.
+          <Typography variant="body2" color="#42526E" sx={{ fontWeight: 500 }}>
+            This will log you out of the current seller panel so you can sign in with a different account.
           </Typography>
 
           {/* Actions */}
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>
             <Button
               size="small"
               onClick={closePopover}
               sx={{
-                color: '#6b6b6b',
-                '&:hover': {
-                  backgroundColor: alpha(BRAND_GREEN, 0.08),
-                },
+                color: '#6B778C',
+                textTransform: 'none',
+                fontWeight: 700,
               }}
             >
               Cancel
             </Button>
             <Button
               size="small"
-              variant="outlined"
+              variant="contained"
               onClick={handleConfirm}
               sx={{
-                borderColor: BRAND_ORANGE,
-                color: BRAND_ORANGE,
-                '&:hover': {
-                  borderColor: BRAND_ORANGE,
-                  backgroundColor: alpha(BRAND_ORANGE, 0.08),
-                },
+                bgcolor: DE_BLUE,
+                color: '#fff',
+                fontWeight: 800,
+                px: 2.5,
+                borderRadius: 1,
+                textTransform: 'none',
+                boxShadow: `0 4px 12px ${alpha(DE_BLUE, 0.3)}`,
+                '&:hover': { bgcolor: '#0043A4' },
               }}
             >
-              Logout
+              Logout & Switch
             </Button>
           </Stack>
         </Stack>

@@ -1,32 +1,24 @@
-import { alpha, Box, Button, Skeleton, Typography } from '@mui/material'
+import { alpha, Box, Skeleton, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { FaWallet } from 'react-icons/fa'
-import { FiPlus } from 'react-icons/fi'
 import { useAuth } from '../../context/auth/AuthContext'
-import useEmployeePermissions from '../../hooks/User/useEmployeePermissions'
 import { useWalletBalance } from '../../hooks/useWalletBalance'
 import AddMoneyDialog from '../AddMoneyDialog'
 
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_DARK = '#17171A'
+const INK = '#182235'
+const ACCENT = '#D66F3D'
 
 interface WalletMenuProps {
-  iconOnly?: boolean
-  iconOverride?: React.ReactNode
+  compactLabel?: string
 }
 
-const WalletMenu = ({ iconOnly = false, iconOverride }: WalletMenuProps) => {
+const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
   const [dialogOpen, setDialogOpen] = useState(false)
-
   const { walletBalance, setWalletBalance } = useAuth()
-  const { canRechargeWallet, canViewWallet } = useEmployeePermissions()
+  const { data, isLoading } = useWalletBalance(true)
 
-  const { data, isLoading } = useWalletBalance(canViewWallet)
-
-  // ✅ Only set balance in context after render
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const balance = Number((data as any)?.data?.balance ?? data) // handle both shapes
+    const balance = Number(data?.data?.balance ?? 0)
     if (!isNaN(balance)) {
       setWalletBalance(balance)
     } else {
@@ -34,145 +26,83 @@ const WalletMenu = ({ iconOnly = false, iconOverride }: WalletMenuProps) => {
     }
   }, [data, setWalletBalance])
 
-  if (!canViewWallet) return null
-
-  const handleOpen = () => {
-    if (!canRechargeWallet) return
-    setDialogOpen(true)
-  }
-
   return (
     <>
-      {iconOnly ? (
+      <Box
+        onClick={() => setDialogOpen(true)}
+        sx={{
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: compactLabel ? 0.75 : 0.85,
+          height: compactLabel ? 38 : 'auto',
+          px: compactLabel ? 1.35 : { xs: 0.95, sm: 1.05 },
+          py: compactLabel ? 0 : 0.78,
+          borderRadius: compactLabel ? 2 : 3,
+          border: compactLabel ? '1px solid #2a313a' : `1px solid ${alpha(INK, 0.08)}`,
+          bgcolor: compactLabel ? '#101720' : alpha('#FFFFFF', 0.84),
+          minWidth: compactLabel ? 'auto' : { xs: 'auto', sm: 156 },
+          boxShadow: compactLabel ? 'none' : `0 8px 18px ${alpha(INK, 0.05)}`,
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            borderColor: compactLabel ? alpha('#7657ff', 0.5) : alpha(ACCENT, 0.24),
+            transform: 'translateY(-1px)',
+          },
+        }}
+      >
         <Box
           sx={{
-            cursor: 'pointer',
+            width: compactLabel ? 20 : 32,
+            height: compactLabel ? 20 : 32,
+            borderRadius: compactLabel ? 1 : 2.5,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 36,
-            height: 36,
-            borderRadius: 2,
-            background: 'rgba(0, 0, 0, 0.02)',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            color: BRAND_PRIMARY,
-            transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              background: `rgba(217, 4, 22, 0.08)`,
-              borderColor: `rgba(217, 4, 22, 0.2)`,
-              boxShadow: `0 4px 12px rgba(217, 4, 22, 0.12)`,
-              transform: 'translateY(-2px)',
-            },
+            bgcolor: compactLabel ? 'transparent' : alpha(ACCENT, 0.12),
+            color: compactLabel ? '#ff7a17' : ACCENT,
+            border: compactLabel ? 0 : `1px solid ${alpha(ACCENT, 0.14)}`,
+            flexShrink: 0,
           }}
-          onClick={handleOpen}
         >
-          {iconOverride || <FaWallet size={16} />}
+          <FaWallet size={14} />
         </Box>
-      ) : (
-        <Box
-          sx={{
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: { xs: 1.0, sm: 1.4 },
-            px: { xs: 1.0, sm: 1.3 },
-            py: { xs: 0.65, sm: 0.85 },
-            minHeight: { xs: 40, sm: 46 },
-            minWidth: { xs: 180, sm: 240 },
-            borderRadius: 2.5,
-            background: 'rgba(0, 0, 0, 0.02)',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              background: `rgba(217, 4, 22, 0.06)`,
-              borderColor: `rgba(217, 4, 22, 0.15)`,
-              boxShadow: `0 8px 20px rgba(217, 4, 22, 0.1)`,
-              transform: 'translateY(-2px)',
-            },
-          }}
-          onClick={handleOpen}
-        >
-          <Box
-            sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.8, sm: 1.2 }, minWidth: 0 }}
-          >
-            <Box
-              sx={{ display: 'flex', alignItems: 'center', color: BRAND_PRIMARY, flexShrink: 0 }}
-            >
-              {iconOverride || <FaWallet size={18} />}
-            </Box>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-              <Typography
-                sx={{
-                  fontSize: { xs: '0.95rem', sm: '1.1rem' },
-                  fontWeight: 700,
-                  color: BRAND_DARK,
-                  lineHeight: 1.2,
-                  mt: 0.3,
-                }}
-              >
-                {isLoading || walletBalance === null ? (
-                  <Skeleton
-                    variant="text"
-                    width={60}
-                    height={22}
-                    sx={{ bgcolor: alpha(BRAND_PRIMARY, 0.12) }}
-                  />
-                ) : (
-                  `₹${walletBalance?.toLocaleString('en-IN')}`
-                )}
-              </Typography>
-            </Box>
-          </Box>
-          {canRechargeWallet ? (
-            <Button
-              size="small"
-              startIcon={<FiPlus size={14} />}
-              onClick={(e) => {
-                e.stopPropagation()
-                setDialogOpen(true)
-              }}
+        <Stack spacing={0.02} sx={{ minWidth: 0 }}>
+          {!compactLabel ? (
+            <Typography
               sx={{
-                height: 32,
-                minHeight: 32,
-                px: 1.2,
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                color: '#fff',
-                background: `black`,
-                boxShadow: '0 6px 14px rgba(217, 4, 22, 0.18)',
-                transition: 'all 0.18s ease',
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
-                '& .MuiButton-startIcon': {
-                  marginRight: 0.6,
-                },
-                '&:hover': {
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 10px 20px rgba(217, 4, 22, 0.25)',
-                  background: `linear-gradient(135deg, #B40312 0%, #8F0210 100%)`,
-                },
-                '&:active': {
-                  transform: 'translateY(0px)',
-                },
+                fontSize: '0.64rem',
+                fontWeight: 800,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: alpha(INK, 0.46),
               }}
             >
-              Add Balance
-            </Button>
+              Wallet
+            </Typography>
           ) : null}
-        </Box>
-      )}
+          {isLoading || walletBalance === null ? (
+            <Skeleton variant="text" width={70} height={20} sx={{ bgcolor: alpha(INK, 0.08) }} />
+          ) : (
+            <Typography
+              sx={{
+                fontSize: compactLabel ? '0.94rem' : '0.86rem',
+                fontWeight: 900,
+                color: compactLabel ? '#f8fafc' : INK,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {compactLabel || `INR ${walletBalance?.toLocaleString('en-IN')}`}
+            </Typography>
+          )}
+        </Stack>
+      </Box>
 
-      {canRechargeWallet ? (
-        <AddMoneyDialog
-          currentBalance={walletBalance ?? 0}
-          open={dialogOpen}
-          setOpen={setDialogOpen}
-        />
-      ) : null}
+      <AddMoneyDialog
+        currentBalance={walletBalance ?? 0}
+        open={dialogOpen}
+        setOpen={setDialogOpen}
+      />
     </>
   )
 }

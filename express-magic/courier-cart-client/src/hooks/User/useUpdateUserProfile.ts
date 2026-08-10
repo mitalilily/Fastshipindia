@@ -7,10 +7,6 @@ import {
 import type { IUserProfileDB } from "../../types/user.types";
 import { updateUserProfile } from "../../api/userProfile.api";
 import { toast } from "../../components/UI/Toast";
-import { getUserProfileQueryKey } from "../../utils/authQueryKeys";
-import { getStoredSessionUser, setStoredSessionUser } from "../../api/tokenVault";
-import { isDemoLoginEnabled } from "../../utils/demoAuth";
-import { emptyUserProfile } from "../../utils/utility";
 
 /**
  * Update the current user's profile
@@ -34,47 +30,18 @@ export const useUpdateUserProfile = (
     Error,
     Partial<IUserProfileDB>
   >({
-    mutationFn: async (payload) => {
-      if (!isDemoLoginEnabled()) return updateUserProfile(payload);
-
-      const current = getStoredSessionUser<IUserProfileDB>() ?? emptyUserProfile;
-      const nextUser = {
-        ...current,
-        ...payload,
-        companyInfo: {
-          ...current.companyInfo,
-          ...(payload.companyInfo ?? {}),
-        },
-      } as IUserProfileDB;
-
-      setStoredSessionUser(nextUser);
-      return { message: "Demo profile updated", user: nextUser };
-    },
-    onSuccess: (
-      data: { message: string; user: IUserProfileDB },
-      variables: Partial<IUserProfileDB>,
-      ...callbackArgs: unknown[]
-    ) => {
-      queryClient.setQueryData(getUserProfileQueryKey(), data?.user);
+    mutationFn: updateUserProfile,
+    onSuccess: (data, variables, context) => {
+      // 1️⃣  Optimistically write the new profile into cache
+      queryClient.setQueryData(["userProfile"], data?.user);
 
       toast.open({ message: data?.message, severity: "success" });
 
-      (options?.onSuccess as ((...args: unknown[]) => unknown) | undefined)?.(
-        data,
-        variables,
-        ...callbackArgs
-      );
+      options?.onSuccess?.(data, variables, context);
     },
-    onError: (
-      error: Error,
-      variables: Partial<IUserProfileDB>,
-      ...callbackArgs: unknown[]
-    ) => {
-      (options?.onError as ((...args: unknown[]) => unknown) | undefined)?.(
-        error,
-        variables,
-        ...callbackArgs
-      );
+    onError: (error, variables, context) => {
+      // Forward to consumer‑supplied handler
+      options?.onError?.(error, variables, context);
       toast.open({
         message: "Error saving profile details!",
         severity: "error",

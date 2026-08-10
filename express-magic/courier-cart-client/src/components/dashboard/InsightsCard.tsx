@@ -1,6 +1,7 @@
 import React from 'react'
 import { alpha, Box, Card, CardContent, Stack, Typography } from '@mui/material'
 import { MdCheckCircle, MdInfo, MdLightbulb, MdTrendingDown, MdTrendingUp, MdWarning } from 'react-icons/md'
+import { dashboardCardSx, dashboardIconSx, dashboardPalette } from './dashboardStyles'
 
 interface InsightsCardProps {
   operational: {
@@ -21,9 +22,6 @@ interface InsightsCardProps {
 }
 
 type InsightType = 'good' | 'warning' | 'notice'
-
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_ACCENT = '#ED1C24'
 
 export default function InsightsCard({ operational, trends, actions }: InsightsCardProps) {
   const insights: Array<{
@@ -77,46 +75,59 @@ export default function InsightsCard({ operational, trends, actions }: InsightsC
   }
 
   const palette: Record<InsightType, { bg: string; border: string; color: string }> = {
-    good: { bg: alpha(BRAND_PRIMARY, 0.07), border: alpha(BRAND_PRIMARY, 0.2), color: BRAND_PRIMARY },
-    warning: { bg: alpha(BRAND_ACCENT, 0.12), border: alpha(BRAND_ACCENT, 0.25), color: '#8a3e00' },
-    notice: { bg: alpha('#6b7280', 0.1), border: alpha('#6b7280', 0.25), color: '#374151' },
+    good: {
+      bg: alpha(dashboardPalette.green, 0.07),
+      border: alpha(dashboardPalette.green, 0.2),
+      color: dashboardPalette.green,
+    },
+    warning: {
+      bg: alpha(dashboardPalette.red, 0.07),
+      border: alpha(dashboardPalette.red, 0.2),
+      color: dashboardPalette.red,
+    },
+    notice: {
+      bg: alpha(dashboardPalette.blue, 0.06),
+      border: alpha(dashboardPalette.blue, 0.2),
+      color: dashboardPalette.blue,
+    },
   }
 
   return (
-    <Card sx={{ height: '100%', borderRadius: 2.6, border: `1px solid ${alpha(BRAND_PRIMARY, 0.14)}`, boxShadow: `0 8px 20px ${alpha(BRAND_PRIMARY, 0.08)}` }}>
-      <CardContent sx={{ p: 2.2 }}>
-        <Stack direction="row" spacing={1.1} alignItems="center" mb={1.8}>
-          <Box sx={{ width: 34, height: 34, borderRadius: 1.8, display: 'grid', placeItems: 'center', bgcolor: alpha(BRAND_ACCENT, 0.16), color: '#8a3e00' }}>
+    <Card sx={dashboardCardSx}>
+      <CardContent sx={{ p: 2.4 }}>
+        <Stack direction="row" spacing={1.2} alignItems="center" mb={2.2}>
+          <Box sx={dashboardIconSx(dashboardPalette.amber)}>
             <MdLightbulb size={20} />
           </Box>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: '#17171A' }}>Smart Insights</Typography>
+          <Box>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+              Performance Insights
+            </Typography>
+            <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
+              Signals that need attention
+            </Typography>
+          </Box>
         </Stack>
 
-        <Stack spacing={1.05}>
+        <Stack spacing={1.3}>
           {insights.slice(0, 4).map((insight, idx) => (
             <Box
               key={idx}
               sx={{
-                p: 1.2,
-                borderRadius: 2,
+                p: 1.35,
+                borderRadius: '12px',
                 border: `1px solid ${palette[insight.type].border}`,
                 bgcolor: palette[insight.type].bg,
               }}
             >
-              <Stack direction="row" spacing={0.9} alignItems="flex-start">
-                <Box sx={{ color: palette[insight.type].color, mt: 0.15 }}>{insight.icon}</Box>
-                <Typography sx={{ fontSize: '12px', color: '#17171A', lineHeight: 1.45, fontWeight: 600 }}>
+              <Stack direction="row" spacing={1.1} alignItems="flex-start">
+                <Box sx={{ color: palette[insight.type].color, mt: 0.2 }}>{insight.icon}</Box>
+                <Typography sx={{ fontSize: '0.82rem', color: dashboardPalette.ink, fontWeight: 600, lineHeight: 1.45 }}>
                   {insight.message}
                 </Typography>
               </Stack>
             </Box>
           ))}
-
-          {insights.length === 0 && (
-            <Typography sx={{ fontSize: '12px', color: '#496189' }}>
-              Insights will appear as shipment activity increases.
-            </Typography>
-          )}
         </Stack>
       </CardContent>
     </Card>

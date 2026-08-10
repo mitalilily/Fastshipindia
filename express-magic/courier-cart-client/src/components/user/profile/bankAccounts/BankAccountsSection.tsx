@@ -13,6 +13,10 @@ import { toast } from '../../../UI/Toast'
 import { AddBankAccountDialog } from './AddBankAccountDialog'
 import { BankAccountsList } from './BankAccountList'
 
+const DE_BLUE = '#0052CC'
+const DE_AMBER = '#FFAB00'
+const BRAND_GRADIENT = `linear-gradient(135deg, ${DE_BLUE} 0%, ${DE_AMBER} 100%)`
+
 export const BankAccountsSection: React.FC = () => {
   const [open, setOpen] = useState(false)
   const { data: accounts, isLoading } = useBankAccounts()
@@ -23,16 +27,6 @@ export const BankAccountsSection: React.FC = () => {
   const delBank = useDeleteBankAccount()
 
   const [editing, setEditing] = useState<BankAccount | null>(null)
-
-  const openAddDialog = () => {
-    setEditing(null)
-    setOpen(true)
-  }
-
-  const closeDialog = () => {
-    setOpen(false)
-    setEditing(null)
-  }
 
   const handleMakePrimary = (id: string) => {
     makePrimary.mutate(id, {
@@ -61,9 +55,10 @@ export const BankAccountsSection: React.FC = () => {
         {
           onSuccess: () => {
             toast.open({ message: 'Bank Account updated!' })
-            closeDialog()
+            setOpen(false)
+            setEditing(null)
           },
-          onError: (err) => toast.open({ message: err.message, severity: 'error' }),
+          onError: () => toast.open({ message: 'Error updating Bank Account!' }),
         },
       )
     } else {
@@ -71,9 +66,9 @@ export const BankAccountsSection: React.FC = () => {
       addBank.mutate(data as BankAccount, {
         onSuccess: () => {
           toast.open({ message: 'Bank Account added successfully!' })
-          closeDialog()
+          setOpen(false)
         },
-        onError: (err) => toast.open({ message: err.message, severity: 'error' }),
+        onError: () => toast.open({ message: 'Error adding Bank Account!' }),
       })
     }
   }
@@ -87,43 +82,17 @@ export const BankAccountsSection: React.FC = () => {
 
   return (
     <Stack spacing={3} width={'100%'}>
+      {/* Header */}
       <Box
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', md: 'center' },
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 1.5,
-          p: 2,
-          border: `1px solid ${alpha('#062A5B', 0.12)}`,
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(251,245,242,0.98) 100%)',
+          alignItems: 'center',
+          mb: 1,
         }}
       >
-        <Stack spacing={0.4}>
-          <Typography sx={{ fontSize: '0.72rem', letterSpacing: '0.16em', fontWeight: 800, color: '#ED1C24', textTransform: 'uppercase' }}>
-            Settlement accounts
-          </Typography>
-          <Typography sx={{ fontSize: '1.2rem', fontWeight: 800, color: '#111827' }}>
-            Banking details for payouts and COD remittance
-          </Typography>
-          <Typography sx={{ fontSize: '0.92rem', color: '#4B5563' }}>
-            Control where FastShip settles funds and which account remains primary for operations.
-          </Typography>
-        </Stack>
         {accounts && accounts.length > 0 && (
-          <Button
-            variant="contained"
-            onClick={openAddDialog}
-            sx={{
-              borderRadius: 0,
-              textTransform: 'none',
-              fontWeight: 700,
-              backgroundColor: '#16181D',
-              color: '#FFFFFF',
-              '&:hover': { backgroundColor: '#111827' },
-            }}
-          >
+          <Button variant="contained" onClick={() => setOpen(true)}>
             + Add Account
           </Button>
         )}
@@ -139,10 +108,13 @@ export const BankAccountsSection: React.FC = () => {
                 animation="wave"
                 height={190}
                 sx={{
-                  borderRadius: 0,
-                  bgcolor: '#F8FAFC',
+                  borderRadius: 3,
+                  bgcolor: alpha(DE_BLUE, 0.04),
                   '&::after': {
-                    background: 'linear-gradient(90deg, transparent, rgba(217, 4, 22, 0.08), transparent)',
+                    background: `linear-gradient(90deg, transparent, ${alpha(
+                      DE_BLUE,
+                      0.08,
+                    )}, transparent)`,
                   },
                 }}
               />
@@ -167,31 +139,61 @@ export const BankAccountsSection: React.FC = () => {
             py: 8,
             px: 4,
             gap: 3,
-            bgcolor: '#FAF6F3',
-            borderRadius: 0,
-            border: '1px solid rgba(217, 4, 22, 0.12)',
+            bgcolor: alpha(DE_BLUE, 0.04),
+            borderRadius: 3,
+            border: `2px dashed ${alpha(DE_BLUE, 0.2)}`,
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 4,
+              background: BRAND_GRADIENT,
+              borderRadius: '12px 12px 0 0',
+              opacity: 0.8,
+            },
           }}
         >
           <Box
             sx={{
               width: 96,
               height: 96,
-              borderRadius: 0,
-              background: '#16181D',
+              borderRadius: '50%',
+              background: BRAND_GRADIENT,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: 'none',
+              boxShadow: `0 4px 16px ${alpha(DE_BLUE, 0.25)}`,
+              position: 'relative',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                inset: -4,
+                borderRadius: '50%',
+                background: BRAND_GRADIENT,
+                opacity: 0.15,
+                zIndex: 0,
+              },
             }}
           >
-            <MdOutlineAccountBalance size={48} color="#FFFFFF" />
+            <MdOutlineAccountBalance
+              size={48}
+              color="#FFFFFF"
+              style={{ zIndex: 1, position: 'relative' }}
+            />
           </Box>
           <Stack spacing={1} alignItems="center" textAlign="center">
             <Typography
               variant="h6"
               fontWeight={700}
               sx={{
-                color: '#111827',
+                background: BRAND_GRADIENT,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
                 fontSize: { xs: '1.125rem', md: '1.25rem' },
               }}
             >
@@ -206,19 +208,22 @@ export const BankAccountsSection: React.FC = () => {
           </Stack>
           <Button
             variant="contained"
-            onClick={openAddDialog}
+            onClick={() => setOpen(true)}
             sx={{
               px: 4,
               py: 1.5,
-              borderRadius: 0,
+              borderRadius: 2.5,
               fontWeight: 600,
-              backgroundColor: '#16181D',
-              boxShadow: 'none',
+              background: BRAND_GRADIENT,
+              boxShadow: `0 4px 16px ${alpha(DE_BLUE, 0.3)}`,
               textTransform: 'none',
               color: '#FFFFFF',
               '&:hover': {
-                backgroundColor: '#111827',
+                transform: 'translateY(-2px)',
+                boxShadow: `0 6px 20px ${alpha(DE_BLUE, 0.4)}`,
+                background: `linear-gradient(135deg, ${DE_BLUE} 0%, ${DE_AMBER} 100%)`,
               },
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             + Add Bank Account
@@ -226,10 +231,16 @@ export const BankAccountsSection: React.FC = () => {
         </Box>
       )}
 
+      {!accounts?.length && (
+        <Box sx={{ display: 'none' }}>
+          <AddBankAccountDialog open={open} onClose={() => setOpen(false)} onAdd={handleAdd} />
+        </Box>
+      )}
+
       <AddBankAccountDialog
         addingAccount={addBank.isPending || editBank.isPending}
         open={open}
-        onClose={closeDialog}
+        onClose={() => setOpen(false)}
         initialData={editing ?? undefined}
         onAdd={handleAdd}
       />

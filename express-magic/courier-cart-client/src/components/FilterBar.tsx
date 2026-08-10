@@ -1,17 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   alpha,
-  Badge,
   Box,
   Button,
   CardContent,
   Collapse,
   Grid,
   IconButton,
-  Popover,
   Skeleton,
   Stack,
   Tooltip,
@@ -19,7 +14,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import {
   Controller,
   useForm,
@@ -28,7 +23,7 @@ import {
   type RegisterOptions,
 } from 'react-hook-form'
 import { FaFilter } from 'react-icons/fa6'
-import { MdDelete, MdExpandMore } from 'react-icons/md'
+import { MdDelete } from 'react-icons/md'
 import { RxDoubleArrowDown, RxDoubleArrowUp } from 'react-icons/rx'
 import CustomDrawer from './UI/drawer/CustomDrawer'
 import CustomDatePicker from './UI/inputs/CustomDatePicker'
@@ -57,15 +52,11 @@ interface GlassFilterBarProps<T extends Record<string, any>> {
   bgOverlayImg?: string
   loading?: boolean
   appliedCount?: number
-  mode?: 'inline' | 'button'
-  buttonLabel?: string
-  buttonIcon?: React.ReactNode
+  compact?: boolean
 }
 
-const BRAND_ORANGE = '#062A5B'
-const BRAND_WINE = '#ED1C24'
-const BRAND_INK = '#17171A'
-const BRAND_MUTED = '#6E6763'
+const DE_BLUE = '#0052CC'
+const DE_AMBER = '#FFAB00'
 
 export const FilterBar = <T extends Record<string, any>>({
   fields,
@@ -74,21 +65,20 @@ export const FilterBar = <T extends Record<string, any>>({
   bgOverlayImg,
   loading,
   appliedCount,
-  mode = 'inline',
-  buttonLabel = 'Filters',
-  buttonIcon = <FaFilter />,
+  compact = false,
 }: GlassFilterBarProps<T>) => {
   const { control, handleSubmit, reset } = useForm<T>({
     defaultValues: defaultValues as DefaultValues<T>,
   })
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [popoverOpen, setPopoverOpen] = useState(false)
-  const [expandedAccordions, setExpandedAccordions] = useState<string[]>(['primary', 'advanced'])
-  const filterButtonRef = useRef<HTMLButtonElement>(null)
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isDark = theme.palette.mode === 'dark'
+  const surface = isDark ? '#151b23' : '#FFFFFF'
+  const borderColor = isDark ? alpha('#f8fafc', 0.12) : alpha(DE_BLUE, 0.16)
+  const actionColor = isDark ? '#60a5fa' : DE_BLUE
 
   const primaryFields = fields.filter((f) => !f.isAdvanced)
   const advancedFields = fields.filter((f) => f.isAdvanced)
@@ -145,11 +135,11 @@ export const FilterBar = <T extends Record<string, any>>({
 
   const renderSkeletonContent = () => (
     <Box>
-      <Grid container spacing={2}>
+      <Grid container spacing={compact ? 1 : 2}>
         {fields?.slice(0, 3).map((_, idx) => (
           <Grid key={idx} size={{ md: 4, xs: 12 }}>
-            <Skeleton variant="text" height={20} sx={{ mb: 1 }} />
-            <Skeleton variant="rectangular" height={42} sx={{ borderRadius: 2 }} />
+            <Skeleton variant="text" height={compact ? 16 : 20} sx={{ mb: compact ? 0.5 : 1 }} />
+            <Skeleton variant="rectangular" height={compact ? 36 : 42} sx={{ borderRadius: 2 }} />
           </Grid>
         ))}
       </Grid>
@@ -159,37 +149,30 @@ export const FilterBar = <T extends Record<string, any>>({
   const submit = (data: T) => {
     onApply(data)
     if (isMobile) setDrawerOpen(false)
-    if (mode === 'button' && !isMobile) setPopoverOpen(false)
-  }
-
-  const handleAccordionChange = (panel: string) => {
-    setExpandedAccordions((prev) =>
-      prev.includes(panel) ? prev.filter((p) => p !== panel) : [...prev, panel],
-    )
   }
 
   const desktopActionButtonSx = {
-    border: `1px solid ${alpha(BRAND_ORANGE, 0.16)}`,
+    border: `1px solid ${alpha(actionColor, 0.28)}`,
     p: 1,
-    borderRadius: 2,
-    background: '#FFFFFF',
-    color: BRAND_ORANGE,
+    borderRadius: 1,
+    background: alpha(actionColor, isDark ? 0.12 : 0.06),
+    color: actionColor,
     '&:hover': {
-      background: alpha(BRAND_ORANGE, 0.04),
-      borderColor: alpha(BRAND_ORANGE, 0.34),
+      background: alpha(actionColor, isDark ? 0.18 : 0.12),
+      borderColor: alpha(actionColor, 0.45),
     },
   }
 
   const renderFormContent = () => (
     <form onSubmit={handleSubmit(submit)}>
-      <Stack gap={2}>
+      <Stack gap={compact ? 0.55 : 1.2}>
         <Stack
           direction={{ xs: 'column', lg: 'row' }}
           alignItems={{ xs: 'stretch', lg: 'center' }}
           justifyContent="space-between"
-          gap={2}
+          gap={compact ? 0.65 : 1.2}
         >
-          <Grid container spacing={2} sx={{ flex: 1 }}>
+          <Grid container spacing={compact ? 0.75 : 1.4} sx={{ flex: 1 }}>
             {primaryFields.map((field) => (
               <Grid size={{ md: 4, xs: 12 }} key={field.name}>
                 <Controller
@@ -202,7 +185,7 @@ export const FilterBar = <T extends Record<string, any>>({
           </Grid>
 
           {!isMobile ? (
-            <Stack mt={{ lg: 2.5 }} gap={1} direction="row" alignItems="center">
+            <Stack mt={{ lg: compact ? 0.95 : 1.6 }} gap={compact ? 0.45 : 0.8} direction="row" alignItems="center">
               {advancedFields.length ? (
                 <Tooltip title={showAdvanced ? 'Hide advanced filters' : 'Show advanced filters'}>
                   <IconButton
@@ -220,10 +203,11 @@ export const FilterBar = <T extends Record<string, any>>({
                 variant="contained"
                 sx={{
                   textTransform: 'none',
-                  fontWeight: 800,
-                  borderRadius: 2,
+                  fontWeight: 700,
+                  borderRadius: 1,
                   minWidth: 92,
-                  background: `linear-gradient(135deg, ${BRAND_ORANGE} 0%, #970915 100%)`,
+                  py: compact ? 0.58 : 1,
+                  background: `linear-gradient(135deg, ${DE_BLUE} 0%, #2a5fbe 100%)`,
                 }}
               >
                 Apply
@@ -249,13 +233,13 @@ export const FilterBar = <T extends Record<string, any>>({
           <Collapse in={showAdvanced} timeout="auto" unmountOnExit>
             <Box
               sx={{
-                p: { xs: 0.5, md: 1.5 },
-                borderRadius: 3,
-                border: `1px solid ${alpha(BRAND_ORANGE, 0.08)}`,
-                backgroundColor: '#FAF7F5',
+                p: compact ? { xs: 0.25, md: 0.8 } : { xs: 0.4, md: 1.1 },
+                borderRadius: 1,
+                border: `1px solid ${alpha(actionColor, 0.16)}`,
+                backgroundColor: alpha(actionColor, isDark ? 0.08 : 0.03),
               }}
             >
-              <Grid container spacing={2}>
+              <Grid container spacing={compact ? 1 : 1.4}>
                 {advancedFields.map((field) => (
                   <Grid size={{ md: 3, xs: 12 }} key={field.name}>
                     <Controller
@@ -273,367 +257,137 @@ export const FilterBar = <T extends Record<string, any>>({
     </form>
   )
 
-  const renderAccordionContent = () => (
-    <form onSubmit={handleSubmit(submit)}>
-      <Stack gap={0}>
-        {/* Primary Filters Accordion */}
-        <Accordion
-          expanded={expandedAccordions.includes('primary')}
-          onChange={() => handleAccordionChange('primary')}
-          sx={{
-            boxShadow: 'none',
-            borderBottom: `1px solid ${alpha(BRAND_INK, 0.08)}`,
-            '&:first-of-type': { borderRadius: '12px 12px 0 0' },
-            '&.Mui-expanded': {
-              margin: 0,
-            },
-          }}
-        >
-          <AccordionSummary
-            expandIcon={<MdExpandMore />}
-            sx={{
-              backgroundColor: alpha(BRAND_ORANGE, 0.02),
-              '&:hover': { backgroundColor: alpha(BRAND_ORANGE, 0.05) },
-              py: 1.5,
-              px: 2,
-            }}
-          >
-            <Typography sx={{ fontWeight: 700, color: BRAND_INK, fontSize: '0.95rem' }}>
-              Primary Filters
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails sx={{ p: 2 }}>
-            <Grid container spacing={2}>
-              {primaryFields.map((field) => (
-                <Grid size={{ md: 6, xs: 12 }} key={field.name}>
-                  <Controller
-                    name={field.name as Path<T>}
-                    control={control}
-                    render={({ field: controllerField }) => renderFieldControl(field, controllerField)}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Advanced Filters Accordion */}
-        {advancedFields.length > 0 && (
-          <Accordion
-            expanded={expandedAccordions.includes('advanced')}
-            onChange={() => handleAccordionChange('advanced')}
-            sx={{
-              boxShadow: 'none',
-              '&:last-of-type': { borderRadius: '0 0 12px 12px' },
-              '&.Mui-expanded': {
-                margin: 0,
-              },
-            }}
-          >
-            <AccordionSummary
-              expandIcon={<MdExpandMore />}
-              sx={{
-                backgroundColor: alpha('#111113', 0.03),
-                '&:hover': { backgroundColor: alpha('#111113', 0.06) },
-                py: 1.5,
-                px: 2,
-              }}
-            >
-              <Typography sx={{ fontWeight: 700, color: BRAND_INK, fontSize: '0.95rem' }}>
-                Advanced Filters
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 2 }}>
-              <Grid container spacing={2}>
-                {advancedFields.map((field) => (
-                  <Grid size={{ md: 6, xs: 12 }} key={field.name}>
-                    <Controller
-                      name={field.name as Path<T>}
-                      control={control}
-                      render={({ field: controllerField }) => renderFieldControl(field, controllerField)}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </AccordionDetails>
-          </Accordion>
-        )}
-
-        {/* Action Buttons */}
-        <Box
-          sx={{
-            p: 2,
-            borderTop: `1px solid ${alpha(BRAND_INK, 0.08)}`,
-            backgroundColor: alpha(BRAND_INK, 0.02),
-            borderRadius: '0 0 12px 12px',
-            display: 'flex',
-            gap: 1,
-          }}
-        >
-          <Button
-            type="submit"
-            variant="contained"
-            sx={{
-              flex: 1,
-              textTransform: 'none',
-              fontWeight: 700,
-              background: `linear-gradient(135deg, ${BRAND_ORANGE} 0%, #970915 100%)`,
-            }}
-          >
-            Apply
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              reset(defaultValues)
-              onApply({} as T)
-            }}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 700,
-              borderColor: alpha(BRAND_INK, 0.2),
-              color: BRAND_INK,
-            }}
-          >
-            Clear
-          </Button>
-        </Box>
-      </Stack>
-    </form>
-  )
-
-  if (mode === 'button') {
-    return (
-      <>
-        {isMobile ? (
-          <IconButton
-            ref={filterButtonRef}
-            onClick={() => setDrawerOpen(true)}
-            sx={{
-              border: `1px solid ${alpha(BRAND_ORANGE, 0.3)}`,
-              backgroundColor: '#FFFFFF',
-              color: BRAND_ORANGE,
-              transition: 'all 200ms ease',
-              '&:hover': {
-                backgroundColor: alpha(BRAND_ORANGE, 0.06),
-                borderColor: BRAND_ORANGE,
-              },
-            }}
-          >
-            {typeof appliedCount === 'number' && appliedCount > 0 ? (
-              <Badge badgeContent={appliedCount} color="error">
-                {buttonIcon}
-              </Badge>
-            ) : (
-              buttonIcon
-            )}
-          </IconButton>
-        ) : (
-          <>
-            <Button
-              ref={filterButtonRef}
-              onClick={() => setPopoverOpen(!popoverOpen)}
-              variant="outlined"
-              startIcon={buttonIcon}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 700,
-                borderRadius: 2,
-                borderColor: alpha(BRAND_ORANGE, 0.3),
-                color: BRAND_INK,
-                backgroundColor: '#FFFFFF',
-                transition: 'all 200ms ease',
-                '&:hover': {
-                  borderColor: BRAND_ORANGE,
-                  backgroundColor: alpha(BRAND_ORANGE, 0.04),
-                  color: BRAND_ORANGE,
-                },
-              }}
-            >
-              {typeof appliedCount === 'number' && appliedCount > 0 ? (
-                <Badge
-                  badgeContent={appliedCount}
-                  color="error"
-                  sx={{
-                    '& .MuiBadge-badge': {
-                      fontSize: '0.65rem',
-                      padding: '0 4px',
-                    },
-                  }}
-                >
-                  <Box>{buttonLabel}</Box>
-                </Badge>
-              ) : (
-                buttonLabel
-              )}
-            </Button>
-
-            <Popover
-              open={popoverOpen}
-              anchorEl={filterButtonRef.current}
-              onClose={() => setPopoverOpen(false)}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              disableAutoFocus
-              disableEnforceFocus
-              disableRestoreFocus
-              slotProps={{
-                paper: {
-                  sx: {
-                    mt: 1,
-                    backgroundColor: alpha('#FFFFFF', 0.98),
-                    backdropFilter: 'blur(12px)',
-                    border: `1px solid ${alpha(BRAND_INK, 0.08)}`,
-                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12)',
-                    borderRadius: 3,
-                    minWidth: 360,
-                  },
-                },
-              }}
-            >
-              <Box sx={{ p: 0 }}>
-                {loading ? (
-                  <Box sx={{ p: 2 }}>
-                    <Stack gap={1}>
-                      <Skeleton height={40} />
-                      <Skeleton height={40} />
-                    </Stack>
-                  </Box>
-                ) : (
-                  renderAccordionContent()
-                )}
-              </Box>
-            </Popover>
-          </>
-        )}
-
-        <CustomDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          width={420}
-          title="Filter records"
-        >
-          <Stack spacing={2}>
-            <Typography sx={{ fontSize: '0.9rem', color: BRAND_MUTED }}>
-              Apply quick or advanced filters for this workspace.
-            </Typography>
-            {loading ? renderSkeletonContent() : renderAccordionContent()}
-          </Stack>
-        </CustomDrawer>
-      </>
-    )
-  }
-
   return (
     <>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         {isMobile ? (
           <IconButton
             sx={{
-              border: `1px solid ${alpha(BRAND_ORANGE, 0.2)}`,
+              border: `1px solid ${alpha(actionColor, 0.28)}`,
               p: 1,
-              borderRadius: 2,
-              background: '#FFFFFF',
-              color: BRAND_ORANGE,
+              display: 'flex',
+              gap: 1,
+              borderRadius: 1,
+              background: alpha(actionColor, isDark ? 0.12 : 0.06),
+              color: actionColor,
+              '&:hover': {
+                background: alpha(actionColor, isDark ? 0.18 : 0.12),
+                borderColor: alpha(actionColor, 0.45),
+              },
             }}
+            size="small"
             onClick={() => setDrawerOpen(true)}
           >
             <FaFilter />
+            {appliedCount ? <Typography variant="caption">{appliedCount}</Typography> : null}
           </IconButton>
-        ) : (
-          <CardContent
-            sx={{
-              width: '100%',
-              p: { xs: 1.4, md: 2.2 },
-              borderRadius: 3,
-              border: `1px solid ${alpha(BRAND_INK, 0.08)}`,
-              background: 'linear-gradient(180deg, #ffffff 0%, #faf7f5 100%)',
-              boxShadow: '0 18px 34px rgba(20, 20, 20, 0.06)',
-              position: 'relative',
-              overflow: 'hidden',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: 4,
-                background: `linear-gradient(180deg, ${BRAND_ORANGE} 0%, ${alpha(BRAND_WINE, 0.4)} 100%)`,
-              },
-            }}
-          >
-            {bgOverlayImg ? (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundImage: `url(${bgOverlayImg})`,
-                  backgroundSize: 'cover',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                  opacity: 0.05,
-                }}
-              />
-            ) : null}
-
-            <Box sx={{ position: 'relative', zIndex: 1 }}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-                alignItems={{ xs: 'flex-start', sm: 'center' }}
-                spacing={1}
-                mb={2}
-              >
-                <Box>
-                  <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: BRAND_INK }}>
-                    Filter records
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.84rem', color: BRAND_MUTED, mt: 0.35 }}>
-                    Narrow down operational records with quick and advanced filters.
-                  </Typography>
-                </Box>
-                {typeof appliedCount === 'number' ? (
-                  <Box
-                    sx={{
-                      px: 1.1,
-                      py: 0.5,
-                      borderRadius: 1.5,
-                      bgcolor: alpha(BRAND_ORANGE, 0.08),
-                      color: BRAND_ORANGE,
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {appliedCount} active
-                  </Box>
-                ) : null}
-              </Stack>
-              {loading ? renderSkeletonContent() : renderFormContent()}
-            </Box>
-          </CardContent>
-        )}
-
-        {isMobile && typeof appliedCount === 'number' ? (
-          <Typography sx={{ fontSize: '0.82rem', color: BRAND_MUTED, fontWeight: 700 }}>
-            {appliedCount} filters applied
-          </Typography>
         ) : null}
       </Stack>
 
+      {!isMobile && (
+        <CardContent
+          sx={{
+            position: 'relative',
+            width: '100%',
+            overflow: 'hidden',
+            background: `
+              radial-gradient(560px 170px at 0% 0%, ${alpha(DE_AMBER, isDark ? 0.12 : 0.08)} 0%, transparent 75%),
+              radial-gradient(560px 170px at 100% 0%, ${alpha(actionColor, isDark ? 0.14 : 0.1)} 0%, transparent 75%),
+              ${surface}
+            `,
+            border: `1px solid ${borderColor}`,
+            borderRadius: 1,
+            boxShadow: isDark
+              ? 'none'
+              : compact ? '0 3px 10px rgba(0, 82, 204, 0.08)' : '0 6px 18px rgba(0, 82, 204, 0.1)',
+            px: compact ? { xs: 0.8, md: 0.95 } : { xs: 1.25, md: 1.5 },
+            py: compact ? { xs: 0.5, md: 0.58 } : { xs: 1.1, md: 1.3 },
+          }}
+        >
+          {bgOverlayImg && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url(${bgOverlayImg})`,
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                opacity: 0.08,
+                zIndex: 0,
+              }}
+            />
+          )}
+
+          <Box sx={{ position: 'relative', zIndex: 2 }}>
+            {loading ? renderSkeletonContent() : renderFormContent()}
+          </Box>
+        </CardContent>
+      )}
+
       <CustomDrawer
+        title="Filters"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        width={420}
-        title="Filter records"
+        anchor="left"
       >
-        <Stack spacing={2}>
-          <Typography sx={{ fontSize: '0.9rem', color: BRAND_MUTED }}>
-            Apply quick or advanced filters for this workspace.
-          </Typography>
-          {loading ? renderSkeletonContent() : renderFormContent()}
-        </Stack>
+        <form
+          onSubmit={handleSubmit((data) => {
+            submit(data)
+            setDrawerOpen(false)
+          })}
+        >
+          <Stack spacing={2} px={1}>
+            {[...primaryFields, ...advancedFields].map((field) => (
+              <Controller
+                key={field.name}
+                name={field.name as Path<T>}
+                control={control}
+                render={({ field: controllerField }) => renderFieldControl(field, controllerField)}
+              />
+            ))}
+
+            <Stack direction="row" spacing={2} mt={2} justifyContent="space-between">
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<MdDelete />}
+                onClick={() => {
+                  reset(defaultValues)
+                  onApply({} as T)
+                  setDrawerOpen(false)
+                }}
+                sx={{
+                  borderColor: alpha(actionColor, 0.3),
+                  color: actionColor,
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  borderRadius: 1,
+                  '&:hover': {
+                    borderColor: actionColor,
+                    backgroundColor: alpha(actionColor, isDark ? 0.14 : 0.08),
+                  },
+                }}
+              >
+                Clear
+              </Button>
+              <Button
+                fullWidth
+                variant="contained"
+                type="submit"
+                sx={{
+                  background: `linear-gradient(135deg, ${DE_BLUE} 0%, #2a5fbe 100%)`,
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  borderRadius: 1,
+                }}
+              >
+                Apply
+              </Button>
+            </Stack>
+          </Stack>
+        </form>
       </CustomDrawer>
     </>
   )

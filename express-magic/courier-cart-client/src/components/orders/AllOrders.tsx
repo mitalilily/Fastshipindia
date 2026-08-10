@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   AlertTitle,
@@ -5,91 +6,75 @@ import {
   Box,
   Button,
   Chip,
-  ClickAwayListener,
   CircularProgress,
   Divider,
-  Fade,
+  IconButton,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
-  Paper,
-  Popover,
-  Popper,
   Stack,
-  TextField,
+  Tooltip,
   Typography,
-  useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useQueryClient } from '@tanstack/react-query'
-import { saveAs } from 'file-saver'
-import Papa from 'papaparse'
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import moment from 'moment'
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import {
-  MdAdd,
   MdAssignment,
-  MdCancel,
-  MdDownload,
-  MdKeyboardReturn,
+  MdDelete,
+  MdFileDownload,
+  MdEdit,
   MdLocalOffer,
-  MdLocalShipping,
-  MdMoreVert,
-  MdOutlineHelpCenter,
+  MdMoreHoriz,
   MdReceipt,
-  MdReplay,
   MdSync,
+  MdTrackChanges,
   MdVisibility,
 } from 'react-icons/md'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  downloadBulkB2CLabelsService,
-  fetchAllOrders,
-  fetchOrdersForCsvExport,
-  generateManifestService,
-} from '../../api/order.service'
-import { fetchTracking } from '../../api/tracking.service'
+import { TbDownload, TbFilter, TbPlus, TbRefresh } from 'react-icons/tb'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { fetchOrdersForCsvExport, generateManifestService } from '../../api/order.service'
 import {
   useAllOrders,
+  useB2BOrdersByUser,
+  useB2COrdersByUser,
   useCancelShipment,
-  useCreateReverseShipment,
+  useDeleteB2COrder,
   useRegenerateOrderDocuments,
-  useRetryFailedManifest,
+  useSyncB2CTracking,
 } from '../../hooks/Orders/useOrders'
-import { usePickupAddresses } from '../../hooks/Pickup/usePickupAddresses'
 import { usePresignedDownloadMutation } from '../../hooks/Uploads/usePresignedDownloadUrls'
-import useEmployeePermissions from '../../hooks/User/useEmployeePermissions'
+import { downloadClientOrdersCsv } from '../../utils/orderCsvExport'
 import { FilterBar, type FilterField } from '../FilterBar'
-import { SupportTicketForm } from '../support/SupportTicketForm'
-import StatusChip from '../UI/chip/StatusChip'
+import { toast } from '../UI/Toast'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
-import CustomSelect from '../UI/inputs/CustomSelect'
-import { SmartTabs } from '../UI/tab/Tabs'
 import DataTable, { type Column } from '../UI/table/DataTable'
 import TableSkeleton from '../UI/table/TableSkeleton'
-import { toast } from '../UI/Toast'
 import { statusColorMap } from './b2c/B2COrdersList'
-import { CLIENT_ORDER_ADDED_HEADERS, downloadClientOrdersCsv } from '../../utils/orderCsvExport'
+import B2COrderFormSteps, { type B2CFormData } from './b2c/B2COrderForm'
 import {
+  BULK_MANIFEST_LIMIT,
   downloadFile,
+  type DocumentEntry,
+  type DocumentType,
   getActionableErrorMessage,
   getB2CManifestIdentifier,
   getB2CManifestProvider,
   getDocumentReference,
   getDownloadFileName,
-  getOrderDocumentLabel,
+  isB2CCancelledStatus,
   isB2CManifestEligible,
-  isHttpUrl,
   summarizeMessages,
   summarizeOrderNumbers,
-  type DocumentEntry,
-  type DocumentType,
 } from './bulkActionUtils'
-import ManifestPickupScheduleDialog from './ManifestPickupScheduleDialog'
-import { OrderExpandedRow } from './OrderExpandedRow'
-import ReverseModal from './reverse/ReverseModal'
-import BulkOrderCourierDrawer from './BulkOrderCourierDrawer'
-import SourceOrderCourierDrawer from './SourceOrderCourierDrawer'
+import ManifestScheduleDialog, {
+  type ManifestSchedulePayload,
+} from './ManifestScheduleDialog'
+import OrderDetailsDialog from './OrderDetailsDialog'
+import B2CSelectCourierDialog from './b2c/B2CSelectCourierDialog'
+import { isB2CCancelEligible, isB2CPreShipmentDraft } from './b2c/orderActionRules'
+import { getB2COrderFormDefaults } from './b2c/orderFormDefaults'
 
 interface Order {
   id: string | number
@@ -103,9 +88,6 @@ type OrdersFilters = {
   fromDate?: string
   toDate?: string
   search?: string
-  productQuery?: string
-  sortBy?: 'created_at'
-  sortOrder?: 'asc' | 'desc'
 }
 
 type BulkFeedback = {
@@ -114,58 +96,11 @@ type BulkFeedback = {
   message: string
 }
 
-type PickupSchedulePayload = {
-  pickup_date: string
-  pickup_time: string
-  pickup_location: string
-  expected_package_count: number
+const documentButtonMeta: Record<DocumentType, { label: string; icon: ReactNode }> = {
+  label: { label: 'Label', icon: <MdLocalOffer /> },
+  invoice: { label: 'Invoice', icon: <MdReceipt /> },
+  manifest: { label: 'Manifest', icon: <MdAssignment /> },
 }
-
-const getOrderTypeKey = (order: Order) =>
-  String(order.type || '')
-    .trim()
-    .toLowerCase()
-
-const getOrderStatusKey = (order: Order) =>
-  String(order.order_status || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, '_')
-
-const isB2COrder = (order: Order) => getOrderTypeKey(order) === 'b2c'
-
-const isMarketplaceSourceOrder = (order: Order) => {
-  const integrationType = String(order.integration_type || '')
-    .trim()
-    .toLowerCase()
-  const localOrderId = String(order.order_id || '')
-    .trim()
-    .toLowerCase()
-  return (
-    ['shopify', 'woocommerce'].includes(integrationType) ||
-    localOrderId.startsWith('shopify_') ||
-    localOrderId.startsWith('woocommerce_')
-  )
-}
-
-const getCourierDisplayName = (order: Order) =>
-  String(order.courier_partner || order.integration_type || '').trim() || '-'
-
-const terminalB2CStatuses = new Set(['cancelled', 'delivered', 'rto_delivered'])
-
-const documentGenerationStatuses = new Set([
-  'booked',
-  'shipment_created',
-  'pickup_initiated',
-  'in_transit',
-  'out_for_delivery',
-  'delivered',
-  'ndr',
-  'undelivered',
-  'rto',
-  'rto_in_transit',
-  'rto_delivered',
-])
 
 const actionMenuItemSx = {
   minHeight: 38,
@@ -173,8 +108,9 @@ const actionMenuItemSx = {
   py: 0.75,
   gap: 0.75,
   color: 'text.primary',
+  fontWeight: 400,
   '&:hover': {
-    bgcolor: 'rgba(232, 85, 0, 0.06)',
+    bgcolor: 'rgba(51, 51, 105, 0.06)',
   },
   '&.Mui-disabled': {
     opacity: 0.48,
@@ -197,128 +133,102 @@ const actionMenuIconSx = {
   },
 }
 
-const getDefaultPickupDateInput = () => new Date().toISOString().split('T')[0]
+const documentGenerationStatuses = new Set([
+  'booked',
+  'shipment_created',
+  'pickup_initiated',
+  'in_transit',
+  'out_for_delivery',
+  'delivered',
+  'ndr',
+  'undelivered',
+  'rto',
+  'rto_in_transit',
+  'rto_delivered',
+])
 
-const getDefaultPickupTimeInput = () => {
-  const nextHour = new Date(Date.now() + 60 * 60 * 1000)
-  return `${String(nextHour.getHours()).padStart(2, '0')}:${String(nextHour.getMinutes()).padStart(2, '0')}`
+const shippingStatusMap: Record<string, string> = {
+  pending: 'NEW',
+  booked: 'Booked',
+  manifest_failed: 'Manifest Failed',
+  pickup_initiated: 'Scheduled for Pickup',
+  shipment_created: 'Shipment Created',
+  in_transit: 'In Transit',
+  out_for_delivery: 'Out For Delivery',
+  delivered: 'Delivered',
+  undelivered: 'Undelivered',
+  ndr: 'NDR',
+  rto_initiated: 'RTO Initiated',
+  rto: 'RTO Initiated',
+  rto_in_transit: 'RTO In Transit',
+  rto_delivered: 'RTO Delivered',
+  cancellation_requested: 'Cancellation Requested',
+  cancelled: 'Cancelled',
 }
 
-const parsePickupDetails = (value: unknown) => {
-  if (!value) return {}
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value)
-    } catch {
-      return {}
-    }
-  }
-  return value as Record<string, unknown>
+const isManifestEligible = (order: Order) => {
+  return order.type === 'b2c' ? isB2CManifestEligible(order) : false
 }
-
-const getManifestPickupLocation = (order: Order) => {
-  const details = parsePickupDetails(order.pickup_details)
-  return String(
-    details?.warehouse_name ||
-      order.pickup_location ||
-      order.pickup_location_name ||
-      order.pickup_location_id ||
-      '',
-  ).trim()
-}
-
-const getManifestGroupKey = (order: Order) => {
-  const providerKey = getB2CManifestProvider(order)
-  if (providerKey !== 'delhivery') return providerKey
-
-  return `${providerKey}:${getManifestPickupLocation(order).toLowerCase()}`
-}
-
-const getProviderFromManifestGroupKey = (groupKey: string) => groupKey.split(':')[0] || groupKey
 
 const AllOrders = () => {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const navigate = useNavigate()
-  const { canAddReturnOrders, canViewReturnOrders } = useEmployeePermissions()
-
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const isDark = theme.palette.mode === 'dark'
+  const surface = isDark ? '#151b23' : '#FFFFFF'
+  const borderColor = isDark ? alpha('#f8fafc', 0.12) : alpha('#1D2842', 0.1)
+  const textPrimary = isDark ? '#f8fafc' : '#1D2842'
+  const textSecondary = isDark ? '#9badc3' : '#6B7280'
+  const quietSurface = isDark ? alpha('#ffffff', 0.05) : 'rgba(29, 40, 66, 0.04)'
+  const panelShadow = isDark ? 'none' : '0 6px 18px rgba(29, 40, 66, 0.06)'
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [selectedOrderIds, setSelectedOrderIds] = useState<Array<Order['id']>>([])
-  const [downloadingDocumentType, setDownloadingDocumentType] = useState<DocumentType | null>(null)
-  const [bulkManifesting, setBulkManifesting] = useState(false)
-  const [manifestingOrderId, setManifestingOrderId] = useState<string | null>(null)
-  const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null)
-  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
-  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null)
-  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null)
-  const [activeActionOrderId, setActiveActionOrderId] = useState<Order['id'] | null>(null)
-  const [detailsOrder, setDetailsOrder] = useState<Order | null>(null)
-  const [documentGenerationRef, setDocumentGenerationRef] = useState<string | null>(null)
-  const [exportingCsv, setExportingCsv] = useState(false)
-  const [bulkFeedback, setBulkFeedback] = useState<BulkFeedback | null>(null)
-  const [pickupDialogOpen, setPickupDialogOpen] = useState(false)
-  const [pickupDialogTitle, setPickupDialogTitle] = useState('Confirm pickup schedule')
-  const [pickupDialogDescription, setPickupDialogDescription] = useState('')
-  const [pickupDialogDate, setPickupDialogDate] = useState(getDefaultPickupDateInput())
-  const [pickupDialogTime, setPickupDialogTime] = useState(getDefaultPickupTimeInput())
-  const [pickupDialogLocation, setPickupDialogLocation] = useState('')
-  const [pickupDialogPackageCount, setPickupDialogPackageCount] = useState(1)
-  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false)
-  const [createOrderAnchorEl, setCreateOrderAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedTab, setSelectedTab] = useState<string>('')
-  const [ticketDialogOpen, setTicketDialogOpen] = useState(false)
-  const [courierSelectionOrder, setCourierSelectionOrder] = useState<Order | null>(null)
-  const [bulkCourierSelectionOpen, setBulkCourierSelectionOpen] = useState(false)
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null)
-  const [downloadingByWarehouse, setDownloadingByWarehouse] = useState(false)
-  const [warehousePopoverAnchor, setWarehousePopoverAnchor] = useState<HTMLElement | null>(null)
-  const [warehouseFromDate, setWarehouseFromDate] = useState('')
-  const [warehouseToDate, setWarehouseToDate] = useState(getDefaultPickupDateInput())
-  const downloadAnchorRef = useRef<HTMLButtonElement>(null)
-  const createOrderButtonRef = useRef<HTMLButtonElement>(null)
-  const warehouseSelectorRef = useRef<HTMLDivElement>(null)
-
-  const pickupDialogResolverRef = useRef<((value: PickupSchedulePayload | null) => void) | null>(
+  const [selectionResetToken, setSelectionResetToken] = useState(0)
+  const [downloadingDocumentType, setDownloadingDocumentType] = useState<DocumentType | null>(
     null,
   )
+  const [downloadingRowDocument, setDownloadingRowDocument] = useState<string | null>(null)
+  const [bulkManifesting, setBulkManifesting] = useState(false)
+  const [exportingCsv, setExportingCsv] = useState(false)
+  const [manifestScheduleOpen, setManifestScheduleOpen] = useState(false)
+  const [selectCourierOrder, setSelectCourierOrder] = useState<Order | null>(null)
+  const [orderDetailsOrder, setOrderDetailsOrder] = useState<Order | null>(null)
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null)
+  const [orderFormDefaults, setOrderFormDefaults] = useState<Partial<B2CFormData> | null>(null)
+  const [orderFormKey, setOrderFormKey] = useState(0)
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<HTMLElement | null>(null)
+  const [activeActionOrderId, setActiveActionOrderId] = useState<Order['id'] | null>(null)
+  const [documentGenerationRef, setDocumentGenerationRef] = useState<string | null>(null)
+  const [syncingTrackingOrderId, setSyncingTrackingOrderId] = useState<Order['id'] | null>(null)
+  const [bulkFeedback, setBulkFeedback] = useState<BulkFeedback | null>(null)
   const [filters, setFilters] = useState<OrdersFilters>({
     status: undefined,
     fromDate: undefined,
     toDate: undefined,
     search: undefined,
-    sortBy: 'created_at',
-    sortOrder: 'desc',
   })
-
-  const effectiveFilters: OrdersFilters = {
-    ...filters,
-    status: selectedTab || undefined,
-  }
   const queryClient = useQueryClient()
   const { mutateAsync: presignDownloads } = usePresignedDownloadMutation()
-  const { mutateAsync: retryFailedManifest } = useRetryFailedManifest()
   const { mutateAsync: regenerateDocuments, isPending: regeneratingDocuments } =
     useRegenerateOrderDocuments()
-  const { mutateAsync: cancelShipment } = useCancelShipment()
-  const { mutate: createReverse } = useCreateReverseShipment()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [reverseOrder, setReverseOrder] = useState<any | null>(null)
-
-  const { data, isLoading, isError } = useAllOrders({
-    page,
-    limit: rowsPerPage,
-    ...effectiveFilters,
-  })
-
-  const { data: warehouseData } = usePickupAddresses({ page: 1, limit: 100 })
+  const { mutate: cancelShipment, isPending: cancellingShipment } = useCancelShipment()
+  const { mutateAsync: deleteB2COrder, isPending: deletingB2COrder } = useDeleteB2COrder()
+  const { mutate: syncB2CTracking, isPending: syncingTracking } = useSyncB2CTracking()
+  const isB2CView = location.pathname.startsWith('/orders/b2c')
+  const isB2BView = location.pathname.startsWith('/orders/b2b')
+  const currentOrderView: 'all' | 'b2c' | 'b2b' = isB2CView ? 'b2c' : isB2BView ? 'b2b' : 'all'
 
   const clearSelection = () => {
     setSelectedOrderIds([])
+    setSelectionResetToken((current) => current + 1)
   }
 
-  const handleActionMenuOpen = (event: MouseEvent<HTMLElement>, orderId: Order['id']) => {
+  const handleActionMenuOpen = (
+    event: MouseEvent<HTMLElement>,
+    orderId: Order['id'],
+  ) => {
     event.stopPropagation()
     setActionMenuAnchor(event.currentTarget)
     setActiveActionOrderId(orderId)
@@ -338,314 +248,54 @@ const AllOrders = () => {
     void action()
   }
 
-  const handleViewDetails = (order: Order) => {
-    setDetailsOrder(order)
-  }
-
-  const handleTrackShipment = (order: Order) => {
-    const awb = String(order.awb_number || '').trim()
-    if (!awb) {
-      toast.open({
-        message: 'AWB number is not available for this order.',
-        severity: 'info',
-      })
-      return
-    }
-
-    navigate(`/tools/track-order?awb=${encodeURIComponent(awb)}`)
-  }
-
-  const requestDelhiveryPickupSchedule = (ordersForPickup: Order[], label: string) =>
-    new Promise<PickupSchedulePayload | null>((resolve) => {
-      const details = parsePickupDetails(ordersForPickup[0]?.pickup_details)
-      const initialDate =
-        typeof details?.pickup_date === 'string' && details.pickup_date.trim()
-          ? details.pickup_date.slice(0, 10)
-          : getDefaultPickupDateInput()
-      const initialTimeRaw =
-        typeof details?.pickup_time === 'string' && details.pickup_time.trim()
-          ? details.pickup_time.trim()
-          : getDefaultPickupTimeInput()
-      const initialPickupLocation = getManifestPickupLocation(ordersForPickup[0])
-
-      pickupDialogResolverRef.current = resolve
-      setPickupDialogTitle('Confirm Pickup Before Manifest')
-      setPickupDialogDescription(label)
-      setPickupDialogDate(initialDate)
-      setPickupDialogTime(initialTimeRaw.slice(0, 5))
-      setPickupDialogLocation(initialPickupLocation)
-      setPickupDialogPackageCount(Math.max(1, ordersForPickup.length))
-      setPickupDialogOpen(true)
-    })
-
-  const closePickupDialog = (value: PickupSchedulePayload | null) => {
-    setPickupDialogOpen(false)
-    pickupDialogResolverRef.current?.(value)
-    pickupDialogResolverRef.current = null
-  }
-
-  const handleSyncLiveTracking = async (order: Order) => {
-    if (!order.awb_number) {
-      toast.open({
-        message: 'AWB is required to sync live status.',
-        severity: 'error',
-      })
-      return
-    }
-
-    const orderId = String(order.id)
-    setTrackingOrderId(orderId)
-    try {
-      const tracking = await fetchTracking({ awb: order.awb_number })
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['b2cOrdersByUser'] }),
-        queryClient.invalidateQueries({ queryKey: ['orders'] }),
-      ])
-      toast.open({
-        message: `Live status synced: ${tracking.status || 'updated'}`,
-        severity: 'success',
-      })
-    } catch (error) {
-      const message = getActionableErrorMessage(error, 'Unable to sync live tracking status.')
-      toast.open({ message, severity: 'error' })
-    } finally {
-      setTrackingOrderId((current) => (current === orderId ? null : current))
-    }
-  }
-
-  const isCancellable = (order: Order) => {
-    if (!isB2COrder(order)) return false
-
-    const status = getOrderStatusKey(order)
-    return !terminalB2CStatuses.has(status)
-  }
-
-  const canManifestOrder = (order: Order) => {
-    if (!isB2COrder(order)) return false
-    if (isMarketplaceSourceOrder(order) && !String(order.awb_number || '').trim()) return false
-    if (!getB2CManifestIdentifier(order)) return false
-
-    const status = getOrderStatusKey(order)
-    if (terminalB2CStatuses.has(status)) return false
-
-    return isB2CManifestEligible(order)
-  }
-
-  const canSelectCourierForOrder = (order: Order) => {
-    if (!isB2COrder(order)) return false
-    if (!isMarketplaceSourceOrder(order)) return false
-    if (String(order.awb_number || '').trim()) return false
-
-    const status = getOrderStatusKey(order)
-    return !terminalB2CStatuses.has(status)
-  }
-
-  const getProviderKey = (order: Order) => {
-    const providerText = String(`${order.integration_type || ''} ${order.courier_partner || ''}`)
-      .trim()
-      .toLowerCase()
-
-    if (providerText.includes('delhivery')) return 'delhivery'
-    if (providerText.includes('ekart')) return 'ekart'
-    if (providerText.includes('xpressbees') || providerText.includes('xpress bees')) {
-      return 'xpressbees'
-    }
-    if (providerText.includes('shadowfax')) return 'shadowfax'
-    if (providerText.includes('amazon')) return 'amazon'
-
-    return providerText
-  }
-
-  const hasDocument = (order: Order, type: DocumentType) => {
-    const { key, url } = getDocumentReference(order, type)
-    return Boolean(key || url)
-  }
-
-  const isDocumentGenerationReady = (order: Order) => {
-    if (!isB2COrder(order)) return false
-
-    const normalizedStatus = getOrderStatusKey(order)
-    return (
-      Boolean(String(order.manifest || order.awb_number || '').trim()) ||
-      documentGenerationStatuses.has(normalizedStatus)
-    )
-  }
-
-  const handleSingleManifest = async (order: Order) => {
-    const manifestRef = getB2CManifestIdentifier(order)
-    if (!manifestRef || !canManifestOrder(order)) {
-      const message = `Manifest cannot be started for ${order.order_number || order.id} yet.`
-      setBulkFeedback({
-        severity: 'error',
-        title: 'Manifest unavailable',
-        message,
-      })
-      toast.open({ message, severity: 'error' })
-      return
-    }
-
-    const orderId = String(order.id)
-    setManifestingOrderId(orderId)
-    try {
-      const providerKey = getB2CManifestProvider(order)
-      const pickupSchedule =
-        providerKey === 'delhivery'
-          ? await requestDelhiveryPickupSchedule(
-              [order],
-              `Set the pickup date and time for ${order.order_number || order.id} before generating the manifest.`,
-            )
-          : null
-
-      if (providerKey === 'delhivery' && !pickupSchedule) {
-        setBulkFeedback({
-          severity: 'info',
-          title: 'Manifest cancelled',
-          message: `Manifest was cancelled for ${order.order_number || order.id}.`,
-        })
-        return
-      }
-
-      setBulkFeedback({
-        severity: 'info',
-        title: 'Manifest in progress',
-        message: `Processing ${order.order_number || order.id}.`,
-      })
-
-      const response = await generateManifestService({
-        awbs: [manifestRef],
-        type: 'b2c',
-        ...(pickupSchedule || {}),
-      })
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['b2cOrdersByUser'] }),
-        queryClient.invalidateQueries({ queryKey: ['orders'] }),
-      ])
-
-      const successMessage = `Manifest completed for ${order.order_number || order.id}.`
-      const warningSummary = summarizeMessages(response.warnings || [])
-      const finalMessage = warningSummary ? `${successMessage} ${warningSummary}` : successMessage
-
-      setBulkFeedback({
-        severity: warningSummary ? 'warning' : 'success',
-        title: warningSummary ? 'Manifest completed with warnings' : 'Manifest completed',
-        message: finalMessage,
-      })
-      toast.open({
-        message: finalMessage,
-        severity: warningSummary ? 'info' : 'success',
-      })
-    } catch (error) {
-      console.error('Manifest failed for order:', order.order_number || order.id, error)
-      const errorMessage = getActionableErrorMessage(
-        error,
-        `Manifest failed for ${order.order_number || order.id}.`,
-      )
-      const message = `${order.order_number || order.id}: ${errorMessage}`
-      setBulkFeedback({
-        severity: 'error',
-        title: 'Manifest failed',
-        message,
-      })
-      toast.open({ message, severity: 'error' })
-    } finally {
-      setManifestingOrderId((current) => (current === orderId ? null : current))
-    }
-  }
-
-  const handleRetryManifest = async (order: Order) => {
-    if (!isB2COrder(order) || !order.id) return
-
-    const orderId = String(order.id)
-    setRetryingOrderId(orderId)
-    try {
-      await retryFailedManifest(orderId)
-    } finally {
-      setRetryingOrderId((current) => (current === orderId ? null : current))
-    }
-  }
-
-  const handleGenerateOrderDocument = async (order: Order, type: 'label' | 'invoice') => {
-    if (!isB2COrder(order)) {
-      toast.open({
-        message: 'Document generation is available for B2C shipments only.',
-        severity: 'info',
-      })
-      return
-    }
-
-    const orderId = String(order.id || '').trim()
-    if (!orderId) {
-      toast.open({
-        message: 'Order identifier is not available.',
-        severity: 'error',
-      })
-      return
-    }
-
-    if (!isDocumentGenerationReady(order)) {
-      toast.open({
-        message: 'Generate the manifest before creating label or invoice documents.',
-        severity: 'info',
-      })
-      return
-    }
-
-    const documentRef = `${order.id}-${type}`
-    try {
-      setDocumentGenerationRef(documentRef)
-      await regenerateDocuments({
-        orderId,
-        regenerateLabel: type === 'label',
-        regenerateInvoice: type === 'invoice',
-      })
-    } catch (error) {
-      console.error(`Failed to generate ${type} for order:`, order.order_number || order.id, error)
-    } finally {
-      setDocumentGenerationRef((current) => (current === documentRef ? null : current))
-    }
-  }
-
-  const handleCancelOrder = async (order: Order) => {
-    if (!isCancellable(order)) {
-      const message = `Order ${order.order_number || order.id} cannot be cancelled right now.`
-      setBulkFeedback({
-        severity: 'error',
-        title: 'Cancel unavailable',
-        message,
-      })
-      toast.open({ message, severity: 'error' })
-      return
-    }
-
-    if (!window.confirm(`Cancel order ${order.order_number || order.id}?`)) {
-      return
-    }
-
-    const orderId = String(order.id)
-    setCancellingOrderId(orderId)
-    try {
-      await cancelShipment(orderId)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['b2cOrdersByUser'] }),
-        queryClient.invalidateQueries({ queryKey: ['orders'] }),
-      ])
-    } finally {
-      setCancellingOrderId((current) => (current === orderId ? null : current))
-    }
-  }
+  useEffect(() => {
+    setManifestScheduleOpen(false)
+    setBulkFeedback(null)
+    setSelectCourierOrder(null)
+    setOrderDetailsOrder(null)
+    setEditingOrder(null)
+    setOrderFormDefaults(null)
+    setActionMenuAnchor(null)
+    setActiveActionOrderId(null)
+    setDocumentGenerationRef(null)
+    setSyncingTrackingOrderId(null)
+    setSelectedOrderIds([])
+    setSelectionResetToken((current) => current + 1)
+  }, [location.pathname, location.search, location.hash])
 
   useEffect(() => {
     const status = searchParams.get('status') || undefined
-    if (status && selectedTab !== status) {
-      setSelectedTab(status)
+    if (status && filters.status !== status) {
+      setFilters((prev) => ({
+        ...prev,
+        status,
+      }))
       setPage(1)
       clearSelection()
       setBulkFeedback(null)
     }
-  }, [searchParams, selectedTab])
+  }, [searchParams, filters.status])
 
-  if (isError)
+  const allOrdersQuery = useAllOrders(
+    {
+      page,
+      limit: rowsPerPage,
+      ...filters,
+    },
+    currentOrderView === 'all',
+  )
+
+  const b2cOrdersQuery = useB2COrdersByUser(page, rowsPerPage, filters, currentOrderView === 'b2c')
+  const b2bOrdersQuery = useB2BOrdersByUser(page, rowsPerPage, filters, currentOrderView === 'b2b')
+
+  const activeQuery =
+    currentOrderView === 'b2c'
+      ? b2cOrdersQuery
+      : currentOrderView === 'b2b'
+        ? b2bOrdersQuery
+        : allOrdersQuery
+
+  if (activeQuery.isError)
     return (
       <Box
         sx={{
@@ -655,10 +305,10 @@ const AllOrders = () => {
           justifyContent: 'center',
           py: 6,
           px: 3,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: surface,
           borderRadius: '12px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          border: `1px solid ${borderColor}`,
+          boxShadow: panelShadow,
         }}
       >
         <Typography
@@ -670,27 +320,73 @@ const AllOrders = () => {
         >
           Failed to fetch orders
         </Typography>
-        <Typography textAlign="center" fontSize="14px" sx={{ color: '#6B7280', mt: 1 }}>
+        <Typography textAlign="center" fontSize="14px" sx={{ color: textSecondary, mt: 1 }}>
           Please try refreshing the page
         </Typography>
       </Box>
     )
 
-  const orders: Order[] = data?.orders ?? []
-  const totalCount = data?.totalCount ?? 0
+  const normalizedOrders: Order[] = (activeQuery.data?.orders ?? []).map((order: Order) => ({
+    ...order,
+    type: order.type || (currentOrderView === 'b2c' ? 'b2c' : currentOrderView === 'b2b' ? 'b2b' : order.type),
+  }))
+  const orders: Order[] = normalizedOrders
+  const totalCount = activeQuery.data?.totalCount ?? 0
   const selectedOrders: Order[] = orders.filter((order) => selectedOrderIds.includes(order.id))
-  const canBulkBookSelectedOrders =
-    selectedOrders.length > 0 && selectedOrders.every(canSelectCourierForOrder)
   const manifestValidationMessage =
     selectedOrders.length === 0
       ? 'Select orders to start a bulk action.'
-      : selectedOrders.some((order) => !canManifestOrder(order))
-        ? 'Some selected orders are not ready for manifest yet.'
-        : ''
+      : selectedOrders.length > BULK_MANIFEST_LIMIT
+        ? `You can manifest a maximum of ${BULK_MANIFEST_LIMIT} orders at a time.`
+        : selectedOrders.some((order) => !isManifestEligible(order))
+          ? 'Some selected orders are not ready for manifest yet.'
+          : ''
 
-  const handleBulkManifest = async () => {
+  const handleExportCsv = async () => {
+    try {
+      setExportingCsv(true)
+      const exportRows = await fetchOrdersForCsvExport(currentOrderView, filters)
+      downloadClientOrdersCsv(exportRows, currentOrderView)
+      toast.open({
+        message: `${exportRows.length} order${exportRows.length === 1 ? '' : 's'} exported to CSV.`,
+        severity: 'success',
+      })
+    } catch (error) {
+      console.error('Order CSV export failed:', error)
+      toast.open({ message: 'Failed to export orders CSV. Please try again.', severity: 'error' })
+    } finally {
+      setExportingCsv(false)
+    }
+  }
+
+  const openBulkManifestSchedule = () => {
     if (!selectedOrders.length) {
-      const message = 'Select eligible orders to manifest.'
+      const message = 'Select up to 5 eligible orders to manifest.'
+      setBulkFeedback({
+        severity: 'error',
+        title: 'No orders selected',
+        message,
+      })
+      toast.open({ message, severity: 'error' })
+      return
+    }
+
+    if (manifestValidationMessage) {
+      setBulkFeedback({
+        severity: 'error',
+        title: 'Manifest unavailable',
+        message: manifestValidationMessage,
+      })
+      toast.open({ message: manifestValidationMessage, severity: 'error' })
+      return
+    }
+
+    setManifestScheduleOpen(true)
+  }
+
+  const handleBulkManifest = async (schedule: ManifestSchedulePayload) => {
+    if (!selectedOrders.length) {
+      const message = 'Select up to 5 eligible orders to manifest.'
       setBulkFeedback({
         severity: 'error',
         title: 'No orders selected',
@@ -719,14 +415,14 @@ const AllOrders = () => {
 
     try {
       const b2cManifestGroups = selectedOrders.reduce<Record<string, Order[]>>((groups, order) => {
-        if (!isB2COrder(order)) return groups
+        if (order.type !== 'b2c') return groups
 
         const manifestIdentifier = getB2CManifestIdentifier(order)
         if (!manifestIdentifier) return groups
 
-        const groupKey = getManifestGroupKey(order)
-        if (!groups[groupKey]) groups[groupKey] = []
-        groups[groupKey].push(order)
+        const providerKey = getB2CManifestProvider(order)
+        if (!groups[providerKey]) groups[providerKey] = []
+        groups[providerKey].push(order)
         return groups
       }, {})
 
@@ -735,8 +431,7 @@ const AllOrders = () => {
       const warningMessages: string[] = []
       let successCount = 0
 
-      for (const [groupKey, providerOrders] of Object.entries(b2cManifestGroups)) {
-        const providerKey = getProviderFromManifestGroupKey(groupKey)
+      for (const [providerKey, providerOrders] of Object.entries(b2cManifestGroups)) {
         const identifiers = providerOrders
           .map((order) => getB2CManifestIdentifier(order))
           .filter((value): value is string => Boolean(value))
@@ -744,24 +439,10 @@ const AllOrders = () => {
         if (!identifiers.length) continue
 
         try {
-          const pickupSchedule =
-            providerKey === 'delhivery'
-              ? await requestDelhiveryPickupSchedule(
-                  providerOrders,
-                  `Set the pickup date and time for ${providerOrders.length} order(s) before generating the manifest.`,
-                )
-              : null
-
-          if (providerKey === 'delhivery' && !pickupSchedule) {
-            failedOrders.push(...providerOrders)
-            failureReasons.push(`${providerKey}: Manifest cancelled before pickup confirmation.`)
-            continue
-          }
-
           const response = await generateManifestService({
             awbs: identifiers,
             type: 'b2c',
-            ...(pickupSchedule || {}),
+            ...schedule,
           })
           successCount += providerOrders.length
           if (response.warnings?.length) {
@@ -771,7 +452,10 @@ const AllOrders = () => {
           console.error('Bulk manifest provider batch failed:', error)
           failedOrders.push(...providerOrders)
           failureReasons.push(
-            `${providerKey}: ${getActionableErrorMessage(error, 'Manifest could not be completed for this batch.')}`,
+            `${providerKey}: ${getActionableErrorMessage(
+              error,
+              'Manifest could not be completed for this batch.',
+            )}`,
           )
         }
       }
@@ -830,7 +514,77 @@ const AllOrders = () => {
     }
   }
 
+  const handleManifestScheduleConfirm = async (schedule: ManifestSchedulePayload) => {
+    await handleBulkManifest(schedule)
+    setManifestScheduleOpen(false)
+  }
+
+  const selectedDelhiveryOrders = selectedOrders.filter(
+    (order) => order.type === 'b2c' && getB2CManifestProvider(order) === 'deliveryone',
+  )
+  const showManifestShipmentCount = selectedDelhiveryOrders.length > 0
+  const defaultManifestShipmentCount = Math.max(
+    1,
+    selectedDelhiveryOrders.length || selectedOrders.length,
+  )
+
+  const getDocumentEntriesForOrders = (targetOrders: Order[], type: DocumentType) =>
+    targetOrders.reduce<DocumentEntry[]>((entries, order) => {
+      const { key, url } = getDocumentReference(order, type)
+      if (!key && !url) return entries
+
+      const source = key || url
+      entries.push({
+        key,
+        url,
+        fileName: getDownloadFileName(order, type, source),
+      })
+      return entries
+    }, [])
+
+  const downloadDocumentEntries = async (documentEntries: DocumentEntry[]) => {
+    const uniqueEntries = Array.from(
+      new Map<string, DocumentEntry>(
+        documentEntries.map((entry) => [entry.key || entry.url || entry.fileName, entry]),
+      ).values(),
+    )
+
+    const keyEntries = uniqueEntries.filter(
+      (entry): entry is DocumentEntry & { key: string } => Boolean(entry.key),
+    )
+    const directEntries = uniqueEntries.filter(
+      (entry): entry is DocumentEntry & { url: string } => !entry.key && Boolean(entry.url),
+    )
+    const presignedUrls = keyEntries.length
+      ? await presignDownloads({ keys: keyEntries.map((entry) => String(entry.key)) })
+      : []
+
+    let downloadedCount = 0
+    let skippedCount = documentEntries.length - uniqueEntries.length
+
+    for (const entry of directEntries) {
+      await downloadFile(String(entry.url), entry.fileName)
+      downloadedCount += 1
+    }
+
+    for (const [index, entry] of keyEntries.entries()) {
+      const resolvedUrl = Array.isArray(presignedUrls) ? presignedUrls[index] : null
+      if (!resolvedUrl) {
+        skippedCount += 1
+        continue
+      }
+
+      await downloadFile(resolvedUrl, entry.fileName)
+      downloadedCount += 1
+    }
+
+    return { downloadedCount, skippedCount }
+  }
+
   const handleBulkDownload = async (type: DocumentType) => {
+    const typeLabel = documentButtonMeta[type].label
+    const typePlural = `${typeLabel.toLowerCase()}s`
+
     if (!selectedOrders.length) {
       const message = 'Select at least one order to download documents.'
       setBulkFeedback({
@@ -845,134 +599,31 @@ const AllOrders = () => {
     setDownloadingDocumentType(type)
     setBulkFeedback({
       severity: 'info',
-      title: `Downloading ${type}s`,
-      message:
-        type === 'label'
-          ? `Generating missing labels and preparing one PDF for ${selectedOrders.length} selected order(s).`
-          : `Preparing ${selectedOrders.length} selected order(s) for ${type} download.`,
+      title: `Downloading ${typePlural}`,
+      message: `Preparing ${selectedOrders.length} selected order(s) for ${typeLabel.toLowerCase()} download.`,
     })
 
     try {
-      if (type === 'label') {
-        const nonB2COrders = selectedOrders.filter((order) => order.type && order.type !== 'b2c')
-        if (nonB2COrders.length) {
-          const message =
-            'Bulk label PDF currently supports B2C orders only. Please select B2C orders.'
-          setBulkFeedback({
-            severity: 'error',
-            title: 'Unsupported order type',
-            message,
-          })
-          toast.open({ message, severity: 'error' })
-          return
-        }
-
-        const result = await downloadBulkB2CLabelsService(selectedOrders.map((order) => order.id))
-        saveAs(result.blob, `bulk-labels-${new Date().toISOString().slice(0, 10)}.pdf`)
-
-        const summaryMessage =
-          result.failed > 0
-            ? `Downloaded one PDF with ${result.total - result.failed} label(s). ${result.failed} label(s) could not be prepared.${result.warnings ? ` ${result.warnings}` : ''}`
-            : `Downloaded one PDF with ${result.total} label(s).${result.generated ? ` Generated ${result.generated} missing label(s).` : ''}`
-
-        setBulkFeedback({
-          severity: result.failed > 0 ? 'warning' : 'success',
-          title: result.failed > 0 ? 'Labels downloaded with warnings' : 'Labels downloaded',
-          message: summaryMessage,
-        })
-        toast.open({
-          message: summaryMessage,
-          severity: result.failed > 0 ? 'info' : 'success',
-        })
-        return
-      }
-
-      const documentEntries = selectedOrders.reduce<DocumentEntry[]>((entries, order) => {
-        const { key, url } = getDocumentReference(order, type)
-        if (!key && !url) return entries
-
-        const source = key || url
-        entries.push({
-          key,
-          url,
-          fileName: getDownloadFileName(order, type, source),
-          orderLabel: getOrderDocumentLabel(order),
-        })
-        return entries
-      }, [])
+      const documentEntries = getDocumentEntriesForOrders(selectedOrders, type)
 
       if (!documentEntries.length) {
-        const message = `No ${type} files are available for the selected orders.`
+        const message = `No ${typeLabel.toLowerCase()} files are available for the selected orders.`
         setBulkFeedback({
           severity: 'error',
-          title: `No ${type} files found`,
+          title: `No ${typeLabel.toLowerCase()} files found`,
           message,
         })
         toast.open({ message, severity: 'error' })
         return
       }
 
-      const uniqueEntries = Array.from(
-        new Map<string, DocumentEntry>(
-          documentEntries.map((entry) => [entry.key || entry.url || entry.fileName, entry]),
-        ).values(),
-      )
-
-      const keyEntries = uniqueEntries.filter((entry): entry is DocumentEntry & { key: string } =>
-        Boolean(entry.key),
-      )
-      const directEntries = uniqueEntries.filter(
-        (entry): entry is DocumentEntry & { url: string } => !entry.key && Boolean(entry.url),
-      )
-      const presignedUrls = keyEntries.length
-        ? await presignDownloads({
-            keys: keyEntries.map((entry) => String(entry.key)),
-          })
-        : []
-
-      let downloadedCount = 0
-      let skippedCount = documentEntries.length - uniqueEntries.length
-      const unavailableOrders: string[] = []
-
-      for (const entry of directEntries) {
-        try {
-          await downloadFile(String(entry.url), entry.fileName)
-          downloadedCount += 1
-        } catch (error) {
-          skippedCount += 1
-          unavailableOrders.push(entry.orderLabel)
-          console.warn(`Skipping unavailable ${type} file for order ${entry.orderLabel}:`, error)
-        }
-      }
-
-      for (const [index, entry] of keyEntries.entries()) {
-        const resolvedUrl = Array.isArray(presignedUrls) ? presignedUrls[index] : null
-        const downloadUrl = resolvedUrl || (entry.url ? String(entry.url) : null)
-        if (!downloadUrl) {
-          skippedCount += 1
-          unavailableOrders.push(entry.orderLabel)
-          continue
-        }
-
-        try {
-          await downloadFile(downloadUrl, entry.fileName)
-          downloadedCount += 1
-        } catch (error) {
-          skippedCount += 1
-          unavailableOrders.push(entry.orderLabel)
-          console.warn(`Skipping unavailable ${type} file for order ${entry.orderLabel}:`, error)
-        }
-      }
+      const { downloadedCount, skippedCount } = await downloadDocumentEntries(documentEntries)
 
       if (!downloadedCount) {
-        const unavailableSummary =
-          unavailableOrders.length > 0
-            ? ` Files are not ready for: ${summarizeOrderNumbers(unavailableOrders)}.`
-            : ''
-        const message = `No ${type} files could be downloaded for the selected orders.${unavailableSummary}`
+        const message = `No ${typeLabel.toLowerCase()} files could be downloaded for the selected orders.`
         setBulkFeedback({
           severity: 'error',
-          title: `${type[0].toUpperCase()}${type.slice(1)} download failed`,
+          title: `${typeLabel} download failed`,
           message,
         })
         toast.open({ message, severity: 'error' })
@@ -981,30 +632,27 @@ const AllOrders = () => {
 
       const summaryMessage =
         skippedCount > 0
-          ? `Downloaded ${downloadedCount} ${type} file(s). ${skippedCount} file(s) were skipped because they were duplicates or not available yet.${unavailableOrders.length ? ` Orders: ${summarizeOrderNumbers(unavailableOrders)}.` : ''}`
-          : `Downloaded ${downloadedCount} ${type} file(s).`
+          ? `Downloaded ${downloadedCount} ${typeLabel.toLowerCase()} file(s). Skipped ${skippedCount} missing or duplicate file(s).`
+          : `Downloaded ${downloadedCount} ${typeLabel.toLowerCase()} file(s).`
 
       setBulkFeedback({
         severity: skippedCount > 0 ? 'warning' : 'success',
         title:
           skippedCount > 0
-            ? `${type[0].toUpperCase()}${type.slice(1)} download completed with skips`
-            : `${type[0].toUpperCase()}${type.slice(1)} download completed`,
+            ? `${typeLabel} download completed with skips`
+            : `${typeLabel} download completed`,
         message: summaryMessage,
       })
-      toast.open({
-        message: summaryMessage,
-        severity: skippedCount > 0 ? 'info' : 'success',
-      })
+      toast.open({ message: summaryMessage, severity: skippedCount > 0 ? 'info' : 'success' })
     } catch (error) {
       console.error(`Bulk ${type} download failed:`, error)
       const message = getActionableErrorMessage(
         error,
-        `Failed to download selected ${type} files. Please try again.`,
+        `Failed to download selected ${typeLabel.toLowerCase()} files. Please try again.`,
       )
       setBulkFeedback({
         severity: 'error',
-        title: `${type[0].toUpperCase()}${type.slice(1)} download failed`,
+        title: `${typeLabel} download failed`,
         message,
       })
       toast.open({ message, severity: 'error' })
@@ -1013,497 +661,650 @@ const AllOrders = () => {
     }
   }
 
-  const handleDownloadLabelsByWarehouse = async () => {
-    if (!selectedWarehouse) {
-      toast.open({ message: 'Please select a warehouse', severity: 'warning' })
-      return
-    }
-
-    setDownloadingByWarehouse(true)
-    try {
-      // Fetch all orders for the selected warehouse with date range filter
-      const warehouseFilters = {
-        warehouse: selectedWarehouse,
-        fromDate: warehouseFromDate || undefined,
-        toDate: warehouseToDate || undefined,
-      }
-
-      // Fetch all pages of data for the warehouse
-      let allOrders: Order[] = []
-      let currentPage = 1
-      let hasMore = true
-
-      while (hasMore) {
-        const response = await fetchAllOrders({
-          page: currentPage,
-          limit: 100,
-          ...warehouseFilters,
-        })
-        if (response?.orders && response.orders.length > 0) {
-          allOrders = [...allOrders, ...response.orders]
-          if (response.orders.length < 100) {
-            hasMore = false
-          } else {
-            currentPage += 1
-          }
-        } else {
-          hasMore = false
-        }
-      }
-
-      if (allOrders.length === 0) {
-        const dateInfo =
-          warehouseFromDate || warehouseToDate ? ' within the selected date range' : ''
-        toast.open({
-          message: `No orders found for the selected warehouse${dateInfo}`,
-          severity: 'warning',
-        })
-        setDownloadingByWarehouse(false)
-        return
-      }
-
-      const entries = allOrders
-        .map((order) => {
-          const docRef = getDocumentReference(order, 'label')
-          if (!docRef) return null
-          const key = docRef.key || docRef.url
-          if (!key) return null
-          return {
-            key,
-            fileName: getDownloadFileName(order, 'label'),
-            orderLabel: getOrderDocumentLabel(order),
-          }
-        })
-        .filter((v) => v !== null) as Array<{
-        key: string
-        fileName: string
-        orderLabel: string
-      }>
-
-      if (!entries.length) {
-        toast.open({
-          message: `No label files available for orders in the selected warehouse`,
-          severity: 'warning',
-        })
-        setDownloadingByWarehouse(false)
-        return
-      }
-
-      const downloadUrls = await presignDownloads({
-        keys: entries.map((e) => e.key),
-      })
-
-      let downloadedCount = 0
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i]
-        const downloadUrl = downloadUrls?.[i]
-        if (!downloadUrl) continue
-
-        try {
-          await downloadFile(downloadUrl, entry.fileName)
-          downloadedCount += 1
-        } catch (error) {
-          console.warn(`Failed to download label for ${entry.orderLabel}:`, error)
-        }
-      }
-
-      const message = `Downloaded ${downloadedCount} label file(s) for ${allOrders.length} order(s)`
-      toast.open({
-        message,
-        severity: downloadedCount > 0 ? 'success' : 'warning',
-      })
-    } catch (error) {
-      console.error('Warehouse label download failed:', error)
-      toast.open({ message: 'Failed to download labels', severity: 'error' })
-    } finally {
-      setDownloadingByWarehouse(false)
-    }
-  }
-
   const handleSingleDocumentDownload = async (order: Order, type: DocumentType) => {
-    const reference = getDocumentReference(order, type)
-    const keyValue = reference.key ? String(reference.key).trim() : ''
-    const urlValue = reference.url ? String(reference.url).trim() : ''
+    const typeLabel = documentButtonMeta[type].label
+    const rowDownloadKey = `${order.id}-${type}`
 
-    if (keyValue) {
-      try {
-        const urls = await presignDownloads({ keys: [keyValue] })
-        const signedUrl = Array.isArray(urls) ? urls[0] : urls
-        if (!signedUrl) {
-          throw new Error(`${type} is not available yet.`)
-        }
-        await downloadFile(signedUrl, getDownloadFileName(order, type, keyValue))
-        return
-      } catch (error) {
+    try {
+      setDownloadingRowDocument(rowDownloadKey)
+      const documentEntries = getDocumentEntriesForOrders([order], type)
+
+      if (!documentEntries.length) {
         toast.open({
-          message: getActionableErrorMessage(error, `Unable to download ${type}.`),
+          message: `${typeLabel} is not available for ${order.order_number || 'this order'} yet.`,
           severity: 'error',
         })
         return
       }
-    }
 
-    if (urlValue && isHttpUrl(urlValue)) {
-      window.open(urlValue, '_blank', 'noopener,noreferrer')
+      const { downloadedCount } = await downloadDocumentEntries(documentEntries)
+
+      if (!downloadedCount) {
+        toast.open({
+          message: `${typeLabel} could not be downloaded for ${order.order_number || 'this order'}.`,
+          severity: 'error',
+        })
+        return
+      }
+
+      toast.open({
+        message: `${typeLabel} downloaded for ${order.order_number || 'this order'}.`,
+        severity: 'success',
+      })
+    } catch (error) {
+      console.error(`${typeLabel} download failed:`, error)
+      const message = getActionableErrorMessage(
+        error,
+        `Failed to download ${typeLabel.toLowerCase()} for ${order.order_number || 'this order'}. Please try again.`,
+      )
+      toast.open({ message, severity: 'error' })
+    } finally {
+      setDownloadingRowDocument(null)
+    }
+  }
+
+  const formatCurrency = (value?: number | string | null, decimals = 0) =>
+    `Rs ${Number(value ?? 0).toFixed(decimals)}`
+
+  const hasDocument = (order: Order, type: DocumentType) => {
+    const { key, url } = getDocumentReference(order, type)
+    return Boolean(key || url)
+  }
+
+  const isCourierSelectionPending = (order: Order) => {
+    return order.type === 'b2c' && isB2CPreShipmentDraft(order)
+  }
+
+  const normalizeKgValue = (value?: number | string | null) => {
+    const numericValue = Number(value ?? 0)
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return 0
+    return numericValue > 50 ? numericValue / 1000 : numericValue
+  }
+
+  const formatKg = (value?: number | string | null) => `${normalizeKgValue(value).toFixed(1)} Kg`
+
+  const formatDimensionValue = (value?: number | string | null) => {
+    const numericValue = Number(value ?? 0)
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return '0'
+    return Number.isInteger(numericValue) ? String(numericValue) : numericValue.toFixed(1)
+  }
+
+  const formatOrderDateTime = (value?: string | null) => {
+    if (!value) return '-'
+    const date = moment(value)
+    return date.isValid() ? date.format('DD MMM YYYY | hh:mm A') : '-'
+  }
+
+  const getOrderProducts = (row: Order): Array<Record<string, unknown>> => {
+    const rawProducts: unknown = row.products
+    if (Array.isArray(rawProducts)) return rawProducts as Array<Record<string, unknown>>
+    if (typeof rawProducts === 'string') {
+      try {
+        const parsedProducts: unknown = JSON.parse(rawProducts)
+        return Array.isArray(parsedProducts) ? (parsedProducts as Array<Record<string, unknown>>) : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  const getProductName = (row: Order) => {
+    const products = getOrderProducts(row)
+    const firstProduct = products[0]
+    const rawName = String(firstProduct?.productName ?? firstProduct?.name ?? firstProduct?.box_name ?? '').trim()
+    if (!rawName) return '-'
+    return products.length > 1 ? `${rawName} +${products.length - 1}` : rawName
+  }
+
+  const getProductQuantity = (row: Order) => {
+    const products = getOrderProducts(row)
+    const quantity = products.reduce((sum, product) => {
+      const productQuantity = Number(product.quantity ?? product.qty ?? 0)
+      return sum + (Number.isFinite(productQuantity) ? productQuantity : 0)
+    }, 0)
+    return Math.max(quantity, 1)
+  }
+
+  const getPickupAddressName = (row: Order) =>
+    String(row.pickup_details?.warehouse_name || row.pickup_details?.name || '-').trim() || '-'
+
+  const getDisplayStatusLabel = (status?: string | null) => {
+    const normalizedStatus = String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+    return shippingStatusMap[normalizedStatus] || status || 'Unknown'
+  }
+
+  const isDocumentGenerationReady = (row: Order) => {
+    const normalizedStatus = String(row.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+    return (
+      Boolean(String(row.manifest_key || row.manifest || row.awb_number || '').trim()) ||
+      documentGenerationStatuses.has(normalizedStatus)
+    )
+  }
+
+  const openSingleManifestSchedule = (order: Order) => {
+    if (!isManifestEligible(order)) {
+      toast.open({ message: 'Generate manifest is not available for this order yet.', severity: 'info' })
       return
     }
 
-    toast.open({
-      message: `${type === 'label' ? 'Label' : type === 'invoice' ? 'Invoice' : 'Manifest'} is not available yet.`,
-      severity: 'error',
+    setSelectedOrderIds([order.id])
+    setBulkFeedback(null)
+    setManifestScheduleOpen(true)
+  }
+
+  const handleGenerateOrderDocument = async (order: Order, type: 'label' | 'invoice') => {
+    const orderId = String(order.id || '').trim()
+    if (!orderId) {
+      toast.open({ message: 'Order identifier is not available.', severity: 'error' })
+      return
+    }
+
+    if (!isDocumentGenerationReady(order)) {
+      toast.open({
+        message: 'Generate the manifest before creating label or invoice documents.',
+        severity: 'info',
+      })
+      return
+    }
+
+    const documentRef = `${order.id}-${type}`
+    try {
+      setDocumentGenerationRef(documentRef)
+      await regenerateDocuments({
+        orderId,
+        regenerateLabel: type === 'label',
+        regenerateInvoice: type === 'invoice',
+      })
+    } catch (error) {
+      console.error(`Failed to regenerate ${type} for order:`, order.order_number, error)
+    } finally {
+      setDocumentGenerationRef((current) => (current === documentRef ? null : current))
+    }
+  }
+
+  const handleTrackShipment = (order: Order) => {
+    const awb = String(order.awb_number || '').trim()
+    if (!awb) {
+      toast.open({ message: 'AWB is not available for tracking yet.', severity: 'info' })
+      return
+    }
+
+    navigate(`/tools/order_tracking?awb=${encodeURIComponent(awb)}`)
+  }
+
+  const handleSyncLiveStatus = (order: Order) => {
+    const orderId = String(order.id || '').trim()
+    if (!orderId) {
+      toast.open({ message: 'Order identifier is not available.', severity: 'error' })
+      return
+    }
+
+    setSyncingTrackingOrderId(order.id)
+    syncB2CTracking(orderId, {
+      onSettled: () => {
+      setSyncingTrackingOrderId((current) => (current === order.id ? null : current))
+      },
     })
   }
 
-  const renderOrderActionsMenu = (row: Order) => {
-    const rowId = String(row.id)
-    const isManifestingRow = manifestingOrderId === rowId
-    const isRetryingRow = retryingOrderId === rowId
-    const isCancellingRow = cancellingOrderId === rowId
-    const isTrackingRow = trackingOrderId === rowId
-    const retriesRemaining = Number(row.manifest_retries_remaining ?? 0)
-    const providerKey = getProviderKey(row)
-    const hasManifestWarning =
-      Boolean(String(row.manifest || '').trim()) && Boolean(String(row.manifest_error || '').trim())
-    const canRetryManifest = row.can_retry_manifest === true
-    const hasPickupFailure =
-      providerKey === 'delhivery' &&
-      canRetryManifest &&
-      (String(row.pickup_status || '').toLowerCase() === 'failed' ||
-        String(row.order_status || '').toLowerCase() === 'shipment_created')
-    const canRetryRowManifest =
-      isB2COrder(row) &&
-      canRetryManifest &&
-      (getOrderStatusKey(row) === 'manifest_failed' || hasManifestWarning || hasPickupFailure)
-    const canTrackShipment = Boolean(String(row.awb_number || '').trim())
-    const isCancelled = getOrderStatusKey(row) === 'cancelled'
-    const isDocumentReady = isDocumentGenerationReady(row)
-    const isLabelGenerating = documentGenerationRef === `${row.id}-label`
-    const isInvoiceGenerating = documentGenerationRef === `${row.id}-invoice`
-    const isMenuOpen = activeActionOrderId === row.id && Boolean(actionMenuAnchor)
-    const hasAnyDocument =
-      hasDocument(row, 'label') || hasDocument(row, 'invoice') || hasDocument(row, 'manifest')
-    const showB2CActions = isB2COrder(row)
+  const handleEditB2COrder = (order: Order) => {
+    if (order.type !== 'b2c' || !isB2CPreShipmentDraft(order)) {
+      toast.open({
+        message: 'Only draft B2C orders that have not been shipped yet can be edited.',
+        severity: 'warning',
+      })
+      return
+    }
 
-    const renderActionItem = ({
-      key,
-      icon,
-      label,
-      onClick,
-      disabled = false,
-      loading = false,
-      danger = false,
-    }: {
-      key: string
-      icon: ReactNode
-      label: string
-      onClick: () => void | Promise<void>
-      disabled?: boolean
-      loading?: boolean
-      danger?: boolean
-    }) => (
-      <MenuItem
-        key={key}
-        disabled={disabled || loading}
-        onClick={(event) => runActionFromMenu(event, onClick)}
-        sx={danger ? actionMenuDangerItemSx : actionMenuItemSx}
-      >
-        <ListItemIcon sx={danger ? { ...actionMenuIconSx, color: 'error.main' } : actionMenuIconSx}>
-          {loading ? <CircularProgress size={16} /> : icon}
-        </ListItemIcon>
-        <ListItemText primary={label} primaryTypographyProps={{ fontSize: 13, fontWeight: 700 }} />
-      </MenuItem>
+    setEditingOrder(order)
+    setOrderFormDefaults(getB2COrderFormDefaults(order as any))
+    setOrderFormKey((current) => current + 1)
+  }
+
+  const handleDeleteB2COrder = async (order: Order) => {
+    if (order.type !== 'b2c' || !isB2CPreShipmentDraft(order)) {
+      toast.open({
+        message: 'Only draft B2C orders that have not been shipped yet can be deleted.',
+        severity: 'warning',
+      })
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Delete draft order ${order.order_number || order.id}? This cannot be undone.`,
     )
+    if (!confirmed) return
 
-    return (
-      <>
-        <Button
-          size="small"
-          variant={isMenuOpen ? 'contained' : 'outlined'}
-          endIcon={<MdMoreVert size={16} />}
-          onClick={(event) => handleActionMenuOpen(event, row.id)}
-          aria-haspopup="menu"
-          aria-expanded={isMenuOpen ? 'true' : undefined}
-          sx={{
-            minHeight: 32,
-            px: 1.15,
-            borderRadius: '8px',
-            fontSize: 12,
-            fontWeight: 800,
-            textTransform: 'none',
-            whiteSpace: 'nowrap',
-            borderColor: 'rgba(232, 85, 0, 0.32)',
-            color: isMenuOpen ? '#FFFFFF' : '#062A5B',
-            bgcolor: isMenuOpen ? '#062A5B' : '#FFFFFF',
-            boxShadow: isMenuOpen ? '0 10px 20px rgba(232, 85, 0, 0.16)' : 'none',
-            '&:hover': {
-              borderColor: '#062A5B',
-              bgcolor: isMenuOpen ? '#D34B00' : 'rgba(232, 85, 0, 0.06)',
-            },
-          }}
-        >
-          Actions
-        </Button>
-        <Menu
-          anchorEl={actionMenuAnchor}
-          open={isMenuOpen}
-          onClose={handleActionMenuClose}
-          onClick={(event) => event.stopPropagation()}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          slotProps={{
-            paper: {
-              sx: {
-                mt: 0.75,
-                minWidth: 260,
-                borderRadius: '10px',
-                border: '1px solid rgba(17, 24, 39, 0.10)',
-                background: 'rgba(255, 255, 255, 0.98)',
-                boxShadow: '0 18px 38px rgba(17, 24, 39, 0.16)',
-                overflow: 'hidden',
-              },
-            },
-            list: {
-              dense: true,
-              sx: { py: 0.45 },
-            },
-          }}
-        >
-          {renderActionItem({
-            key: 'view-details',
-            icon: <MdVisibility />,
-            label: 'View Details',
-            onClick: () => handleViewDetails(row),
-          })}
-          {canSelectCourierForOrder(row) &&
-            renderActionItem({
-              key: 'select-courier',
-              icon: <MdLocalShipping />,
-              label: 'Select Courier',
-              onClick: () => setCourierSelectionOrder(row),
-              disabled: isTrackingRow || isManifestingRow || isRetryingRow || isCancellingRow,
-            })}
-
-          {showB2CActions && <Divider sx={{ my: 0.35 }} />}
-          {showB2CActions &&
-            renderActionItem({
-              key: 'generate-manifest',
-              icon: <MdAssignment />,
-              label: isManifestingRow ? 'Generating Manifest' : 'Generate Manifest',
-              onClick: () => handleSingleManifest(row),
-              disabled:
-                isCancelled ||
-                !canManifestOrder(row) ||
-                bulkManifesting ||
-                isManifestingRow ||
-                isRetryingRow ||
-                isCancellingRow,
-              loading: isManifestingRow,
-            })}
-          {showB2CActions &&
-            renderActionItem({
-              key: 'generate-label',
-              icon: <MdLocalOffer />,
-              label: isLabelGenerating
-                ? 'Generating Label'
-                : hasDocument(row, 'label')
-                  ? 'Regenerate Label'
-                  : 'Generate Label',
-              onClick: () => handleGenerateOrderDocument(row, 'label'),
-              disabled:
-                isCancelled ||
-                !isDocumentReady ||
-                regeneratingDocuments ||
-                Boolean(documentGenerationRef),
-              loading: isLabelGenerating,
-            })}
-          {showB2CActions &&
-            renderActionItem({
-              key: 'generate-invoice',
-              icon: <MdReceipt />,
-              label: isInvoiceGenerating
-                ? 'Generating Invoice'
-                : hasDocument(row, 'invoice')
-                  ? 'Regenerate Invoice'
-                  : 'Generate Invoice',
-              onClick: () => handleGenerateOrderDocument(row, 'invoice'),
-              disabled:
-                isCancelled ||
-                !isDocumentReady ||
-                regeneratingDocuments ||
-                Boolean(documentGenerationRef),
-              loading: isInvoiceGenerating,
-            })}
-
-          {hasAnyDocument && <Divider sx={{ my: 0.35 }} />}
-          {hasDocument(row, 'label') &&
-            renderActionItem({
-              key: 'download-label',
-              icon: <MdDownload />,
-              label: 'Download Label',
-              onClick: () => handleSingleDocumentDownload(row, 'label'),
-              disabled: isManifestingRow || isRetryingRow || isCancellingRow,
-            })}
-          {hasDocument(row, 'invoice') &&
-            renderActionItem({
-              key: 'download-invoice',
-              icon: <MdDownload />,
-              label: 'Download Invoice',
-              onClick: () => handleSingleDocumentDownload(row, 'invoice'),
-              disabled: isManifestingRow || isRetryingRow || isCancellingRow,
-            })}
-          {hasDocument(row, 'manifest') &&
-            renderActionItem({
-              key: 'download-manifest',
-              icon: <MdDownload />,
-              label: 'Download Manifest',
-              onClick: () => handleSingleDocumentDownload(row, 'manifest'),
-              disabled: isManifestingRow || isRetryingRow || isCancellingRow,
-            })}
-
-          {(canRetryRowManifest ||
-            getOrderStatusKey(row) === 'delivered' ||
-            isCancellable(row)) && <Divider sx={{ my: 0.35 }} />}
-          {canRetryRowManifest &&
-            renderActionItem({
-              key: 'retry-manifest',
-              icon: <MdReplay />,
-              label: hasPickupFailure
-                ? `Retry Pickup (${retriesRemaining} left)`
-                : hasManifestWarning && providerKey !== 'delhivery'
-                  ? `Retry Invoice (${retriesRemaining} left)`
-                  : `Retry Manifest (${retriesRemaining} left)`,
-              onClick: () => handleRetryManifest(row),
-              disabled: isRetryingRow || isManifestingRow || isCancellingRow,
-              loading: isRetryingRow,
-            })}
-          {showB2CActions &&
-            canViewReturnOrders &&
-            canAddReturnOrders &&
-            getOrderStatusKey(row) === 'delivered' &&
-            renderActionItem({
-              key: 'reverse',
-              icon: <MdKeyboardReturn />,
-              label: 'Create Reverse',
-              onClick: () => setReverseOrder(row),
-            })}
-          {isCancellable(row) &&
-            renderActionItem({
-              key: 'cancel',
-              icon: <MdCancel />,
-              label: isCancellingRow ? 'Cancelling Shipment' : 'Cancel Shipment',
-              onClick: () => handleCancelOrder(row),
-              disabled: isCancellingRow || isManifestingRow || isRetryingRow,
-              loading: isCancellingRow,
-              danger: true,
-            })}
-
-          <Divider sx={{ my: 0.35 }} />
-          {renderActionItem({
-            key: 'track-shipment',
-            icon: <MdLocalShipping />,
-            label: 'Track Shipment',
-            onClick: () => handleTrackShipment(row),
-            disabled: !canTrackShipment,
-          })}
-          {renderActionItem({
-            key: 'sync-live-status',
-            icon: <MdSync />,
-            label: isTrackingRow ? 'Syncing Live Status' : 'Sync Live Status',
-            onClick: () => handleSyncLiveTracking(row),
-            disabled:
-              !canTrackShipment ||
-              isTrackingRow ||
-              isManifestingRow ||
-              isRetryingRow ||
-              isCancellingRow,
-            loading: isTrackingRow,
-          })}
-        </Menu>
-      </>
-    )
+    try {
+      await deleteB2COrder(String(order.id))
+    } catch (error) {
+      console.error('Draft order delete failed:', error)
+    }
   }
 
   const columns: Column<Order>[] = [
     {
       id: 'order_number',
-      label: 'Order #',
-      minWidth: 280,
-      showCellTooltip: false,
-      render: (value) => (
-        <Typography
-          sx={{
-            color: '#111111',
-            fontSize: '0.85rem',
-            fontWeight: 500,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {String(value || '-')}
-        </Typography>
-      ),
-    },
-    { id: 'type', label: 'Type', minWidth: 110 },
-    {
-      id: 'awb_number',
-      label: 'AWB',
-      render: (value) =>
-        value ? (
-          <Box
-            onClick={() => navigate(`/tools/track-order?awb=${value}`)}
-            sx={{
-              cursor: 'pointer',
-              color: '#062A5B',
-              fontWeight: 500,
-              textDecoration: 'underline',
-              '&:hover': { opacity: 0.8 },
+      label: 'Order Details',
+      minWidth: 142,
+      truncate: false,
+      render: (_v, row) => (
+        <Stack spacing={0.35} sx={{ minWidth: 0 }}>
+          <Typography
+            component="button"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              setOrderDetailsOrder(row)
             }}
-          >
-            {value}
-          </Box>
-        ) : (
-          <span>-</span>
-        ),
-    },
-    { id: 'buyer_name', label: 'Buyer Name' },
-    { id: 'city', label: 'City' },
-    { id: 'state', label: 'State' },
-    { id: 'order_amount', label: 'Amount' },
-    {
-      id: 'courier_partner',
-      label: 'Courier',
-      minWidth: 170,
-      render: (_value, row) => getCourierDisplayName(row),
-    },
-    {
-      label: 'Status',
-      id: 'order_status',
-      minWidth: 160,
-      showCellTooltip: false,
-      render: (v) => {
-        return (
-          <Stack
-            direction="row"
-            alignItems="center"
             sx={{
-              minWidth: 0,
-              '@keyframes spin': {
-                from: { transform: 'rotate(0deg)' },
-                to: { transform: 'rotate(360deg)' },
+              all: 'unset',
+              maxWidth: '100%',
+              cursor: 'pointer',
+              color: '#05BD7E',
+              fontSize: 12.2,
+              fontWeight: 600,
+              lineHeight: 1.25,
+              '&:hover': { textDecoration: 'underline' },
+              '&:focus-visible': {
+                outline: '2px solid rgba(5, 189, 126, 0.35)',
+                outlineOffset: '2px',
+                borderRadius: '4px',
               },
             }}
+            noWrap
           >
-            <StatusChip label={v} status={statusColorMap[v] || 'info'} />
+            {row.order_number || '-'}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.secondary', lineHeight: 1.25 }} noWrap>
+            {formatOrderDateTime(row.created_at || row.order_date)}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.primary', lineHeight: 1.25 }} noWrap>
+            {row.is_external_api ? 'API' : 'Custom'}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      id: 'buyer_name',
+      label: 'Customer Details',
+      minWidth: 176,
+      truncate: false,
+      render: (_v, row) => (
+        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 500, color: 'text.primary', lineHeight: 1.28 }} noWrap>
+            {row.buyer_name || '-'}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.9, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+            {row.buyer_email || '-'}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.9, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+            {row.buyer_phone || '-'}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      label: 'Product Details',
+      id: 'products',
+      minWidth: 112,
+      truncate: false,
+      render: (_value, row) => (
+        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 12.1, fontWeight: 500, color: 'text.primary', maxWidth: '100%' }} noWrap>
+            {getProductName(row)}
+          </Typography>
+          <Typography sx={{ fontSize: 10.9, color: 'text.primary', fontWeight: 500 }} noWrap>
+            QTY:{getProductQuantity(row)}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      label: 'Package Details',
+      id: 'weight',
+      minWidth: 158,
+      truncate: false,
+      render: (_value, row) => {
+        const applicableWeight =
+          row.charged_weight ?? row.selected_max_slab_weight ?? row.volumetric_weight ?? row.weight
+        return (
+          <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
+              Dead wt. :{formatKg(row.weight)}
+            </Typography>
+            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
+              {formatDimensionValue(row.length)} X {formatDimensionValue(row.breadth)} X{' '}
+              {formatDimensionValue(row.height)} (cm)
+            </Typography>
+            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
+              Applicable wt. :{formatKg(applicableWeight)}
+            </Typography>
           </Stack>
         )
       },
     },
     {
-      id: 'actions',
-      label: 'Actions',
+      label: 'Payment',
+      id: 'order_amount',
+      minWidth: 88,
+      truncate: false,
+      render: (_value, row) => {
+        const isCod = String(row.order_type || '').toLowerCase() === 'cod'
+        return (
+          <Stack spacing={0.45} alignItems="flex-start">
+            <Typography sx={{ fontSize: 12.1, color: 'text.primary', fontWeight: 500 }} noWrap>
+              {formatCurrency(row.order_amount, 0)}
+            </Typography>
+            <Chip
+              label={isCod ? 'COD' : 'Prepaid'}
+              size="small"
+              sx={{
+                height: 22,
+                px: 0.65,
+                borderRadius: '999px',
+                color: isCod ? 'warning.dark' : '#038B60',
+                bgcolor: isCod ? alpha('#FF9C4B', 0.12) : alpha('#05BD7E', 0.12),
+                border: `1px solid ${isCod ? alpha('#B45309', 0.24) : alpha('#05BD7E', 0.45)}`,
+                '& .MuiChip-label': {
+                  px: 0.5,
+                  fontSize: 10,
+                  fontWeight: 600,
+                },
+              }}
+            />
+          </Stack>
+        )
+      },
+    },
+    {
+      label: 'Pickup Address',
+      id: 'pickup_location_id',
+      minWidth: 118,
+      truncate: false,
+      render: (_value, row) => (
+        <Typography
+          sx={{
+            width: 'fit-content',
+            maxWidth: '100%',
+            fontSize: 12,
+            color: 'text.primary',
+            fontWeight: 500,
+            borderBottom: `1px dashed ${alpha('#0D1B4D', 0.28)}`,
+            lineHeight: 1.3,
+          }}
+          noWrap
+        >
+          {getPickupAddressName(row)}
+        </Typography>
+      ),
+    },
+    {
+      label: 'Status',
+      id: 'order_status',
+      minWidth: 84,
+      truncate: false,
+      render: (_value, row) => (
+        <Chip
+          label={getDisplayStatusLabel(row.order_status)}
+          size="small"
+          sx={{
+            height: 25,
+            minWidth: 58,
+            borderRadius: '999px',
+            color: '#05BD7E',
+            bgcolor: alpha('#05BD7E', 0.08),
+            border: `1px solid ${alpha('#05BD7E', 0.45)}`,
+            '& .MuiChip-label': {
+              px: 0.7,
+              fontSize: 10,
+              fontWeight: 600,
+            },
+          }}
+        />
+      ),
+    },
+    {
+      label: 'Action',
+      id: 'id',
       minWidth: 170,
-      showCellTooltip: false,
-      stickyRight: true,
-      render: (_value, row) => renderOrderActionsMenu(row),
+      sticky: 'right',
+      stickyOffset: 0,
+      truncate: false,
+      render: (_v, row) => {
+        const orderStatus = String(row.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+        const canManifest = isManifestEligible(row)
+        const isCancelled = isB2CCancelledStatus(orderStatus)
+        const isDocumentReady = isDocumentGenerationReady(row)
+        const isLabelGenerating = documentGenerationRef === `${row.id}-label`
+        const isInvoiceGenerating = documentGenerationRef === `${row.id}-invoice`
+        const isLabelDownloading = downloadingRowDocument === `${row.id}-label`
+        const isInvoiceDownloading = downloadingRowDocument === `${row.id}-invoice`
+        const isManifestDownloading = downloadingRowDocument === `${row.id}-manifest`
+        const canDownloadLabel = hasDocument(row, 'label')
+        const canDownloadInvoice = hasDocument(row, 'invoice')
+        const canDownloadManifest = hasDocument(row, 'manifest')
+        const isMenuOpen = activeActionOrderId === row.id && Boolean(actionMenuAnchor)
+        const canSelectCourier = isCourierSelectionPending(row)
+        const canEditDraft = row.type === 'b2c' && isB2CPreShipmentDraft(row)
+        const hasAwb = Boolean(String(row.awb_number || '').trim())
+        const isSyncingThisOrder = syncingTracking && syncingTrackingOrderId === row.id
+
+        const renderActionItem = ({
+          key,
+          icon,
+          label,
+          onClick,
+          disabled = false,
+          loading = false,
+          danger = false,
+        }: {
+          key: string
+          icon: ReactNode
+          label: string
+          onClick: () => void | Promise<void>
+          disabled?: boolean
+          loading?: boolean
+          danger?: boolean
+        }) => (
+          <MenuItem
+            key={key}
+            disabled={disabled || loading}
+            onClick={(event) => runActionFromMenu(event, onClick)}
+            sx={danger ? actionMenuDangerItemSx : actionMenuItemSx}
+          >
+            <ListItemIcon sx={danger ? { ...actionMenuIconSx, color: 'error.main' } : actionMenuIconSx}>
+              {loading ? <CircularProgress size={16} /> : icon}
+            </ListItemIcon>
+            <ListItemText
+              primary={label}
+              primaryTypographyProps={{ fontSize: 13.5, fontWeight: 500 }}
+            />
+          </MenuItem>
+        )
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={0.55} sx={{ minWidth: 0 }}>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={(event) => {
+                event.stopPropagation()
+                setSelectCourierOrder(row)
+              }}
+              disabled={isCancelled || !canSelectCourier}
+              sx={{
+                minWidth: 78,
+                minHeight: 31,
+                px: 1,
+                borderRadius: '8px',
+                fontSize: 11.4,
+                fontWeight: 600,
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Ship Now
+            </Button>
+            <Tooltip title="More actions" arrow>
+              <IconButton
+                size="small"
+                onClick={(event) => handleActionMenuOpen(event, row.id)}
+                aria-haspopup="menu"
+                aria-label={`Actions for ${row.order_number || 'order'}`}
+                aria-expanded={isMenuOpen ? 'true' : undefined}
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '50%',
+                  color: '#FFFFFF',
+                  bgcolor: isMenuOpen ? '#5F646D' : '#7C818A',
+                  '&:hover': {
+                    bgcolor: '#5F646D',
+                  },
+                }}
+              >
+                <MdMoreHoriz size={22} />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={actionMenuAnchor}
+              open={isMenuOpen}
+              onClose={handleActionMenuClose}
+              onClick={(event) => event.stopPropagation()}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{
+                paper: {
+                  sx: {
+                    mt: 0.75,
+                    minWidth: 238,
+                    borderRadius: '8px',
+                    border: `1px solid ${isDark ? alpha('#f8fafc', 0.12) : alpha('#0D1B4D', 0.12)}`,
+                    background: surface,
+                    boxShadow: isDark
+                      ? `0 18px 38px ${alpha('#000000', 0.35)}`
+                      : `0 18px 38px ${alpha('#0D1B4D', 0.18)}`,
+                    overflow: 'hidden',
+                  },
+                },
+                list: {
+                  dense: true,
+                  sx: { py: 0.55 },
+                },
+              }}
+            >
+              {renderActionItem({
+                key: 'view-details',
+                icon: <MdVisibility />,
+                label: 'View Details',
+                onClick: () => setOrderDetailsOrder(row),
+              })}
+              {canEditDraft &&
+                renderActionItem({
+                  key: 'edit-order',
+                  icon: <MdEdit />,
+                  label: 'Edit Order',
+                  onClick: () => handleEditB2COrder(row),
+                })}
+              {canEditDraft &&
+                renderActionItem({
+                  key: 'delete-order',
+                  icon: <MdDelete />,
+                  label: deletingB2COrder ? 'Deleting Order' : 'Delete Order',
+                  onClick: () => handleDeleteB2COrder(row),
+                  loading: deletingB2COrder,
+                  danger: true,
+                })}
+              {renderActionItem({
+                key: 'generate-manifest',
+                icon: <MdAssignment />,
+                label: bulkManifesting ? 'Generating Manifest' : 'Generate Manifest',
+                onClick: () => openSingleManifestSchedule(row),
+                disabled: !canManifest || bulkManifesting,
+                loading: canManifest && bulkManifesting,
+              })}
+              {renderActionItem({
+                key: 'regenerate-label',
+                icon: <MdLocalOffer />,
+                label: isLabelGenerating ? 'Regenerating Label' : 'Regenerate Label',
+                onClick: () => handleGenerateOrderDocument(row, 'label'),
+                disabled:
+                  row.type !== 'b2c' ||
+                  isCancelled ||
+                  !isDocumentReady ||
+                  regeneratingDocuments ||
+                  Boolean(documentGenerationRef),
+                loading: isLabelGenerating,
+              })}
+              {renderActionItem({
+                key: 'regenerate-invoice',
+                icon: <MdReceipt />,
+                label: isInvoiceGenerating ? 'Regenerating Invoice' : 'Regenerate Invoice',
+                onClick: () => handleGenerateOrderDocument(row, 'invoice'),
+                disabled:
+                  row.type !== 'b2c' ||
+                  isCancelled ||
+                  !isDocumentReady ||
+                  regeneratingDocuments ||
+                  Boolean(documentGenerationRef),
+                loading: isInvoiceGenerating,
+              })}
+              <Divider sx={{ my: 0.45 }} />
+              {renderActionItem({
+                key: 'download-label',
+                icon: <MdFileDownload />,
+                label: 'Download Label',
+                onClick: () => handleSingleDocumentDownload(row, 'label'),
+                disabled: !canDownloadLabel || Boolean(downloadingDocumentType) || Boolean(downloadingRowDocument),
+                loading: isLabelDownloading,
+              })}
+              {renderActionItem({
+                key: 'download-invoice',
+                icon: <MdFileDownload />,
+                label: 'Download Invoice',
+                onClick: () => handleSingleDocumentDownload(row, 'invoice'),
+                disabled: !canDownloadInvoice || Boolean(downloadingDocumentType) || Boolean(downloadingRowDocument),
+                loading: isInvoiceDownloading,
+              })}
+              {renderActionItem({
+                key: 'download-manifest',
+                icon: <MdFileDownload />,
+                label: 'Download Manifest',
+                onClick: () => handleSingleDocumentDownload(row, 'manifest'),
+                disabled: !canDownloadManifest || Boolean(downloadingDocumentType) || Boolean(downloadingRowDocument),
+                loading: isManifestDownloading,
+              })}
+              <Divider sx={{ my: 0.45 }} />
+              {renderActionItem({
+                key: 'cancel-shipment',
+                icon: <MdDelete />,
+                label: cancellingShipment ? 'Cancelling Shipment' : 'Cancel Shipment',
+                onClick: () => cancelShipment(String(row.id)),
+                disabled: row.type !== 'b2c' || !isB2CCancelEligible(row) || cancellingShipment,
+                loading: cancellingShipment,
+                danger: true,
+              })}
+              {renderActionItem({
+                key: 'track-shipment',
+                icon: <MdTrackChanges />,
+                label: 'Track Shipment',
+                onClick: () => handleTrackShipment(row),
+                disabled: !hasAwb,
+              })}
+              {renderActionItem({
+                key: 'sync-live-status',
+                icon: <MdSync />,
+                label: isSyncingThisOrder ? 'Syncing Live Status' : 'Sync Live Status',
+                onClick: () => handleSyncLiveStatus(row),
+                disabled: row.type !== 'b2c' || !hasAwb || syncingTracking,
+                loading: isSyncingThisOrder,
+              })}
+            </Menu>
+          </Stack>
+        )
+      },
     },
   ]
 
@@ -1515,144 +1316,106 @@ const AllOrders = () => {
       placeholder: 'Order # / Buyer Name',
     },
     {
-      name: 'productQuery',
-      label: 'Product / SKU',
-      type: 'text',
-      placeholder: 'Search by product or SKU',
+      name: 'status',
+      label: 'Status',
+      type: 'select',
+      options: Object.keys(statusColorMap).map((status) => ({
+        label: status,
+        value: status,
+      })),
+      isAdvanced: true,
     },
-    {
-      name: 'fromDate',
-      label: 'From Date',
-      type: 'date',
-      placeholder: 'YYYY-MM-DD',
-    },
-    {
-      name: 'toDate',
-      label: 'To Date',
-      type: 'date',
-      placeholder: 'YYYY-MM-DD',
-    },
+    { name: 'fromDate', label: 'From Date', type: 'date', placeholder: 'YYYY-MM-DD' },
+    { name: 'toDate', label: 'To Date', type: 'date', placeholder: 'YYYY-MM-DD' },
   ]
-
-  const handleTabChange = (newValue: string) => {
-    setSelectedTab(newValue)
-    setPage(1)
-    clearSelection()
-    setBulkFeedback(null)
-  }
-
-  const statusTabs = [
-    { label: 'All', value: '' },
-    ...Object.keys(statusColorMap).map((status) => ({
-      label: status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' '),
-      value: status,
-    })),
-  ]
-
-  const hasActiveFilters = Object.values(filters).some((v) => v !== undefined && v !== '')
-  const filterChips = [
-    filters.status && { label: `Status: ${filters.status}`, key: 'status' },
-    filters.search && { label: `Search: ${filters.search}`, key: 'search' },
-    filters.productQuery && {
-      label: `Product: ${filters.productQuery}`,
-      key: 'productQuery',
-    },
-    filters.fromDate && { label: `From: ${filters.fromDate}`, key: 'fromDate' },
-    filters.toDate && { label: `To: ${filters.toDate}`, key: 'toDate' },
-  ].filter(Boolean) as Array<{ label: string; key: keyof OrdersFilters }>
-
-  const handleCreateOrderClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    setCreateOrderAnchorEl(e.currentTarget)
-  }
-
-  const handleSelectOrderType = (type: 'b2c' | 'b2b') => {
-    // Navigate to create order page based on type
-    navigate(`/orders/create?type=${type}`)
-    setCreateOrderAnchorEl(null)
-  }
-
-  const handleExportCSV = async () => {
-    if (exportingCsv) return
-
-    setExportingCsv(true)
-    try {
-      const exportOrders = await fetchOrdersForCsvExport('all', effectiveFilters)
-      if (!exportOrders.length) {
-        toast.open({ message: 'No orders to export', severity: 'warning' })
-        return
-      }
-
-      downloadClientOrdersCsv(exportOrders, 'all')
-      toast.open({
-        message: `Exported ${exportOrders.length} orders with ${CLIENT_ORDER_ADDED_HEADERS.length} added columns.`,
-        severity: 'success',
-      })
-    } catch {
-      toast.open({ message: 'Failed to export orders', severity: 'error' })
-    } finally {
-      setExportingCsv(false)
-    }
-
-    if (Date.now() < 0) {
-      const csvData = orders.map((order) => ({
-        'Order #': order.order_number,
-        Type: order.type?.toUpperCase() || 'N/A',
-        'Buyer Name': order.buyer_name,
-        City: order.city,
-        State: order.state,
-        Amount: order.order_amount,
-        Status: order.order_status,
-        'Created At': order.created_at || '',
-      }))
-
-      const csv = Papa.unparse(csvData)
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.setAttribute('download', `orders_${new Date().toISOString().split('T')[0]}.csv`)
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.open({
-        message: 'Orders exported successfully',
-        severity: 'success',
-      })
-    }
-  }
 
   return (
-    <Stack gap={0} sx={{ pb: selectedOrders.length > 0 ? 6 : 2, position: 'relative' }}>
-      {/* Page Header - Title + Controls Bar in One Row */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        gap={2}
-        mb={2}
-        sx={{ flexWrap: 'wrap' }}
+    <Stack gap={1.2}>
+      <Box
+        sx={{
+          backgroundColor: surface,
+          borderRadius: '8px',
+          border: `1px solid ${borderColor}`,
+          boxShadow: panelShadow,
+          overflow: 'hidden',
+        }}
       >
-        {/* Page Heading */}
-        <Typography
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          alignItems={{ xs: 'flex-start', lg: 'center' }}
+          justifyContent="space-between"
+          gap={1}
           sx={{
-            fontSize: { xs: '1.2rem', sm: '1.4rem', md: '1.6rem' },
-            fontWeight: 900,
-            color: '#111827',
-            whiteSpace: 'nowrap',
-            minWidth: 'fit-content',
+            px: { xs: 1.15, md: 1.5 },
+            py: 1,
+            borderBottom: `1px solid ${borderColor}`,
+            bgcolor: surface,
           }}
         >
-          All Shipments
-        </Typography>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: textPrimary,
+              fontSize: '17px',
+            }}
+          >
+            Orders Management
+          </Typography>
 
-        {/* Controls Bar - Filter Button + Export + Create Order Button */}
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="flex-end"
-          gap={1}
-          sx={{ flex: '0 1 auto', flexWrap: { xs: 'wrap', md: 'nowrap' } }}
-        >
-          {/* <FilterBar
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
+            <Button
+              variant="outlined"
+              startIcon={<TbRefresh size={16} />}
+              onClick={() => activeQuery.refetch()}
+              disabled={activeQuery.isRefetching}
+              sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
+            >
+              {activeQuery.isRefetching ? 'Refreshing' : 'Refresh'}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<TbFilter size={16} />}
+              onClick={() =>
+                document.getElementById('orders-filter-bar')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start',
+                })
+              }
+              sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
+            >
+              Filters
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={exportingCsv ? <CircularProgress size={14} /> : <TbDownload size={16} />}
+              onClick={handleExportCsv}
+              disabled={exportingCsv}
+              sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
+            >
+              {exportingCsv ? 'Exporting' : 'Export CSV'}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<TbPlus size={16} />}
+              onClick={() => navigate('/orders/create')}
+              sx={{
+                borderRadius: 1,
+                minHeight: 34,
+                fontSize: 12,
+                bgcolor: '#1D2842',
+                '&:hover': {
+                  bgcolor: '#152038',
+                },
+              }}
+            >
+              Create Order
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Box sx={{ px: { xs: 1.15, md: 1.5 }, pt: 1 }} id="orders-filter-bar">
+          <FilterBar
             fields={filterFields}
             defaultValues={filters}
             onApply={(appliedFilters) => {
@@ -1661,481 +1424,132 @@ const AllOrders = () => {
               clearSelection()
               setBulkFeedback(null)
             }}
-            mode="button"
-            buttonLabel="Filters"
-            appliedCount={
-              Object.values(filters).filter((v) => v !== undefined && v !== '' && v !== 'latest')
-                .length
-            }
-          /> */}
-
-          {/* Warehouse Selector */}
-          {warehouseData?.pickupAddresses && warehouseData.pickupAddresses.length > 0 && (
-            <Box ref={warehouseSelectorRef}>
-              <CustomSelect
-                value={selectedWarehouse ?? ''}
-                onSelect={(warehouseId) => {
-                  setSelectedWarehouse(warehouseId as string)
-                  // Open popover when warehouse is selected
-                  setTimeout(() => {
-                    if (warehouseSelectorRef.current) {
-                      setWarehousePopoverAnchor(warehouseSelectorRef.current)
-                    }
-                  }, 0)
-                }}
-                items={warehouseData.pickupAddresses.map((w: any) => ({
-                  key: w.id || w.pickup?.addressNickname,
-                  label: w.pickup?.addressNickname || 'Warehouse',
-                  description:
-                    w.pickup?.city && w.pickup?.state ? `${w.pickup.city}, ${w.pickup.state}` : '',
-                }))}
-                placeholder="Choose warehouse"
-                width="400px"
-              />
-            </Box>
-          )}
-
-          {/* Date Range Popover */}
-          {selectedWarehouse && (
-            <Popover
-              open={Boolean(warehousePopoverAnchor)}
-              anchorEl={warehousePopoverAnchor}
-              onClose={() => {
-                setWarehousePopoverAnchor(null)
-                setSelectedWarehouse(null)
-              }}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            >
-              <Paper
-                sx={{
-                  p: 2.5,
-                  borderRadius: 2,
-                  minWidth: '340px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                }}
-              >
-                <Stack spacing={2}>
-                  <Box>
-                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 700, mb: 1.5 }}>
-                      📅 Select Date Range
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.85rem', color: '#6B7280', mb: 2 }}>
-                      Download labels for orders within this date range (by default shows all)
-                    </Typography>
-                  </Box>
-
-                  <Stack spacing={1.5}>
-                    <Box>
-                      <TextField
-                        type="date"
-                        label="From Date (Optional)"
-                        value={warehouseFromDate}
-                        onChange={(e) => setWarehouseFromDate(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        size="small"
-                        fullWidth
-                        helperText="Leave empty to show all orders from the beginning"
-                      />
-                    </Box>
-                    <Box>
-                      <TextField
-                        type="date"
-                        label="To Date"
-                        value={warehouseToDate}
-                        onChange={(e) => setWarehouseToDate(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        size="small"
-                        fullWidth
-                      />
-                    </Box>
-                  </Stack>
-
-                  <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Button
-                      variant="text"
-                      onClick={() => {
-                        setWarehousePopoverAnchor(null)
-                        setSelectedWarehouse(null)
-                        setWarehouseFromDate('')
-                        setWarehouseToDate(getDefaultPickupDateInput())
-                      }}
-                      sx={{ textTransform: 'none' }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={
-                        downloadingByWarehouse ? (
-                          <Box
-                            component="span"
-                            sx={{
-                              display: 'inline-flex',
-                              animation: 'spin 1s linear infinite',
-                              '@keyframes spin': {
-                                '0%': { transform: 'rotate(0deg)' },
-                                '100%': { transform: 'rotate(360deg)' },
-                              },
-                            }}
-                          >
-                            <MdDownload size={18} />
-                          </Box>
-                        ) : (
-                          <MdDownload size={18} />
-                        )
-                      }
-                      onClick={async () => {
-                        await handleDownloadLabelsByWarehouse()
-                        setWarehousePopoverAnchor(null)
-                        setSelectedWarehouse(null)
-                        setWarehouseFromDate('')
-                        setWarehouseToDate(getDefaultPickupDateInput())
-                      }}
-                      disabled={downloadingByWarehouse}
-                      sx={{
-                        bgcolor: '#062A5B',
-                        textTransform: 'none',
-                        '&:hover': { bgcolor: '#B40312' },
-                      }}
-                    >
-                      {downloadingByWarehouse ? 'Downloading...' : 'Download'}
-                    </Button>
-                  </Stack>
-                </Stack>
-              </Paper>
-            </Popover>
-          )}
-
-          <Button
-            onClick={handleExportCSV}
-            startIcon={<MdDownload size={16} />}
-            variant="outlined"
-            disabled={exportingCsv || orders.length === 0}
-            sx={{
-              minHeight: 28,
-              py: 0.75,
-              px: 1.5,
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              borderRadius: '8px',
-              borderColor: '#062A5B',
-              color: '#062A5B',
-              '&:hover': {
-                borderColor: '#B40312',
-                backgroundColor: alpha('#062A5B', 0.06),
-              },
-              '&:disabled': {
-                borderColor: alpha('#062A5B', 0.4),
-                color: alpha('#062A5B', 0.4),
-              },
-            }}
-          >
-            {exportingCsv ? 'Exporting...' : 'Export'}
-          </Button>
-
-          <Button
-            ref={createOrderButtonRef}
-            onClick={handleCreateOrderClick}
-            startIcon={<MdAdd size={16} />}
-            variant="contained"
-            sx={{
-              minHeight: 28,
-              py: 0.75,
-              px: 1.5,
-              bgcolor: '#062A5B',
-              color: '#FFFFFF',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              textTransform: 'none',
-              borderRadius: '8px',
-              boxShadow: '0 12px 24px rgba(217, 4, 22, 0.22)',
-              transition: 'all 200ms ease',
-              '&:hover': {
-                bgcolor: '#B40312',
-                boxShadow: '0 14px 28px rgba(217, 4, 22, 0.28)',
-              },
-              '&:disabled': {
-                bgcolor: alpha('#062A5B', 0.4),
-              },
-            }}
-          >
-            Create Order
-          </Button>
-        </Stack>
-      </Stack>
-
-      {/* Create Order Popover */}
-      <Popover
-        open={Boolean(createOrderAnchorEl)}
-        anchorEl={createOrderAnchorEl}
-        onClose={() => setCreateOrderAnchorEl(null)}
-        slots={{ transition: Fade }}
-        transitionDuration={200}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{
-          paper: {
-            sx: {
-              backdropFilter: 'blur(16px)',
-              background: 'rgba(255, 255, 255, 0.98)',
-              border: '1px solid rgba(17, 17, 19, 0.08)',
-              boxShadow: '0 24px 50px rgba(17, 17, 19, 0.12)',
-              borderRadius: '24px',
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-            },
-          },
-        }}
-      >
-        {[
-          { label: 'Create B2C Order', type: 'b2c' as const },
-          { label: 'Create B2B Order', type: 'b2b' as const },
-        ].map((action) => (
-          <Button
-            key={action.type}
-            variant="outlined"
-            onClick={() => handleSelectOrderType(action.type)}
-            sx={{
-              borderColor: 'rgba(17, 17, 19, 0.12)',
-              color: '#17171A',
-              fontWeight: 700,
-              textTransform: 'none',
-              px: 2.5,
-              py: 1,
-              borderRadius: '999px',
-              '&:hover': {
-                borderColor: '#062A5B',
-                backgroundColor: alpha('#062A5B', 0.06),
-                color: '#062A5B',
-              },
-            }}
-          >
-            {action.label}
-          </Button>
-        ))}
-      </Popover>
-
-      {/* Sort + Status + Filters Row */}
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        px={0}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', md: 'center' }}
-        gap={2}
-      >
-        <Box sx={{ width: { xs: '100%', sm: 220 } }}>
-          <CustomSelect
-            label="Sort by Created At"
-            value={filters.sortOrder || 'desc'}
-            onSelect={(value) => {
-              const sortOrder = (value as 'asc' | 'desc') || 'desc'
-              setFilters((prev) => ({
-                ...prev,
-                sortBy: 'created_at',
-                sortOrder,
-              }))
-              setPage(1)
-              clearSelection()
-              setBulkFeedback(null)
-            }}
-            items={[
-              { key: 'desc', label: 'Newest first' },
-              { key: 'asc', label: 'Oldest first' },
-            ]}
+            compact
           />
         </Box>
 
-        <Stack mt={2}>
-          <Typography
-            sx={{
-              display: { xs: 'block', md: 'block' },
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: '#4f4f4f',
-              mb: 0.6,
-              textAlign: 'left',
-            }}
+        {bulkFeedback && (
+          <Alert
+            severity={bulkFeedback.severity}
+            onClose={() => setBulkFeedback(null)}
+            sx={{ mt: 1, mx: { xs: 1.15, md: 1.5 }, alignItems: 'flex-start' }}
           >
-            Status
-          </Typography>
-          <SmartTabs
-            showDivider={false}
-            tabs={statusTabs}
-            value={selectedTab}
-            onChange={handleTabChange}
-          />
-        </Stack>
+            <AlertTitle>{bulkFeedback.title}</AlertTitle>
+            {bulkFeedback.message}
+          </Alert>
+        )}
 
-        <Box mt={4}>
-          <FilterBar
-            fields={filterFields}
-            onApply={(appliedFilters) => {
-              setFilters((prev) => ({
-                ...prev,
-                ...appliedFilters,
-              }))
-              setPage(1)
-              clearSelection()
-              setBulkFeedback(null)
-            }}
-            mode="button"
-            buttonLabel="Filters"
-            defaultValues={filters}
-            appliedCount={
-              Object.values(filters).filter(
-                (v) => v !== undefined && v !== '' && v !== 'created_at' && v !== 'desc',
-              ).length
-            }
-          />
-        </Box>
-      </Stack>
-
-      {/* Active Filter Chips */}
-      {hasActiveFilters && (
-        <Stack
-          direction="row"
-          gap={1}
-          mb={1.5}
-          flexWrap="wrap"
-          sx={{
-            animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-            '@keyframes fadeIn': {
-              from: { opacity: 0, transform: 'translateY(-8px)' },
-              to: { opacity: 1, transform: 'translateY(0)' },
-            },
-          }}
-        >
-          {filterChips.map((chip) => (
-            <Chip
-              key={chip.key}
-              label={chip.label}
-              onDelete={() => {
-                setFilters((prev) => ({
-                  ...prev,
-                  [chip.key]: undefined,
-                }))
-                setPage(1)
-                clearSelection()
-              }}
-              size={isMobile ? 'small' : 'medium'}
-              sx={{
-                backgroundColor: alpha('#062A5B', 0.08),
-                color: '#062A5B',
-                fontWeight: 500,
-                border: `1px solid ${alpha('#062A5B', 0.2)}`,
-                '& .MuiChip-deleteIcon': {
-                  color: alpha('#062A5B', 0.6),
-                  '&:hover': {
-                    color: '#062A5B',
-                  },
-                },
-              }}
-            />
-          ))}
-        </Stack>
-      )}
-
-      {/* Feedback Alert */}
-      {bulkFeedback && (
-        <Alert
-          severity={bulkFeedback.severity}
-          onClose={() => setBulkFeedback(null)}
-          sx={{
-            mb: 1.5,
-            alignItems: 'flex-start',
-            animation: 'slideDown 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-            '@keyframes slideDown': {
-              from: { opacity: 0, transform: 'translateY(-12px)' },
-              to: { opacity: 1, transform: 'translateY(0)' },
-            },
-          }}
-        >
-          <AlertTitle>{bulkFeedback.title}</AlertTitle>
-          {bulkFeedback.message}
-        </Alert>
-      )}
-
-      {/* Main Content - Table Section */}
-      <Box
-        sx={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: 2.5,
-          border: `1px solid ${alpha('#000', 0.08)}`,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-          overflow: 'hidden',
-          minHeight: 400,
-          transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
-      >
-        {isLoading ? (
-          <Box sx={{ p: { xs: 2, md: 3 } }}>
-            <TableSkeleton />
-          </Box>
-        ) : orders.length === 0 ? (
+        {selectedOrders.length > 0 && (
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              py: { xs: 6, md: 8 },
-              px: 3,
-              animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-              '@keyframes fadeIn': {
-                from: { opacity: 0 },
-                to: { opacity: 1 },
-              },
+              mt: 1,
+              mx: { xs: 1.15, md: 1.5 },
+              p: 1.25,
+              borderRadius: '8px',
+              border: `1px solid ${borderColor}`,
+              backgroundColor: quietSurface,
             }}
           >
-            <Box
-              sx={{
-                width: { xs: 60, md: 80 },
-                height: { xs: 60, md: 80 },
-                borderRadius: '50%',
-                backgroundColor: alpha('#062A5B', 0.08),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
+            <Stack
+              direction={{ xs: 'column', lg: 'row' }}
+              alignItems={{ xs: 'flex-start', lg: 'center' }}
+              justifyContent="space-between"
+              gap={1.25}
             >
-              <Typography sx={{ fontSize: { xs: '2rem', md: '2.5rem' } }}>📦</Typography>
-            </Box>
-            <Typography
-              sx={{
-                fontSize: { xs: '1rem', md: '1.1rem' },
-                fontWeight: 700,
-                color: '#111827',
-                textAlign: 'center',
-              }}
-            >
-              {hasActiveFilters ? 'No orders found' : 'No orders yet'}
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: { xs: '0.85rem', md: '0.95rem' },
-                color: '#6B7280',
-                textAlign: 'center',
-                mt: 1,
-              }}
-            >
-              {hasActiveFilters
-                ? "Try adjusting your filters to find what you're looking for"
-                : 'Create your first shipment to get started'}
-            </Typography>
+              <Box>
+                <Typography sx={{ fontWeight: 700, color: textPrimary, fontSize: '14px' }}>
+                  {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''} selected
+                </Typography>
+                <Typography sx={{ color: textSecondary, fontSize: '12px', mt: 0.25 }}>
+                  Manifest up to {BULK_MANIFEST_LIMIT} eligible orders at once. Bulk label, invoice,
+                  and manifest downloads have no selection limit.
+                </Typography>
+                {manifestValidationMessage && (
+                  <Typography sx={{ color: '#C0392B', fontSize: '12px', mt: 0.5 }}>
+                    {manifestValidationMessage}
+                  </Typography>
+                )}
+              </Box>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} gap={0.75} flexWrap="wrap">
+                <Button
+                  variant="contained"
+                  onClick={openBulkManifestSchedule}
+                  disabled={bulkManifesting || Boolean(manifestValidationMessage)}
+                  sx={{ textTransform: 'none', minWidth: 150, minHeight: 34, fontSize: 12 }}
+                >
+                  {bulkManifesting ? 'Manifesting...' : 'Manifest Selected'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleBulkDownload('label')}
+                  disabled={downloadingDocumentType !== null}
+                  sx={{ textTransform: 'none', minHeight: 34, fontSize: 12 }}
+                >
+                  {downloadingDocumentType === 'label' ? 'Downloading...' : 'Download Labels'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleBulkDownload('invoice')}
+                  disabled={downloadingDocumentType !== null}
+                  sx={{ textTransform: 'none', minHeight: 34, fontSize: 12 }}
+                >
+                  {downloadingDocumentType === 'invoice' ? 'Downloading...' : 'Download Invoices'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleBulkDownload('manifest')}
+                  disabled={downloadingDocumentType !== null}
+                  sx={{ textTransform: 'none', minHeight: 34, fontSize: 12 }}
+                >
+                  {downloadingDocumentType === 'manifest' ? 'Downloading...' : 'Download Manifests'}
+                </Button>
+                <Button
+                  variant="text"
+                  onClick={() => {
+                    clearSelection()
+                    setBulkFeedback(null)
+                  }}
+                  sx={{ textTransform: 'none', minHeight: 34, fontSize: 12 }}
+                >
+                  Clear
+                </Button>
+              </Stack>
+            </Stack>
+          </Box>
+        )}
+      </Box>
+
+      <Box
+        sx={{
+          backgroundColor: surface,
+          borderRadius: '8px',
+          border: `1px solid ${borderColor}`,
+          boxShadow: panelShadow,
+          overflow: 'hidden',
+        }}
+      >
+        {activeQuery.isLoading ? (
+          <Box sx={{ p: 1.5 }}>
+            <TableSkeleton />
           </Box>
         ) : (
           <DataTable<Order>
             rows={orders}
             columns={columns}
-            title=""
+            title={
+              currentOrderView === 'b2c'
+                ? `${totalCount} total B2C orders`
+                : currentOrderView === 'b2b'
+                  ? `${totalCount} total B2B orders`
+                  : `${totalCount} total orders`
+            }
             pagination
             selectable
-            currentPage={page - 1}
+            density="compact"
+            tableVariant="shipment"
+            maxHeight={640}
+            currentPage={page}
             onPageChange={(newPage) => {
               setPage(newPage + 1)
               clearSelection()
@@ -2148,348 +1562,63 @@ const AllOrders = () => {
               setBulkFeedback(null)
             }}
             defaultRowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[10, 25, 50]}
             totalCount={totalCount}
             onSelectRows={(ids) => setSelectedOrderIds(ids as Array<Order['id']>)}
             selectedRowIds={selectedOrderIds}
-            expandable
-            renderExpandedRow={(row) => <OrderExpandedRow row={row} />}
+            selectionResetToken={selectionResetToken}
           />
         )}
       </Box>
 
-      {/* Sticky Bulk Actions Bar */}
-      {selectedOrders.length > 0 && (
-        <Box
-          sx={{
-            position: 'fixed',
-            bottom: 0,
-            left: { xs: 76, md: 76 },
-            right: 0,
-            backgroundColor: alpha('#FFFFFF', 0.98),
-            backdropFilter: 'blur(10px)',
-            borderTop: `1px solid ${alpha('#000', 0.08)}`,
-            boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.1)',
-            p: 1,
-            zIndex: 40,
-            animation: 'slideUp 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-            '@keyframes slideUp': {
-              from: { opacity: 0, transform: 'translateY(100%)' },
-              to: { opacity: 1, transform: 'translateY(0)' },
-            },
-          }}
-        >
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            gap={1}
-            sx={{ flexWrap: 'nowrap' }}
-          >
-            {/* Selection Info */}
-            <Box sx={{ flex: 0, whiteSpace: 'nowrap' }}>
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  color: '#062A5B',
-                  fontSize: '0.85rem',
-                }}
-              >
-                {selectedOrders.length} order
-                {selectedOrders.length > 1 ? 's' : ''} selected
-              </Typography>
-              {manifestValidationMessage && (
-                <Typography sx={{ color: '#C0392B', fontSize: '0.75rem', mt: 0.2 }}>
-                  {manifestValidationMessage}
-                </Typography>
-              )}
-            </Box>
-
-            {/* Action Buttons */}
-            <Stack direction="row" gap={0.6} sx={{ flexWrap: 'nowrap', overflow: 'auto' }}>
-              <Button
-                variant="contained"
-                onClick={() => setBulkCourierSelectionOpen(true)}
-                disabled={!canBulkBookSelectedOrders}
-                startIcon={<MdLocalShipping size={14} />}
-                sx={{
-                  textTransform: 'none',
-                  minHeight: 28,
-                  py: 0.75,
-                  px: 1.5,
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Bulk Book
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleBulkManifest}
-                disabled={bulkManifesting || Boolean(manifestValidationMessage)}
-                sx={{
-                  textTransform: 'none',
-                  minHeight: 28,
-                  py: 0.75,
-                  px: 1.5,
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  '&.Mui-disabled': {
-                    opacity: 1,
-                    color: '#ffffff',
-                    backgroundColor: 'rgba(6, 42, 91, 0.62)',
-                    border: '1px solid rgba(6, 42, 91, 0.45)',
-                  },
-                }}
-              >
-                {bulkManifesting ? 'Manifesting...' : 'Manifest'}
-              </Button>
-
-              {/* Download Dropdown */}
-              <Box sx={{ position: 'relative' }}>
-                <Button
-                  ref={downloadAnchorRef}
-                  onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
-                  variant="outlined"
-                  disabled={downloadingDocumentType !== null}
-                  endIcon={<MdMoreVert size={14} />}
-                  sx={{
-                    textTransform: 'none',
-                    minHeight: 28,
-                    py: 0.75,
-                    px: 1.5,
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Downloads
-                </Button>
-
-                <Popper
-                  open={downloadMenuOpen}
-                  anchorEl={downloadAnchorRef.current}
-                  placement="top-end"
-                  style={{ zIndex: 41 }}
-                >
-                  <ClickAwayListener onClickAway={() => setDownloadMenuOpen(false)}>
-                    <Paper
-                      sx={{
-                        mt: 1,
-                        backgroundColor: alpha('#FFFFFF', 0.98),
-                        backdropFilter: 'blur(16px)',
-                        boxShadow:
-                          '0 25px 50px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.05)',
-                        border: `1px solid ${alpha('#000', 0.08)}`,
-                        borderRadius: 2,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <Stack sx={{ minWidth: 180 }}>
-                        {[
-                          {
-                            type: 'label' as DocumentType,
-                            label: 'Download Labels',
-                          },
-                          {
-                            type: 'invoice' as DocumentType,
-                            label: 'Download Invoices',
-                          },
-                          {
-                            type: 'manifest' as DocumentType,
-                            label: 'Download Manifests',
-                          },
-                        ].map((item, index) => (
-                          <Box
-                            key={item.type}
-                            onClick={() => {
-                              handleBulkDownload(item.type)
-                              setDownloadMenuOpen(false)
-                            }}
-                            sx={{
-                              p: '10px 16px',
-                              cursor: 'pointer',
-                              transition: 'all 200ms ease',
-                              backgroundColor: 'transparent',
-                              '&:hover': {
-                                backgroundColor: alpha('#062A5B', 0.06),
-                                transform: 'translateX(4px)',
-                              },
-                              borderBottom: index < 2 ? `1px solid ${alpha('#000', 0.06)}` : 'none',
-                              animation: `slideUp 200ms cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 40}ms backwards`,
-                              '@keyframes slideUp': {
-                                from: {
-                                  opacity: 0,
-                                  transform: 'translateY(8px)',
-                                },
-                                to: { opacity: 1, transform: 'translateY(0)' },
-                              },
-                            }}
-                          >
-                            <Typography
-                              sx={{
-                                fontSize: '0.9rem',
-                                fontWeight: 500,
-                                color:
-                                  downloadingDocumentType === item.type ? '#062A5B' : '#111827',
-                              }}
-                            >
-                              {downloadingDocumentType === item.type
-                                ? 'Downloading...'
-                                : item.label}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Stack>
-                    </Paper>
-                  </ClickAwayListener>
-                </Popper>
-              </Box>
-
-              <Button
-                variant="outlined"
-                onClick={() => setTicketDialogOpen(true)}
-                startIcon={<MdOutlineHelpCenter size={14} />}
-                sx={{
-                  textTransform: 'none',
-                  minHeight: 28,
-                  py: 0.75,
-                  px: 1.5,
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: '#062A5B',
-                  borderColor: '#062A5B',
-                  whiteSpace: 'nowrap',
-                  '&:hover': {
-                    borderColor: '#062A5B',
-                    backgroundColor: 'rgba(217, 4, 22, 0.04)',
-                  },
-                }}
-              >
-                Raise Ticket
-              </Button>
-
-              <Button
-                variant="text"
-                onClick={() => {
-                  clearSelection()
-                  setBulkFeedback(null)
-                }}
-                sx={{
-                  textTransform: 'none',
-                  minHeight: 28,
-                  py: 0.75,
-                  px: 1.5,
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: '#6B7280',
-                  whiteSpace: 'nowrap',
-                  '&:hover': {
-                    color: '#062A5B',
-                    backgroundColor: alpha('#062A5B', 0.05),
-                  },
-                }}
-              >
-                Clear
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
-      )}
-
-      <ReverseModal
-        open={canViewReturnOrders && canAddReturnOrders && Boolean(reverseOrder)}
-        order={reverseOrder}
-        onClose={() => setReverseOrder(null)}
-        onConfirm={(payload) => {
-          createReverse(payload)
-          setReverseOrder(null)
+      <ManifestScheduleDialog
+        open={manifestScheduleOpen}
+        loading={bulkManifesting}
+        defaultShipmentCount={defaultManifestShipmentCount}
+        showShipmentCount={showManifestShipmentCount}
+        title="Schedule Selected Manifests"
+        description="Choose the pickup date and time before sending the selected manifests to the courier."
+        onClose={() => {
+          if (!bulkManifesting) setManifestScheduleOpen(false)
         }}
+        onConfirm={handleManifestScheduleConfirm}
+      />
+
+      <B2CSelectCourierDialog
+        open={Boolean(selectCourierOrder)}
+        order={selectCourierOrder as any}
+        onClose={() => setSelectCourierOrder(null)}
+      />
+
+      <OrderDetailsDialog
+        open={Boolean(orderDetailsOrder)}
+        order={orderDetailsOrder}
+        onClose={() => setOrderDetailsOrder(null)}
       />
 
       <CustomDrawer
-        width={isMobile ? '100%' : 820}
-        open={Boolean(detailsOrder)}
-        onClose={() => setDetailsOrder(null)}
-        title={detailsOrder?.order_number ? `Order ${detailsOrder.order_number}` : 'Order Details'}
-      >
-        {detailsOrder && <OrderExpandedRow row={detailsOrder} />}
-      </CustomDrawer>
-
-      <ManifestPickupScheduleDialog
-        open={pickupDialogOpen}
-        title={pickupDialogTitle}
-        description={pickupDialogDescription}
-        pickupDate={pickupDialogDate}
-        pickupTime={pickupDialogTime}
-        pickupLocation={pickupDialogLocation}
-        expectedPackageCount={pickupDialogPackageCount}
-        minDate={getDefaultPickupDateInput()}
-        onPickupDateChange={setPickupDialogDate}
-        onPickupTimeChange={setPickupDialogTime}
-        onPickupLocationChange={setPickupDialogLocation}
-        onExpectedPackageCountChange={setPickupDialogPackageCount}
-        onCancel={() => closePickupDialog(null)}
-        onConfirm={() =>
-          closePickupDialog({
-            pickup_date: pickupDialogDate,
-            pickup_time: pickupDialogTime,
-            pickup_location: pickupDialogLocation.trim(),
-            expected_package_count: Math.max(1, Math.round(pickupDialogPackageCount)),
-          })
-        }
-      />
-
-      <SourceOrderCourierDrawer
-        open={Boolean(courierSelectionOrder)}
-        order={courierSelectionOrder}
-        onClose={() => setCourierSelectionOrder(null)}
-      />
-
-      <BulkOrderCourierDrawer
-        open={bulkCourierSelectionOpen}
-        orders={selectedOrders}
-        onClose={() => setBulkCourierSelectionOpen(false)}
-        onComplete={() => {
-          clearSelection()
-          setBulkFeedback(null)
+        width={1200}
+        open={Boolean(editingOrder)}
+        onClose={() => {
+          setEditingOrder(null)
+          setOrderFormDefaults(null)
+          setOrderFormKey((current) => current + 1)
         }}
-      />
-
-      <CustomDrawer
-        open={ticketDialogOpen}
-        onClose={() => setTicketDialogOpen(false)}
-        anchor="right"
-        width={isMobile ? '100%' : 500}
-        title="Raise Support Ticket"
+        title={editingOrder?.order_number ? `Edit Order ${editingOrder.order_number}` : 'Edit Order'}
       >
-        <SupportTicketForm
-          initialPrefill={{
-            orderReferences: selectedOrders.map((order) => ({
-              orderId: String(order.id),
-              orderNumber: order.order_number || String(order.id),
-              awbNumber: order.awb_number || undefined,
-              buyerName: order.buyer_name || undefined,
-              buyerPhone: order.buyer_phone || undefined,
-              buyerEmail: order.buyer_email || undefined,
-              courierPartner: order.courier_partner || undefined,
-              warehouseName: order.warehouse_name || undefined,
-              shipmentType: order.type || 'b2c',
-              orderType: order.order_type || 'prepaid',
-              orderStatus: order.order_status || undefined,
-            })),
-          }}
-          onSuccess={() => {
-            setTicketDialogOpen(false)
-            clearSelection()
-            toast.open({
-              message: 'Support ticket created successfully',
-              severity: 'success',
-            })
-          }}
-          onCancel={() => setTicketDialogOpen(false)}
-        />
+        {editingOrder && (
+          <B2COrderFormSteps
+            key={orderFormKey}
+            initialValues={orderFormDefaults || undefined}
+            mode="edit"
+            existingOrderId={String(editingOrder.id)}
+            onClose={() => {
+              setEditingOrder(null)
+              setOrderFormDefaults(null)
+              setOrderFormKey((current) => current + 1)
+            }}
+          />
+        )}
       </CustomDrawer>
     </Stack>
   )

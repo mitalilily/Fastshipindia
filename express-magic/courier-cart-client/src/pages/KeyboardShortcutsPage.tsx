@@ -1,28 +1,37 @@
-import { alpha, Box, Grid, Paper, Stack, styled, Typography, useMediaQuery, useTheme } from '@mui/material'
-import React from 'react'
-import { FiDollarSign, FiGrid, FiPackage, FiSearch, FiSettings, FiTool, FiTruck, FiUsers } from 'react-icons/fi'
+import { alpha, Box, Container, Grid, Paper, Stack, styled, Typography } from '@mui/material'
+import { FiDollarSign, FiGrid, FiPackage, FiSearch, FiSettings, FiTool } from 'react-icons/fi'
 import PageHeading from '../components/UI/heading/PageHeading'
+import { brand, brandGradients } from '../theme/brand'
 
-const BRAND_PRIMARY = '#062A5B'
+const INK = brand.ink
+const SKY = '#4E90CA'
+const MUTED = brand.inkSoft
 
 const Kbd = styled(Box)(({ theme }) => ({
   fontFamily: '"SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace',
-  padding: '8px 14px',
-  borderRadius: '10px',
-  border: '1px solid rgba(217, 4, 22, 0.14)',
-  background: 'linear-gradient(180deg, #FFFFFF 0%, #FBF5F2 100%)',
+  padding: '6px 12px',
+  borderRadius: '16px',
+  border: `1px solid ${alpha(INK, 0.12)}`,
+  borderBottom: `3px solid ${alpha(SKY, 0.32)}`,
+  background: '#FFFFFF',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
   marginRight: theme.spacing(1),
   marginBottom: theme.spacing(0.5),
-  fontSize: '0.82rem',
-  fontWeight: 700,
-  color: '#17171A',
-  boxShadow: '0 8px 18px rgba(20, 20, 20, 0.08)',
+  fontSize: '0.85rem',
+  fontWeight: 800,
+  color: INK,
+  boxShadow: '0 6px 16px rgba(15, 44, 67, 0.08)',
+  transition: 'all 0.1s ease',
+  cursor: 'default',
   userSelect: 'none',
   minWidth: '32px',
   textAlign: 'center',
+  '&:hover': {
+    transform: 'translateY(1px)',
+    borderBottomWidth: '2px',
+  },
 }))
 
 interface Shortcut {
@@ -39,150 +48,126 @@ interface Category {
 const categories: Category[] = [
   {
     title: 'Navigation',
-    icon: <FiGrid size={22} color={BRAND_PRIMARY} />,
+    icon: <FiGrid size={24} color={INK} />,
     shortcuts: [
-      { label: 'Dashboard', keys: ['Ctrl/⌘', 'Shift', 'D'] },
-      { label: 'Home', keys: ['Ctrl/⌘', 'Shift', 'H'] },
+      { label: 'Dashboard', keys: ['Ctrl/Cmd', 'Shift', 'D'] },
+      { label: 'Home', keys: ['Ctrl/Cmd', 'Shift', 'H'] },
     ],
   },
   {
-    title: 'Orders',
-    icon: <FiTruck size={22} color={BRAND_PRIMARY} />,
+    title: 'Shipments',
+    icon: <FiPackage size={24} color={INK} />,
     shortcuts: [
-      { label: 'All Orders', keys: ['Ctrl/⌘', 'Shift', 'O'] },
-      { label: 'Create Order', keys: ['Ctrl/⌘', 'Shift', 'N'] },
-      { label: 'NDR Events', keys: ['Ctrl/⌘', 'Shift', 'E'] },
-      { label: 'RTO Events', keys: ['Ctrl/⌘', 'Shift', 'R'] },
+      { label: 'New Order', keys: ['Ctrl/Cmd', 'Shift', 'N'] },
+      { label: 'All Orders', keys: ['Ctrl/Cmd', 'Shift', 'O'] },
     ],
   },
   {
-    title: 'Billing & Finance',
-    icon: <FiDollarSign size={22} color={BRAND_PRIMARY} />,
-    shortcuts: [
-      { label: 'Invoices', keys: ['Ctrl/⌘', 'Shift', 'I'] },
-      { label: 'Wallet Transactions', keys: ['Ctrl/⌘', 'Shift', 'W'] },
-      { label: 'COD Remittance', keys: ['Ctrl/⌘', 'Shift', 'M'] },
-    ],
+    title: 'Search',
+    icon: <FiSearch size={24} color={INK} />,
+    shortcuts: [{ label: 'Global Search', keys: ['/'] }],
+  },
+  {
+    title: 'Finance',
+    icon: <FiDollarSign size={24} color={INK} />,
+    shortcuts: [{ label: 'Wallet', keys: ['Ctrl/Cmd', 'Shift', 'W'] }],
+  },
+  {
+    title: 'Settings',
+    icon: <FiSettings size={24} color={INK} />,
+    shortcuts: [{ label: 'Account Settings', keys: ['Ctrl/Cmd', 'Shift', 'S'] }],
   },
   {
     title: 'Tools',
-    icon: <FiTool size={22} color={BRAND_PRIMARY} />,
-    shortcuts: [
-      { label: 'Rate Calculator', keys: ['Ctrl/⌘', 'Shift', 'K'] },
-      { label: 'Order Tracking', keys: ['Ctrl/⌘', 'Shift', 'T'] },
-    ],
-  },
-  {
-    title: 'Operations',
-    icon: <FiPackage size={22} color={BRAND_PRIMARY} />,
-    shortcuts: [{ label: 'Weight Reconciliation', keys: ['Ctrl/⌘', 'Shift', 'G'] }],
-  },
-  {
-    title: 'Settings & Profile',
-    icon: <FiSettings size={22} color={BRAND_PRIMARY} />,
-    shortcuts: [
-      { label: 'Settings', keys: ['Ctrl/⌘', 'Shift', 'S'] },
-      { label: 'Profile', keys: ['Ctrl/⌘', 'Shift', 'P'] },
-    ],
-  },
-  {
-    title: 'Support',
-    icon: <FiUsers size={22} color={BRAND_PRIMARY} />,
-    shortcuts: [{ label: 'Support Tickets', keys: ['Ctrl/⌘', 'Shift', 'U'] }],
-  },
-  {
-    title: 'Global',
-    icon: <FiSearch size={22} color={BRAND_PRIMARY} />,
-    shortcuts: [
-      { label: 'Focus Search', keys: ['Ctrl/⌘', 'K'] },
-      { label: 'Keyboard Shortcuts', keys: ['Ctrl/⌘', 'Shift', '/'] },
-    ],
+    icon: <FiTool size={24} color={INK} />,
+    shortcuts: [{ label: 'Rate Calculator', keys: ['Ctrl/Cmd', 'Shift', 'R'] }],
   },
 ]
 
-const KeyboardShortcutsPage: React.FC = () => {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-
+export default function KeyboardShortcutsPage() {
   return (
-    <Stack spacing={3.5} sx={{ py: 2.5 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       <PageHeading
+        eyebrow="Workspace Tools"
         title="Keyboard Shortcuts"
-        subtitle="Master the workspace with fast keyboard actions and reduce repetitive navigation."
+        subtitle="Speed up the Ship Aggregator workspace with quick navigation and booking shortcuts."
       />
 
-      {/* <Box
-        sx={{
-          borderRadius: 5,
-          overflow: 'hidden',
-          border: `1px solid ${alpha(BRAND_PRIMARY, 0.12)}`,
-          boxShadow: '0 18px 38px rgba(20, 20, 20, 0.08)',
-        }}
-      >
-        <Box
-          component="img"
-          src="/images/keyboard-shortcuts.webp"
-          loading="lazy"
-          decoding="async"
-          alt="Keyboard Shortcuts Guide"
-          sx={{ width: '100%', display: 'block', objectFit: 'cover' }}
-        />
-      </Box> */}
-
-      <Grid container spacing={2.5}>
-        {categories.map(({ title, icon, shortcuts }) => (
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={title}>
+      <Grid container spacing={3} sx={{ mt: 1 }}>
+        {categories.map((category) => (
+          <Grid size={{ xs: 12, md: 6 }} key={category.title}>
             <Paper
               elevation={0}
               sx={{
-                p: 2.4,
-                borderRadius: 5,
-                border: `1px solid ${alpha(BRAND_PRIMARY, 0.12)}`,
-                boxShadow: '0 16px 32px rgba(20, 20, 20, 0.06)',
+                p: 3,
                 height: '100%',
+                borderRadius: '28px',
+                border: `1px solid ${alpha('#FFFFFF', 0.72)}`,
+                background: brandGradients.surface,
+                boxShadow: '0 18px 38px rgba(15, 44, 67, 0.08)',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 22px 44px rgba(15, 44, 67, 0.1)',
+                  borderColor: alpha(SKY, 0.32),
+                },
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={1.2} sx={{ mb: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="center" mb={3}>
                 <Box
                   sx={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 3,
-                    display: 'grid',
-                    placeItems: 'center',
-                    bgcolor: alpha(BRAND_PRIMARY, 0.08),
+                    p: 1.5,
+                    borderRadius: '18px',
+                    bgcolor: alpha(SKY, 0.16),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  {icon}
+                  {category.icon}
                 </Box>
-                <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight={800} color="#17171A">
-                  {title}
+                <Typography variant="h6" sx={{ fontWeight: 800, color: INK }}>
+                  {category.title}
                 </Typography>
               </Stack>
 
-              <Stack spacing={1.6}>
-                {shortcuts.map(({ label, keys }) => (
-                  <Box key={label}>
-                    <Typography sx={{ mb: 1.1, color: BRAND_PRIMARY, fontWeight: 700 }}>{label}</Typography>
-                    <Box display="flex" flexWrap="wrap" alignItems="center" gap={0.5}>
-                      {keys.map((key, idx) => (
-                        <React.Fragment key={`${label}-${key}-${idx}`}>
-                          <Kbd>{key}</Kbd>
-                          {idx < keys.length - 1 && (
-                            <Typography sx={{ color: '#6E6763', fontWeight: 700 }}>+</Typography>
-                          )}
-                        </React.Fragment>
+              <Stack spacing={2}>
+                {category.shortcuts.map((shortcut) => (
+                  <Stack
+                    key={shortcut.label}
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{
+                      py: 1.2,
+                      px: 2,
+                      borderRadius: '20px',
+                      bgcolor: alpha('#FFFFFF', 0.86),
+                      border: `1px solid ${alpha(INK, 0.08)}`,
+                      transition: 'all 0.1s ease',
+                      '&:hover': {
+                        borderColor: alpha(SKY, 0.28),
+                        bgcolor: alpha('#FFFFFF', 0.96),
+                      },
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: MUTED }}>
+                      {shortcut.label}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      {shortcut.keys.map((key) => (
+                        <Kbd key={key}>{key}</Kbd>
                       ))}
                     </Box>
-                  </Box>
+                  </Stack>
                 ))}
               </Stack>
             </Paper>
           </Grid>
         ))}
       </Grid>
-    </Stack>
+    </Container>
   )
 }
 
-export default KeyboardShortcutsPage
+

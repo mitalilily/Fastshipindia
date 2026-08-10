@@ -100,41 +100,11 @@ export interface CompanyInfo {
 
 export type BusinessType = "b2b" | "b2c" | "d2c";
 
-export interface EmployeeOrderAccess {
-  cancelOrders?: boolean;
-  exportOrders?: boolean;
-  exportCustomerDetails?: boolean;
-  viewCustomerDetails?: boolean;
-  changePaymentMode?: boolean;
-}
-
-export interface EmployeeModuleAccess {
-  dashboard?: {
-    walletBalance?: boolean;
-  };
-  warehouse?: {
-    viewWarehouse?: boolean;
-    editWarehouse?: boolean;
-    createWarehouse?: boolean;
-  };
-  wallet?: {
-    viewWallet?: boolean;
-    rechargeWallet?: boolean;
-  };
-  tools?: {
-    shippingChargeRateCalculator?: boolean;
-  };
-  returnOrders?: {
-    viewReturnOrder?: boolean;
-    addReturnOrder?: boolean;
-  };
-  orders?: EmployeeOrderAccess;
-  [key: string]: any;
-}
-
 export interface IUserProfileDB {
   id: string;
   userId: string;
+  name?: string;
+  email?: string;
 
   onboardingStep: number;
   monthlyOrderCount: string;
@@ -153,11 +123,6 @@ export interface IUserProfileDB {
   rejectionReason: string | null;
   currentPlanId?: string | null;
   currentPlanName?: string | null;
-  role?: string | null;
-  employeeId?: string | null;
-  employeeRole?: string | null;
-  employeeIsActive?: boolean | null;
-  moduleAccess?: EmployeeModuleAccess | null;
 
   submittedAt: string;
   updatedAt: string;
@@ -181,10 +146,9 @@ export interface BankAccount {
   bankName: string;
   branch?: string;
   id: string;
-  accountType?: "SAVINGS" | "CURRENT";
+  accountType?: "Savings" | "Current";
   upiId?: string;
   chequeImageUrl?: string;
-  chequeImageKey?: string;
   status: "verified" | "pending" | "rejected"; // ✅ verified/unverified status
   rejectionReason?: string;
   isPrimary: boolean;
@@ -212,12 +176,14 @@ export interface KycDetails {
 
   /* ─ PAN & IDs ─ */
   gstin?: string;
-  panNumber?: string;
   cin?: string;
 
   /* ─ File URLs or R2 object keys ─ */
+  selfieUrl?: string;
   panCardUrl?: string;
   aadhaarUrl?: string;
+  aadhaarFrontUrl?: string;
+  aadhaarBackUrl?: string;
   msmeCertUrl?: string;
   cancelledChequeUrl?: string;
   boardResolutionUrl?: string;
@@ -228,42 +194,45 @@ export interface KycDetails {
   llpAgreementUrl?: string;
 
   /* ─ Optional MIME types ─ */
+  selfieMime?: string;
   panCardMime?: string;
   aadhaarMime?: string;
+  aadhaarFrontMime?: string;
+  aadhaarBackMime?: string;
   msmeCertMime?: string;
   cancelledChequeMime?: string;
   boardResolutionMime?: string;
   partnershipDeedMime?: string;
-  llpAgreementMime?: string;
-  companyAddressProofMime?: string;
   businessPanMime?: string;
+  companyAddressProofMime?: string;
   gstCertificateMime?: string;
+  llpAgreementMime?: string;
 
   /* ─ Per-field status ─ */
+  selfieStatus?: "pending" | "verified" | "rejected";
   panCardStatus?: "pending" | "verified" | "rejected";
   aadhaarStatus?: "pending" | "verified" | "rejected";
+  aadhaarFrontStatus?: "pending" | "verified" | "rejected";
+  aadhaarBackStatus?: "pending" | "verified" | "rejected";
   msmeCertStatus?: "pending" | "verified" | "rejected";
   cancelledChequeStatus?: "pending" | "verified" | "rejected";
   boardResolutionStatus?: "pending" | "verified" | "rejected";
   partnershipDeedStatus?: "pending" | "verified" | "rejected";
   cinStatus?: "pending" | "verified" | "rejected";
   llpAgreementStatus: "pending" | "verified" | "rejected";
-  businessPanStatus?: "pending" | "verified" | "rejected";
-  gstCertificateStatus?: "pending" | "verified" | "rejected";
-  companyAddressProofStatus?: "pending" | "verified" | "rejected";
 
   /* ─ Rejection reasons ─ */
+  selfieRejectionReason?: string;
   panCardRejectionReason?: string;
   aadhaarRejectionReason?: string;
+  aadhaarFrontRejectionReason?: string;
+  aadhaarBackRejectionReason?: string;
   msmeCertRejectionReason?: string;
   cancelledChequeRejectionReason?: string;
   boardResolutionRejectionReason?: string;
   partnershipDeedRejectionReason?: string;
   cinRejectionReason?: string;
   llpAgreementReason?: string;
-  businessPanRejectionReason?: string;
-  gstCertificateRejectionReason?: string;
-  companyAddressProofRejectionReason?: string;
 
   /* ─ Workflow ─ */
   rejectionReason?: string; // global rejection reason (optional)

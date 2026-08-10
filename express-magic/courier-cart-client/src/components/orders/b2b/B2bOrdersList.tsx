@@ -1,12 +1,17 @@
 import { Button, Link, Stack, Typography } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import moment from 'moment'
+import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { useB2BOrdersByUser, useGenerateManifest } from '../../../hooks/Orders/useOrders'
 import type { B2BOrder } from '../../../types/generic.types'
+import { getCourierDisplayName } from '../../../utils/courierDisplay'
 import StatusChip from '../../UI/chip/StatusChip'
 import DataTable, { type Column } from '../../UI/table/DataTable'
 import TableSkeleton from '../../UI/table/TableSkeleton'
+import ManifestScheduleDialog, {
+  type ManifestSchedulePayload,
+} from '../ManifestScheduleDialog'
 import { OrderExpandedRow } from '../OrderExpandedRow'
 
 export const statusColorMap: Record<string, 'success' | 'pending' | 'error' | 'info'> = {
@@ -27,13 +32,6 @@ interface B2BOrdersListProps {
   filters: any
 }
 
-const getCourierDisplayName = (order: B2BOrder) =>
-  String(
-    order.courier_partner ||
-      (order as B2BOrder & { integration_type?: string }).integration_type ||
-      '',
-  ).trim() || '-'
-
 const B2BOrdersList = ({
   page,
   rowsPerPage,
@@ -41,24 +39,56 @@ const B2BOrdersList = ({
   setRowsPerPage,
   filters,
 }: B2BOrdersListProps) => {
-  const { data, isLoading, isFetching, isError } = useB2BOrdersByUser(
-    page,
-    rowsPerPage,
-    filters,
-  )
+  const location = useLocation()
+  const { data, isLoading, isError } = useB2BOrdersByUser(page, rowsPerPage, filters)
   const { mutate: triggerManifest, isPending: isGeneratingManifest } = useGenerateManifest()
   const [manifestingAwb, setManifestingAwb] = useState<string | null>(null)
+  const [manifestScheduleOrder, setManifestScheduleOrder] = useState<B2BOrder | null>(null)
 
-  const handleGenerateManifest = (order: B2BOrder) => {
+  useEffect(() => {
+    setManifestScheduleOrder(null)
+    setManifestingAwb(null)
+  }, [location.pathname, location.search, location.hash])
+
+  const handleGenerateManifest = (order: B2BOrder, schedule: ManifestSchedulePayload) => {
     if (!order.awb_number) return
     setManifestingAwb(order.awb_number)
     triggerManifest(
-      { awbs: [order.awb_number], type: 'b2b' },
+      { awbs: [order.awb_number], type: 'b2b', ...schedule },
       {
         onSettled: () => {
           setManifestingAwb((current) => (current === order.awb_number ? null : current))
         },
       },
+    )
+  }
+
+  const handleManifestScheduleConfirm = async (schedule: ManifestSchedulePayload) => {
+    if (!manifestScheduleOrder) return
+    handleGenerateManifest(manifestScheduleOrder, schedule)
+    setManifestScheduleOrder(null)
+  }
+
+  const hasLabelGenerated = (row: B2BOrder) =>
+    Boolean(String(row.label_url || row.label_key || row.label || '').trim())
+
+  const hasInvoiceGenerated = (row: B2BOrder) =>
+    Boolean(String(row.invoice_url || row.invoice_key || row.invoice_link || '').trim())
+
+  const renderAwbLink = (value?: string | null) => {
+    const awb = String(value || '').trim()
+    if (!awb) return '-'
+
+    return (
+      <Link
+        component={RouterLink}
+        to={`/tools/order_tracking?awb=${encodeURIComponent(awb)}`}
+        underline="hover"
+        onClick={(event) => event.stopPropagation()}
+        sx={{ fontWeight: 800 }}
+      >
+        {awb}
+      </Link>
     )
   }
 
@@ -74,14 +104,37 @@ const B2BOrdersList = ({
       ),
     },
     { label: 'Order #', id: 'order_number' },
-    { label: 'AWB', id: 'awb_number' },
+    { label: 'AWB', id: 'awb_number', render: (value) => renderAwbLink(value) },
+    {
+      label: 'Docs',
+      id: 'id',
+      minWidth: 220,
+      sticky: 'right',
+      stickyOffset: 140,
+      render: (_v, row) => (
+        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+          <StatusChip
+            label={hasLabelGenerated(row) ? 'Label Generated' : 'Label Pending'}
+            status={hasLabelGenerated(row) ? 'success' : 'pending'}
+          />
+          <StatusChip
+            label={hasInvoiceGenerated(row) ? 'Invoice Generated' : 'Invoice Pending'}
+            status={hasInvoiceGenerated(row) ? 'success' : 'pending'}
+          />
+        </Stack>
+      ),
+    },
     { label: 'Buyer', id: 'buyer_name' },
     { label: 'Amount', id: 'order_amount', render: (v) => `₹${Number(v)?.toFixed(2)}` },
     {
       label: 'Courier',
       id: 'courier_partner',
-      minWidth: 170,
-      render: (_value, row) => getCourierDisplayName(row),
+      render: (value, row) =>
+        getCourierDisplayName({
+          name: value,
+          courier_id: row.courier_id,
+          integration_type: (row as B2BOrder & { integration_type?: string }).integration_type,
+        }),
     },
     {
       label: 'Source',
@@ -96,6 +149,9 @@ const B2BOrdersList = ({
     {
       label: 'Status',
       id: 'order_status',
+      minWidth: 150,
+      sticky: 'right',
+      stickyOffset: 360,
       render: (v) => <StatusChip label={v} status={statusColorMap[v] || 'info'} />,
     },
     { label: 'Order Date', id: 'order_date', render: (v) => moment(v).format('DD MMM YYYY') },
@@ -103,10 +159,12 @@ const B2BOrdersList = ({
     {
       label: 'Actions',
       id: 'id',
-      showCellTooltip: false,
+      minWidth: 140,
+      sticky: 'right',
+      stickyOffset: 0,
       render: (_, row) => {
         const courierText = (row.courier_partner || '').toLowerCase()
-        const integrationText = (((row as any).integration_type as string) || '').toLowerCase()
+        const integrationText = String((row as B2BOrder & { integration_type?: string }).integration_type || '').toLowerCase()
         const isXpressbees =
           integrationText === 'xpressbees' || courierText.includes('xpressbees')
         const isEkart = integrationText === 'ekart' || courierText.includes('ekart')
@@ -125,7 +183,7 @@ const B2BOrdersList = ({
               disabled={isThisManifesting}
               onClick={(e) => {
                 e.stopPropagation()
-                handleGenerateManifest(row)
+                setManifestScheduleOrder(row)
               }}
             >
               {isThisManifesting ? 'Manifesting…' : 'Manifest'}
@@ -164,29 +222,35 @@ const B2BOrdersList = ({
 
   return (
     <Stack spacing={2}>
-      {isLoading && !data ? (
-        <TableSkeleton title="Loading B2B orders" />
+      {isLoading ? (
+        <TableSkeleton />
       ) : (
         <DataTable<B2BOrder>
           rows={data?.orders || []}
           columns={columns}
           title="My B2B Orders"
-          loading={isFetching}
-          loadingLabel="Updating B2B orders..."
-          emptyMessage="No B2B orders match the current filters."
           pagination
-          currentPage={page - 1}
+          currentPage={page}
           expandable
           renderExpandedRow={(row) => <OrderExpandedRow type="b2b" row={row} />}
           defaultRowsPerPage={rowsPerPage}
           totalCount={data?.totalCount || 0}
-          onPageChange={(newPage) => setPage(newPage + 1)}
+          onPageChange={setPage}
           onRowsPerPageChange={(newLimit) => {
             setRowsPerPage(newLimit)
             setPage(1)
           }}
         />
       )}
+      <ManifestScheduleDialog
+        open={Boolean(manifestScheduleOrder)}
+        loading={isGeneratingManifest}
+        description="Choose the pickup date and time before sending this manifest to the courier."
+        onClose={() => {
+          if (!isGeneratingManifest) setManifestScheduleOrder(null)
+        }}
+        onConfirm={handleManifestScheduleConfirm}
+      />
     </Stack>
   )
 }

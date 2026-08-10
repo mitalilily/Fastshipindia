@@ -1,743 +1,414 @@
-import {
-  alpha,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Grid,
-  LinearProgress,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material'
+import { alpha, Box, Button, LinearProgress, Stack, Typography, useTheme } from '@mui/material'
 import { useMemo, useState } from 'react'
-import {
-  MdAccessTime,
-  MdArrowForward,
-  MdCheckCircle,
-  MdContactMail,
-  MdErrorOutline,
-  MdHeadsetMic,
-  MdLocalShipping,
-  MdOutlineAddShoppingCart,
-  MdOutlineAssignment,
-  MdOutlineLocalShipping,
-  MdPercent,
-  MdReceiptLong,
-  MdSyncProblem,
-  MdWarning,
-} from 'react-icons/md'
-import { RiRefreshLine } from 'react-icons/ri'
 import { useNavigate } from 'react-router-dom'
+import {
+  TbAlertTriangle,
+  TbArrowRight,
+  TbCalculator,
+  TbChartBar,
+  TbCheck,
+  TbCreditCard,
+  TbCube,
+  TbPackage,
+  TbPlus,
+  TbRefresh,
+  TbShieldCheck,
+  TbTruckDelivery,
+  TbWallet,
+  TbX,
+} from 'react-icons/tb'
 import { useAuth } from '../../context/auth/AuthContext'
-import { useMerchantDashboardStats } from '../../hooks/useDashboard'
-import OpsAnalyticsSection from '../../components/dashboard/OpsAnalyticsSection'
+import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
 
-const BRAND_PRIMARY = '#062A5B'
-const BRAND_TEXT = '#111827'
-const TEXT_MUTED = '#6B7280'
+const PURPLE = '#7657ff'
+const ORANGE = '#ff7a17'
+const BLUE = '#3082ff'
+const RED = '#ef4444'
+const GREEN = '#35d27f'
 
-const CARD_STYLE = {
-  borderRadius: 3,
-  bgcolor: '#ffffff',
-  border: '1px solid rgba(17, 24, 39, 0.08)',
-  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)',
-}
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
-
-const formatDelta = (value: number, suffix = '%') => {
-  const numeric = Number(value || 0)
-  if (numeric === 0) return `0${suffix}`
-  return `${numeric > 0 ? '+' : ''}${numeric.toFixed(1)}${suffix}`
-}
-
-const Home = () => {
+export default function Home() {
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const todayDateInput = useMemo(() => new Date().toISOString().slice(0, 10), [])
-  const [selectedDate, setSelectedDate] = useState(todayDateInput)
-  const {
-    data: stats,
-    isLoading,
-    isError,
-    refetch,
-    isRefetching,
-  } = useMerchantDashboardStats(selectedDate)
+  const theme = useTheme()
+  const { walletBalance, user } = useAuth()
+  const { progress } = useMerchantReadiness()
+  const [showKycBanner, setShowKycBanner] = useState(true)
+  const isDark = theme.palette.mode === 'dark'
+  const pageBg = isDark ? '#0f141b' : '#f4f7fb'
+  const cardBg = isDark ? '#151b23' : '#ffffff'
+  const nestedCardBg = isDark ? '#0f141b' : '#f8fafc'
+  const border = isDark ? '#2a313a' : alpha('#0f172a', 0.12)
+  const strongBorder = isDark ? alpha('#ffffff', 0.86) : alpha(PURPLE, 0.34)
+  const text = isDark ? '#f8fafc' : '#111827'
+  const muted = isDark ? '#9badc3' : '#5b6b82'
+  const dim = isDark ? '#7f8fa6' : '#64748b'
+  const progressTrack = isDark ? '#2a313a' : alpha('#0f172a', 0.1)
+  const emptyStepBorder = isDark ? '#2d3744' : alpha('#64748b', 0.36)
+  const closeHoverBg = isDark ? alpha('#ffffff', 0.07) : alpha('#0f172a', 0.07)
+  const cardSx = {
+    border: `1px solid ${border}`,
+    bgcolor: cardBg,
+    borderRadius: 3,
+    boxShadow: isDark ? 'none' : '0 12px 30px rgba(15, 23, 42, 0.05)',
+  }
+
+  const displayName = user?.companyInfo?.contactPerson || user?.name || 'Sahil Mittal'
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 17) return 'Good afternoon'
+    return 'Good evening'
+  }, [])
+  const formattedWalletBalance = `\u20B9${Number(walletBalance ?? 0).toLocaleString('en-IN')}`
+
+  const statCards = useMemo(
+    () => [
+      { label: 'Orders Today', value: '0', icon: <TbCube />, color: PURPLE },
+      { label: 'In Transit', value: '0', icon: <TbTruckDelivery />, color: BLUE },
+      { label: 'NDR Pending', value: '0', icon: <TbAlertTriangle />, color: RED },
+      { label: 'RTO Active', value: '0', icon: <TbRefresh />, color: ORANGE },
+      {
+        label: 'Wallet',
+        value: formattedWalletBalance,
+        icon: <TbWallet />,
+        color: PURPLE,
+        action: '+ Recharge',
+      },
+    ],
+    [formattedWalletBalance],
+  )
+
+  const setupSteps = [
+    { title: 'Complete KYC', text: 'Verify identity to unlock all fea...', done: false },
+    { title: 'Company Profile', text: 'Add business details', done: false },
+    { title: 'Bank Account', text: 'Required for COD payouts', done: false },
+    { title: 'Pickup Address', text: 'Set up warehouse location', done: false },
+    { title: 'Label Config', text: 'Customize shipping labels', done: true },
+  ]
 
   const quickActions = [
-    {
-      label: 'Create Shipment',
-      icon: MdOutlineAddShoppingCart,
-      path: '/orders/create',
-      color: '#ED1C24',
-      desc: 'Start a new order',
-    },
-    {
-      label: 'All Shipments',
-      icon: MdOutlineAssignment,
-      path: '/orders/list',
-      color: '#062A5B',
-      desc: 'Track every order',
-    },
-    {
-      label: 'Track Shipment',
-      icon: MdOutlineLocalShipping,
-      path: '/tools/order_tracking',
-      color: '#1F5C9E',
-      desc: 'Check live movement',
-    },
-    {
-      label: 'NDR Management',
-      icon: MdErrorOutline,
-      path: '/ops/ndr',
-      color: '#B80F1A',
-      desc: 'Resolve exceptions',
-    },
-    {
-      label: 'Manage Pickups',
-      icon: MdContactMail,
-      path: '/settings/manage_pickups',
-      color: '#3E6AA8',
-      desc: 'Organize origins',
-    },
-    {
-      label: 'COD Remittance',
-      icon: MdLocalShipping,
-      path: '/cod-settlement',
-      color: '#041A38',
-      desc: 'Check COD flow',
-    },
+    { title: 'Create Order', text: 'Ship a new package', icon: <TbPlus />, color: PURPLE, path: '/orders/create' },
+    { title: 'All Orders', text: 'View all shipments', icon: <TbTruckDelivery />, color: BLUE, path: '/orders/list' },
+    { title: 'NDR Actions', text: 'Handle failed deliveries', icon: <TbRefresh />, color: RED, path: '/ops/ndr' },
+    { title: 'COD Remittance', text: 'Track COD payouts', icon: <TbCreditCard />, color: '#d99b1c', path: '/cod-remittance' },
+    { title: 'Rate Calculator', text: 'Compare courier rates', icon: <TbCalculator />, color: '#00a976', path: '/tools/rate_calculator' },
+    { title: 'Analytics', text: 'Shipping insights', icon: <TbChartBar />, color: PURPLE, path: '/dashboard' },
   ]
-
-  const getStatusColor = (status: string) => {
-    const normalized = String(status || '').toLowerCase()
-    if (normalized.includes('deliver')) {
-      return { bg: alpha('#10B981', 0.1), text: '#10B981', icon: <MdCheckCircle size={14} /> }
-    }
-    if (normalized.includes('transit') || normalized.includes('pickup')) {
-      return { bg: alpha(BRAND_PRIMARY, 0.1), text: BRAND_PRIMARY, icon: <MdAccessTime size={14} /> }
-    }
-    if (normalized.includes('ndr') || normalized.includes('rto') || normalized.includes('fail')) {
-      return { bg: alpha('#F59E0B', 0.12), text: '#D97706', icon: <MdWarning size={14} /> }
-    }
-    return { bg: alpha(TEXT_MUTED, 0.1), text: TEXT_MUTED, icon: null }
-  }
-
-  const todayOps = stats?.todayOperations || { orders: 0, pending: 0, inTransit: 0, delivered: 0 }
-  const financial = stats?.financial || {
-    walletBalance: 0,
-    totalShippingCharges: 0,
-    codAmount: 0,
-    codRemittanceDue: 0,
-    todayRevenue: 0,
-    totalRevenue: 0,
-    totalFreightCharges: 0,
-    profit: 0,
-    codRemittanceCredited: 0,
-  }
-  const operational = stats?.operational || {
-    deliverySuccessRate: 0,
-    ndrRate: 0,
-    rtoRate: 0,
-    avgDeliveryTime: 0,
-    totalOrders: 0,
-    deliveredOrders: 0,
-    ndrCount: 0,
-    rtoCount: 0,
-  }
-  const actions = stats?.actions || {
-    ndrCount: 0,
-    rtoCount: 0,
-    weightDiscrepancyCount: 0,
-    openTickets: 0,
-    inProgressTickets: 0,
-    pendingInvoices: 0,
-    pendingInvoiceAmount: 0,
-    overdueInvoices: 0,
-    overdueInvoiceAmount: 0,
-  }
-  const trends = stats?.trends || {
-    ordersGrowth: 0,
-    revenueGrowth: 0,
-    thisWeekOrders: 0,
-    lastWeekOrders: 0,
-    thisWeekRevenue: 0,
-    lastWeekRevenue: 0,
-  }
-  const metrics = stats?.metrics || {
-    avgOrderValue: 0,
-    totalPrepaidOrders: 0,
-    totalCodOrders: 0,
-    prepaidRevenue: 0,
-    codRevenue: 0,
-    topRevenueCities: [],
-  }
-
-  const topDestinations = stats?.geographic?.topDestinations || []
-  const destinationMax = Math.max(
-    ...topDestinations.map((destination) => Number(destination.count || 0)),
-    1,
-  )
-  const recentOrders = stats?.recentActivity?.recentOrders || []
-
-  const primaryCards = [
-    {
-      label: 'Active Orders',
-      value: todayOps.pending + todayOps.inTransit,
-      hint: `${todayOps.pending} pending, ${todayOps.inTransit} in transit`,
-      icon: MdOutlineAssignment,
-      color: '#3B82F6',
-      change: formatDelta(trends.ordersGrowth),
-    },
-    {
-      label: 'Delivered Today',
-      value: todayOps.delivered,
-      hint: `${todayOps.orders} total orders today`,
-      icon: MdCheckCircle,
-      color: '#10B981',
-      change: `${operational.deliverySuccessRate.toFixed(1)}% success`,
-    },
-    {
-      label: 'Average Delivery',
-      value: `${(operational.avgDeliveryTime / 24 || 0).toFixed(1)}`,
-      unit: 'days',
-      hint: 'Average across delivered shipments',
-      icon: MdAccessTime,
-      color: '#F59E0B',
-      change: `${operational.rtoRate.toFixed(1)}% RTO`,
-    },
-    {
-      label: 'Pending Invoices',
-      value: actions.pendingInvoices,
-      hint: formatCurrency(actions.pendingInvoiceAmount),
-      icon: MdReceiptLong,
-      color: '#8B5CF6',
-      change: `${actions.overdueInvoices} overdue`,
-    },
-  ]
-
-  const bottomMetrics = [
-    {
-      label: 'Total Shipments',
-      value: operational.totalOrders,
-      hint: formatDelta(trends.ordersGrowth),
-      icon: MdOutlineAssignment,
-      color: '#3B82F6',
-    },
-    {
-      label: 'Average Order Value',
-      value: formatCurrency(metrics.avgOrderValue),
-      hint: `${metrics.totalPrepaidOrders} prepaid / ${metrics.totalCodOrders} COD`,
-      icon: MdPercent,
-      color: '#14B8A6',
-    },
-    {
-      label: 'NDR Count',
-      value: operational.ndrCount,
-      hint: `${operational.ndrRate.toFixed(1)}% of orders`,
-      icon: MdSyncProblem,
-      color: '#F59E0B',
-    },
-    {
-      label: 'COD Due',
-      value: formatCurrency(financial.codRemittanceDue),
-      hint: formatCurrency(financial.codAmount),
-      icon: MdLocalShipping,
-      color: '#10B981',
-    },
-    {
-      label: 'Open Tickets',
-      value: actions.openTickets,
-      hint: `${actions.inProgressTickets} in progress`,
-      icon: MdHeadsetMic,
-      color: '#F97316',
-    },
-  ]
-
-  if (isError) {
-    return (
-      <Stack spacing={2} sx={{ py: 4, alignItems: 'center' }}>
-        <Typography sx={{ fontWeight: 700, color: BRAND_TEXT }}>
-          We could not load your home dashboard.
-        </Typography>
-        <Button variant="contained" onClick={() => refetch()} sx={{ textTransform: 'none' }}>
-          Retry
-        </Button>
-      </Stack>
-    )
-  }
 
   return (
-    <Stack spacing={3} sx={{ pb: 4 }}>
-      <Box
-        sx={{
-          ...CARD_STYLE,
-          p: { xs: 2, md: 2.5 },
-          background:
-            'linear-gradient(135deg, rgba(217,4,22,0.05) 0%, rgba(255,255,255,0.94) 45%, rgba(59,130,246,0.05) 100%)',
-        }}
-      >
-        <Stack
-          direction={{ xs: 'column', lg: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', lg: 'center' }}
-          gap={2}
-        >
-          <Box>
-            <Typography
-              sx={{ fontSize: { xs: '1rem', md: '1.2rem' }, fontWeight: 800, color: BRAND_TEXT }}
-            >
-              Welcome back, {user?.companyInfo?.contactPerson || 'User'}
-            </Typography>
-            <Typography
-              sx={{ mt: 0.6, fontSize: { xs: '0.82rem', md: '0.88rem' }, color: TEXT_MUTED }}
-            >
-              Your shipment & billing dashboard
-            </Typography>
-          </Box>
-
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={1.2}
-            width={{ xs: '100%', lg: 'auto' }}
+    <Box sx={{ bgcolor: pageBg, color: text, minHeight: '100%', pb: 5 }}>
+      <Stack spacing={3}>
+        {showKycBanner ? (
+          <Box
+            sx={{
+              ...cardSx,
+              minHeight: 92,
+              px: { xs: 2, md: 3.2 },
+              py: 2,
+              pr: { xs: 5, md: 3.2 },
+              borderColor: strongBorder,
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr auto' },
+              gap: 2,
+              alignItems: 'center',
+              position: 'relative',
+            }}
           >
-            <TextField
-              type="date"
-              size="small"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              inputProps={{ max: todayDateInput }}
-              sx={{
-                minWidth: { xs: '100%', sm: 185 },
-                '& .MuiInputBase-root': {
-                  bgcolor: '#FFFFFF',
-                  cursor: 'pointer',
-                },
-              }}
-            />
-            <Button
-              variant="outlined"
-              onClick={() => refetch()}
-              disabled={isRefetching}
-              sx={{ textTransform: 'none', fontWeight: 700 }}
-            >
-              {isRefetching ? 'Refreshing...' : <RiRefreshLine style={{ fontSize: 25 }} />}
-            </Button>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Box sx={{ color: ORANGE, display: 'grid', placeItems: 'center' }}>
+                <TbShieldCheck size={22} />
+              </Box>
+              <Box>
+                <Typography sx={{ color: ORANGE, fontWeight: 900, fontSize: '1.05rem' }}>
+                  Complete Your KYC
+                </Typography>
+                <Typography sx={{ color: dim, fontWeight: 600 }}>
+                  Verify your identity to unlock COD orders, wallet withdrawals, and more.
+                </Typography>
+              </Box>
+            </Stack>
             <Button
               variant="contained"
-              onClick={() => navigate('/orders/create')}
+              endIcon={<TbArrowRight />}
+              onClick={() => navigate('/profile/kyc_details')}
               sx={{
+                justifySelf: { xs: 'start', md: 'end' },
+                bgcolor: PURPLE,
+                color: '#ffffff',
+                borderRadius: 2,
+                px: 2.6,
+                py: 1.1,
+                fontWeight: 900,
                 textTransform: 'none',
-                fontWeight: 700,
-                boxShadow: '0 12px 24px rgba(217,4,22,0.16)',
+                '&:hover': { bgcolor: '#6547ea' },
               }}
             >
-              Create Shipment
+              Start KYC
             </Button>
-          </Stack>
-        </Stack>
-      </Box>
+            <Box
+              component="button"
+              type="button"
+              aria-label="Dismiss KYC reminder"
+              onClick={() => setShowKycBanner(false)}
+              sx={{
+                position: 'absolute',
+                top: 14,
+                right: 14,
+                width: 26,
+                height: 26,
+                border: 0,
+                borderRadius: '50%',
+                bgcolor: 'transparent',
+                color: dim,
+                display: 'grid',
+                placeItems: 'center',
+                cursor: 'pointer',
+                '&:hover': { color: text, bgcolor: closeHoverBg },
+              }}
+            >
+              <TbX size={18} />
+            </Box>
+          </Box>
+        ) : null}
 
-      {isLoading && !stats ? (
-        <Box sx={{ ...CARD_STYLE, p: 4, display: 'flex', justifyContent: 'center' }}>
-          <CircularProgress />
+        <Box>
+          <Typography sx={{ color: text, fontSize: '1.55rem', fontWeight: 900 }}>
+            {greeting}, {displayName}!
+          </Typography>
+          <Typography sx={{ color: muted, mt: 0.4, fontSize: '1rem' }}>
+            Here's your daily overview.
+          </Typography>
         </Box>
-      ) : null}
 
-      <Grid container spacing={2}>
-        {primaryCards.map((card) => {
-          const Icon = card.icon
-          return (
-            <Grid key={card.label} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-              <Box sx={{ ...CARD_STYLE, p: 2.2 }}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="flex-start"
-                  mb={1.4}
-                >
-                  <Box
-                    sx={{
-                      p: 1,
-                      borderRadius: 1.4,
-                      bgcolor: alpha(card.color, 0.1),
-                      color: card.color,
-                      display: 'flex',
-                    }}
-                  >
-                    <Icon size={20} />
-                  </Box>
-                  <Chip
-                    label={card.change}
-                    size="small"
-                    sx={{
-                      bgcolor: alpha(card.color, 0.09),
-                      color: card.color,
-                      fontWeight: 700,
-                    }}
-                  />
-                </Stack>
-                <Typography
-                  sx={{
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    color: TEXT_MUTED,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  {card.label}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.6, mt: 0.7 }}>
-                  <Typography sx={{ fontSize: '1.4rem', fontWeight: 800, color: BRAND_TEXT }}>
-                    {card.value}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(5, 1fr)' },
+            gap: 2,
+          }}
+        >
+          {statCards.map((item) => (
+            <Box
+              key={item.label}
+              sx={{
+                ...cardSx,
+                minHeight: 112,
+                p: 2,
+                position: 'relative',
+                overflow: 'hidden',
+                borderColor: item.label === 'Wallet' ? strongBorder : border,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  bgcolor: item.color,
+                },
+              }}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography sx={{ color: dim, fontWeight: 700 }}>{item.label}</Typography>
+                  <Typography sx={{ color: text, fontSize: '1.75rem', lineHeight: 1.1, fontWeight: 900 }}>
+                    {item.value}
                   </Typography>
-                  {card.unit ? (
-                    <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: TEXT_MUTED }}>
-                      {card.unit}
+                  {item.action ? (
+                    <Typography sx={{ color: PURPLE, mt: 0.8, fontWeight: 800, fontSize: '0.86rem' }}>
+                      {item.action}
                     </Typography>
                   ) : null}
                 </Box>
-                <Typography sx={{ mt: 0.6, fontSize: '0.8rem', color: TEXT_MUTED }}>
-                  {card.hint}
-                </Typography>
-              </Box>
-            </Grid>
-          )
-        })}
-      </Grid>
+                <Box sx={{ color: item.color, '& svg': { width: 22, height: 22 } }}>{item.icon}</Box>
+              </Stack>
+            </Box>
+          ))}
+        </Box>
 
-      <Box
-        sx={{
-          ...CARD_STYLE,
-          p: { xs: 2, md: 2.5 },
-          background:
-            'linear-gradient(180deg, rgba(6, 42, 91, 0.04) 0%, rgba(255,255,255,0.98) 100%)',
-        }}
-      >
-        <Stack spacing={0.8} sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: '0.78rem', fontWeight: 800, color: BRAND_PRIMARY, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Seller analytics
-          </Typography>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: BRAND_TEXT }}>
-            Ops cards for zone, courier, pincode and dispatch decisions
-          </Typography>
-          <Typography sx={{ fontSize: '0.84rem', color: TEXT_MUTED, maxWidth: 900 }}>
-            These analytics are visible on the seller panel and can be customized from the dashboard as well.
-          </Typography>
-        </Stack>
-
-        <OpsAnalyticsSection />
-      </Box>
-
-      <Box>
-        <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: BRAND_TEXT, mb: 1.6 }}>
-          Quick Actions
-        </Typography>
-        <Grid container spacing={1.5}>
-          {quickActions.map((action) => {
-            const Icon = action.icon
-            return (
-              <Grid key={action.label} size={{ xs: 6, md: 3, lg: 2 }}>
+        <Box sx={{ ...cardSx, borderColor: strongBorder, p: { xs: 2, md: 3 } }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.2}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <TbShieldCheck color={PURPLE} />
+              <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.1rem' }}>
+                Complete Your Profile
+              </Typography>
+            </Stack>
+            <Typography sx={{ color: PURPLE, fontWeight: 900 }}>{progress || 20}%</Typography>
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={progress || 20}
+            sx={{
+              height: 7,
+              borderRadius: 999,
+              bgcolor: progressTrack,
+              mb: 2.4,
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 999,
+                background: `linear-gradient(90deg, ${PURPLE}, ${ORANGE})`,
+              },
+            }}
+          />
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(5, 1fr)' },
+              gap: 1.2,
+            }}
+          >
+            {setupSteps.map((step) => (
+              <Box
+                key={step.title}
+                sx={{
+                  minHeight: 66,
+                  p: 1.6,
+                  borderRadius: 2,
+                  border: `1px solid ${step.done ? strongBorder : border}`,
+                  bgcolor: cardBg,
+                  display: 'flex',
+                  gap: 1.5,
+                  alignItems: 'center',
+                }}
+              >
                 <Box
-                  onClick={() => navigate(action.path)}
                   sx={{
-                    ...CARD_STYLE,
-                    p: 1.2,
-                    cursor: 'pointer',
-                    minHeight: 'auto',
+                    width: 25,
+                    height: 25,
+                    borderRadius: '50%',
+                    border: `2px solid ${step.done ? GREEN : emptyStepBorder}`,
+                    bgcolor: step.done ? GREEN : 'transparent',
+                    color: '#ffffff',
+                    flexShrink: 0,
+                    display: 'grid',
+                    placeItems: 'center',
+                  }}
+                >
+                  {step.done ? <TbCheck size={15} strokeWidth={3} /> : null}
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    sx={{
+                      color: step.done ? alpha(text, 0.6) : text,
+                      fontWeight: 850,
+                      textDecoration: step.done ? 'line-through' : 'none',
+                    }}
+                    noWrap
+                  >
+                    {step.title}
+                  </Typography>
+                  <Typography sx={{ color: muted, fontSize: '0.78rem' }} noWrap>
+                    {step.text}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '0.9fr 1.85fr' }, gap: 2.2 }}>
+          <Box sx={{ ...cardSx, minHeight: 258, p: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack direction="row" spacing={1.4} alignItems="center">
+                <TbChartBar color={PURPLE} />
+                <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem' }}>
+                  Orders by Status
+                </Typography>
+              </Stack>
+              <Typography sx={{ color: muted }}>0 total</Typography>
+            </Stack>
+            <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 178 }}>
+              <TbPackage size={32} color={muted} />
+              <Typography sx={{ color: muted, mt: 1.3 }}>No orders yet</Typography>
+            </Stack>
+          </Box>
+
+          <Box sx={{ ...cardSx, p: 3 }}>
+            <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem', mb: 2 }}>
+              Quick Actions
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.2 }}>
+              {quickActions.map((item) => (
+                <Box
+                  key={item.title}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    minHeight: 76,
+                    p: 1.7,
                     display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    gap: 0.6,
-                    '&:hover': {
-                      borderColor: alpha(action.color, 0.35),
-                      boxShadow: `0 14px 30px ${alpha(action.color, 0.12)}`,
-                      transform: 'translateY(-2px)',
-                    },
+                    alignItems: 'center',
+                    gap: 1.5,
+                    borderRadius: 2,
+                    border: `1px solid ${border}`,
+                    bgcolor: nestedCardBg,
+                    cursor: 'pointer',
+                    '&:hover': { borderColor: alpha(item.color, 0.6), transform: 'translateY(-1px)' },
+                    transition: 'all 0.16s ease',
                   }}
                 >
                   <Box
                     sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 1,
-                      bgcolor: alpha(action.color, 0.12),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: action.color,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      display: 'grid',
+                      placeItems: 'center',
+                      bgcolor: alpha(item.color, 0.13),
+                      color: item.color,
+                      flexShrink: 0,
+                      '& svg': { width: 22, height: 22 },
                     }}
                   >
-                    <Icon size={18} />
+                    {item.icon}
                   </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: BRAND_TEXT, lineHeight: 1.2 }}>
-                      {action.label}
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.02rem' }} noWrap>
+                      {item.title}
                     </Typography>
-                    <Typography sx={{ mt: 0.25, fontSize: '0.65rem', color: TEXT_MUTED, lineHeight: 1.2 }}>
-                      {action.desc}
+                    <Typography sx={{ color: muted, fontSize: '0.84rem' }} noWrap>
+                      {item.text}
                     </Typography>
                   </Box>
                 </Box>
-              </Grid>
-            )
-          })}
-        </Grid>
-      </Box>
-
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 12, md: 6, lg: 4 }}>
-          <Box sx={{ ...CARD_STYLE, p: 2.1, height: '100%' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.6}>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: BRAND_TEXT }}>
-                Recent Shipments
-              </Typography>
-              <Button
-                size="small"
-                endIcon={<MdArrowForward size={14} />}
-                onClick={() => navigate('/orders/list')}
-                sx={{ textTransform: 'none', color: BRAND_PRIMARY, fontWeight: 700 }}
-              >
-                View all
-              </Button>
-            </Stack>
-            <Stack spacing={1}>
-              {recentOrders.length === 0 ? (
-                <Typography sx={{ fontSize: '0.82rem', color: TEXT_MUTED }}>
-                  No recent shipments yet.
-                </Typography>
-              ) : (
-                recentOrders.slice(0, 5).map((order) => {
-                  const statusColor = getStatusColor(order.status)
-                  return (
-                    <Box
-                      key={order.id}
-                      sx={{
-                        p: 1.2,
-                        borderRadius: 1.5,
-                        bgcolor: alpha('#000', 0.018),
-                        border: '1px solid rgba(17, 24, 39, 0.06)',
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        gap={1}
-                      >
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography
-                            sx={{ fontSize: '0.84rem', fontWeight: 700, color: BRAND_TEXT }}
-                          >
-                            {order.orderNumber}
-                          </Typography>
-                          <Typography sx={{ mt: 0.25, fontSize: '0.72rem', color: TEXT_MUTED }}>
-                            {new Date(order.createdAt).toLocaleDateString('en-IN')}
-                          </Typography>
-                        </Box>
-                        <Box
-                          sx={{
-                            px: 1,
-                            py: 0.45,
-                            borderRadius: 999,
-                            bgcolor: statusColor.bg,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.4,
-                          }}
-                        >
-                          {statusColor.icon}
-                          <Typography
-                            sx={{ fontSize: '0.68rem', fontWeight: 700, color: statusColor.text }}
-                          >
-                            {order.status}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </Box>
-                  )
-                })
-              )}
-            </Stack>
+              ))}
+            </Box>
           </Box>
-        </Grid>
+        </Box>
 
-        <Grid size={{ xs: 12, sm: 12, md: 6, lg: 4 }}>
-          <Box sx={{ ...CARD_STYLE, p: 2.1, height: '100%' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.6}>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: BRAND_TEXT }}>
-                Top Destinations
-              </Typography>
-              <Chip
-                label={`${topDestinations.length} active lanes`}
-                size="small"
-                sx={{ bgcolor: alpha('#3B82F6', 0.08), color: '#2563EB', fontWeight: 700 }}
-              />
-            </Stack>
-            <Stack spacing={1.2}>
-              {topDestinations.length === 0 ? (
-                <Typography sx={{ fontSize: '0.82rem', color: TEXT_MUTED }}>
-                  Destination trends will appear after more orders are shipped.
-                </Typography>
-              ) : (
-                topDestinations.slice(0, 5).map((route, idx) => (
-                  <Box key={`${route.city}-${route.state}-${idx}`}>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      mb={0.5}
-                    >
-                      <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: BRAND_TEXT }}>
-                        {route.city}, {route.state}
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.74rem', fontWeight: 700, color: '#2563EB' }}>
-                        {route.count} orders
-                      </Typography>
-                    </Stack>
-                    <LinearProgress
-                      variant="determinate"
-                      value={(Number(route.count || 0) / destinationMax) * 100}
-                      sx={{
-                        height: 7,
-                        borderRadius: 999,
-                        bgcolor: alpha('#3B82F6', 0.1),
-                        '& .MuiLinearProgress-bar': {
-                          borderRadius: 999,
-                          background: 'linear-gradient(90deg, #60A5FA 0%, #2563EB 100%)',
-                        },
-                      }}
-                    />
-                  </Box>
-                ))
-              )}
-            </Stack>
-          </Box>
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 12, md: 6, lg: 4 }}>
-          <Box sx={{ ...CARD_STYLE, p: 2.1, height: '100%' }}>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 800, color: BRAND_TEXT, mb: 1.6 }}>
-              Billing Overview
+        <Box sx={{ ...cardSx, minHeight: 386, p: 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem' }}>
+              Recent Orders
             </Typography>
-            <Stack spacing={1.4}>
-              <Box sx={{ p: 1.4, borderRadius: 2, bgcolor: alpha(BRAND_PRIMARY, 0.05) }}>
-                <Typography
-                  sx={{
-                    fontSize: '0.74rem',
-                    color: TEXT_MUTED,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  Wallet Balance
-                </Typography>
-                <Typography
-                  sx={{ mt: 0.45, fontSize: '1.7rem', fontWeight: 800, color: BRAND_TEXT }}
-                >
-                  {formatCurrency(financial.walletBalance)}
-                </Typography>
-              </Box>
-              <Stack spacing={1}>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography sx={{ fontSize: '0.8rem', color: TEXT_MUTED }}>
-                    Shipping Charges
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: BRAND_TEXT }}>
-                    {formatCurrency(financial.totalShippingCharges)}
-                  </Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography sx={{ fontSize: '0.8rem', color: TEXT_MUTED }}>
-                    Pending Invoice Amount
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#D97706' }}>
-                    {formatCurrency(actions.pendingInvoiceAmount)}
-                  </Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography sx={{ fontSize: '0.8rem', color: TEXT_MUTED }}>
-                    COD Remittance Due
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#059669' }}>
-                    {formatCurrency(financial.codRemittanceDue)}
-                  </Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography sx={{ fontSize: '0.8rem', color: TEXT_MUTED }}>
-                    This Week Revenue
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: BRAND_TEXT }}>
-                    {formatCurrency(trends.thisWeekRevenue)}
-                  </Typography>
-                </Stack>
-              </Stack>
-            </Stack>
-          </Box>
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={1.5}>
-        {bottomMetrics.map((metric) => {
-          const Icon = metric.icon
-          return (
-            <Grid key={metric.label} size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }}>
-              <Box sx={{ ...CARD_STYLE, p: 1.8 }}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="flex-start"
-                  mb={1}
-                >
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 1.25,
-                      bgcolor: alpha(metric.color, 0.1),
-                      color: metric.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Icon size={18} />
-                  </Box>
-                  <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: metric.color }}>
-                    {metric.hint}
-                  </Typography>
-                </Stack>
-                <Typography
-                  sx={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: TEXT_MUTED,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  {metric.label}
-                </Typography>
-                <Typography
-                  sx={{ mt: 0.6, fontSize: '1.45rem', fontWeight: 800, color: BRAND_TEXT }}
-                >
-                  {metric.value}
-                </Typography>
-              </Box>
-            </Grid>
-          )
-        })}
-      </Grid>
-    </Stack>
+            <Typography onClick={() => navigate('/orders/list')} sx={{ color: PURPLE, fontWeight: 800, cursor: 'pointer' }}>
+              View all {'\u2192'}
+            </Typography>
+          </Stack>
+          <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 300 }}>
+            <TbCube size={32} color={PURPLE} />
+            <Typography sx={{ color: text, mt: 2, fontWeight: 900, fontSize: '1.05rem' }}>
+              No orders yet
+            </Typography>
+            <Typography sx={{ color: muted, mt: 0.7 }}>Create your first order to start shipping.</Typography>
+            <Button
+              variant="contained"
+              startIcon={<TbPlus />}
+              onClick={() => navigate('/orders/create')}
+              sx={{
+                mt: 2.2,
+                bgcolor: PURPLE,
+                color: '#ffffff',
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 900,
+                px: 2.6,
+                '&:hover': { bgcolor: '#6547ea' },
+              }}
+            >
+              Create Order
+            </Button>
+          </Stack>
+        </Box>
+      </Stack>
+    </Box>
   )
 }
-
-export default Home

@@ -3,9 +3,9 @@ import { MdLocationOn } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
 import type { TopDestination } from '../../api/dashboard.api'
 
-const BRAND_PRIMARY = '#062A5B'
-const INK = '#111827'
-const MUTED = '#6B7280'
+const DE_BLUE = '#0052CC'
+const TEXT_PRIMARY = '#172B4D'
+const TEXT_SECONDARY = '#42526E'
 
 type TopDestinationsProps = {
   data?: TopDestination[]
@@ -22,13 +22,13 @@ const TopDestinations = ({ data: overrideData, isLoading: overrideLoading, error
   return (
     <Stack spacing={1.8}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, color: INK }}>
+        <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, color: TEXT_PRIMARY }}>
           Top Destinations
         </Typography>
-        <Typography sx={{ fontSize: '12px', color: MUTED, fontWeight: 600 }}>Top lanes</Typography>
+        <Typography sx={{ fontSize: '12px', color: TEXT_SECONDARY, fontWeight: 700 }}>Top lanes</Typography>
       </Stack>
       {errorMessage && (
-        <Typography sx={{ fontSize: '0.75rem', color: '#b42318', fontWeight: 600 }}>
+        <Typography sx={{ fontSize: '0.75rem', color: '#DE350B', fontWeight: 600 }}>
           {errorMessage}
         </Typography>
       )}
@@ -36,7 +36,7 @@ const TopDestinations = ({ data: overrideData, isLoading: overrideLoading, error
       {isLoading ? (
         <Stack spacing={1.2}>
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={60} variant="rectangular" sx={{ borderRadius: 0 }} />
+            <Skeleton key={i} height={60} variant="rectangular" sx={{ borderRadius: 1 }} />
           ))}
         </Stack>
       ) : !destinations || destinations.length === 0 ? (
@@ -44,14 +44,14 @@ const TopDestinations = ({ data: overrideData, isLoading: overrideLoading, error
           sx={{
             textAlign: 'center',
             py: 4,
-            borderRadius: 0,
-            border: '1px dashed rgba(17, 24, 39, 0.18)',
-            bgcolor: '#F8FAFC',
+            borderRadius: 1,
+            border: `1px dashed ${alpha(DE_BLUE, 0.2)}`,
+            bgcolor: alpha(DE_BLUE, 0.02),
           }}
         >
-          <MdLocationOn size={34} style={{ color: BRAND_PRIMARY, opacity: 0.6 }} />
-          <Typography sx={{ mt: 0.8, fontSize: '0.88rem', color: MUTED, fontWeight: 600 }}>
-            No destination data available yet
+          <MdLocationOn size={34} style={{ color: DE_BLUE, opacity: 0.5 }} />
+          <Typography sx={{ mt: 0.8, fontSize: '0.88rem', color: TEXT_SECONDARY, fontWeight: 600 }}>
+            No destination data available
           </Typography>
         </Box>
       ) : (
@@ -64,13 +64,14 @@ const TopDestinations = ({ data: overrideData, isLoading: overrideLoading, error
                 alignItems: 'center',
                 gap: 1.5,
                 p: 1.4,
-                borderRadius: 0,
-                border: '1px solid rgba(17, 24, 39, 0.08)',
-                bgcolor: '#ffffff',
+                borderRadius: 1,
+                border: `1px solid ${alpha(DE_BLUE, index === 0 ? 0.24 : 0.08)}`,
+                bgcolor: index === 0 ? alpha(DE_BLUE, 0.04) : '#ffffff',
                 transition: 'all .2s ease',
                 '&:hover': {
-                  borderColor: 'rgba(17, 24, 39, 0.14)',
-                  bgcolor: '#F8FAFC',
+                  transform: 'translateX(4px)',
+                  borderColor: DE_BLUE,
+                  bgcolor: alpha(DE_BLUE, 0.02),
                 },
               }}
             >
@@ -78,13 +79,13 @@ const TopDestinations = ({ data: overrideData, isLoading: overrideLoading, error
                 sx={{
                   width: 32,
                   height: 32,
-                  borderRadius: 0,
+                  borderRadius: 0.5,
                   display: 'grid',
                   placeItems: 'center',
-                  fontWeight: 800,
+                  fontWeight: 900,
                   fontSize: '0.78rem',
-                  color: index === 0 ? '#ffffff' : INK,
-                  bgcolor: index === 0 ? BRAND_PRIMARY : '#F4F5F8',
+                  color: index < 3 ? '#ffffff' : DE_BLUE,
+                  bgcolor: index < 3 ? DE_BLUE : alpha(DE_BLUE, 0.1),
                   flexShrink: 0,
                 }}
               >
@@ -92,25 +93,20 @@ const TopDestinations = ({ data: overrideData, isLoading: overrideLoading, error
               </Box>
 
               <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography noWrap sx={{ fontSize: '0.9rem', fontWeight: 700, color: INK }}>
+                <Typography noWrap sx={{ fontSize: '0.9rem', fontWeight: 800, color: TEXT_PRIMARY }}>
                   {destination.city}
                 </Typography>
-                <Typography noWrap sx={{ fontSize: '0.77rem', color: MUTED }}>
+                <Typography noWrap sx={{ fontSize: '0.77rem', color: TEXT_SECONDARY, fontWeight: 500 }}>
                   {destination.state}
                 </Typography>
               </Box>
 
-              <Box
-                sx={{
-                  px: 1.2,
-                  py: 0.55,
-                  borderRadius: 0,
-                  border: '1px solid rgba(17, 24, 39, 0.08)',
-                  bgcolor: '#F9FAFB',
-                }}
-              >
-                <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: INK }}>
-                  {destination.count} {destination.count === 1 ? 'order' : 'orders'}
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: DE_BLUE }}>
+                  {destination.count}
+                </Typography>
+                <Typography sx={{ fontSize: '10px', color: TEXT_SECONDARY, fontWeight: 700, textTransform: 'uppercase' }}>
+                  Orders
                 </Typography>
               </Box>
             </Box>
@@ -118,22 +114,28 @@ const TopDestinations = ({ data: overrideData, isLoading: overrideLoading, error
         </Stack>
       )}
 
-      {destinations && destinations.length > 0 && (
-        <Box textAlign="right">
-          <Button
-            onClick={() => navigate('/orders/list')}
-            variant="text"
-            sx={{
-              color: BRAND_PRIMARY,
-              fontWeight: 700,
-              textTransform: 'none',
-              '&:hover': { bgcolor: alpha(BRAND_PRIMARY, 0.08) },
-            }}
-          >
-            View All Orders
-          </Button>
-        </Box>
-      )}
+      <Button
+        fullWidth
+        variant="outlined"
+        size="small"
+        onClick={() => navigate('/orders/list')}
+        sx={{
+          mt: 1,
+          borderColor: alpha(DE_BLUE, 0.2),
+          color: DE_BLUE,
+          borderRadius: 0.5,
+          fontWeight: 800,
+          fontSize: '11px',
+          py: 1,
+          textTransform: 'uppercase',
+          '&:hover': {
+            borderColor: DE_BLUE,
+            bgcolor: alpha(DE_BLUE, 0.04),
+          },
+        }}
+      >
+        View Analytics
+      </Button>
     </Stack>
   )
 }

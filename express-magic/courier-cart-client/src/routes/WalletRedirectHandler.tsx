@@ -20,7 +20,7 @@ export default function GlobalRedirectHandler() {
     if (status) {
       navigate(location.pathname, { replace: true })
     }
-  }, [location, navigate])
+  }, [location.pathname, location.search, navigate])
 
   return null
 }

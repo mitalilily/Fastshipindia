@@ -1,16 +1,16 @@
-import { Box, Skeleton, Stack } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
-import { FiMail, FiPlus } from 'react-icons/fi'
-import { useLocation, useNavigate } from 'react-router-dom'
-import type { SupportTicketPrefill } from '../../api/support.api'
+import { Button, Skeleton, Stack, useMediaQuery, useTheme } from '@mui/material'
+import { useState } from 'react'
+import { FaWhatsapp } from 'react-icons/fa'
+import { FiPlus } from 'react-icons/fi'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
 import CustomDrawer from '../../components/UI/drawer/CustomDrawer'
-import ListPageLayout from '../../components/UI/layout/ListPageLayout'
+import PageHeading from '../../components/UI/heading/PageHeading'
 import TableSkeleton from '../../components/UI/table/TableSkeleton'
 import { SupportTicketForm } from '../../components/support/SupportTicketForm'
 import SupportTicketList from '../../components/support/SupportTicketList'
 import TicketStatusSummaryCard from '../../components/support/TicketStatusSummaryCard'
 import { useMyTickets } from '../../hooks/User/useSupport'
+import { brandIdentity } from '../../theme/brand'
 
 const supportTicketFilterFields: FilterField[] = [
   {
@@ -88,32 +88,12 @@ const initialFilterValues = {
 }
 
 export const SupportTicketsPage = () => {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [filters, setFilters] = useState(initialFilterValues)
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [ticketPrefill, setTicketPrefill] = useState<SupportTicketPrefill | null>(null)
-
-  const routePrefill = useMemo(
-    () =>
-      (location.state as { ticketPrefill?: SupportTicketPrefill } | null)?.ticketPrefill ?? null,
-    [location.state],
-  )
-
-  useEffect(() => {
-    if (!routePrefill) return
-
-    setTicketPrefill(routePrefill)
-    setDrawerOpen(true)
-    navigate(location.pathname, { replace: true, state: {} })
-  }, [location.pathname, navigate, routePrefill])
-
-  const closeDrawer = () => {
-    setDrawerOpen(false)
-    setTicketPrefill(null)
-  }
 
   const { data: tickets, isLoading } = useMyTickets({
     page,
@@ -125,32 +105,62 @@ export const SupportTicketsPage = () => {
     ([key, value]) => key !== 'sortBy' && Boolean(value),
   ).length
 
-  const controls = (
-    <Box sx={{ px: 2 }}>
-      <FilterBar
-        fields={supportTicketFilterFields}
-        defaultValues={initialFilterValues}
-        onApply={(newFilters) => {
-          setFilters(newFilters)
-          setPage(0)
-        }}
-        mode="button"
-        buttonLabel="Filters"
-        appliedCount={appliedCount}
+  return (
+    <Stack spacing={3}>
+      <PageHeading
+        eyebrow="Support Panel"
+        title="Support"
+        subtitle="Manage issue resolution, ticket queues, and seller support requests from a support panel."
       />
-    </Box>
-  )
+      {isLoading ? (
+        <Skeleton />
+      ) : (
+        <TicketStatusSummaryCard
+          counts={tickets?.statusCounts ?? { closed: 0, in_progress: 0, open: 0, resolved: 0 }}
+        />
+      )}
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        {' '}
+        <FilterBar
+          fields={supportTicketFilterFields}
+          defaultValues={initialFilterValues}
+          onApply={(newFilters) => {
+            setFilters(newFilters)
+            setPage(0) // reset to first page on filter change
+          }}
+          bgOverlayImg="/images/filters-bg.png"
+          appliedCount={appliedCount}
+        />
+        <Button
+          sx={{ ml: !isMobile ? '50px' : 0 }}
+          size="small"
+          variant="contained"
+          startIcon={<FiPlus size={18} />}
+          onClick={() => setDrawerOpen(true)}
+        >
+          Create Ticket
+        </Button>
+      </Stack>
+      {!isLoading && (
+        <Stack direction="row" justifyContent="flex-end">
+          <Button
+            href={`https://wa.me/91${brandIdentity.supportPhone}?text=Hi%2C%20I%27m%20a%20seller%20and%20I%20need%20some%20assistance.%20Can%20you%20please%20help%3F`}
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="outlined"
+            color="success"
+            startIcon={<FaWhatsapp />}
+            sx={{
+              textTransform: 'none',
+              mt: 1,
+              color: 'green',
+            }}
+          >
+            Get Help on WhatsApp
+          </Button>
+        </Stack>
+      )}
 
-  const summaryCard = isLoading ? (
-    <Skeleton />
-  ) : (
-    <TicketStatusSummaryCard
-      counts={tickets?.statusCounts ?? { closed: 0, in_progress: 0, open: 0, resolved: 0 }}
-    />
-  )
-
-  const list = (
-    <>
       {isLoading ? (
         <TableSkeleton />
       ) : (
@@ -166,53 +176,22 @@ export const SupportTicketsPage = () => {
           }}
         />
       )}
-    </>
-  )
-
-  return (
-    <>
-      <ListPageLayout
-        title="Support Tickets"
-        description="Manage your support requests and track resolutions"
-        actions={[
-          {
-            label: 'Create Ticket',
-            onClick: () => setDrawerOpen(true),
-            icon: <FiPlus />,
-            variant: 'contained',
-          },
-          {
-            label: 'Email Support',
-            onClick: () =>
-              (window.location.href =
-                'mailto:support@fastship.in?subject=FastShip%20Support%20Request'),
-            icon: <FiMail />,
-            variant: 'outlined',
-          },
-        ]}
-        controls={controls}
-      >
-        <Box sx={{ px: 2, mb: 2 }}>{summaryCard}</Box>
-        {list}
-      </ListPageLayout>
 
       <CustomDrawer
         title="Create Support Ticket"
         open={drawerOpen}
         width={1100}
-        onClose={closeDrawer}
+        onClose={() => setDrawerOpen(false)}
         anchor="right"
       >
         <Stack sx={{ color: '#fff', p: 2 }} gap={2}>
           <SupportTicketForm
             onSuccess={() => {
-              closeDrawer()
+              setDrawerOpen(false)
             }}
-            onCancel={closeDrawer}
-            initialPrefill={ticketPrefill}
           />
         </Stack>
       </CustomDrawer>
-    </>
+    </Stack>
   )
 }

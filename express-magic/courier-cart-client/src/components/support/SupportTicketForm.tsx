@@ -1,7 +1,6 @@
-import { Alert, Box, Button, Chip, Grid, Stack, Typography } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { Box, Button, Grid } from '@mui/material'
+import { useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
-import type { SupportTicketPrefill } from '../../api/support.api'
 import { useCreateTicket } from '../../hooks/User/useSupport'
 import { toast } from '../UI/Toast'
 import AutocompleteDropdown from '../UI/inputs/AutoCompleteDropdown'
@@ -19,8 +18,6 @@ interface FormValues {
 
 interface SupportTicketFormProps {
   onSuccess?: () => void
-  onCancel?: () => void
-  initialPrefill?: SupportTicketPrefill | null
 }
 
 export const supportCategories = [
@@ -118,34 +115,7 @@ export const supportCategories = [
   },
 ]
 
-const buildPrefillDescription = (prefill?: SupportTicketPrefill | null) => {
-  if (!prefill?.orderReferences?.length) return ''
-
-  const lines = prefill.orderReferences.map((order, index) => {
-    const parts = [
-      `${index + 1}. Order ${order.orderNumber}`,
-      order.awbNumber ? `AWB ${order.awbNumber}` : null,
-      order.buyerName ? `Buyer ${order.buyerName}` : null,
-      order.warehouseName ? `Warehouse ${order.warehouseName}` : null,
-      order.courierPartner ? `Courier ${order.courierPartner}` : null,
-      order.orderStatus ? `Status ${order.orderStatus}` : null,
-    ].filter(Boolean)
-
-    return parts.join(' | ')
-  })
-
-  return `Affected orders:\n${lines.join('\n')}\n\nIssue details:\n`
-}
-
-export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({
-  onSuccess,
-  onCancel,
-  initialPrefill,
-}) => {
-  const defaultDescription = useMemo(
-    () => buildPrefillDescription(initialPrefill),
-    [initialPrefill],
-  )
+export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({ onSuccess }) => {
   const {
     control,
     handleSubmit,
@@ -156,11 +126,8 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({
       subject: '',
       category: '',
       subcategory: '',
-      awbNumber:
-        initialPrefill?.orderReferences?.length === 1
-          ? initialPrefill.orderReferences[0]?.awbNumber || ''
-          : '',
-      description: defaultDescription,
+      awbNumber: '',
+      description: '',
       attachments: null,
     },
   })
@@ -170,20 +137,6 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({
 
   const { mutateAsync: createTicket } = useCreateTicket()
   const [uploading, setUploading] = useState(false)
-
-  useEffect(() => {
-    reset({
-      subject: '',
-      category: '',
-      subcategory: '',
-      awbNumber:
-        initialPrefill?.orderReferences?.length === 1
-          ? initialPrefill.orderReferences[0]?.awbNumber || ''
-          : '',
-      description: buildPrefillDescription(initialPrefill),
-      attachments: null,
-    })
-  }, [initialPrefill, reset])
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -231,28 +184,6 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({
 
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-      {initialPrefill?.orderReferences?.length ? (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Stack spacing={1.25}>
-            <Typography sx={{ fontWeight: 700 }}>
-              {initialPrefill.orderReferences.length} linked order
-              {initialPrefill.orderReferences.length > 1 ? 's' : ''} will be attached to this
-              ticket
-            </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
-              {initialPrefill.orderReferences.map((order) => (
-                <Chip
-                  key={order.orderId}
-                  label={order.awbNumber ? `${order.orderNumber} • ${order.awbNumber}` : order.orderNumber}
-                  size="small"
-                  variant="outlined"
-                />
-              ))}
-            </Stack>
-          </Stack>
-        </Alert>
-      ) : null}
-
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
           <Controller
@@ -280,6 +211,7 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({
             control={control}
             rules={{ required: 'Category is required' }}
             render={({ field, fieldState }) => {
+              console.log('field', field)
               return (
                 <AutocompleteDropdown
                   label="Category"
@@ -394,21 +326,14 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Stack direction="row" spacing={1.25}>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={isSubmitting || uploading}
-            >
-              {uploading ? 'Uploading...' : 'Submit Ticket'}
-            </Button>
-            {onCancel ? (
-              <Button type="button" variant="outlined" onClick={onCancel}>
-                Cancel
-              </Button>
-            ) : null}
-          </Stack>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={isSubmitting || uploading}
+          >
+            {uploading ? 'Uploading...' : 'Submit Ticket'}
+          </Button>
         </Grid>
       </Grid>
     </Box>

@@ -10,37 +10,16 @@ export interface Stores {
   userId: string;
   domain: string;
   platformId: number;
-  apiKey?: string;
-  adminApiAccessToken?: string;
-  settings?: Record<string, any>;
   timezone: string | null;
   country: string | null;
   currency: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: Record<string, any> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
-
-export interface ShopifyOAuthStartPayload {
-  shop: string;
-  returnTo?: string;
-}
-
-export interface ShopifyOAuthStartResponse {
-  success: boolean;
-  message?: string;
-  authUrl?: string;
-  data?: {
-    authUrl?: string;
-    shop?: string;
-    scopes?: string[];
-    redirectUri?: string;
-    scopeSource?: string;
-    accessMode?: string;
-  };
-}
-
 export const integrateShopifyStore = async (params: ShopifyForm) => {
   const { data } = await axiosInstance.post(
     "/integrations/shopify-auth",
@@ -48,21 +27,6 @@ export const integrateShopifyStore = async (params: ShopifyForm) => {
   );
   return data;
 };
-
-export const startShopifyOAuth = async (
-  payload: ShopifyOAuthStartPayload,
-): Promise<ShopifyOAuthStartResponse> => {
-  const { data } = await axiosInstance.post('/integrations/shopify/oauth/start', payload)
-  return data
-}
-
-export const updateShopifySettings = async (payload: {
-  storeId?: string;
-  settings: NonNullable<ShopifyForm['settings']>;
-}) => {
-  const response = await axiosInstance.post('/integrations/shopify/settings', payload)
-  return response.data
-}
 
 export const getUserStoreIntegrations = async (): Promise<Stores[]> => {
   const res = await axiosInstance.get(`/user/integrations`);
@@ -98,14 +62,6 @@ export const integrateWixStore = async (data: WixForm) => {
 
 export const syncShopifyOrders = async (payload?: { limit?: number; storeId?: string }) => {
   const response = await axiosInstance.post('/integrations/shopify/sync-orders', {
-    limit: payload?.limit ?? 50,
-    storeId: payload?.storeId,
-  })
-  return response.data
-}
-
-export const syncWooCommerceOrders = async (payload?: { limit?: number; storeId?: string }) => {
-  const response = await axiosInstance.post('/integrations/woocommerce/sync-orders', {
     limit: payload?.limit ?? 50,
     storeId: payload?.storeId,
   })

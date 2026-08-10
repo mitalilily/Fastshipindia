@@ -1,80 +1,77 @@
-import { alpha, Box, Link, Stack, Typography } from '@mui/material'
-import { FiBarChart2, FiCheckCircle, FiMapPin, FiShield, FiTruck } from 'react-icons/fi'
-import { Link as RouterLink } from 'react-router-dom'
-import { BRAND } from '../../config/brand'
+import { alpha, Box, Grid, Stack, Typography } from '@mui/material'
+import { motion } from 'framer-motion'
+import {
+  TbRouteSquare,
+  TbShieldCheck,
+  TbTruckDelivery,
+} from 'react-icons/tb'
+import { brand, brandFonts } from '../../theme/brand'
+import BrandLogo from '../brand/BrandLogo'
+import { DoorstepCourierScene, RollingVanScene } from '../branding/AnimatedCourierScene'
 import PhoneForm from './PhoneForm'
 
-const { teal, tealDark, orange, ink, text, muted, paper, surface, border } = BRAND.colors
+const INK = brand.surface
+const INK_SOFT = brand.cream
+const SKY = brand.ink
+const CLAY = brand.accent
+const MIST = brand.page
+const SURFACE = brand.surface
+const TEXT = brand.ink
+const MUTED = brand.inkSoft
+const DISPLAY_FONT = brandFonts.display
 
-const highlights = [
-  { icon: <FiTruck />, title: 'Courier booking', copy: 'Create AWB, labels and pickup actions from one place.' },
-  { icon: <FiMapPin />, title: 'Live tracking', copy: 'Follow every shipment from dispatch to doorstep.' },
-  { icon: <FiBarChart2 />, title: 'Rate clarity', copy: 'Compare courier price, ETA and serviceability.' },
+const commandNotes = [
+  'Sign in with your registered email to access your Ship Aggregator account.',
+  'Use OTP login or email and password based on your account access.',
+  'Access orders, billing, support, channels, and courier tools after sign in.',
 ]
-
-function MetricCard({ value, label }: { value: string; label: string }) {
-  return (
-    <Box
-      sx={{
-        minWidth: 0,
-        borderRadius: 2,
-        border: `1px solid ${alpha(paper, 0.34)}`,
-        background: alpha(paper, 0.12),
-        px: 2,
-        py: 1.65,
-        color: paper,
-        backdropFilter: 'blur(14px)',
-      }}
-    >
-      <Typography sx={{ fontSize: { md: 28, lg: 32 }, fontWeight: 950, lineHeight: 1 }}>{value}</Typography>
-      <Typography sx={{ mt: 0.7, color: alpha(paper, 0.74), fontSize: 12.5, fontWeight: 750 }}>{label}</Typography>
-    </Box>
-  )
-}
 
 export default function LoginForm() {
   return (
     <Box
       sx={{
-        height: { xs: 'auto', md: '100svh' },
-        minHeight: { xs: '100svh', md: '100svh' },
-        width: '100%',
-        overflowX: 'hidden',
-        overflowY: { xs: 'auto', md: 'hidden' },
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        px: { xs: 1.5, sm: 2.5, md: 3, lg: 4.5 },
-        py: { xs: 1.2, md: 1 },
-        background:
-          `linear-gradient(90deg, ${alpha(teal, 0.06)} 1px, transparent 1px) 0 0 / 52px 52px, ` +
-          `linear-gradient(${alpha(teal, 0.045)} 1px, transparent 1px) 0 0 / 52px 52px, ` +
-          `radial-gradient(circle at 12% 10%, ${alpha(orange, 0.1)}, transparent 30%), ` +
-          `radial-gradient(circle at 86% 18%, ${alpha(teal, 0.1)}, transparent 31%), ` +
-          `linear-gradient(180deg, #ffffff 0%, ${surface} 58%, #eef4fb 100%)`,
+        minHeight: '100vh',
+        background: `
+          radial-gradient(860px 360px at 0% 0%, ${alpha(CLAY, 0.14)} 0%, transparent 58%),
+          radial-gradient(760px 360px at 100% 0%, ${alpha(SKY, 0.12)} 0%, transparent 56%),
+          linear-gradient(180deg, #f8fbff 0%, ${MIST} 48%, #e9f0f8 100%)
+        `,
+        px: { xs: 1.2, sm: 2.2, md: 3 },
+        py: { xs: 1.2, sm: 2, md: 2.4 },
       }}
     >
-      <Box
+      <Grid
+        container
+        component={motion.div}
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: 'easeOut' }}
         sx={{
-          width: '100%',
-          maxWidth: 1240,
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(400px, 0.68fr)' },
-          gap: { xs: 1.4, md: 2, lg: 2.5 },
-          alignItems: 'stretch',
-          maxHeight: { md: 'calc(100svh - 16px)' },
+          minHeight: 'calc(100vh - 32px)',
+          maxWidth: 1380,
+          mx: 'auto',
+          borderRadius: { xs: 4, md: 5 },
+          overflow: 'hidden',
+          border: `1px solid ${alpha(SKY, 0.08)}`,
+          boxShadow: '0 30px 80px rgba(22, 32, 51, 0.12)',
+          backgroundColor: alpha(SURFACE, 0.82),
+          backdropFilter: 'blur(16px)',
         }}
       >
-        <Box
+        <Grid
+          size={{ xs: 12, lg: 7 }}
           sx={{
-            display: { xs: 'none', md: 'grid' },
-            minHeight: 'min(610px, calc(100svh - 16px))',
-            overflow: 'hidden',
             position: 'relative',
-            borderRadius: 3,
-            border: `1px solid ${alpha(teal, 0.14)}`,
-            background: tealDark,
-            boxShadow: '0 28px 80px rgba(6, 26, 51, 0.18)',
+            overflow: 'hidden',
+            background: `
+              radial-gradient(320px 220px at 10% 12%, ${alpha('#ffffff', 0.72)} 0%, transparent 70%),
+              radial-gradient(420px 260px at 100% 0%, ${alpha(CLAY, 0.16)} 0%, transparent 72%),
+              linear-gradient(160deg, ${INK} 0%, ${INK_SOFT} 52%, #f5e7da 100%)
+            `,
+            color: TEXT,
+            px: { xs: 1.6, sm: 2.2, md: 3.4, lg: 4.2 },
+            py: { xs: 1.8, sm: 2.2, md: 3.2 },
+            display: 'flex',
           }}
         >
           <Box
@@ -82,253 +79,295 @@ export default function LoginForm() {
               position: 'absolute',
               inset: 0,
               background:
-                `linear-gradient(90deg, ${alpha(tealDark, 0.96)} 0%, ${alpha(tealDark, 0.82)} 44%, ${alpha(tealDark, 0.24)} 100%), ` +
-                "url('/assets/fastshipindia-hero-green-navy.jpg') center right / cover no-repeat",
-              filter: 'saturate(0.9) contrast(1.02)',
+                'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 38%, rgba(255,255,255,0.03) 100%)',
             }}
           />
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                `linear-gradient(0deg, ${alpha(tealDark, 0.84)} 0%, transparent 42%), ` +
-                `radial-gradient(circle at 18% 16%, ${alpha(orange, 0.22)}, transparent 28%)`,
-            }}
-          />
+
           <Stack
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              height: '100%',
-              justifyContent: 'space-between',
-              p: { md: 2.4, lg: 3.2 },
-              color: paper,
-            }}
+            spacing={{ xs: 2.2, md: 3 }}
+            sx={{ position: 'relative', zIndex: 1, width: '100%', justifyContent: 'space-between' }}
           >
-            <Box>
-              <Box
-                component="img"
-                src={BRAND.logo}
-                alt={`${BRAND.name} logo`}
+            <Stack spacing={2.4}>
+              <BrandLogo
                 sx={{
-                  width: { md: 128, lg: 142 },
+                  width: { xs: 152, sm: 176, md: 198 },
                   height: 'auto',
-                  borderRadius: 1.5,
-                  background: paper,
-                  p: 0.75,
-                  boxShadow: '0 16px 34px rgba(0,0,0,0.18)',
+                  display: 'block',
                 }}
               />
-              <Typography
-                sx={{
-                  mt: 2,
-                  color: alpha(paper, 0.72),
-                  fontSize: 13,
-                  fontWeight: 900,
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                FastShip merchant access
-              </Typography>
-              <Typography
-                component="h1"
-                sx={{
-                  mt: 1.35,
-                  maxWidth: 600,
-                  color: paper,
-                  fontSize: { md: 44, lg: 56 },
-                  fontWeight: 950,
-                  letterSpacing: 0,
-                  lineHeight: 1.02,
-                }}
-              >
-                Ship Faster.
-                <Box component="span" sx={{ display: 'block', color: '#ff3b43' }}>
-                  Deliver Smarter.
-                </Box>
-              </Typography>
-              <Typography sx={{ mt: 1.35, maxWidth: 520, color: alpha(paper, 0.78), fontSize: 18, lineHeight: 1.55 }}>
-                Login to book shipments, compare courier rates, track orders and manage delivery exceptions from one
-                focused workspace.
-              </Typography>
-            </Box>
 
-            <Box>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  gap: 1.25,
-                  mb: 0.85,
-                }}
-              >
-                <MetricCard value="29K+" label="PIN codes" />
-                <MetricCard value="220+" label="Countries" />
-                <MetricCard value="24/7" label="Visibility" />
-              </Box>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gap: 1,
-                  borderRadius: 2,
-                  border: `1px solid ${alpha(paper, 0.24)}`,
-                  background: alpha(paper, 0.1),
-                  p: 0.9,
-                  backdropFilter: 'blur(14px)',
-                }}
-              >
-                {highlights.map((item) => (
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {['Ship Aggregator platform', 'Ship Aggregator brand colors', 'Secure login system'].map((chip) => (
                   <Box
-                    key={item.title}
+                    key={chip}
                     sx={{
-                      display: 'grid',
-                      gridTemplateColumns: '38px 1fr',
-                      gap: 1,
-                      alignItems: 'center',
-                      borderRadius: 1.5,
-                      background: alpha(paper, 0.1),
-                      px: 1.1,
-                      py: 0.75,
+                      px: 1.35,
+                      py: 0.7,
+                      borderRadius: 999,
+                      border: `1px solid ${alpha(SKY, 0.1)}`,
+                      bgcolor: alpha('#ffffff', 0.76),
                     }}
                   >
+                    <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: alpha(SKY, 0.86) }}>
+                      {chip}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+
+              <Stack spacing={1.3} sx={{ maxWidth: 650 }}>
+                <Typography
+                  sx={{
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    color: alpha(SKY, 0.62),
+                  }}
+                >
+                  Courier command access
+                </Typography>
+                <Typography
+                  sx={{
+                    fontFamily: DISPLAY_FONT,
+                    fontSize: { xs: '2.2rem', sm: '2.9rem', lg: '4.35rem' },
+                    lineHeight: { xs: 1.02, lg: 0.94 },
+                    letterSpacing: '-0.05em',
+                    fontWeight: 800,
+                    maxWidth: 760,
+                  }}
+                >
+                  Sign in to your
+                  <Box component="span" sx={{ color: CLAY, display: 'block' }}>
+                    Ship Aggregator account.
+                  </Box>
+                </Typography>
+                <Typography
+                  sx={{
+                    color: MUTED,
+                    fontSize: { xs: '0.94rem', md: '1.02rem' },
+                    lineHeight: 1.75,
+                    maxWidth: 620,
+                  }}
+                >
+                  Access your account and continue with orders, billing, support,
+                  and shipping operations in Ship Aggregator.
+                </Typography>
+              </Stack>
+            </Stack>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1.3fr 0.95fr' },
+                gap: 2,
+                alignItems: 'stretch',
+              }}
+            >
+              <Box
+                sx={{
+                  borderRadius: 3,
+                  border: `1px solid ${alpha(SKY, 0.1)}`,
+                  background: alpha('#ffffff', 0.74),
+                  p: { xs: 1.5, md: 2.1 },
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                <Stack spacing={1.4}>
+                  <Stack direction="row" spacing={1.1} alignItems="center">
                     <Box
                       sx={{
                         width: 34,
                         height: 34,
-                        display: 'grid',
-                        placeItems: 'center',
-                        borderRadius: 1.2,
-                        color: paper,
-                        background: orange,
-                        fontSize: 20,
+                        borderRadius: 1.4,
+                        bgcolor: alpha(CLAY, 0.18),
+                        color: SKY,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      {item.icon}
+                      <TbShieldCheck size={18} />
                     </Box>
-                    <Box minWidth={0}>
-                      <Typography sx={{ color: paper, fontSize: 14.5, fontWeight: 900 }}>{item.title}</Typography>
-                      <Typography sx={{ mt: 0.25, color: alpha(paper, 0.68), fontSize: 12.5, lineHeight: 1.45 }}>
-                        {item.copy}
+                    <Typography sx={{ fontSize: '1rem', fontWeight: 800 }}>
+                      Account access
+                    </Typography>
+                  </Stack>
+
+                  {commandNotes.map((note) => (
+                    <Stack key={note} direction="row" spacing={1} alignItems="flex-start">
+                      <Box
+                        sx={{
+                          mt: 0.7,
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          bgcolor: CLAY,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography sx={{ color: MUTED, lineHeight: 1.65, fontSize: '0.92rem' }}>
+                        {note}
                       </Typography>
-                    </Box>
-                  </Box>
-                ))}
+                    </Stack>
+                  ))}
+                </Stack>
               </Box>
+
+            </Box>
+
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              <RollingVanScene compact />
             </Box>
           </Stack>
-        </Box>
+        </Grid>
 
-        <Box
+        <Grid
+          size={{ xs: 12, lg: 5 }}
           sx={{
+            position: 'relative',
+            px: { xs: 1.4, sm: 2.2, md: 3, lg: 3.4 },
+            py: { xs: 1.8, sm: 2.3, md: 3.1 },
+            background: `
+              radial-gradient(260px 180px at 100% 0%, ${alpha(CLAY, 0.12)} 0%, transparent 70%),
+              radial-gradient(220px 120px at 0% 100%, ${alpha(SKY, 0.05)} 0%, transparent 70%),
+              linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,251,255,0.98) 100%)
+            `,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
-            minWidth: 0,
           }}
         >
-          <Box
-            sx={{
-              width: '100%',
-              maxWidth: { xs: 450, md: 520 },
-              maxHeight: { md: 'calc(100svh - 16px)' },
-              overflow: { xs: 'visible', md: 'auto' },
-              borderRadius: 3,
-              border: `1px solid ${alpha(border, 0.9)}`,
-              background: paper,
-              boxShadow: '0 26px 70px rgba(6, 26, 51, 0.13)',
-              px: { xs: 2, sm: 2.6, md: 2.7 },
-              py: { xs: 1.6, sm: 1.9, md: 1.6 },
-            }}
-          >
-            <Box sx={{ mb: { xs: 1.2, md: 1.05 }, textAlign: 'center' }}>
-              <Box
-                component="img"
-                src={BRAND.logo}
-                alt={`${BRAND.name} logo`}
-                sx={{
-                  display: 'block',
-                  width: { xs: 126, sm: 138 },
-                  height: 'auto',
-                  mx: 'auto',
-                  mb: 0.65,
-                  objectFit: 'contain',
-                }}
-              />
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  mx: 'auto',
-                  mb: 0.7,
-                  display: 'grid',
-                  placeItems: 'center',
-                  borderRadius: 2,
-                  color: paper,
-                  background: `linear-gradient(135deg, ${teal} 0%, ${tealDark} 64%, ${orange} 100%)`,
-                  boxShadow: `0 14px 28px ${alpha(teal, 0.18)}`,
-                  fontSize: 26,
-                }}
+          <Box sx={{ width: '100%', maxWidth: 520, mx: 'auto' }}>
+            <Stack spacing={2.1} sx={{ mb: 2.6 }}>
+              <Stack direction="row" spacing={1.1} alignItems="center">
+                <Box
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 1.4,
+                    bgcolor: alpha(SKY, 0.08),
+                    color: SKY,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <TbRouteSquare size={19} />
+                </Box>
+                <Typography
+                  sx={{
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                    color: SKY,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Ship Aggregator sign in
+                </Typography>
+              </Stack>
+
+              <Stack spacing={0.8}>
+                <Typography
+                  sx={{
+                    fontFamily: DISPLAY_FONT,
+                    fontSize: { xs: '1.9rem', sm: '2.5rem' },
+                    fontWeight: 800,
+                    color: TEXT,
+                    lineHeight: 1.02,
+                    letterSpacing: '-0.04em',
+                  }}
+                >
+                  Welcome back.
+                </Typography>
+                <Typography
+                  sx={{
+                    color: MUTED,
+                    fontSize: '0.98rem',
+                    lineHeight: 1.7,
+                    maxWidth: 470,
+                  }}
+                >
+                  Sign in with OTP or password to access your Ship Aggregator dashboard and account tools.
+                </Typography>
+              </Stack>
+
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                useFlexGap
+                sx={{ display: { xs: 'none', sm: 'flex' } }}
               >
-                <FiShield />
-              </Box>
-              <Typography
-                component="h2"
-                sx={{
-                  color: ink,
-                  fontWeight: 950,
-                  fontSize: { xs: 28, sm: 31 },
-                  lineHeight: 1.08,
-                  letterSpacing: 0,
-                }}
-              >
-                Sign in to FastShip
-              </Typography>
-              <Typography
-                sx={{
-                  mt: 0.65,
-                  color: text,
-                  fontSize: { xs: 14, sm: 14.5 },
-                  lineHeight: 1.5,
-                  maxWidth: 370,
-                  mx: 'auto',
-                }}
-              >
-                Use OTP or password access to manage courier bookings, billing, NDR and shipment tracking.
-              </Typography>
+                {['OTP login', 'Password login', 'Email verification'].map((pill) => (
+                  <Box
+                    key={pill}
+                    sx={{
+                      px: 1.15,
+                      py: 0.58,
+                      borderRadius: 999,
+                      border: `1px solid ${alpha(SKY, 0.1)}`,
+                      bgcolor: alpha(SKY, 0.03),
+                    }}
+                  >
+                    <Typography sx={{ fontSize: '0.76rem', fontWeight: 700, color: SKY }}>
+                      {pill}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Stack>
+
+            <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2.2 }}>
+              <DoorstepCourierScene compact />
             </Box>
-
-            <PhoneForm />
-
-            <Typography sx={{ mt: 1, color: muted, fontSize: 13.5, textAlign: 'center' }}>
-              New to FastShip?{' '}
-              <Link component={RouterLink} to="/register" sx={{ color: teal, fontWeight: 900 }}>
-                Create account
-              </Link>
-            </Typography>
 
             <Box
               sx={{
-                mt: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 1,
-                color: muted,
-                fontSize: { xs: 12, sm: 13 },
-                fontWeight: 700,
-                textAlign: 'center',
-                flexWrap: 'wrap',
+                position: 'relative',
+                borderRadius: 4,
+                p: { xs: 1.5, sm: 2.1, md: 2.4 },
+                bgcolor: alpha('#ffffff', 0.96),
+                border: `1px solid ${alpha(SKY, 0.1)}`,
+                boxShadow: '0 20px 42px rgba(26, 34, 56, 0.08)',
+                overflow: 'hidden',
               }}
             >
-              <FiCheckCircle size={16} />
-              Protected access for your shipping workspace.
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  background: `linear-gradient(90deg, ${SKY} 0%, ${CLAY} 100%)`,
+                }}
+              />
+
+              <PhoneForm />
             </Box>
+
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1.2}
+              justifyContent="space-between"
+              sx={{ mt: 2.2 }}
+            >
+              <Typography sx={{ color: MUTED, fontSize: '0.86rem', lineHeight: 1.6 }}>
+                Secure account access for orders, billing, support, and shipping tools.
+              </Typography>
+              <Stack direction="row" spacing={0.8} alignItems="center" justifyContent="flex-start">
+                <TbTruckDelivery size={16} color={CLAY} />
+                <Typography sx={{ color: SKY, fontSize: '0.84rem', fontWeight: 700 }}>
+                  Ship Aggregator account access
+                </Typography>
+              </Stack>
+            </Stack>
           </Box>
-        </Box>
-      </Box>
+        </Grid>
+      </Grid>
     </Box>
   )
 }
+
+

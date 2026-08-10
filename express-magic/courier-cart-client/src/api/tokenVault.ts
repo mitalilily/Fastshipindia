@@ -1,134 +1,66 @@
-let access = ""
-let refresh = ""
-let session = ""
+// src/api/tokenVault.ts
+let access = ''
+let refresh = ''
+let keepSignedIn = true
 
-const ACCESS_TOKEN_KEY = 'cc_access'
-const REFRESH_TOKEN_KEY = 'cc_refresh'
-const AUTH_SESSION_KEY = 'cc_auth_session'
-const SESSION_USER_KEY = 'cc_session_user'
+const ACCESS_KEY = 'cc_access'
+const REFRESH_KEY = 'cc_refresh'
 
-export const AUTH_STORAGE_KEYS = [
-  ACCESS_TOKEN_KEY,
-  REFRESH_TOKEN_KEY,
-  AUTH_SESSION_KEY,
-  SESSION_USER_KEY,
-] as const
+const getStoredTokenPair = () => {
+  const sessionAccess = sessionStorage.getItem(ACCESS_KEY) || ''
+  const sessionRefresh = sessionStorage.getItem(REFRESH_KEY) || ''
+  const localAccess = localStorage.getItem(ACCESS_KEY) || ''
+  const localRefresh = localStorage.getItem(REFRESH_KEY) || ''
 
-export type AuthTokenSnapshot = {
-  accessToken: string
-  refreshToken: string
-  sessionId: string
-}
-
-const createAuthSessionId = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
+  if (sessionAccess || sessionRefresh) {
+    keepSignedIn = false
+    return { accessToken: sessionAccess, refreshToken: sessionRefresh }
   }
 
-  return `auth-${Date.now()}-${Math.random().toString(16).slice(2)}`
-}
-
-const persistSessionId = (sessionId: string) => {
-  if (typeof window === 'undefined' || !sessionId) return
-  localStorage.setItem(AUTH_SESSION_KEY, sessionId)
-}
-
-const normalizeStoredTokens = (stored: AuthTokenSnapshot): AuthTokenSnapshot => {
-  const hasTokens = Boolean(stored.accessToken && stored.refreshToken)
-
-  if (!hasTokens) {
-    return {
-      accessToken: stored.accessToken,
-      refreshToken: stored.refreshToken,
-      sessionId: '',
-    }
+  if (localAccess || localRefresh) {
+    keepSignedIn = true
+    return { accessToken: localAccess, refreshToken: localRefresh }
   }
 
-  if (stored.sessionId) return stored
-
-  const nextSessionId = createAuthSessionId()
-  persistSessionId(nextSessionId)
-
-  return {
-    ...stored,
-    sessionId: nextSessionId,
-  }
+  return { accessToken: '', refreshToken: '' }
 }
 
-const readStoredTokens = (): AuthTokenSnapshot => {
-  if (typeof window === 'undefined') {
-    return { accessToken: access, refreshToken: refresh, sessionId: session }
-  }
+export const getAuthPersistence = () => keepSignedIn
 
-  return normalizeStoredTokens({
-    accessToken: localStorage.getItem(ACCESS_TOKEN_KEY) || '',
-    refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY) || '',
-    sessionId: localStorage.getItem(AUTH_SESSION_KEY) || '',
-  })
-}
+/** Read the latest tokens kept in memory and the selected browser storage. */
+export const getAuthTokens = () => {
+  if (access || refresh) return { accessToken: access, refreshToken: refresh }
 
-export const getAuthTokens = (): AuthTokenSnapshot => {
-  const stored = readStoredTokens()
-  access = stored.accessToken
-  refresh = stored.refreshToken
-  session = stored.sessionId
-  return stored
-}
-
-export const setAuthTokens = (accessToken: string, refreshToken: string): AuthTokenSnapshot => {
-  const sessionId = createAuthSessionId()
-
+  const { accessToken, refreshToken } = getStoredTokenPair()
   access = accessToken
   refresh = refreshToken
-  session = sessionId
 
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
-    localStorage.setItem(AUTH_SESSION_KEY, sessionId)
-  }
-
-  return { accessToken, refreshToken, sessionId }
+  return { accessToken, refreshToken }
 }
 
-export const getStoredSessionUser = <T>() => {
-  if (typeof window === 'undefined') return null
+/** Save tokens for the current browser session, or persist when keep-signed-in is enabled. */
+export const setAuthTokens = (a: string, r: string, persist = getAuthPersistence()) => {
+  access = a
+  refresh = r
+  keepSignedIn = persist
 
-  try {
-    const rawValue = localStorage.getItem(SESSION_USER_KEY)
-    return rawValue ? (JSON.parse(rawValue) as T) : null
-  } catch (error) {
-    console.warn('Failed to parse stored session user', error)
-    localStorage.removeItem(SESSION_USER_KEY)
-    return null
-  }
+  sessionStorage.removeItem(ACCESS_KEY)
+  sessionStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(ACCESS_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+
+  const storage = persist ? localStorage : sessionStorage
+  storage.setItem(ACCESS_KEY, a)
+  storage.setItem(REFRESH_KEY, r)
 }
 
-export const setStoredSessionUser = <T>(user: T) => {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
-}
-
-export const isCurrentAuthSession = (sessionId?: string | null) => {
-  if (!sessionId) return true
-  return getAuthTokens().sessionId === sessionId
-}
-
-export const clearAuthTokens = (expectedSessionId?: string | null) => {
-  if (!isCurrentAuthSession(expectedSessionId)) {
-    return false
-  }
-
+/** Wipe everything. */
+export const clearAuthTokens = () => {
   access = ''
   refresh = ''
-  session = ''
-
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
-    localStorage.removeItem(AUTH_SESSION_KEY)
-    localStorage.removeItem(SESSION_USER_KEY)
-  }
-
-  return true
+  keepSignedIn = true
+  sessionStorage.removeItem(ACCESS_KEY)
+  sessionStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(ACCESS_KEY)
+  localStorage.removeItem(REFRESH_KEY)
 }

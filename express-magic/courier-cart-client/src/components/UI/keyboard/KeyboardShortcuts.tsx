@@ -93,7 +93,7 @@ export default function KeyboardShortcuts() {
     'ctrl+shift+k, cmd+shift+k',
     (e) => {
       e.preventDefault()
-      navigate('/tools/rate-calculator')
+      navigate('/tools/rate_calculator')
     },
     { enableOnFormTags: false },
   )
@@ -102,7 +102,7 @@ export default function KeyboardShortcuts() {
     'ctrl+shift+t, cmd+shift+t',
     (e) => {
       e.preventDefault()
-      navigate('/tools/track-order')
+      navigate('/tools/order_tracking')
     },
     { enableOnFormTags: false },
   )

@@ -30,14 +30,29 @@ export interface Courier {
   volumetric_weight?: number | null
   slabs?: number | null
   courier_cost_estimate?: number | null
-  gst_percent?: number | null
-  gst_amount?: number | null
-  total_charges_without_gst?: number | null
-  total_charges_with_gst?: number | null
-  wallet_debit_amount?: number | null
-  tax_label?: string | null
-  localRates?: Record<string, any>
+  platform_rate?: number | null
+  provider_quote?: number | null
+  seller_freight_charge?: number | null
+  final_freight_charge?: number | null
+  final_courier_charge?: number | null
+  quote_required?: boolean | null
+  quote_available?: boolean | null
+  is_bookable?: boolean | null
+  unavailable_reason?: string | null
+  localRates?: Record<string, unknown>
   approxZone?: { id?: string; code?: string; name?: string } | null
+  integration_type?: string | null
+  serviceProvider?: string | null
+  shipping_mode?: string | null
+  rateEstimate?: number | null
+  provider_rate?: {
+    provider?: string
+    total?: number | null
+    freight?: number | null
+    cod?: number | null
+    chargeable_weight?: number | null
+    raw?: unknown
+  } | null
 }
 
 export interface CourierSummary {
@@ -47,33 +62,6 @@ export interface CourierSummary {
   totalRtoCount: number
   totalOdaCount: number
   updatedAt?: string
-}
-
-const isAmazonCourierEntry = (entry: any) => {
-  if (typeof entry === 'string') {
-    return entry.trim().toLowerCase().includes('amazon')
-  }
-
-  const tokens = [
-    entry?.integration_type,
-    entry?.integrationType,
-    entry?.service_provider,
-    entry?.serviceProvider,
-    entry?.courier_partner,
-    entry?.courierPartner,
-    entry?.courier_name,
-    entry?.courierName,
-    entry?.name,
-    entry?.displayName,
-    entry?.label,
-  ]
-
-  return tokens.some((value) => String(value || '').trim().toLowerCase().includes('amazon'))
-}
-
-const filterAmazonCouriers = <T,>(items: T[] | undefined | null): T[] => {
-  if (!Array.isArray(items)) return []
-  return items.filter((item) => !isAmazonCourierEntry(item))
 }
 
 // src/api/courier.ts
@@ -114,24 +102,8 @@ export const getCouriers = async ({
   const url = queryString ? `/couriers?${queryString}` : '/couriers'
 
   const res = await axiosInstance.get<{ status: string; data: CourierListResponse }>(url)
-  const payload = res.data.data
-  const filteredCouriers = filterAmazonCouriers(payload?.couriers)
-  const removedCount = Math.max((payload?.couriers?.length ?? 0) - filteredCouriers.length, 0)
 
-  return {
-    ...payload,
-    couriers: filteredCouriers,
-    totalCount: Math.max(Number(payload?.totalCount ?? 0) - removedCount, 0),
-    summary: payload?.summary
-      ? {
-          ...payload.summary,
-          totalCourierCount: Math.max(
-            Number(payload.summary.totalCourierCount ?? 0) - removedCount,
-            0,
-          ),
-        }
-      : payload.summary,
-  }
+  return res.data.data
 }
 
 export const getCourierById = async (id: number): Promise<Courier> => {
@@ -145,56 +117,29 @@ interface FetchCouriersResponse {
   error?: string
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// Courier selection can briefly fail during backend restarts or upstream gateway hiccups.
-const shouldRetryCourierFetch = (error: any) => {
-  const status = Number(error?.response?.status)
-  const code = String(error?.code || '').toUpperCase()
-  return (
-    !error?.response ||
-    [502, 503, 504].includes(status) ||
-    ['ECONNABORTED', 'ECONNRESET', 'ETIMEDOUT'].includes(code)
-  )
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const fetchAvailableCouriers = async (params: any): Promise<any[]> => {
-  const maxAttempts = 2
+  try {
+    const { useGuest, guest, ...payload } = params ?? {}
+    const endpoint =
+      useGuest || guest ? '/couriers/available-to-guest' : '/couriers/available-to-user'
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      const res = await axiosInstance.post<FetchCouriersResponse>(
-        '/couriers/available-to-user',
-        {
-          ...params,
-        },
-        {
-          timeout: 45000,
-        },
-      )
+    const res = await axiosInstance.post<FetchCouriersResponse>(endpoint, payload)
 
-      if (!res.data.success) {
-        throw new Error(res.data.error || 'Failed to fetch couriers')
-      }
-
-      return Array.isArray(res.data.data) ? res.data.data : []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      console.error('fetchAvailableCouriers error:', error.response?.data || error.message)
-      if (attempt < maxAttempts && shouldRetryCourierFetch(error)) {
-        await delay(1200)
-        continue
-      }
-      throw new Error(error.response?.data?.error || error.message || 'Failed to fetch couriers')
+    if (!res.data.success) {
+      throw new Error(res.data.error || 'Failed to fetch couriers')
     }
-  }
 
-  throw new Error('Failed to fetch couriers')
+    return res.data.data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    console.error('fetchAvailableCouriers error:', error.response?.data || error.message)
+    throw new Error(error.response?.data?.error || error.message || 'Failed to fetch couriers')
+  }
 }
 
 interface ShippingRatesFilters {
-  courier?: string
+  courier?: string | string[]
   mode?: string
   min_weight?: number
   businessType?: 'b2b' | 'b2c'
@@ -202,7 +147,7 @@ interface ShippingRatesFilters {
 }
 
 export const fetchShippingRates = async (filters: ShippingRatesFilters = {}) => {
-  const params: Record<string, string | number> = {}
+  const params: Record<string, string | number | string[]> = {}
 
   if (filters.courier) params.courier_name = filters.courier
   if (filters.mode) params.mode = filters.mode
@@ -216,27 +161,30 @@ export const fetchShippingRates = async (filters: ShippingRatesFilters = {}) => 
 export const fetchAllCouriers = async () => {
   const res = await axiosInstance.get(`/couriers/list`)
   if (!res.data?.success) throw new Error('Failed to fetch couriers')
-  return filterAmazonCouriers(res.data.data) // returns an array of courier names
+  return res.data.data // returns an array of courier names
 }
 
 export const fetchCouriersWithDetails = async () => {
   const res = await axiosInstance.get(`/couriers/full-list`)
   if (!res.data?.success) throw new Error('Failed to fetch couriers')
-  return filterAmazonCouriers(res.data.data) // returns an array of courier names
+  return res.data.data // returns an array of courier names
 }
 export const getZones = async () => {
   const res = await axiosInstance.get('/admin/zones')
   return res.data
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getZonesFiltered = async (businessType: string, filters: any) => {
+export const getZonesFiltered = async (
+  businessType: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  filters: any,
+) => {
   const params = new URLSearchParams()
   if (businessType) params.append('business_type', businessType)
 
   // Only include courier filter if B2B
   if (businessType === 'B2B' && filters.courier_id) {
-    params.append('courier_id', filters.courier_id)
+    params.append('courier_id', String(filters.courier_id))
   }
 
   const res = await axiosInstance.get(`/admin/zones?${params.toString()}`)

@@ -1,20 +1,9 @@
-import { Box, Typography } from '@mui/material'
+import { alpha, Box, Typography, useTheme } from '@mui/material'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import React from 'react'
 import styles from './CustomInput.module.css'
-
-const LABEL_SX = {
-  fontSize: '12px',
-  color: '#374151',
-  fontWeight: 700,
-  letterSpacing: '0.04em',
-  textTransform: 'uppercase',
-}
-
-const CONTROL_MIN_HEIGHT = 48
-const DENSE_CONTROL_MIN_HEIGHT = 34
 
 interface CustomDatePickerProps {
   label?: string
@@ -26,7 +15,6 @@ interface CustomDatePickerProps {
   width?: string | number
   topMargin?: boolean
   error?: boolean
-  dense?: boolean
 }
 
 const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
@@ -39,17 +27,19 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   width = '100%',
   topMargin = true,
   error = false,
-  dense = false,
 }) => {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
+
   return (
     <div
       className={styles.inputContainer}
       style={{
-        marginTop: topMargin ? (dense ? '8px' : '16px') : '0px',
+        marginTop: topMargin ? '16px' : '0px',
       }}
     >
       {label && (
-        <Typography sx={LABEL_SX} mb={dense ? 0.25 : 0.8} className={styles.customLabel}>
+        <Typography sx={{ fontSize: '13px', color: theme.palette.text.secondary }} mb={0.5} className={styles.customLabel}>
           {label}
           {required && <span className={styles.required}>*</span>}
         </Typography>
@@ -73,34 +63,26 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               sx: {
                 width,
                 '& .MuiOutlinedInput-root': {
-                  minHeight: dense ? DENSE_CONTROL_MIN_HEIGHT : CONTROL_MIN_HEIGHT,
-                  borderRadius: 0,
-                  backgroundColor: '#FFFFFF',
-                  alignItems: 'center',
+                  borderRadius: '6px',
+                  backgroundColor: isDark ? '#101720' : '#FFFFFF',
+                  color: theme.palette.text.primary,
                   '& fieldset': {
-                    borderColor: 'rgba(17, 24, 39, 0.12)',
+                    borderColor: isDark ? alpha('#f8fafc', 0.14) : alpha('#0f172a', 0.14),
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(17, 24, 39, 0.2)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#062A5B',
+                    borderColor: isDark ? alpha('#8b7cf6', 0.5) : alpha('#0f172a', 0.24),
                   },
                 },
                 '& .MuiInputBase-input': {
-                  padding: dense ? '5px 8px' : '12px 14px',
-                  boxSizing: 'border-box',
-                  fontSize: dense ? '0.82rem' : '0.95rem',
-                  color: '#111827',
+                  padding: '10px',
+                  height: 12,
+                  fontSize: '0.85rem',
                   zIndex: 2,
-                },
-                '& .MuiFormHelperText-root': {
-                  marginLeft: 0,
-                  marginRight: 0,
-                  marginTop: dense ? '2px' : '6px',
+                  color: theme.palette.text.primary,
                 },
               },
               placeholder,
+              helperText,
               error: Boolean(error),
             },
           }}
@@ -114,7 +96,8 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             variant="caption"
             sx={{
               fontSize: '11px',
-              color: '#6B7280',
+              opacity: 0.7,
+              fontStyle: 'italic',
             }}
           >
             {helperText}

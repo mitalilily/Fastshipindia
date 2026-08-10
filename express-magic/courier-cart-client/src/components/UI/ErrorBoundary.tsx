@@ -5,13 +5,13 @@ import { MdErrorOutline } from 'react-icons/md'
 
 /* ---------------------------   CLASS  --------------------------- */
 type InnerProps = { children: ReactNode; theme: Theme }
-type State = { hasError: boolean }
+type State = { hasError: boolean; error: Error | null }
 
 class ErrorBoundaryCore extends React.Component<InnerProps, State> {
-  state: State = { hasError: false }
+  state: State = { hasError: false, error: null }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true }
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -23,6 +23,8 @@ class ErrorBoundaryCore extends React.Component<InnerProps, State> {
 
   render() {
     if (!this.state.hasError) return this.props.children
+
+    const isDev = import.meta.env.DEV
 
     return (
       <Box
@@ -47,8 +49,10 @@ class ErrorBoundaryCore extends React.Component<InnerProps, State> {
             background: '#FFFFFF',
             border: '1px solid #E0E6ED',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-            maxWidth: { xs: '90%', sm: 500 },
+            maxWidth: { xs: '90%', sm: 600 },
             width: '100%',
+            overflowY: 'auto',
+            maxHeight: '90vh'
           }}
         >
           <Box
@@ -97,12 +101,20 @@ class ErrorBoundaryCore extends React.Component<InnerProps, State> {
             the problem persists.
           </Typography>
 
+          {isDev && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: 1, textAlign: 'left' }}>
+              <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#C53030', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                {this.state.error?.stack || this.state.error?.message || 'Unknown error'}
+              </Typography>
+            </Box>
+          )}
+
           <Box display="flex" justifyContent="center" gap={2}>
             <Button
               variant="contained"
               onClick={this.handleReload}
               sx={{
-                background: 'linear-gradient(135deg, #062A5B 0%, #2F3B5F 100%)',
+                background: 'linear-gradient(135deg, #333369 0%, #2F3B5F 100%)',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 px: 4,

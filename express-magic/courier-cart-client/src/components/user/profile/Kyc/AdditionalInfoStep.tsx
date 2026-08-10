@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Box, Button, Grid, Stack, Typography } from "@mui/material";
+import { useEffect } from "react";
+import { Alert, Box, Button, Grid, Stack, Typography } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import type {
   BusinessStructure,
@@ -11,20 +11,34 @@ import {
   requiredKycDetails,
   requiredKycFieldMap,
 } from "../../../../utils/constants";
+import React from "react";
 
 export interface AdditionalKYCForm {
   gstin?: string;
-  panNumber?: string;
   cin?: string;
   aadhaarUrl?: string;
+  aadhaarMime?: string;
+  aadhaarFrontUrl?: string;
+  aadhaarFrontMime?: string;
+  aadhaarBackUrl?: string;
+  aadhaarBackMime?: string;
   businessPanUrl?: string;
+  businessPanMime?: string;
   companyAddressProofUrl?: string;
+  companyAddressProofMime?: string;
   gstCertificateUrl?: string;
+  gstCertificateMime?: string;
   panCardUrl?: string;
+  panCardMime?: string;
   partnershipDeedUrl?: string;
+  partnershipDeedMime?: string;
   boardResolutionUrl?: string;
+  boardResolutionMime?: string;
   llpAgreementUrl?: string;
+  llpAgreementMime?: string;
+
   cancelledChequeUrl?: string;
+  cancelledChequeMime?: string;
 }
 
 interface Props {
@@ -32,16 +46,16 @@ interface Props {
   companyType?: CompanyType;
   defaultValue?: Partial<AdditionalKYCForm>;
   onComplete: (data?: AdditionalKYCForm) => void;
-  submitLabel?: string;
 }
 
-const fieldLabels: Record<keyof AdditionalKYCForm, string> = {
-  gstin: "GST Number (GSTIN)",
-  panNumber: "PAN Number",
-  cin: "CIN (Corporate Identification Number)",
+const fieldLabels: Partial<Record<keyof AdditionalKYCForm, string>> = {
   panCardUrl: "Upload PAN Card",
+  gstin: "GSTIN (Tax ID)",
+  cin: "CIN (Corporate Identification Number)",
   gstCertificateUrl: "Upload GST Certificate",
   aadhaarUrl: "Upload Your Aadhaar Card",
+  aadhaarFrontUrl: "Upload Aadhaar Front Side",
+  aadhaarBackUrl: "Upload Aadhaar Back Side",
   partnershipDeedUrl: "Upload Partnership Deed",
   businessPanUrl: "Upload Business PAN",
   companyAddressProofUrl: "Upload Company Address Proof",
@@ -51,52 +65,69 @@ const fieldLabels: Record<keyof AdditionalKYCForm, string> = {
 };
 
 const inputPlaceholders: Partial<Record<keyof AdditionalKYCForm, string>> = {
-  gstin: "Example: 27ABCDE1234F1Z5",
-  panNumber: "Example: ABCDE1234F",
-  cin: "Example: U12345MH2020PTC123456",
+  gstin: "Enter your 15-digit GSTIN",
+  cin: "Enter your 21-character CIN",
 };
 
-const inputHelpText: Partial<Record<keyof AdditionalKYCForm, string>> = {
-  gstin: "15 characters. The middle 10 characters should match the PAN.",
-  panNumber: "10 characters: five letters, four digits, one letter.",
-  cin: "21 characters from the MCA registration certificate.",
-};
-
-const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-const CIN_REGEX = /^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/;
+const pdfAccept = ".pdf,application/pdf,application/x-pdf";
+const imagePdfAccept =
+  ".jpg,.jpeg,.png,image/jpeg,image/png,.pdf,application/pdf,application/x-pdf";
 
 const allowedMimeTypes: Partial<Record<keyof AdditionalKYCForm, string>> = {
-  aadhaarUrl: "image/jpeg,image/png,application/pdf",
-  panCardUrl: "image/jpeg,image/png,application/pdf",
-  cancelledChequeUrl: "image/jpeg,image/png,application/pdf",
-  partnershipDeedUrl: "application/pdf",
-  boardResolutionUrl: "application/pdf",
-  companyAddressProofUrl: "application/pdf,image/jpeg,image/png",
-  businessPanUrl: "image/jpeg,image/png,application/pdf",
-  gstCertificateUrl: "image/jpeg,image/png,application/pdf",
-  llpAgreementUrl: "application/pdf",
+  aadhaarUrl: imagePdfAccept,
+  aadhaarFrontUrl: imagePdfAccept,
+  aadhaarBackUrl: imagePdfAccept,
+  panCardUrl: imagePdfAccept,
+  cancelledChequeUrl: imagePdfAccept,
+  partnershipDeedUrl: pdfAccept,
+  boardResolutionUrl: pdfAccept,
+  llpAgreementUrl: pdfAccept,
+  companyAddressProofUrl: imagePdfAccept,
+  businessPanUrl: imagePdfAccept,
+  gstCertificateUrl: imagePdfAccept,
 };
 
-const isFileField = (field: keyof AdditionalKYCForm) =>
+const isFileField = (f: keyof AdditionalKYCForm) =>
   [
     "aadhaarUrl",
+    "aadhaarFrontUrl",
+    "aadhaarBackUrl",
     "panCardUrl",
     "partnershipDeedUrl",
     "boardResolutionUrl",
     "llpAgreementUrl",
     "companyAddressProofUrl",
+    "boardResolution",
     "cancelledChequeUrl",
     "businessPanUrl",
+    "msmeCert",
     "gstCertificateUrl",
-  ].includes(field);
+  ]?.includes(f);
+
+const mimeFieldByUploadField: Partial<
+  Record<keyof AdditionalKYCForm, keyof AdditionalKYCForm>
+> = {
+  aadhaarUrl: "aadhaarMime",
+  aadhaarFrontUrl: "aadhaarFrontMime",
+  aadhaarBackUrl: "aadhaarBackMime",
+  panCardUrl: "panCardMime",
+  cancelledChequeUrl: "cancelledChequeMime",
+  partnershipDeedUrl: "partnershipDeedMime",
+  boardResolutionUrl: "boardResolutionMime",
+  llpAgreementUrl: "llpAgreementMime",
+  companyAddressProofUrl: "companyAddressProofMime",
+  businessPanUrl: "businessPanMime",
+  gstCertificateUrl: "gstCertificateMime",
+};
+
+const getFieldLabel = (field: keyof AdditionalKYCForm) =>
+  fieldLabels[field] ?? String(field);
 
 export default function AdditionalDetailsStep({
   structure = "individual",
   defaultValue,
   companyType,
   onComplete,
-  submitLabel = "Submit KYC",
 }: Props) {
   const {
     control,
@@ -128,83 +159,12 @@ export default function AdditionalDetailsStep({
     return [];
   }, [structure, companyType]);
 
-  const optionalFields: (keyof AdditionalKYCForm)[] = React.useMemo(
-    () => (structure === "individual" ? ["gstin"] : []),
-    [structure]
-  );
-
   const filePlaceholder = (field: keyof AdditionalKYCForm) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     watch(`${field}_key` as any);
 
-  const getMimeFieldName = (field: keyof AdditionalKYCForm) =>
-    `${field.replace('Url', '')}Mime` as keyof AdditionalKYCForm
-
-  const isRequiredField = (field: keyof AdditionalKYCForm) =>
-    structure === "company" && companyType
-      ? (
-          requiredKycFieldMap[structure] as Record<
-            CompanyType,
-            Partial<Record<keyof AdditionalKYCForm, boolean>>
-          >
-        )[companyType]?.[field] ?? false
-      : (
-          requiredKycFieldMap[structure] as Partial<
-            Record<keyof AdditionalKYCForm, boolean>
-          >
-        )?.[field] ?? false;
-
-  const displayedFields = React.useMemo(
-    () => [...requiredFields, ...optionalFields.filter((field) => !requiredFields.includes(field))],
-    [requiredFields, optionalFields]
-  );
-
-  const textFields = displayedFields.filter((field) => !isFileField(field));
-  const fileFields = requiredFields.filter(isFileField);
-
-  const normalizeTextValue = (field: keyof AdditionalKYCForm, value?: string) => {
-    const next = String(value ?? "").trim().toUpperCase();
-    if (field === "panNumber") return next.replace(/[^A-Z0-9]/g, "").slice(0, 10);
-    if (field === "gstin") return next.replace(/[^A-Z0-9]/g, "").slice(0, 15);
-    if (field === "cin") return next.replace(/[^A-Z0-9]/g, "").slice(0, 21);
-    return String(value ?? "");
-  };
-
-  const getTextRules = (field: keyof AdditionalKYCForm) => ({
-    required: isRequiredField(field) ? `${fieldLabels[field]} is required` : false,
-    validate: (value?: string) => {
-      const normalized = normalizeTextValue(field, value);
-      if (!normalized) return true;
-
-      if (field === "panNumber") {
-        if (!PAN_REGEX.test(normalized)) {
-          return "Invalid PAN format. Use 10 characters like ABCDE1234F";
-        }
-        const gstin = normalizeTextValue("gstin", watch("gstin"));
-        if (gstin && gstin.substring(2, 12) !== normalized) {
-          return "PAN number must match characters 3-12 of the GSTIN";
-        }
-      }
-
-      if (field === "gstin") {
-        if (!GSTIN_REGEX.test(normalized)) {
-          return "Invalid GSTIN format. Use 15 characters like 27ABCDE1234F1Z5";
-        }
-        const panNumber = normalizeTextValue("panNumber", watch("panNumber"));
-        if (panNumber && normalized.substring(2, 12) !== panNumber) {
-          return "GSTIN must contain the same PAN number";
-        }
-      }
-
-      if (field === "cin" && !CIN_REGEX.test(normalized)) {
-        return "Invalid CIN format. Use 21 characters like U12345MH2020PTC123456";
-      }
-
-      return true;
-    },
-  });
-
   useEffect(() => {
+    // Populate _key fields from URL if available
     requiredFields.forEach((field) => {
       const url = defaultValue?.[field];
       const keyField = `${field}_key` as keyof AdditionalKYCForm;
@@ -231,151 +191,213 @@ export default function AdditionalDetailsStep({
 
   return (
     <Box component="form" onSubmit={handleSubmit(onComplete)}>
-      <Typography variant="h6" mb={0.5} fontWeight={700} color="#111827">
-        Enter Additional KYC Details
+      <Typography variant="h6" mb={2}>
+        Confirm KYC Details
       </Typography>
-      <Typography fontSize={13} color="#6B7280" mb={2}>
-        Add the official identifiers and upload documents that match the same legal entity.
-      </Typography>
-
-      {textFields.length > 0 && (
-        <Box
-          sx={{
-            p: { xs: 1.5, md: 2 },
-            mb: 3,
-            border: "1px solid rgba(15, 23, 42, 0.08)",
-            bgcolor: "#F8FAFC",
-          }}
-        >
-          <Typography fontSize={14} fontWeight={800} color="#111827" mb={1}>
-            Business identifiers
-          </Typography>
-          <Grid container spacing={2}>
-            {textFields.map((field) => (
-              <Grid key={field} size={{ md: 6, xs: 12 }}>
-                <Controller
-                  name={field}
-                  control={control}
-                  rules={getTextRules(field)}
-                  render={({ field: ctrl, fieldState }) => (
-                    <CustomInput
-                      {...ctrl}
-                      value={(ctrl.value as string | undefined) ?? ""}
-                      onChange={(event) =>
-                        ctrl.onChange(normalizeTextValue(field, event.target.value))
-                      }
-                      required={isRequiredField(field)}
-                      fullWidth
-                      label={fieldLabels[field]}
-                      placeholder={
-                        inputPlaceholders[field] ?? `Enter ${fieldLabels[field]}`
-                      }
-                      maxLength={field === "cin" ? 21 : field === "gstin" ? 15 : 10}
-                      error={!!fieldState.error}
-                      helperText={
-                        fieldState.error?.message ??
-                        (field === "gstin" && !isRequiredField(field)
-                          ? "Optional for individual sellers. If entered, the middle 10 characters should match the PAN."
-                          : inputHelpText[field])
-                      }
-                    />
-                  )}
-                />
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
-
-      <Typography fontSize={14} fontWeight={800} color="#111827" mb={1}>
-        Required documents
-      </Typography>
+      {requiredFields.length === 0 ? (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          No document upload is required right now. Submit to finish KYC instantly.
+        </Alert>
+      ) : null}
       <Grid container spacing={3}>
-        {fileFields.map((field) => (
+        {requiredFields.map((field) => (
           <Grid key={field} size={{ md: 6, xs: 12 }}>
-            <Controller
-              name={field}
-              control={control}
-              rules={{
-                required: isRequiredField(field)
-                  ? `${fieldLabels[field]} is required`
-                  : false,
-              }}
-              render={({ field: ctrl, fieldState }) => (
-                <Stack mt={1.5}>
-                  <FileUploader
-                    required={isRequiredField(field)}
-                    folderKey="kyc"
-                    fullWidth
-                    showAccept={Boolean(filePlaceholder(field)) === false}
-                    accept={allowedMimeTypes[field]}
-                    variant="button"
-                    label={fieldLabels[field]}
-                    placeholder={filePlaceholder(field) as string}
-                    onUploaded={async (files) => {
-                      const file = files?.[0];
-                      const fileKey = file?.key;
-                      setValue(field, fileKey);
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      setValue(`${field}_key` as any, file?.originalName);
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      setValue(getMimeFieldName(field) as any, file?.mime);
-                      ctrl.onChange(fileKey);
-                    }}
-                  />
-                  {!watch(field) || watch(field) === defaultValue?.[field]
-                    ? (() => {
-                        const status = getStatus(field);
-                        const reason = getRejectionReason(field);
-                        if (status === "rejected") {
-                          return (
-                            <Typography
-                              variant="caption"
-                              color="error"
-                              mt={0.5}
-                            >
-                              Rejected: {reason || "No reason provided"}
-                            </Typography>
-                          );
-                        } else if (status === "verified") {
-                          return (
-                            <Typography
-                              variant="caption"
-                              color="success.main"
-                              mt={0.5}
-                            >
-                              Verified
-                            </Typography>
-                          );
-                        } else if (status === "verification_in_progress") {
-                          return (
-                            <Typography
-                              variant="caption"
-                              color="info.main"
-                              mt={0.5}
-                            >
-                              Verification in progress
-                            </Typography>
-                          );
+            {isFileField(field) ? (
+              <Controller
+                name={field}
+                control={control}
+                rules={{
+                  required:
+                    structure === "company" && companyType
+                      ? (
+                          requiredKycFieldMap[structure] as Record<
+                            CompanyType,
+                            Partial<Record<keyof AdditionalKYCForm, boolean>>
+                          >
+                        )[companyType]?.[field] ?? false
+                      : (
+                          requiredKycFieldMap[structure] as Partial<
+                            Record<keyof AdditionalKYCForm, boolean>
+                          >
+                        )?.[field] ?? false
+                      ? `${getFieldLabel(field)} is required`
+                      : false,
+                  ...(field === "gstin"
+                    ? {
+                        pattern: {
+                          value:
+                            /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+                          message:
+                            "Invalid GSTIN format. Must be 15 characters (e.g., 22ABCDE1234F1Z5)",
+                        },
+                      }
+                    : {}),
+                }}
+                render={({ field: ctrl, fieldState }) => {
+                  const isRequired =
+                    structure === "company" && companyType
+                      ? (
+                          requiredKycFieldMap[structure] as Record<
+                            CompanyType,
+                            Partial<Record<keyof AdditionalKYCForm, boolean>>
+                          >
+                        )[companyType]?.[field] ?? false
+                      : (
+                          requiredKycFieldMap[structure] as Partial<
+                            Record<keyof AdditionalKYCForm, boolean>
+                          >
+                        )?.[field] ?? false;
+
+                  return (
+                    <Stack mt={1.5}>
+                      <FileUploader
+                        required={isRequired}
+                        folderKey="kyc"
+                        fullWidth
+                        showAccept={Boolean(filePlaceholder(field)) === false}
+                        accept={allowedMimeTypes[field]}
+                        maxSizeMb={20}
+                        uploadStrategy="proxy"
+                        variant="button"
+                        label={getFieldLabel(field)}
+                        placeholder={filePlaceholder(field) as string}
+                        onUploaded={async (files) => {
+                          const file = files?.[0];
+                          const fileKey = file?.key ?? "";
+                          setValue(field, fileKey, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          setValue(`${field}_key` as any, file?.originalName ?? "", {
+                            shouldDirty: true,
+                          });
+                          const mimeField = mimeFieldByUploadField[field];
+                          if (mimeField) {
+                            setValue(mimeField, file?.mime ?? "", {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                          }
+                          ctrl.onChange(fileKey);
+                        }}
+                      />
+                      {!watch(field) || watch(field) === defaultValue?.[field]
+                        ? (() => {
+                            const status = getStatus(field);
+                            const reason = getRejectionReason(field);
+                            if (status === "rejected") {
+                              return (
+                                <Typography
+                                  variant="caption"
+                                  color="error"
+                                  mt={0.5}
+                                >
+                                  Rejected: {reason || "No reason provided"}
+                                </Typography>
+                              );
+                            } else if (status === "verified") {
+                              return (
+                                <Typography
+                                  variant="caption"
+                                  color="success.main"
+                                  mt={0.5}
+                                >
+                                  ✅ Verified
+                                </Typography>
+                              );
+                            } else if (status === "verification_in_progress") {
+                              return (
+                                <Typography
+                                  variant="caption"
+                                  color="info.main"
+                                  mt={0.5}
+                                >
+                                  ⏳ Verification in progress
+                                </Typography>
+                              );
+                            }
+                            return null;
+                          })()
+                        : null}
+                      {fieldState.error && (
+                        <Typography variant="caption" color="error">
+                          {fieldState.error.message}
+                        </Typography>
+                      )}
+                    </Stack>
+                  );
+                }}
+              />
+            ) : (
+              <Controller
+                name={field}
+                control={control}
+                rules={(() => {
+                  const isRequired =
+                    structure === "company" && companyType
+                      ? (
+                          requiredKycFieldMap[structure] as Record<
+                            CompanyType,
+                            Partial<Record<keyof AdditionalKYCForm, boolean>>
+                          >
+                        )[companyType]?.[field] ?? false
+                      : (
+                          requiredKycFieldMap[structure] as Partial<
+                            Record<keyof AdditionalKYCForm, boolean>
+                          >
+                        )?.[field] ?? false;
+
+                  return {
+                    required: isRequired ? `${getFieldLabel(field)} is required` : false,
+                    ...(field === "gstin"
+                      ? {
+                          validate: (value?: string) =>
+                            !value ||
+                            /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+                              value
+                            ) ||
+                            "Invalid GSTIN format. Must be 15 characters (e.g., 22ABCDE1234F1Z5)",
                         }
-                        return null;
-                      })()
-                    : null}
-                  {fieldState.error && (
-                    <Typography variant="caption" color="error">
-                      {fieldState.error.message}
-                    </Typography>
-                  )}
-                </Stack>
-              )}
-            />
+                      : {}),
+                  };
+                })()}
+                render={({ field: ctrl, fieldState }) => (
+                  <CustomInput
+                    {...ctrl}
+                    required={
+                      (structure === "company" && companyType
+                        ? (
+                            requiredKycFieldMap[structure] as Record<
+                              CompanyType,
+                              Partial<Record<keyof AdditionalKYCForm, boolean>>
+                            >
+                          )[companyType]?.[field] ?? false
+                        : (
+                            requiredKycFieldMap[structure] as Partial<
+                              Record<keyof AdditionalKYCForm, boolean>
+                            >
+                          )?.[field] ?? false)
+                    }
+                    fullWidth
+                    label={getFieldLabel(field)}
+                    placeholder={
+                      inputPlaceholders[field] ?? `Enter ${getFieldLabel(field)}`
+                    }
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                  />
+                )}
+              />
+            )}
           </Grid>
         ))}
       </Grid>
 
+      {/* Submit Button */}
       <Box mt={4} display="flex" justifyContent="flex-end">
-        <Button variant="contained" type="submit" disabled={!isValid}>
-          {submitLabel}
+        <Button variant="contained" type="submit" disabled={requiredFields.length > 0 && !isValid}>
+          {requiredFields.length === 0 ? "Finish KYC" : "Submit KYC"}
         </Button>
       </Box>
     </Box>

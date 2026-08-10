@@ -3,8 +3,8 @@ import { type FieldErrors } from 'react-hook-form'
 import { FaMoneyBillWave, FaRupeeSign, FaShoppingCart } from 'react-icons/fa'
 import type { B2CFormData } from './b2c/B2COrderForm'
 
-const ACCENT = '#062A5B'
-const TEXT_PRIMARY = '#17171A'
+const ACCENT = '#0D3B8E'
+const TEXT_PRIMARY = '#102A54'
 
 interface OrderSummaryProps {
   subtotal: number

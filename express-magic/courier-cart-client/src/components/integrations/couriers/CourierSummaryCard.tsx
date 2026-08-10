@@ -1,5 +1,5 @@
 // src/components/CourierSummaryCard.tsx
-import { alpha, Box, Card, CardContent, Grid, Typography } from '@mui/material'
+import { Box, Card, CardContent, Grid, Typography } from '@mui/material'
 import {
   FaExclamationTriangle,
   FaMapMarkedAlt,
@@ -17,27 +17,27 @@ const summaryItems = (summary: CourierSummary) => [
   {
     label: 'Total Couriers',
     value: summary.totalCourierCount,
-    icon: <FaShippingFast size={24} color="#062A5B" />,
+    icon: <FaShippingFast size={28} color="#1976d2" />,
   },
   {
     label: 'Serviceable Pincodes',
     value: summary.serviceablePincodesCount,
-    icon: <FaMapMarkedAlt size={24} color="#111113" />,
+    icon: <FaMapMarkedAlt size={28} color="#2e7d32" />,
   },
   {
     label: 'Pickup Pincodes',
     value: summary.pickupPincodesCount,
-    icon: <FaStore size={24} color="#062A5B" />,
+    icon: <FaStore size={28} color="#0288d1" />,
   },
   {
     label: 'Total RTO Count',
     value: summary.totalRtoCount,
-    icon: <FaUndoAlt size={24} color="#111113" />,
+    icon: <FaUndoAlt size={28} color="#f9a825" />,
   },
   {
     label: 'Total ODA Count',
     value: summary.totalOdaCount,
-    icon: <FaExclamationTriangle size={24} color="#062A5B" />,
+    icon: <FaExclamationTriangle size={28} color="#d32f2f" />,
   },
 ]
 
@@ -57,9 +57,7 @@ export default function CourierSummaryCard({ summary }: Props) {
             variant="outlined"
             sx={{
               width: '100%',
-              background: 'linear-gradient(180deg, #FFFFFF 0%, #FAF7F5 100%)',
-              borderRadius: 3,
-              borderColor: alpha('#111113', 0.08),
+              background: '#FFFFFF',
               height: '100%',
               display: 'flex',
               alignItems: 'center',
@@ -70,28 +68,16 @@ export default function CourierSummaryCard({ summary }: Props) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 2,
-                px: 2.1,
-                py: 1.9,
+                px: 2,
+                py: 1.5,
               }}
             >
-              <Box
-                sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 2,
-                  display: 'grid',
-                  placeItems: 'center',
-                  bgcolor: alpha('#062A5B', 0.08),
-                  border: `1px solid ${alpha('#062A5B', 0.12)}`,
-                }}
-              >
-                {icon}
-              </Box>
+              <Box>{icon}</Box>
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                <Typography variant="body2" color="text.secondary">
                   {label}
                 </Typography>
-                <Typography variant="h6" fontWeight={800}>
+                <Typography variant="h6" fontWeight={600}>
                   {value}
                 </Typography>
               </Box>

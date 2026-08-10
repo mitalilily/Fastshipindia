@@ -13,10 +13,27 @@ const WEBHOOK_EVENTS = [
   'order.cancelled',
   'order.return_created',
   'order.ndr',
+  'order.weight_discrepancy',
   'shipment.label_generated',
   'shipment.manifest_generated',
   'tracking.updated',
 ]
+
+const WEBHOOK_EVENT_LABELS: Record<string, string> = {
+  'order.created': 'Order created',
+  'order.updated': 'Order updated',
+  'order.shipped': 'Order shipped',
+  'order.delivered': 'Order delivered',
+  'order.failed': 'Order failed',
+  'order.rto': 'Order RTO',
+  'order.cancelled': 'Order cancelled',
+  'order.return_created': 'Return created',
+  'order.ndr': 'Order NDR',
+  'order.weight_discrepancy': 'Weight discrepancy',
+  'shipment.label_generated': 'Label generated',
+  'shipment.manifest_generated': 'Manifest generated',
+  'tracking.updated': 'Tracking updated',
+}
 
 interface WebhookPayload {
   event: string
@@ -33,8 +50,8 @@ const SAMPLE_PAYLOADS: Record<string, WebhookPayload> = {
       order_number: 'ORD-2024-001234',
       awb_number: 'AWB123456789',
       status: 'booked',
-      courier_partner: 'Delhivery',
-      integration_type: 'delhivery',
+      courier_partner: 'Delhivery Surface',
+      integration_type: 'deliveryone',
       payment_type: 'prepaid',
       created_at: '2024-01-15T10:30:00.000Z',
     },
@@ -59,7 +76,7 @@ const SAMPLE_PAYLOADS: Record<string, WebhookPayload> = {
       order_number: 'ORD-2024-001234',
       awb_number: 'AWB123456789',
       status: 'shipped',
-      courier_partner: 'Delhivery',
+      courier_partner: 'Delhivery Surface',
       shipped_at: '2024-01-15T12:00:00.000Z',
     },
   },
@@ -125,7 +142,7 @@ const SAMPLE_PAYLOADS: Record<string, WebhookPayload> = {
       status: 'booked',
       reverse_charge: 200.0,
       shipment_data: {
-        courier_partner: 'Delhivery',
+        courier_partner: 'Delhivery Express',
         tracking_url: 'https://tracking.example.com/AWB987654321',
       },
     },
@@ -141,8 +158,32 @@ const SAMPLE_PAYLOADS: Record<string, WebhookPayload> = {
       reason: 'Door closed',
       remarks: 'Delivery attempt failed - door closed',
       attempt_no: '1',
-      courier_partner: 'Delhivery',
+      courier_partner: 'Delhivery Surface',
       updated_at: '2024-01-17T10:00:00.000Z',
+    },
+  },
+  'order.weight_discrepancy': {
+    event: 'order.weight_discrepancy',
+    timestamp: '2024-01-17T11:00:00.000Z',
+    data: {
+      action: 'created',
+      action_label: 'Created',
+      discrepancy_id: 'WD-2024-001',
+      order_id: '550e8400-e29b-41d4-a716-446655440000',
+      order_number: 'ORD-2024-001234',
+      awb_number: 'AWB123456789',
+      courier_partner: 'Delhivery Surface',
+      order_type: 'b2c',
+      status: 'pending',
+      status_label: 'Pending',
+      declared_weight: 0.5,
+      charged_weight: 0.75,
+      weight_difference: 0.25,
+      additional_charge: 42.5,
+      event_type: 'weight_discrepancy',
+      source: 'weight_reconciliation',
+      detected_at: '2024-01-17T11:00:00.000Z',
+      updated_at: '2024-01-17T11:00:00.000Z',
     },
   },
   'shipment.label_generated': {
@@ -264,7 +305,7 @@ export const SamplePayloadModal = ({
               {WEBHOOK_EVENTS.map((event) => (
                 <Chip
                   key={event}
-                  label={event}
+                  label={WEBHOOK_EVENT_LABELS[event] || event}
                   onClick={() => onSelectEvent(event)}
                   color={selectedEventType === event ? 'primary' : 'default'}
                   size="small"
@@ -292,7 +333,7 @@ export const SamplePayloadModal = ({
                           alignItems="center"
                         >
                           <Typography variant="subtitle1" fontWeight={600}>
-                            {event}
+                            {WEBHOOK_EVENT_LABELS[event] || event}
                           </Typography>
                           <Button
                             size="small"
@@ -316,7 +357,7 @@ export const SamplePayloadModal = ({
                             sx={{
                               fontFamily: 'monospace',
                               fontSize: '0.75rem',
-                              color: '#062A5B',
+                              color: '#333369',
                               m: 0,
                               whiteSpace: 'pre-wrap',
                               wordBreak: 'break-word',
@@ -337,4 +378,3 @@ export const SamplePayloadModal = ({
     </CustomDialog>
   )
 }
-

@@ -8,21 +8,11 @@ export const getBankAccounts = async () => {
 };
 
 export const addBankAccount = async (data: BankAccount) => {
-  try {
-    const res = await axiosInstance.post("/bank-account", {
-      ...data,
-      mode: "manual",
-    });
-    return res.data;
-  } catch (err) {
-    const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
-    throw new Error(
-      axiosErr.response?.data?.error ??
-        axiosErr.response?.data?.message ??
-        axiosErr.message ??
-        "Bank-account creation failed"
-    );
-  }
+  const res = await axiosInstance.post("/bank-account", {
+    ...data,
+    mode: "manual",
+  });
+  return res.data;
 };
 
 export interface VerifyUpiPayload {

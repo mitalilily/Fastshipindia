@@ -1,11 +1,20 @@
 import { alpha, Box, Skeleton, Stack, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { MdAccessTime, MdLocationPin, MdLocalShipping } from 'react-icons/md'
 import type { Pickup } from '../../api/dashboard.api'
+import { getCourierDisplayName } from '../../utils/courierDisplay'
 import StatusChip from '../UI/chip/StatusChip'
 
-const BRAND_PRIMARY = '#062A5B'
-const INK = '#111827'
-const MUTED = '#6B7280'
+const DE_BLUE = '#0052CC'
+const TEXT_PRIMARY = '#172B4D'
+const TEXT_SECONDARY = '#42526E'
+
+const pickupStatusMap: Record<string, 'pending' | 'success' | 'info' | 'error'> = {
+  scheduled: 'pending',
+  pending: 'pending',
+  picked: 'success',
+  completed: 'success',
+  cancelled: 'error',
+}
 
 type UpcomingPickupsHomeProps = {
   data?: Pickup[]
@@ -23,15 +32,15 @@ const UpcomingPickupsHome = ({ data: overrideData, isLoading: overrideLoading, e
   return (
     <Stack gap={1.8}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-        <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, color: INK }}>
+        <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, color: TEXT_PRIMARY }}>
           Upcoming Pickups
         </Typography>
-        <Typography sx={{ fontSize: '12px', color: MUTED, fontWeight: 600 }}>
+        <Typography sx={{ fontSize: '12px', color: TEXT_SECONDARY, fontWeight: 700 }}>
           Scheduled queue
         </Typography>
       </Stack>
       {errorMessage && (
-        <Typography sx={{ fontSize: '0.75rem', color: '#b42318', fontWeight: 600 }}>
+        <Typography sx={{ fontSize: '0.75rem', color: '#DE350B', fontWeight: 600 }}>
           {errorMessage}
         </Typography>
       )}
@@ -42,9 +51,9 @@ const UpcomingPickupsHome = ({ data: overrideData, isLoading: overrideLoading, e
             <Box
               key={i}
               sx={{
-                borderRadius: 0,
+                borderRadius: 1,
                 p: 1.35,
-                border: '1px solid rgba(17, 24, 39, 0.08)',
+                border: `1px solid ${alpha(DE_BLUE, 0.08)}`,
                 bgcolor: '#ffffff',
               }}
             >
@@ -61,13 +70,13 @@ const UpcomingPickupsHome = ({ data: overrideData, isLoading: overrideLoading, e
           sx={{
             py: 3.3,
             textAlign: 'center',
-            borderRadius: 0,
-            border: '1px dashed rgba(17, 24, 39, 0.18)',
-            bgcolor: '#F8FAFC',
+            borderRadius: 1,
+            border: `1px dashed ${alpha(DE_BLUE, 0.2)}`,
+            bgcolor: alpha(DE_BLUE, 0.02),
           }}
         >
-          <MdLocalShipping size={30} style={{ color: BRAND_PRIMARY, opacity: 0.62 }} />
-          <Typography sx={{ mt: 0.8, fontSize: '0.88rem', color: MUTED, fontWeight: 600 }}>
+          <MdLocalShipping size={30} style={{ color: DE_BLUE, opacity: 0.5 }} />
+          <Typography sx={{ mt: 0.8, fontSize: '0.88rem', color: TEXT_SECONDARY, fontWeight: 600 }}>
             No upcoming pickups found
           </Typography>
         </Box>
@@ -92,78 +101,56 @@ const UpcomingPickupsHome = ({ data: overrideData, isLoading: overrideLoading, e
               : '—'
 
             const warehouseName = pickup.pickup_details?.warehouse_name ?? 'Warehouse'
-            const courier = pickup?.courier_partner ?? 'Courier TBD'
+            const courier = getCourierDisplayName(pickup?.courier_partner, 'Courier TBD')
             const address = pickup.pickup_details?.address ?? '—'
 
             return (
               <Box
                 key={pickup.id}
                 sx={{
-                  borderRadius: 0,
-                  p: 1.35,
-                  border: '1px solid rgba(17, 24, 39, 0.08)',
+                  p: 1.6,
+                  borderRadius: 1,
+                  border: `1px solid ${alpha(DE_BLUE, 0.08)}`,
                   bgcolor: '#ffffff',
-                  transition: 'all .2s ease',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    borderColor: 'rgba(17, 24, 39, 0.14)',
-                    backgroundColor: '#F8FAFC',
+                    borderColor: DE_BLUE,
+                    boxShadow: `0 4px 12px ${alpha(DE_BLUE, 0.08)}`,
                   },
                 }}
               >
-                <Stack
-                  direction={isMobile ? 'column' : 'row'}
-                  alignItems={isMobile ? 'flex-start' : 'center'}
-                  justifyContent="space-between"
-                  gap={1}
-                >
-                  <Stack gap={0.7} minWidth={0}>
-                    <Stack direction="row" gap={1} minWidth={0} alignItems="center">
-                      <Typography
-                        noWrap
-                        sx={{
-                          maxWidth: isMobile ? 210 : 180,
-                          fontWeight: 700,
-                          color: INK,
-                          fontSize: '0.88rem',
-                        }}
-                      >
+                <Stack direction={isMobile ? 'column' : 'row'} justifyContent="space-between" gap={1.5}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                      <Typography sx={{ fontSize: '0.92rem', fontWeight: 800, color: TEXT_PRIMARY }}>
                         {warehouseName}
                       </Typography>
-                      <Typography
-                        noWrap
-                        sx={{
-                          maxWidth: 130,
-                          fontSize: '0.77rem',
-                          color: alpha(INK, 0.85),
-                          borderRadius: 0,
-                          px: 0.8,
-                          py: 0.2,
-                          bgcolor: '#F4F5F8',
-                          border: '1px solid rgba(17, 24, 39, 0.08)',
-                        }}
-                      >
-                        {courier}
+                      <StatusChip
+                        status={pickupStatusMap[String(pickup.status || '').toLowerCase()] || 'info'}
+                        label={pickup.status || 'Scheduled'}
+                      />
+                    </Stack>
+                    <Stack direction="row" spacing={0.8} alignItems="center" color={TEXT_SECONDARY}>
+                      <MdLocationPin size={14} color={DE_BLUE} />
+                      <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: 500 }}>
+                        {address}
                       </Typography>
                     </Stack>
+                  </Box>
 
-                    <Stack direction="row" alignItems="center" gap={0.6}>
-                      <MdAccessTime size={14} color={MUTED} />
-                      <Typography sx={{ fontSize: '12px', color: MUTED }}>
-                        Created: {createdDate} | {createdTime}
-                      </Typography>
-                    </Stack>
-
-                    <Stack direction="row" alignItems="center" gap={0.6} minWidth={0}>
-                      <MdLocationPin size={14} color={MUTED} />
-                      <Tooltip title={address}>
-                        <Typography noWrap sx={{ maxWidth: isMobile ? 230 : 340, fontSize: '12px', color: MUTED }}>
-                          {address}
+                  <Box sx={{ textAlign: isMobile ? 'left' : 'right' }}>
+                    <Typography sx={{ fontSize: '0.88rem', fontWeight: 800, color: DE_BLUE, mb: 0.5 }}>
+                      {courier}
+                    </Typography>
+                    <Tooltip title="Pickup Scheduled Time">
+                      <Stack direction="row" spacing={0.8} alignItems="center" justifyContent={isMobile ? 'flex-start' : 'flex-end'} color={TEXT_SECONDARY}>
+                        <MdAccessTime size={14} />
+                        <Typography sx={{ fontSize: '0.78rem', fontWeight: 600 }}>
+                          {createdDate} • {createdTime}
                         </Typography>
-                      </Tooltip>
-                    </Stack>
-                  </Stack>
-
-                  <StatusChip label="Scheduled" status="pending" />
+                      </Stack>
+                    </Tooltip>
+                  </Box>
                 </Stack>
               </Box>
             )

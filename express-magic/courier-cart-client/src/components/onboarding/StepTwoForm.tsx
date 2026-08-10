@@ -1,18 +1,9 @@
-import {
-  Box,
-  ButtonBase,
-  Checkbox,
-  Divider,
-  FormControlLabel,
-  Grid,
-  Stack,
-  Typography,
-} from '@mui/material'
+import { Box, Checkbox, FormControlLabel, Grid, Stack, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useEffect, useMemo, useState } from 'react'
-import { MdBusiness, MdTrendingUp } from 'react-icons/md'
-import type { UserInfoData } from '../../types/user.types'
+import { MdBusiness } from 'react-icons/md'
 import type { FormErrors } from '../../pages/onboarding/UserOnboarding'
+import type { UserInfoData } from '../../types/user.types'
 import { createSyntheticEvent } from '../../utils/functions'
 import CustomInput from '../UI/inputs/CustomInput'
 import CustomSelect from '../UI/inputs/CustomSelect'
@@ -26,8 +17,8 @@ interface StepTwoFormProps {
   errors: FormErrors
 }
 
-const BRAND_ORANGE = '#062A5B'
-const BRAND_INK = '#141414'
+const DE_BLUE = '#0052CC'
+const DE_AMBER = '#FFAB00'
 
 const BUSINESS_OPTIONS = [
   {
@@ -75,20 +66,34 @@ export default function StepTwoForm({ formData, onChange, errors }: StepTwoFormP
 
   return (
     <Stack spacing={{ xs: 2.2, md: 2.8 }}>
-      <Typography variant="body2" sx={{ color: '#6E6A66', lineHeight: 1.7 }}>
-        Choose your business model and shipping volume so we can configure your account defaults.
-      </Typography>
+      <Box>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 800,
+            color: DE_BLUE,
+            mb: 0.7,
+            fontSize: { xs: '1.22rem', md: '1.5rem' },
+          }}
+        >
+          Shipping Profile
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#60789f', lineHeight: 1.55 }}>
+          Choose your business model and shipment volume so we can configure panel defaults
+          correctly.
+        </Typography>
+      </Box>
 
       <Box
         sx={{
           p: { xs: 1.6, md: 2 },
-          borderRadius: 4,
-          border: '1px solid rgba(20,20,20,0.08)',
+          borderRadius: 1,
+          border: `1px solid ${alpha(DE_BLUE, 0.12)}`,
           backgroundColor: '#fff',
         }}
       >
-        <Typography sx={{ fontSize: '0.84rem', fontWeight: 700, color: BRAND_INK, mb: 1.2 }}>
-          Select one or more business types
+        <Typography sx={{ fontSize: '0.84rem', fontWeight: 700, color: DE_BLUE, mb: 1.2 }}>
+          Select one or more shipment models
         </Typography>
 
         <Grid container spacing={1.3}>
@@ -97,197 +102,137 @@ export default function StepTwoForm({ formData, onChange, errors }: StepTwoFormP
 
             return (
               <Grid key={option.key} size={{ xs: 12, md: 4 }}>
-                <ButtonBase
-                  type="button"
+                <Box
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleCategory(option.key)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      toggleCategory(option.key)
-                    }
+                  onKeyUp={(e) => {
+                    if (e.key === 'Enter') toggleCategory(option.key)
                   }}
                   sx={{
-                    width: '100%',
-                    display: 'block',
-                    textAlign: 'left',
                     p: 1.5,
-                    borderRadius: 2.5,
-                    border: `1.5px solid ${active ? BRAND_ORANGE : 'rgba(20,20,20,0.12)'}`,
-                    backgroundColor: active ? alpha(BRAND_ORANGE, 0.07) : '#fff',
+                    borderRadius: 1,
+                    border: `1px solid ${active ? alpha(DE_BLUE, 0.4) : alpha(DE_BLUE, 0.12)}`,
+                    backgroundColor: active ? alpha(DE_BLUE, 0.06) : '#fff',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    minHeight: 108,
-                    position: 'relative',
-                    alignItems: 'stretch',
-                    justifyContent: 'flex-start',
-                    userSelect: 'none',
-                    '&:hover': {
-                      borderColor: active ? BRAND_ORANGE : alpha(BRAND_ORANGE, 0.34),
-                      backgroundColor: active ? alpha(BRAND_ORANGE, 0.08) : '#FCFAF9',
-                    },
-                    '&:focus-visible': {
-                      outline: `2px solid ${alpha(BRAND_ORANGE, 0.35)}`,
-                      outlineOffset: 1,
-                    },
+                    transition: 'all .2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    minHeight: { xs: 'auto', md: 112 },
                   }}
                 >
-                  <Checkbox
-                    checked={active}
-                    tabIndex={-1}
-                    disableRipple
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      toggleCategory(option.key)
-                    }}
+                  <Typography
                     sx={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      p: 0.4,
-                      color: alpha(BRAND_INK, 0.36),
-                      '&.Mui-checked': {
-                        color: BRAND_ORANGE,
-                      },
+                      fontSize: '0.94rem',
+                      fontWeight: 800,
+                      color: active ? DE_BLUE : '#2f4e77',
                     }}
-                  />
-
-                  <Stack spacing={0.7} pr={4}>
-                    <Typography
-                      sx={{
-                        fontWeight: 800,
-                        color: active ? BRAND_INK : '#2E2B2A',
-                        mb: 0.1,
-                        fontSize: '1rem',
-                      }}
-                    >
-                      {option.title}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: '#716B68',
-                        fontSize: '0.84rem',
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      {option.subtitle}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: active ? BRAND_ORANGE : 'rgba(20,20,20,0.45)',
-                        pt: 0.45,
-                      }}
-                    >
-                      {active ? 'Selected' : 'Tap to select'}
-                    </Typography>
-                  </Stack>
-                </ButtonBase>
+                  >
+                    {option.title}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: '0.78rem',
+                      color: '#6b82a8',
+                      mt: 0.2,
+                      lineHeight: 1.35,
+                      minHeight: { xs: 'auto', md: 34 },
+                    }}
+                  >
+                    {option.subtitle}
+                  </Typography>
+                </Box>
               </Grid>
             )
           })}
         </Grid>
-
-        {errors?.businessLegal?.businessCategory && (
-          <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
-            {errors.businessLegal.businessCategory}
-          </Typography>
-        )}
       </Box>
 
-      <Divider sx={{ borderColor: 'rgba(20,20,20,0.08)' }} />
+      <Box
+        sx={{
+          p: { xs: 1.6, md: 2 },
+          borderRadius: 1,
+          border: `1px solid ${alpha(DE_BLUE, 0.12)}`,
+          backgroundColor: '#fff',
+        }}
+      >
+        <Typography sx={{ fontSize: '0.84rem', fontWeight: 700, color: DE_BLUE, mb: 1.6 }}>
+          Shipment Volume & Brand Identity
+        </Typography>
 
-      <Grid container spacing={{ xs: 1.5, md: 2 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Box
-            sx={{
-              p: { xs: 1.6, md: 2 },
-              borderRadius: 4,
-              border: '1px solid rgba(20,20,20,0.08)',
-              backgroundColor: '#fff',
-              height: '100%',
-            }}
-          >
-            <Stack direction="row" spacing={0.8} alignItems="center" mb={1}>
-              <MdBusiness size={18} color={BRAND_ORANGE} />
-              <Typography sx={{ fontWeight: 700, color: BRAND_INK }}>Brand Name</Typography>
-            </Stack>
-
-            <CustomInput
-              label="Brand Name"
-              name="brandName"
-              required
-              value={formData.businessLegal.brandName}
-              onChange={(e) => onChange(e, 'businessLegal')}
-              error={!!errors.businessLegal?.brandName}
-              helperText={errors.businessLegal?.brandName}
-              disabled={sameAsCompany}
-            />
-
-            <FormControlLabel
-              sx={{ mt: 1 }}
-              control={
-                <Checkbox
-                  checked={sameAsCompany}
-                  onChange={(e) => setSameAsCompany(e.target.checked)}
-                  sx={{
-                    color: BRAND_ORANGE,
-                    '&.Mui-checked': {
-                      color: BRAND_ORANGE,
-                    },
-                  }}
-                />
-              }
-              label={<Typography variant="body2" sx={{ color: '#6E6A66' }}>Same as company name</Typography>}
-            />
-          </Box>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Box
-            sx={{
-              p: { xs: 1.6, md: 2 },
-              borderRadius: 4,
-              border: `1px solid ${alpha(BRAND_ORANGE, 0.16)}`,
-              backgroundColor: alpha(BRAND_ORANGE, 0.04),
-              height: '100%',
-            }}
-          >
-            <Stack direction="row" spacing={0.8} alignItems="center" mb={1}>
-              <MdTrendingUp size={18} color={BRAND_ORANGE} />
-              <Typography sx={{ fontWeight: 700, color: BRAND_INK }}>Monthly Shipment Volume</Typography>
-            </Stack>
-
+        <Grid container spacing={2.2}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <CustomSelect
-              required
-              width="100%"
-              label="How many shipments do you process monthly?"
+              label="Expected Orders / Month"
               items={[
-                { key: '0-100', label: '0 - 100 shipments' },
-                { key: '101-500', label: '101 - 500 shipments' },
-                { key: '501-1000', label: '501 - 1000 shipments' },
-                { key: '1000+', label: '1000+ shipments' },
+                { key: '', label: 'Select volume range' },
+                { key: '0-100', label: '0 - 100' },
+                { key: '101-500', label: '101 - 500' },
+                { key: '501-2000', label: '501 - 2,000' },
+                { key: '2000+', label: '2,000+' },
               ]}
               value={formData?.businessLegal?.monthlyShipments}
-              onSelect={(val) =>
+              onSelect={(value) =>
                 onChange(
-                  {
-                    target: {
-                      name: 'monthlyShipments',
-                      value: val,
-                    },
-                  } as React.ChangeEvent<HTMLInputElement>,
+                  createSyntheticEvent('monthlyShipments', String(value)) as React.ChangeEvent<
+                    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+                  >,
                   'businessLegal',
                 )
               }
+              required
+              error={!!errors.businessLegal.monthlyShipments}
+              helperText={errors.businessLegal.monthlyShipments}
+              placeholder="Select volume range"
             />
-          </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Stack spacing={1}>
+              <CustomInput
+                label="Brand Name"
+                name="brandName"
+                value={formData?.businessLegal?.brandName}
+                onChange={(e) => onChange(e, 'businessLegal')}
+                required
+                error={!!errors.businessLegal.brandName}
+                helperText={errors.businessLegal.brandName}
+                prefix={<MdBusiness color={DE_BLUE} />}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={sameAsCompany}
+                    onChange={(e) => setSameAsCompany(e.target.checked)}
+                    sx={{ color: alpha(DE_BLUE, 0.4), '&.Mui-checked': { color: DE_BLUE } }}
+                  />
+                }
+                label={
+                  <Typography variant="caption" sx={{ color: '#60789f', fontWeight: 600 }}>
+                    Same as company name
+                  </Typography>
+                }
+              />
+            </Stack>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
+
+      <Box
+        sx={{
+          p: 1.5,
+          borderRadius: 1,
+          bgcolor: alpha(DE_AMBER, 0.06),
+          border: `1px solid ${alpha(DE_AMBER, 0.2)}`,
+        }}
+      >
+        <Typography variant="caption" sx={{ color: DE_AMBER, fontWeight: 700, display: 'block' }}>
+          These shipping profile details help us show the most relevant couriers and defaults across
+          the panel.
+        </Typography>
+      </Box>
     </Stack>
   )
 }

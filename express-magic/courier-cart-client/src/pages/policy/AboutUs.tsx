@@ -39,7 +39,7 @@ const AboutUs = () => {
 
   return (
     <Stack gap={3} sx={{ py: 4, px: 4 }}>
-      <PageHeading title="About Us – FastShip" />
+      <PageHeading title="About Us - Ship Aggregator" />
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
@@ -71,6 +71,31 @@ const AboutUs = () => {
             }}
             dangerouslySetInnerHTML={{ __html: content }}
           />
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              mt: 4,
+              mb: 1,
+              px: 1,
+            }}
+          >
+            <Box
+              component="img"
+              src="/images/about-us-seller.jpeg"
+              alt="Ship Aggregator team portrait"
+              loading="lazy"
+              sx={{
+                width: '100%',
+                maxWidth: 440,
+                height: 'auto',
+                display: 'block',
+                borderRadius: 3,
+                boxShadow: '0 12px 30px rgba(0, 0, 0, 0.12)',
+                objectFit: 'cover',
+              }}
+            />
+          </Box>
         </>
       )}
     </Stack>
@@ -78,3 +103,5 @@ const AboutUs = () => {
 }
 
 export default AboutUs
+
+

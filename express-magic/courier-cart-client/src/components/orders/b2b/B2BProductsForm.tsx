@@ -278,7 +278,7 @@ const ProductBoxesForm = () => {
               left: 0,
               right: 0,
               height: '4px',
-              background: 'linear-gradient(90deg, #062A5B 0%, #3DD598 100%)',
+              background: 'linear-gradient(90deg, #333369 0%, #3DD598 100%)',
               borderRadius: '12px 12px 0 0',
             },
           }}
@@ -294,13 +294,13 @@ const ProductBoxesForm = () => {
           >
             <Stack spacing={1.5}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography variant="body2" fontWeight={600} color="#062A5B">
+                <Typography variant="body2" fontWeight={600} color="#333369">
                   Chargeable Weight
                 </Typography>
                 {weightCalculations.loading ? (
                   <CircularProgress size={20} />
                 ) : (
-                  <Typography variant="h6" fontWeight={700} color="#062A5B">
+                  <Typography variant="h6" fontWeight={700} color="#333369">
                     {weightCalculations.totalChargeableWeight.toFixed(2)} kg
                   </Typography>
                 )}

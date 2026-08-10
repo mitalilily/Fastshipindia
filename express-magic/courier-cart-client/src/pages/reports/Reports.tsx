@@ -1,21 +1,23 @@
 import {
-  alpha,
   Box,
   Button,
   Card,
   CardContent,
   Checkbox,
   CircularProgress,
+  Container,
   Divider,
   FormControlLabel,
   FormGroup,
   Grid,
+  MenuItem,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
 import { useMemo, useState } from 'react'
 import { downloadCustomReportCsv } from '../../api/reports.api'
+import PageHeading from '../../components/UI/heading/PageHeading'
 import { toast } from '../../components/UI/Toast'
 
 type ReportField = {
@@ -72,12 +74,12 @@ const GROUPS: FieldGroup[] = [
   },
   {
     key: 'ndr',
-    label: 'NDR',
+    label: 'Ndr',
     fields: [{ key: 'ndr_attempts_info', label: 'ndr_attempts_info' }],
   },
 ]
 
-const ALL_FIELD_KEYS = GROUPS.flatMap((group) => group.fields.map((field) => field.key))
+const ALL_FIELD_KEYS = GROUPS.flatMap((group) => group.fields.map((f) => f.key))
 
 const formatUiDate = (value: string) => {
   if (!value) return ''
@@ -87,18 +89,28 @@ const formatUiDate = (value: string) => {
 }
 
 const getToday = () => new Date().toISOString().slice(0, 10)
+const getPastDate = (days: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return d.toISOString().slice(0, 10)
+}
 const getMonthStart = () => {
-  const date = new Date()
-  date.setDate(1)
-  return date.toISOString().slice(0, 10)
+  const d = new Date()
+  d.setDate(1)
+  return d.toISOString().slice(0, 10)
 }
 
+const DATE_PRESETS = [
+  { label: 'Today', days: 0 },
+  { label: 'Last 7 days', days: 7 },
+  { label: 'Last 15 days', days: 15 },
+  { label: 'Last 30 days', days: 30 },
+]
+
 export default function Reports() {
-  const BRAND_PRIMARY = '#062A5B'
-  const BRAND_TEXT = '#17171A'
-  const BRAND_MUTED = '#6E6763'
   const [fromDate, setFromDate] = useState<string>(getMonthStart())
   const [toDate, setToDate] = useState<string>(getToday())
+  const [paymentType, setPaymentType] = useState<'all' | 'prepaid' | 'cod'>('all')
   const [selectedFields, setSelectedFields] = useState<string[]>(ALL_FIELD_KEYS)
   const [downloading, setDownloading] = useState(false)
 
@@ -107,13 +119,16 @@ export default function Reports() {
   const selectedByGroup = useMemo(() => {
     const selectedSet = new Set(selectedFields)
     return GROUPS.reduce<Record<string, number>>((acc, group) => {
-      acc[group.key] = group.fields.filter((field) => selectedSet.has(field.key)).length
+      acc[group.key] = group.fields.filter((f) => selectedSet.has(f.key)).length
       return acc
     }, {})
   }, [selectedFields])
 
   const toggleField = (key: string) => {
-    setSelectedFields((prev) => (prev.includes(key) ? prev.filter((field) => field !== key) : [...prev, key]))
+    setSelectedFields((prev) => {
+      if (prev.includes(key)) return prev.filter((f) => f !== key)
+      return [...prev, key]
+    })
   }
 
   const toggleSelectAll = () => {
@@ -129,19 +144,19 @@ export default function Reports() {
       toast.open({ message: 'Please select at least one field', severity: 'warning' })
       return
     }
-
     setDownloading(true)
     try {
-      const blob = await downloadCustomReportCsv({ fromDate, toDate, selectedFields })
+      const blob = await downloadCustomReportCsv({ fromDate, toDate, selectedFields, paymentType })
       const fileName = `custom_report_${fromDate}_to_${toDate}.csv`
       const url = window.URL.createObjectURL(blob)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = fileName
-      anchor.click()
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      a.click()
       window.URL.revokeObjectURL(url)
       toast.open({ message: 'Report downloaded', severity: 'success' })
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errObj = error as { response?: { data?: unknown } }
       const reader = new FileReader()
       reader.onload = () => {
         const text = String(reader.result || '')
@@ -155,8 +170,8 @@ export default function Reports() {
           toast.open({ message: 'Failed to download report', severity: 'error' })
         }
       }
-      if (error?.response?.data instanceof Blob) {
-        reader.readAsText(error.response.data)
+      if (errObj.response?.data instanceof Blob) {
+        reader.readAsText(errObj.response.data)
       } else {
         toast.open({ message: 'Failed to download report', severity: 'error' })
       }
@@ -166,93 +181,97 @@ export default function Reports() {
   }
 
   return (
-    <Stack spacing={2.5} sx={{ py: 2.5 }}>
-      <Box
-        sx={{
-          p: { xs: 2.1, md: 2.8 },
-          borderRadius: 5,
-          border: '1px solid rgba(17, 17, 19, 0.08)',
-          background:
-            'radial-gradient(circle at top right, rgba(217,4,22,0.14) 0%, transparent 22%), linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,244,241,0.98) 100%)',
-          boxShadow: '0 18px 38px rgba(17, 17, 19, 0.06)',
-        }}
-      >
-        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={1.5}>
-          <Box>
-            <Typography sx={{ fontSize: { xs: '1.45rem', md: '1.9rem' }, fontWeight: 800, color: BRAND_TEXT }}>
-              Custom reports
-            </Typography>
-            <Typography sx={{ fontSize: '0.92rem', color: BRAND_MUTED, mt: 0.7, maxWidth: 760 }}>
-              Build exports for orders, shipments, and NDR data with only the columns your team needs.
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              alignSelf: 'flex-start',
-              px: 1.1,
-              py: 0.55,
-              borderRadius: 999,
-              bgcolor: alpha(BRAND_PRIMARY, 0.08),
-              color: BRAND_PRIMARY,
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Export builder
-          </Box>
-        </Stack>
+    <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box sx={{ mb: 3 }}>
+        <PageHeading
+          eyebrow="Reports Panel"
+          title="Custom Reports"
+          subtitle="Build exports, choose operational fields, and generate report files from a consistent utility workspace."
+        />
       </Box>
+      <Card variant="outlined" sx={{ borderRadius: 3 }}>
+        <CardContent>
+          <Stack spacing={2}>
+            <Typography variant="h5" fontWeight={700}>
+              Reports - Custom Report
+            </Typography>
+            <Typography variant="h6" fontWeight={600}>
+              Custom Reports
+            </Typography>
 
-      <Card
-        variant="outlined"
-        sx={{
-          borderRadius: 5,
-          borderColor: alpha('#111113', 0.08),
-          boxShadow: '0 18px 34px rgba(17, 17, 19, 0.06)',
-        }}
-      >
-        <CardContent sx={{ p: { xs: 2, md: 2.6 } }}>
-          <Stack spacing={2.4}>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               alignItems={{ xs: 'stretch', md: 'center' }}
               gap={2}
             >
-              <Typography fontWeight={800} color={BRAND_TEXT}>
-                Date Range
-              </Typography>
+              <Typography fontWeight={600}>Date Range:</Typography>
+              <Stack direction="row" gap={1} flexWrap="wrap" useFlexGap>
+                {DATE_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      setFromDate(preset.days === 0 ? getToday() : getPastDate(preset.days))
+                      setToDate(getToday())
+                    }}
+                    sx={{ textTransform: 'none', borderRadius: 99 }}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </Stack>
               <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-                <TextField type="date" size="small" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-                <TextField type="date" size="small" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                <TextField
+                  type="date"
+                  size="small"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
+                <TextField
+                  type="date"
+                  size="small"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
               </Stack>
               <Typography color="text.secondary">
                 {formatUiDate(fromDate)} - {formatUiDate(toDate)}
               </Typography>
             </Stack>
 
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              gap={2}
+            >
+              <Typography fontWeight={600}>Payment Type:</Typography>
+              <TextField
+                select
+                size="small"
+                value={paymentType}
+                onChange={(event) => setPaymentType(event.target.value as 'all' | 'prepaid' | 'cod')}
+                sx={{ minWidth: 180 }}
+              >
+                <MenuItem value="all">All Payments</MenuItem>
+                <MenuItem value="prepaid">Prepaid</MenuItem>
+                <MenuItem value="cod">COD</MenuItem>
+              </TextField>
+            </Stack>
+
             <Divider />
 
             <FormControlLabel
               control={<Checkbox checked={allSelected} onChange={toggleSelectAll} />}
-              label="Select All Fields"
+              label="Select All"
             />
 
             <Grid container spacing={2}>
               {GROUPS.map((group) => (
                 <Grid key={group.key} size={{ xs: 12, md: 4 }}>
-                  <Card
-                    variant="outlined"
-                    sx={{
-                      borderRadius: 4,
-                      height: '100%',
-                      borderColor: alpha('#111113', 0.08),
-                      boxShadow: '0 12px 28px rgba(17, 17, 19, 0.05)',
-                    }}
-                  >
+                  <Card variant="outlined" sx={{ borderRadius: 2 }}>
                     <CardContent>
-                      <Typography variant="h6" fontWeight={800} gutterBottom color={BRAND_TEXT}>
+                      <Typography variant="h6" fontWeight={700} gutterBottom>
                         {group.label}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>
@@ -284,7 +303,6 @@ export default function Reports() {
                 onClick={onDownload}
                 disabled={downloading}
                 startIcon={downloading ? <CircularProgress size={16} color="inherit" /> : undefined}
-                sx={{ borderRadius: 999 }}
               >
                 {downloading ? 'Generating CSV...' : 'Download CSV'}
               </Button>
@@ -292,6 +310,6 @@ export default function Reports() {
           </Stack>
         </CardContent>
       </Card>
-    </Stack>
+    </Container>
   )
 }

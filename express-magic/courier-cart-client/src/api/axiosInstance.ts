@@ -1,201 +1,144 @@
-import axios, { type InternalAxiosRequestConfig } from 'axios'
-import { getAppHashHref } from '../utils/appNavigation'
+// src/api/axiosInstance.ts
+import axios from 'axios'
 import { clearAuthTokens, getAuthTokens, setAuthTokens } from './tokenVault'
 
-const DEFAULT_PRODUCTION_API_URL = 'https://fastshipindia.onrender.com/api'
+const RAW_API_BASE_URL = import.meta.env.VITE_API_URL
+const DEFAULT_API_BASE_URL = 'https://aggregator-backend-7gmk.onrender.com/api'
+const LEGACY_RAILWAY_API_HOST = ['choice', 'me-backend-production.up.railway.app'].join('')
+const PLACEHOLDER_API_HOST = 'your-backend-url.onrender.com'
 
-const resolveDefaultApiBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname.toLowerCase()
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-      return 'http://localhost:4000/api'
+const getApiBaseUrl = () => {
+  const fallback = DEFAULT_API_BASE_URL.replace(/\/+$/, '')
+
+  try {
+    if (!RAW_API_BASE_URL) return fallback
+
+    const candidate = new URL(RAW_API_BASE_URL, window.location.origin)
+    const currentHost = window.location.hostname
+    const pointsToLegacyRailwayApi = candidate.hostname === LEGACY_RAILWAY_API_HOST
+    const pointsToPlaceholderApi = candidate.hostname === PLACEHOLDER_API_HOST
+    const isHostedFrontend =
+      currentHost.endsWith('netlify.app') ||
+      currentHost.endsWith('vercel.app') ||
+      currentHost.endsWith('up.railway.app')
+    const isLocalhost =
+      currentHost === 'localhost' ||
+      currentHost === '127.0.0.1' ||
+      currentHost === '0.0.0.0'
+    const pointsBackToFrontend = candidate.hostname === currentHost
+
+    // In preview/prod frontend hosting, sending API calls back to the same
+    // frontend origin often causes 405s on POST auth routes like request-otp.
+    if (pointsBackToFrontend && (isHostedFrontend || !isLocalhost)) {
+      return fallback
     }
+
+    // The old Railway backend host can lag behind the live API and has caused
+    // courier calculator requests to fail with unsupported-media responses.
+    if (pointsToLegacyRailwayApi || pointsToPlaceholderApi) {
+      return fallback
+    }
+
+    const normalized = candidate.href.replace(/\/+$/, '')
+    if (normalized.endsWith('/api') || normalized.includes('/api/')) return normalized
+    return `${normalized}/api`
+  } catch {
+    return fallback
   }
-
-  return DEFAULT_PRODUCTION_API_URL
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || resolveDefaultApiBaseUrl()).replace(/\/+$/, '')
-
-type AuthAwareRequestConfig = InternalAxiosRequestConfig & {
-  _authSessionId?: string
-  _retry?: boolean
-  _sessionRetry?: boolean
-}
+const API_BASE_URL = getApiBaseUrl()
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 25000,
   headers: { 'Content-Type': 'application/json' },
 })
 
 let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null
-let refreshPromiseSessionId: string | null = null
 
 const redirectToLogin = () => {
-  if (typeof window === 'undefined') return
-  if (!window.location.hash.includes('/login')) {
-    window.location.href = getAppHashHref('/login')
+  if (!window.location.pathname.includes('/login')) {
+    window.location.replace('/login')
   }
 }
 
-const applyAccessToken = (cfg: AuthAwareRequestConfig, accessToken: string) => {
-  if (accessToken) {
-    cfg.headers.Authorization = `Bearer ${accessToken}`
-    return
+const refreshAuthTokens = (refreshToken: string) => {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post(
+        `${API_BASE_URL}/auth/refresh-token`,
+        { refreshToken },
+        {
+          headers: {
+            'x-refresh-token': refreshToken,
+          },
+        },
+      )
+      .then(({ data }) => {
+        if (!data?.accessToken || !data?.refreshToken) {
+          throw new Error('Invalid response from refresh token endpoint')
+        }
+
+        setAuthTokens(data.accessToken, data.refreshToken)
+        return data
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
   }
 
-  delete cfg.headers.Authorization
+  return refreshPromise
 }
 
-const clearCurrentSession = (expectedSessionId?: string | null) => {
-  const cleared = clearAuthTokens(expectedSessionId)
-  if (cleared) {
-    redirectToLogin()
-  } else {
-    console.info('Ignored auth clear from a stale session request')
-  }
-  return cleared
-}
-
-const retryWithLatestSession = (cfg: AuthAwareRequestConfig) => {
-  const latestAuth = getAuthTokens()
-  if (
-    !latestAuth.accessToken ||
-    !latestAuth.sessionId ||
-    !cfg._authSessionId ||
-    latestAuth.sessionId === cfg._authSessionId
-  ) {
-    return null
-  }
-
-  cfg._sessionRetry = true
-  cfg._authSessionId = latestAuth.sessionId
-  applyAccessToken(cfg, latestAuth.accessToken)
-
-  return api(cfg)
-}
-
-/* ----- attach access token to every request ----- */
 api.interceptors.request.use((cfg) => {
-  const requestConfig = cfg as AuthAwareRequestConfig
-  const { accessToken, sessionId } = getAuthTokens()
+  const { accessToken } = getAuthTokens()
+  if (accessToken) cfg.headers.Authorization = `Bearer ${accessToken}`
 
-  requestConfig._authSessionId = sessionId
-  applyAccessToken(requestConfig, accessToken)
+  if (typeof FormData !== 'undefined' && cfg.data instanceof FormData && cfg.headers) {
+    const headers = cfg.headers as { delete?: (name: string) => void; [key: string]: unknown }
+    if (typeof headers.delete === 'function') {
+      headers.delete('Content-Type')
+    } else {
+      delete headers['Content-Type']
+    }
+  }
 
-  return requestConfig
+  return cfg
 })
 
-/* ----- silent-refresh once per 401 ----- */
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    const original = err.config as AuthAwareRequestConfig | undefined
+    const original = err.config
+    const requestUrl = original?.url || ''
 
-    if (!original || err.response?.status !== 401) {
-      return Promise.reject(err)
-    }
-
-    const responseCode = String(err.response?.data?.code || '').trim().toUpperCase()
-    const currentAuth = getAuthTokens()
-
-    // If a newer login/refresh happened after this request was sent, retry once
-    // using the latest session instead of letting an old request clear fresh auth.
     if (
-      !original._sessionRetry &&
-      original._authSessionId &&
-      currentAuth.sessionId &&
-      original._authSessionId !== currentAuth.sessionId &&
-      currentAuth.accessToken
+      err.response?.status !== 401 ||
+      !original ||
+      original._retry ||
+      requestUrl.includes('/auth/')
     ) {
-      original._sessionRetry = true
-      original._authSessionId = currentAuth.sessionId
-      applyAccessToken(original, currentAuth.accessToken)
-      return api(original)
-    }
-
-    // Skip refresh if:
-    // 1. Already retried
-    // 2. This is the refresh token endpoint itself (avoid infinite loop)
-    if (original._retry || original.url?.includes('/auth/refresh-token')) {
-      return Promise.reject(err)
-    }
-
-    if (responseCode === 'SESSION_INVALID') {
-      console.warn('Session invalid, clearing stored auth and redirecting to login')
-      clearCurrentSession(original._authSessionId)
       return Promise.reject(err)
     }
 
     original._retry = true
 
-    if (!currentAuth.refreshToken) {
-      console.warn('No refresh token available, redirecting to login')
-      clearCurrentSession(original._authSessionId)
+    const { refreshToken } = getAuthTokens()
+    if (!refreshToken) {
+      clearAuthTokens()
+      redirectToLogin()
       return Promise.reject(err)
     }
 
     try {
-      console.log('Attempting to refresh access token...')
-      const refreshSessionId = currentAuth.sessionId
-
-      if (!refreshPromise || refreshPromiseSessionId !== refreshSessionId) {
-        refreshPromiseSessionId = refreshSessionId
-
-        refreshPromise = axios
-          .post(
-            `${API_BASE_URL}/auth/refresh-token`,
-            { refreshToken: currentAuth.refreshToken },
-            {
-              headers: {
-                'x-refresh-token': currentAuth.refreshToken,
-              },
-            },
-          )
-          .then(({ data }) => data)
-          .finally(() => {
-            if (refreshPromiseSessionId === refreshSessionId) {
-              refreshPromise = null
-              refreshPromiseSessionId = null
-            }
-          })
-      }
-
-      const data = await refreshPromise
-
-      if (!data?.accessToken || !data?.refreshToken) {
-        throw new Error('Invalid response from refresh token endpoint')
-      }
-
-      const latestAuth = getAuthTokens()
-      if (latestAuth.sessionId && latestAuth.sessionId !== refreshSessionId) {
-        const latestSessionRetry = retryWithLatestSession(original)
-        if (latestSessionRetry) {
-          console.info('Ignored stale refresh response from an older auth session')
-          return latestSessionRetry
-        }
-
-        return Promise.reject(err)
-      }
-
-      const nextAuth = setAuthTokens(data.accessToken, data.refreshToken)
-      original._authSessionId = nextAuth.sessionId
-      applyAccessToken(original, nextAuth.accessToken)
-
-      console.log('Token refreshed successfully, retrying original request')
+      const data = await refreshAuthTokens(refreshToken)
+      original.headers = original.headers ?? {}
+      original.headers.Authorization = `Bearer ${data.accessToken}`
       return api(original)
-    } catch (e: unknown) {
-      const error = e as { response?: { data?: { error?: string } }; message?: string }
-      console.error('Refresh token failed:', error?.response?.data?.error || error?.message || e)
-
-      const latestSessionRetry = retryWithLatestSession(original)
-      if (latestSessionRetry) {
-        console.info('Recovered from stale refresh failure by reusing the active auth session')
-        return latestSessionRetry
-      }
-
-      clearCurrentSession(original._authSessionId)
+    } catch (e) {
+      clearAuthTokens()
+      redirectToLogin()
       return Promise.reject(e)
     }
   },

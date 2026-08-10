@@ -1,47 +1,60 @@
-import { Button } from '@mui/material'
+import { Box, Button, Divider, Paper, Typography } from '@mui/material'
 import { useState } from 'react'
 import { FaUserPlus } from 'react-icons/fa'
-import { Navigate } from 'react-router-dom'
-import AdminPageShell from '../../components/admin/AdminPageShell'
 import UserForm from '../../components/settings/user-management/UserForm'
 import UsersList from '../../components/settings/user-management/UsersList'
-import useEmployeePermissions from '../../hooks/User/useEmployeePermissions'
+import PageHeading from '../../components/UI/heading/PageHeading'
 
 const UsersManagement = () => {
   const [openDialog, setOpenDialog] = useState(false)
-  const { isEmployee } = useEmployeePermissions()
 
-  if (isEmployee) {
-    return <Navigate to="/home" replace />
-  }
+  const handleAddUser = () => setOpenDialog(true)
+  const handleCloseDialog = () => setOpenDialog(false)
 
   return (
-    <>
-      <AdminPageShell
-        title="User access management"
-        badge="Team"
-        description="Create employee accounts, control access, and keep the FastShip admin workspace limited to the right operators."
-        metrics={[
-          { label: 'Access model', value: 'Role-based', hint: 'Employee access stays structured' },
-          { label: 'Account actions', value: 'Create, edit, disable', hint: 'All key controls in one place' },
-          { label: 'Ops readiness', value: 'Always visible', hint: 'Status and availability stay clear' },
-        ]}
-        primaryAction={
-          <Button
-            variant="contained"
-            startIcon={<FaUserPlus />}
-            sx={{ borderRadius: 2, minHeight: 44 }}
-            onClick={() => setOpenDialog(true)}
-          >
-            Add user
-          </Button>
-        }
+    <Box p={{ xs: 2, sm: 4 }}>
+      {/* Header */}
+      <Box
+        display="flex"
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        mb={3}
+        gap={2}
       >
-        <UsersList />
-      </AdminPageShell>
+        <PageHeading title="Users Management" />
 
-      <UserForm open={openDialog} onClose={() => setOpenDialog(false)} />
-    </>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<FaUserPlus />}
+          onClick={handleAddUser}
+        >
+          Add User
+        </Button>
+      </Box>
+
+      {/* Users List in Paper Card */}
+      <Paper
+        elevation={3}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          backgroundColor: 'background.paper',
+          overflow: 'hidden',
+        }}
+      >
+        <Typography variant="h6" fontWeight={600} mb={2}>
+          All Users
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+
+        <UsersList />
+      </Paper>
+
+      {/* Add User Dialog */}
+      <UserForm open={openDialog} onClose={handleCloseDialog} />
+    </Box>
   )
 }
 

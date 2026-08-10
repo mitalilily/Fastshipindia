@@ -1,77 +1,31 @@
-import { alpha, Box, Container, Divider, Link, Paper, Stack, Typography } from '@mui/material'
+import { Box, Container, Divider, Link, Typography } from '@mui/material'
 import { FiCreditCard, FiFileText, FiShield } from 'react-icons/fi'
 import TermsOfService from '../../components/terms/TermsOfService'
 import PageHeading from '../../components/UI/heading/PageHeading'
+import { brandIdentity } from '../../theme/brand'
+import { TERMS_REFUND_POLICY_LINE } from '../../utils/constants'
 import CompanyDetails from './CompanyDetails'
 
 const PolicyPages = () => {
-  const BRAND_PRIMARY = '#062A5B'
-  const BRAND_WINE = '#ED1C24'
-
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 2.5, md: 3.5 },
-          borderRadius: 5,
-          border: `1px solid ${alpha(BRAND_PRIMARY, 0.12)}`,
-          background:
-            'radial-gradient(circle at top right, rgba(217,4,22,0.12) 0%, transparent 24%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,243,240,0.98) 100%)',
-          boxShadow: '0 18px 38px rgba(20, 20, 20, 0.08)',
-        }}
-      >
+    <Container maxWidth="lg" sx={{ py: 8 }}>
+      <Box display={'flex'} justifyContent={'center'}>
         <PageHeading
           title="Legal & Policy Information"
-          subtitle="All policies, terms, privacy details, and company information for FastShip in one clear, professional reference space."
-        />
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.2} mt={2}>
-          {[
-            'Privacy and data handling',
-            'Terms and service usage',
-            'Refund and cancellation rules',
-          ].map((item) => (
-            <Typography
-              key={item}
-              sx={{
-                alignSelf: 'flex-start',
-                px: 1.5,
-                py: 0.8,
-                borderRadius: '999px',
-                bgcolor: alpha(BRAND_PRIMARY, 0.08),
-                color: BRAND_PRIMARY,
-                fontWeight: 700,
-                fontSize: '0.84rem',
-              }}
-            >
-              {item}
-            </Typography>
-          ))}
-        </Stack>
-      </Paper>
+          subtitle="All policies, terms, and privacy information for Ship Aggregator"
+        />{' '}
+      </Box>
 
-      <Box sx={{ mt: 4 }}>
+      {/* Refund & Cancellation */}
+      <Box sx={{ mt: 6 }}>
         <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              display: 'grid',
-              placeItems: 'center',
-              borderRadius: 3,
-              bgcolor: alpha(BRAND_WINE, 0.1),
-              color: BRAND_WINE,
-            }}
-          >
-            <FiCreditCard size={22} />
-          </Box>
-          <Typography variant="h4" fontWeight={800} color="#17171A">
-            Refund & Cancellation Policy
-          </Typography>
+          <FiCreditCard size={28} />
+          <Typography variant="h4">Refund & Cancellation Policy</Typography>
         </Box>
         <Typography paragraph>
           • You may cancel your account at any time by emailing us at{' '}
-          <Link href="mailto:support@fastship.in">support@fastship.in</Link>.
+          <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link> or call{' '}
+          <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
         </Typography>
         <Typography paragraph>
           • Once your account is cancelled, all of your data and content will be permanently deleted
@@ -83,17 +37,28 @@ const PolicyPages = () => {
           invoice via email. Once that invoice has been paid, no further charges will apply.
         </Typography>
         <Typography paragraph>
-          • FastShip reserves the right to modify, suspend, or terminate the Service for any reason,
-          without prior notice at any time.
+          • Ship Aggregator (Ship Aggregator) reserves the right to modify, suspend, or terminate
+          the Service for any reason, without prior notice at any time.
         </Typography>
         <Typography paragraph>
-          • Fraud Prevention: Without limiting any other remedies, FastShip may suspend or terminate
-          your account if we suspect that you (through conviction, settlement, investigation, or
-          otherwise) have engaged in fraudulent or unlawful activity in connection with the
-          Platform.
+          • Fraud Prevention: Without limiting any other remedies, Ship Aggregator may suspend or
+          terminate your account if we suspect that you (through conviction, settlement,
+          investigation, or otherwise) have engaged in fraudulent or unlawful activity in connection
+          with the Platform.
         </Typography>
-        <Typography paragraph>
-          • Note: No refunds are provided, even if a subscription or plan is cancelled mid-cycle.
+        <Typography
+          paragraph
+          sx={{
+            fontWeight: 800,
+            color: '#171310',
+            bgcolor: 'rgba(245, 124, 0, 0.12)',
+            borderLeft: '4px solid #F57C00',
+            borderRadius: '8px',
+            px: 1.25,
+            py: 0.85,
+          }}
+        >
+          • {TERMS_REFUND_POLICY_LINE}
         </Typography>
       </Box>
 
@@ -102,29 +67,15 @@ const PolicyPages = () => {
       {/* Privacy Policy */}
       <Box sx={{ mt: 4 }}>
         <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              display: 'grid',
-              placeItems: 'center',
-              borderRadius: 3,
-              bgcolor: alpha(BRAND_PRIMARY, 0.08),
-              color: BRAND_PRIMARY,
-            }}
-          >
-            <FiShield size={22} />
-          </Box>
-          <Typography variant="h4" fontWeight={800} color="#17171A">
-            Privacy Policy
-          </Typography>
+          <FiShield size={28} />
+          <Typography variant="h4">Privacy Policy</Typography>
         </Box>
         <Typography paragraph>Last Updated: [Insert Date]</Typography>
         <Typography paragraph>
-          FastShip ("we," "our," or "us") operates the services offered via our website and related
-          platforms (collectively, the “Platform”). Please read this Privacy Policy carefully before
-          accessing or using our Platform, as continued use indicates your acceptance of this
-          Policy.
+          Ship Aggregator (Ship Aggregator) ("we," "our," or "us") operates the services offered
+          via our website and related platforms (collectively, the “Platform”). Please read this
+          Privacy Policy carefully before accessing or using our Platform, as continued use
+          indicates your acceptance of this Policy.
         </Typography>
         <Typography paragraph>
           1. Introduction
@@ -222,7 +173,8 @@ const PolicyPages = () => {
           services).
           <br />
           To do so, please contact us at{' '}
-          <Link href="mailto:support@fastship.in">support@fastship.in</Link>.
+          <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link> or call{' '}
+          <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
         </Typography>
         <Typography paragraph>
           10. Third-Party Links
@@ -241,6 +193,9 @@ const PolicyPages = () => {
           12. Grievance Officer
           <br />
           If you have questions, complaints, or wish to exercise your privacy rights, reach out to:
+          <br />
+          <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link> or call{' '}
+          <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
         </Typography>
       </Box>
 
@@ -249,25 +204,10 @@ const PolicyPages = () => {
       {/* Terms of Service */}
       <Box sx={{ mt: 4 }}>
         <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              display: 'grid',
-              placeItems: 'center',
-              borderRadius: 3,
-              bgcolor: alpha(BRAND_PRIMARY, 0.08),
-              color: BRAND_PRIMARY,
-            }}
-          >
-            <FiFileText size={22} />
-          </Box>
-          <Typography variant="h4" fontWeight={800} color="#17171A">
-            Terms of Service
-          </Typography>
+          <FiFileText size={28} />
+          <Typography variant="h4">Terms of Service</Typography>
         </Box>
 
-        {/* Paste your full Terms of Service text exactly as you provided */}
         <TermsOfService />
       </Box>
 
@@ -280,3 +220,5 @@ const PolicyPages = () => {
 }
 
 export default PolicyPages
+
+

@@ -1,9 +1,9 @@
-import { Paper, Typography, Box } from '@mui/material'
+import { Chip, Paper, Stack, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { fetchMyRto } from '../../api/rto'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
+import PageHeading from '../../components/UI/heading/PageHeading'
 import DataTable, { type Column } from '../../components/UI/table/DataTable'
-import ListPageLayout from '../../components/UI/layout/ListPageLayout'
 
 type RtoRow = {
   awb_number?: string
@@ -46,10 +46,27 @@ export default function RtoList() {
     () => [
       { id: 'awb_number', label: 'AWB' },
       { id: 'order_id', label: 'Order ID' },
-      { id: 'status', label: 'Status' },
+      {
+        id: 'status',
+        label: 'Status',
+        render: (value) => {
+          const status = String(value || '').toLowerCase()
+          const color =
+            status.includes('delivered') ? 'success' : status.includes('transit') ? 'warning' : 'error'
+          return <Chip label={value || 'Unknown'} color={color} size="small" variant="outlined" />
+        },
+      },
       { id: 'reason', label: 'Reason' },
       { id: 'remarks', label: 'Remarks' },
-      { id: 'rto_charges', label: 'RTO Charges' },
+      {
+        id: 'rto_charges',
+        label: 'RTO Charges',
+        render: (value) => (
+          <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827' }}>
+            {value ? `₹${Number(value).toFixed(2)}` : '—'}
+          </Typography>
+        ),
+      },
     ],
     [],
   )
@@ -65,8 +82,12 @@ export default function RtoList() {
     [rows],
   )
 
-  const controls = (
-    <Box sx={{ px: 2 }}>
+  return (
+    <Stack gap={3} p={4}>
+      <PageHeading
+        title="RTO"
+        subtitle="Track return-to-origin events, filter timelines, and monitor reverse charges from a consistent operations workspace."
+      />
       <FilterBar
         fields={filterFields}
         defaultValues={filters}
@@ -74,43 +95,29 @@ export default function RtoList() {
           setFilters(f)
           setPage(1)
         }}
-        mode="button"
-        buttonLabel="Filters"
-        appliedCount={Object.values(filters).filter(Boolean).length}
+        loading={loading}
       />
-    </Box>
-  )
 
-  const table = (
-    <Paper sx={{ borderRadius: 2, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-      {loading ? (
-        <Typography p={3}>Loading RTO events...</Typography>
-      ) : (
-        <DataTable
-          rows={tableRows}
-          columns={columns}
-          title="RTO Events"
-          pagination
-          currentPage={page}
-          onPageChange={setPage}
-          onRowsPerPageChange={(n) => {
-            setRowsPerPage(n)
-            setPage(1)
-          }}
-          defaultRowsPerPage={rowsPerPage}
-          totalCount={totalCount}
-        />
-      )}
-    </Paper>
-  )
-
-  return (
-    <ListPageLayout
-      title="RTO Events"
-      description="Manage return-to-origin shipments and charges"
-      controls={controls}
-    >
-      {table}
-    </ListPageLayout>
+      <Paper sx={{ borderRadius: 2, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+        {loading ? (
+          <Typography p={3}>Loading RTO events...</Typography>
+        ) : (
+          <DataTable
+            rows={tableRows}
+            columns={columns}
+            title="RTO Events"
+            pagination
+            currentPage={page}
+            onPageChange={setPage}
+            onRowsPerPageChange={(n) => {
+              setRowsPerPage(n)
+              setPage(1)
+            }}
+            defaultRowsPerPage={rowsPerPage}
+            totalCount={totalCount}
+          />
+        )}
+      </Paper>
+    </Stack>
   )
 }

@@ -1,7 +1,6 @@
 import { useAuth } from '../../context/auth/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '../../components/UI/Toast'
-import { isApprovedMerchant } from '../../utils/approvedMerchant'
 
 /**
  * Hook to check KYC verification status and provide helper functions
@@ -12,7 +11,7 @@ export const useKycVerification = () => {
   const navigate = useNavigate()
 
   const kycStatus = user?.domesticKyc?.status
-  const isKycVerified = kycStatus === 'verified' || isApprovedMerchant(user)
+  const isKycVerified = kycStatus === 'verified'
   const isKycBlocked = !isKycVerified
 
   const getKycErrorMessage = (): string => {

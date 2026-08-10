@@ -1,248 +1,180 @@
-import { Stack, Typography } from '@mui/material'
-import { useState } from 'react'
-import { TbEditCircle } from 'react-icons/tb'
-import type { Stores } from '../../api/integrations'
-import DataTable, { type Column } from '../../components/UI/table/DataTable'
-import { useAuth } from '../../context/auth/AuthContext'
+import { Typography, Stack } from "@mui/material";
+import DataTable, { type Column } from "../../components/UI/table/DataTable";
 import {
   useDeleteIntegration,
   useUserChannelIntegrations,
-} from '../../hooks/Integrations/useUserChannelIntegrations'
-import {
-  useIntegrateWooCommerce,
-  useSyncShopifyOrders,
-  useSyncWooCommerceOrders,
-  useUpdateShopifySettings,
-} from '../../hooks/useIntegrations'
-import { channelIntegrationImageMapping } from '../../utils/utility'
-import ShopifyConnectionModal from '../integrations/ShopifyConnectionModal'
-import type { ShopifyForm } from '../integrations/ShopifyIntegration'
-import WooCommerceConnectionModal from '../integrations/woocommerce/WooCommerceConnectionModal'
-import type { WooCommerceForm } from '../integrations/woocommerce/WooCommerceIntegration'
-import TableSkeleton from '../UI/table/TableSkeleton'
-import { toast } from '../UI/Toast'
-
-const getApiErrorMessage = (error: any, fallback: string) =>
-  error?.response?.data?.error ||
-  error?.response?.data?.message ||
-  error?.message ||
-  fallback
+} from "../../hooks/Integrations/useUserChannelIntegrations";
+import type { Stores } from "../../api/integrations";
+import { channelIntegrationImageMapping } from "../../utils/utility";
+import TableSkeleton from "../UI/table/TableSkeleton";
+import { TbEditCircle } from "react-icons/tb";
+import { useState } from "react";
+import ShopifyConnectionModal from "../integrations/ShopifyConnectionModal";
+import type { ShopifyForm } from "../integrations/ShopifyIntegration";
+import { useIntegrateShopify } from "../../hooks/useIntegrations";
+import { useSyncShopifyOrders } from '../../hooks/useIntegrations'
+import { useAuth } from "../../context/auth/AuthContext";
+import { toast } from "../UI/Toast";
 
 const UserConnectedChannels = () => {
-  const { user: userData } = useAuth()
-  const { mutate: deleteIntegration, isPending: deleting } = useDeleteIntegration()
+  const { user: userData } = useAuth();
+  const { mutate: deleteIntegration, isPending: deleting } =
+    useDeleteIntegration();
 
-  const { data: stores, isLoading } = useUserChannelIntegrations()
+  const { data: stores, isLoading } = useUserChannelIntegrations();
 
-  const { mutate: updateShopifySettings, isPending: updatingShopifySettings } =
-    useUpdateShopifySettings()
+  const { mutate: integrateShopify, isPending: integrating } =
+    useIntegrateShopify();
   const { mutate: syncShopifyOrders, isPending: syncingShopify } = useSyncShopifyOrders()
-  const { mutate: integrateWooCommerce, isPending: integratingWooCommerce } =
-    useIntegrateWooCommerce()
-  const { mutate: syncWooCommerceOrders, isPending: syncingWooCommerce } =
-    useSyncWooCommerceOrders()
   const [selectedStore, setSelectedStore] = useState<{
-    platform: number | null
-    channelId: string
-  }>({ channelId: '', platform: null })
+    platform: number | null;
+    channelId: string;
+  }>({ channelId: "", platform: null });
 
-  const [details, setDetails] = useState({})
+  const [details, setDetails] = useState<ShopifyForm>({
+    storeUrl: "",
+    apiKey: "",
+    webhookSecret: "",
+    adminApiAccessToken: "",
+  });
 
   const columns: Column<Stores>[] = [
     {
-      id: 'id',
-      label: 'Channel Id',
+      id: "id",
+      label: "Channel Id",
     },
     {
-      id: 'name',
-      label: 'Store',
+      id: "name",
+      label: "Store",
     },
     {
-      id: 'domain',
-      label: 'Domain',
+      id: "domain",
+      label: "Domain",
     },
     {
-      id: 'platformId',
-      label: 'Platform',
+      id: "platformId",
+      label: "Platform",
       render: (platformId) => (
         <Stack>
           <img
-            height={'30px'}
-            width={'65px'}
-            style={{ objectFit: 'cover', borderRadius: '5px' }}
-            src={channelIntegrationImageMapping[platformId]}
+            height={"30px"}
+            width={"65px"}
+            style={{ objectFit: "cover", borderRadius: "5px" }}
+            src={channelIntegrationImageMapping[Number(platformId)]}
           />
         </Stack>
       ),
     },
     {
-      id: 'id',
-      label: 'Action',
+      id: "id",
+      label: "Action",
       render: (value, row) => (
-        <Stack direction="row" alignItems={'center'} spacing={1.5}>
+        <Stack direction="row" alignItems={"center"} spacing={1.5}>
           <Stack
             onClick={() => {
-              setSelectedStore({ channelId: value, platform: row?.platformId })
-              const metadata = (row as any)?.metadata || {}
-              const credentialDetails =
-                row?.platformId === 2
-                  ? {
-                      storeUrl: row?.domain,
-                      consumerKey: row?.apiKey || '',
-                      consumerSecret: row?.adminApiAccessToken || '',
-                      webhookSecret: metadata?.wooWebhookSecret || metadata?.webhookSecret || '',
-                    }
-                  : {
-                      storeUrl: row?.domain,
-                    }
-
+              setSelectedStore({ channelId: value, platform: row?.platformId });
               setDetails({
                 ...row,
-                ...credentialDetails,
-              })
+                name: row.name ?? undefined,
+                storeUrl: row.domain || '',
+                apiKey: String((row.metadata as { apiKey?: string } | null)?.apiKey || ''),
+                adminApiAccessToken: String(
+                  (row.metadata as { adminApiAccessToken?: string } | null)?.adminApiAccessToken || '',
+                ),
+                webhookSecret:
+                  (row.metadata as { shopifyWebhookSecret?: string })?.shopifyWebhookSecret ||
+                  (row.metadata as { webhookSecret?: string })?.webhookSecret ||
+                  "",
+              });
             }}
-            sx={{ color: '#ffd25e', cursor: 'pointer' }}
+            sx={{ color: "#ffd25e", cursor: "pointer" }}
             direction="row"
-            alignItems={'center'}
+            alignItems={"center"}
             spacing={1}
           >
             <TbEditCircle />
-            <Typography fontWeight={600} fontSize={'12px'}>
+            <Typography fontWeight={600} fontSize={"12px"}>
               Edit
             </Typography>
           </Stack>
-          {(row?.platformId === 1 || row?.platformId === 2) && (
+          {row?.platformId === 1 && (
             <Typography
               fontWeight={600}
-              fontSize={'12px'}
-              sx={{
-                color:
-                  (row?.platformId === 1 ? syncingShopify : syncingWooCommerce)
-                    ? '#9ca3af'
-                    : '#34d399',
-                cursor:
-                  (row?.platformId === 1 ? syncingShopify : syncingWooCommerce)
-                    ? 'default'
-                    : 'pointer',
-              }}
+              fontSize={"12px"}
+              sx={{ color: syncingShopify ? '#9ca3af' : '#34d399', cursor: syncingShopify ? 'default' : 'pointer' }}
               onClick={() => {
-                const isShopify = row?.platformId === 1
-                const isSyncing = isShopify ? syncingShopify : syncingWooCommerce
-                const syncOrders = isShopify ? syncShopifyOrders : syncWooCommerceOrders
-                const label = isShopify ? 'Shopify' : 'WooCommerce'
-
-                if (isSyncing) return
-                syncOrders(
-                  { limit: 100, storeId: row?.id },
-                  {
-                    onSuccess: (data: any) => {
-                      toast.open({
-                        message: `${label} sync complete: ${data?.created ?? 0} created, ${data?.updated ?? 0} updated`,
-                        severity: 'success',
-                      })
-                    },
-                    onError: (error: any) => {
-                      toast.open({
-                        message:
-                          error?.response?.data?.error || `Failed to sync ${label} orders`,
-                        severity: 'error',
-                      })
-                    },
+                if (syncingShopify) return
+                syncShopifyOrders({ limit: 100, storeId: row?.id }, {
+                  onSuccess: (data: { created: number; updated: number; message: string }) => {
+                    toast.open({
+                      message: `Shopify sync complete: ${data?.created ?? 0} created, ${data?.updated ?? 0} updated`,
+                      severity: 'success',
+                    })
                   },
-                )
+                  onError: (error: unknown) => {
+                    const apiError = error as { response?: { data?: { error?: string } } }
+                    toast.open({
+                      message: apiError?.response?.data?.error || 'Failed to sync Shopify orders',
+                      severity: 'error',
+                    })
+                  },
+                })
               }}
             >
-              {(row?.platformId === 1 ? syncingShopify : syncingWooCommerce)
-                ? 'Syncing...'
-                : 'Sync Orders'}
+              {syncingShopify ? 'Syncing...' : 'Sync Orders'}
             </Typography>
           )}
         </Stack>
       ),
     },
-  ]
+  ];
 
   const handleUpdateShopify = () => {
-    const settings = {
-      fulfillTrigger: 'do_not_fulfill',
-      customerNotifyOnFulfill: 'do_not_notify',
-      ...(details as ShopifyForm)?.settings,
+    const payload = {
+      ...details,
+      webhookSecret:
+        details.webhookSecret ||
+        (details.metadata as { shopifyWebhookSecret?: string })?.shopifyWebhookSecret ||
+        (details.metadata as { webhookSecret?: string })?.webhookSecret ||
+        "",
+      userId: userData?.userId,
     }
 
-    updateShopifySettings({
-      storeId: selectedStore.channelId,
-      settings,
-    }, {
+    integrateShopify(payload, {
       onSuccess: (data) => {
         toast.open({
           message: data?.warning ? `${data?.message}. ${data.warning}` : data?.message,
-          severity: data?.warning ? 'warning' : 'success',
-        })
-        setSelectedStore({ channelId: '', platform: null })
+          severity: data?.warning ? "warning" : "success",
+        });
+        setSelectedStore({ channelId: "", platform: null });
       },
-      onError: (error: any) => {
-        const message = getApiErrorMessage(error, 'Error saving Shopify settings')
-        console.error('Error saving Shopify settings:', message)
+      onError: (error) => {
+        console.error("Error integrating Shopify store:", error);
         toast.open({
-          message,
-          severity: 'error',
-        })
+          message: "Error integrating Shopify store",
+          severity: "error",
+        });
       },
-    })
-  }
-
-  const handleUpdateWooCommerce = () => {
-    const metadata = (details as any)?.metadata || {}
-    const payload = {
-      ...(details as any),
-      storeUrl: (details as any)?.storeUrl || (details as any)?.domain,
-      consumerKey: (details as any)?.consumerKey || (details as any)?.apiKey,
-      consumerSecret:
-        (details as any)?.consumerSecret || (details as any)?.adminApiAccessToken,
-      webhookSecret:
-        (details as any)?.webhookSecret ||
-        metadata?.wooWebhookSecret ||
-        metadata?.webhookSecret ||
-        '',
-      userId: userData?.userId,
-    } as WooCommerceForm
-
-    integrateWooCommerce(payload, {
-      onSuccess: (data) => {
-        toast.open({
-          message: data?.warning ? `${data?.message}. ${data.warning}` : data?.message,
-          severity: data?.warning ? 'warning' : 'success',
-        })
-        setSelectedStore({ channelId: '', platform: null })
-      },
-      onError: (error: any) => {
-        const message = getApiErrorMessage(error, 'Error connecting WooCommerce store')
-        console.error('Error integrating WooCommerce store:', message)
-        toast.open({
-          message,
-          severity: 'error',
-        })
-      },
-    })
-  }
+    });
+  };
 
   const handleDeleteStore = () => {
-    if (!window.confirm('Are you sure you want to delete this store?')) return
+    if (!window.confirm("Are you sure you want to delete this store?")) return;
 
     deleteIntegration(selectedStore?.channelId, {
       onSuccess: () => {
         toast.open({
-          message: 'Store deleted successfully',
-          severity: 'success',
-        })
-        setSelectedStore({ channelId: '', platform: null })
+          message: "Store deleted successfully",
+          severity: "success",
+        });
+        setSelectedStore({ channelId: "", platform: null });
       },
       onError: (error) => {
-        console.error('Delete error:', error)
-        toast.open({ message: 'Failed to delete store', severity: 'error' })
+        console.error("Delete error:", error);
+        toast.open({ message: "Failed to delete store", severity: "error" });
       },
-    })
-  }
+    });
+  };
 
   return (
     <>
@@ -255,7 +187,8 @@ const UserConnectedChannels = () => {
           title="Your Connected Stores"
           subTitle="Manage the stores you’ve integrated with your sales channels"
           pagination
-          onSelectRows={(ids) => console.log('Selected store IDs:', ids)}
+          bgOverlayImg="/images/api-graphical.png"
+          onSelectRows={(ids) => console.log("Selected store IDs:", ids)}
         />
       )}
 
@@ -263,33 +196,20 @@ const UserConnectedChannels = () => {
         <ShopifyConnectionModal
           deleting={deleting}
           handleDelete={handleDeleteStore}
-          integrating={updatingShopifySettings}
+          integrating={integrating}
           handleConnect={handleUpdateShopify}
           isEditing={selectedStore?.platform ? true : false}
           setShopifyDetails={setDetails}
-          shopifyDetails={details as ShopifyForm}
+          shopifyDetails={details}
           openModal={selectedStore?.platform ? true : false}
-          onSetOpen={() => setSelectedStore({ channelId: '', platform: null })}
-        />
-      )}
-
-      {selectedStore?.platform === 2 && (
-        <WooCommerceConnectionModal
-          deleting={deleting}
-          handleDelete={handleDeleteStore}
-          integrating={integratingWooCommerce}
-          handleConnect={handleUpdateWooCommerce}
-          isEditing={selectedStore?.platform ? true : false}
-          setWooDetails={setDetails as any}
-          wooDetails={details as WooCommerceForm}
-          openModal={selectedStore?.platform ? true : false}
-          onSetOpen={() => setSelectedStore({ channelId: '', platform: null })}
+          onSetOpen={() => setSelectedStore({ channelId: "", platform: null })}
         />
       )}
 
       {/* Add more modals here as needed */}
+      {/* {selectedStore?.platformId === 2 && <WooEditModal ... />} */}
     </>
-  )
-}
+  );
+};
 
-export default UserConnectedChannels
+export default UserConnectedChannels;

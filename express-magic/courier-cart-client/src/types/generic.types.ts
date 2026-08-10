@@ -128,7 +128,7 @@ export interface B2COrder {
   city: string
   state: string
   country: string
-  integration_type: 'delhivery' | 'ekart' | 'shadowfax' | 'xpressbees' | 'icarry'
+  integration_type: 'xpressbees' | 'ekart' | 'deliveryone' | 'icarry' | string
   pincode: string
 
   // Product info
@@ -144,17 +144,26 @@ export interface B2COrder {
 
   // Package info
   weight: number
-  charged_weight?: number | string | null
   length: number
   breadth: number
   height: number
+  actual_weight?: number | null
+  volumetric_weight?: number | null
+  charged_weight?: number | null
+  weight_discrepancy?: boolean | null
+  charged_slabs?: number | null
 
   // Charges
   order_type: 'prepaid' | 'cod'
   prepaid_amount?: number | null
   shipping_charges?: number | null
+  freight_charges?: number | null
   cod_charges?: number | null
   other_charges?: number | null
+  insurance_charge?: number | null
+  insurance_charge_basis?: number | null
+  final_courier_charge?: number | null
+  courier_charge?: number | null
   transaction_fee?: number | null
   gift_wrap?: number | null
   discount?: number | null
@@ -166,11 +175,21 @@ export interface B2COrder {
 
   // Courier info
   courier_partner?: string | null
+  delivery_location?: string | null
   courier_id?: number | null
+  selected_max_slab_weight?: number | null
+  shipping_mode?: string | null
   shipment_id?: string | null
   is_insurance: boolean
   label?: string | null
+  label_url?: string | null
+  label_key?: string | null
   manifest?: string | null
+  manifest_url?: string | null
+  manifest_key?: string | null
+  invoice_link?: string | null
+  invoice_url?: string | null
+  invoice_key?: string | null
   manifest_error?: string | null
   manifest_retry_count?: number | null
   manifest_last_retry_at?: string | null
@@ -216,7 +235,7 @@ export interface B2COrder {
 export interface B2BOrder {
   id: string
   order_number: string
-  order_id?: string // optional, if you store shipment id from Nimbus
+  order_id?: string // optional shipment identifier
   order_date: string // or Date if you parse it
   order_amount: number
   buyer_name: string
@@ -236,7 +255,8 @@ export interface B2BOrder {
   order_type?: string // prepaid / cod
   order_status: string
   shipping_charges?: number
-  charged_weight?: number | string | null
+  insurance_charge?: number
+  insurance_charge_basis?: number
   transaction_fee?: number
   discount?: number
   courier_partner?: string
@@ -244,7 +264,14 @@ export interface B2BOrder {
   shipment_id?: string
   awb_number?: string
   label?: string
+  label_url?: string | null
+  label_key?: string | null
   manifest?: string
+  manifest_url?: string | null
+  manifest_key?: string | null
+  invoice_link?: string | null
+  invoice_url?: string | null
+  invoice_key?: string | null
   pickup_location_id?: string
   created_at: string // or Date
   updated_at: string // or Date

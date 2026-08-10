@@ -1,605 +1,288 @@
+// src/pages/client/RateCard.tsx
+
 import {
   Avatar,
-  Box,
-  Chip,
+  Button,
+  Card,
+  CardContent,
   Stack,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
-  Tooltip,
   Typography,
-  alpha,
 } from '@mui/material'
 import Papa from 'papaparse'
-import { useMemo, useState } from 'react'
-import { MdCalculate, MdDownload, MdInfoOutline, MdLocalShipping } from 'react-icons/md'
-import { TbPlaneTilt } from 'react-icons/tb'
+import { useState } from 'react'
+import { MdCalculate, MdDownload } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
-import ListPageLayout from '../../components/UI/layout/ListPageLayout'
+import PageHeading from '../../components/UI/heading/PageHeading'
 import { SmartTabs } from '../../components/UI/tab/Tabs'
+import type { Column } from '../../components/UI/table/DataTable'
+import DataTable from '../../components/UI/table/DataTable'
 import TableSkeleton from '../../components/UI/table/TableSkeleton'
-import { useAllCouriers, useShippingRates } from '../../hooks/Integrations/useCouriers'
+import { useShippingRates } from '../../hooks/Integrations/useCouriers'
 import { useZones } from '../../hooks/useZones'
-import { courierLogos, defaultLogo } from '../../utils/constants'
+import {
+  DELHIVERY_COURIER_FILTER_OPTIONS_BY_NAME,
+  getCourierDisplayName,
+  getCourierLogo,
+} from '../../utils/courierDisplay'
+import { defaultLogo } from '../../utils/constants'
 
-type RateSlab = {
-  id?: string
-  weight_from: number
-  weight_to?: number | null
-  rate: number
-  extra_rate?: number | null
-  extra_weight_unit?: number | null
-}
-
-type ZoneRateMap = {
-  forward?: number | string
-  rto?: number | string
-  reverse?: number | string
-  description?: string
-  forward_per_kg?: number | string
-  rto_per_kg?: number | string
-  reverse_per_kg?: number | string
-  min_weight?: number
-}
-
-type ShippingRate = {
+interface ShippingRate {
   id: string | number
-  courier_id?: number | null
   courier_name: string
   service_provider?: string | null
+  serviceProvider?: string | null
   mode: string
   min_weight: number
   cod_charges?: number | string
   cod_percent?: number | string
+  cod_slabs?: Array<{
+    amount_from: number | string
+    amount_to?: number | string | null
+    charge_type: 'flat' | 'percent' | string
+    charge_value: number | string
+  }>
   other_charges?: number | string
-  rates: Record<string, ZoneRateMap>
-  zone_slabs?: Record<string, Partial<Record<'forward' | 'rto' | 'reverse_pickup', RateSlab[]>>>
-}
-
-type ZoneItem = {
-  id?: string
-  code?: string
-  name: string
-  description?: string
-}
-
-type RateMatrixRow = {
-  id: string
-  isPrimary: boolean
-  courierLabel?: string
-  mode: string
-  weightLabel: string
-  zoneValues: Record<string, string>
-  codLabel: string
-  otherLabel: string
-  badgeLabel?: string
-}
-
-const BORDER = 'rgba(15, 23, 42, 0.08)'
-const HEADER_BG = '#E9EFF6'
-const HEADER_TEXT = '#314158'
-const SUBHEADER_TEXT = '#66758B'
-const ROW_ALT = '#F7FAFD'
-const TEXT_PRIMARY = '#132238'
-const TEXT_MUTED = '#6A7B91'
-const TEAL = '#08B7A5'
-const ZONE_ORDER = [
-  'WITHIN_CITY',
-  'WITHIN_STATE',
-  'METRO_TO_METRO',
-  'ROI',
-  'SPECIAL_ZONE',
-  'WITHIN_REGION',
-]
-
-const getCourierLogo = (name: string) =>
-  Object.entries(courierLogos || {}).find(([key]) => name.toLowerCase().includes(key.toLowerCase()))?.[1] ??
-  defaultLogo
-
-const formatCurrency = (value: unknown, allowNA = true) => {
-  if (value === null || value === undefined || value === '') return allowNA ? 'NA' : '0'
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return allowNA ? 'NA' : '0'
-  return Number.isInteger(parsed) ? parsed.toString() : parsed.toFixed(2)
-}
-
-const pickZoneRateValue = (
-  zoneRates: ZoneRateMap | undefined,
-  keys: Array<keyof ZoneRateMap>,
-): number | string => {
-  for (const key of keys) {
-    const value = zoneRates?.[key]
-    if (value !== undefined && value !== null && value !== '') {
-      return value
+  rates: {
+    [zone: string]: {
+      forward?: number | string
+      rto?: number | string
+      description?: string
+      forward_per_kg?: number | string
+      rto_per_kg?: number | string
+      min_weight?: number
     }
   }
-
-  return 'NA'
 }
 
-const getForwardRateValue = (zoneRates: ZoneRateMap | undefined, businessType: 'b2b' | 'b2c') =>
-  pickZoneRateValue(zoneRates, businessType === 'b2b' ? ['forward_per_kg', 'forward'] : ['forward'])
+const getZoneLookupKeys = (zone: { id?: string; code?: string; name?: string }) =>
+  [
+    zone?.id,
+    zone?.code,
+    zone?.name,
+    zone?.code && zone?.name ? `${zone.code} - ${zone.name}` : '',
+    zone?.code && zone?.name ? `${zone.name} (${zone.code})` : '',
+  ].filter(Boolean) as string[]
 
-const getRtoRateValue = (zoneRates: ZoneRateMap | undefined, businessType: 'b2b' | 'b2c') =>
-  pickZoneRateValue(zoneRates, businessType === 'b2b' ? ['rto_per_kg', 'rto'] : ['rto'])
-
-const getReverseRateValue = (zoneRates: ZoneRateMap | undefined, businessType: 'b2b' | 'b2c') =>
-  pickZoneRateValue(
-    zoneRates,
-    businessType === 'b2b'
-      ? ['reverse_per_kg', 'reverse', 'rto_per_kg', 'rto']
-      : ['reverse', 'rto'],
-  )
-
-const formatZoneRateSummary = (forward: unknown, rto: unknown, reverse: unknown) =>
-  `F: ${formatCurrency(forward)} | RTO: ${formatCurrency(rto)} | Reverse: ${formatCurrency(reverse)}`
-
-const formatWeightUnit = (value: number) => {
-  if (!Number.isFinite(value) || value <= 0) return '-'
-  if (value < 1) return `${value.toFixed(2)} kg`
-  if (Number.isInteger(value)) return `${value.toFixed(0)} kg`
-  return `${value.toFixed(2)} kg`
-}
-
-const formatBaseWeightLabel = (slab: RateSlab) => {
-  const weightTo = slab.weight_to ?? null
-  if (slab.weight_from <= 0 && weightTo && weightTo > 0) {
-    return `Per ${formatWeightUnit(weightTo)}`
+const getZoneEntry = (
+  collection: ShippingRate['rates'] | undefined,
+  zone: { id?: string; code?: string; name?: string },
+) => {
+  if (!collection) return {}
+  for (const key of getZoneLookupKeys(zone)) {
+    if (collection[key] !== undefined) return collection[key] || {}
   }
-  if (weightTo && weightTo > slab.weight_from) {
-    return `${formatWeightUnit(slab.weight_from)} to ${formatWeightUnit(weightTo)}`
-  }
-  return `Per ${formatWeightUnit(weightTo ?? slab.weight_from)}`
+  return {}
 }
 
-const formatAdditionalWeightLabel = (slab: RateSlab) => {
-  const extraWeight = Number(slab.extra_weight_unit ?? 0)
-  if (extraWeight > 0) return `additional Per ${formatWeightUnit(extraWeight)}`
-  return 'additional'
-}
+const getZoneLabel = (zone: { code?: string; name?: string }) =>
+  [zone.code, zone.name].filter(Boolean).join(' - ') || 'Zone'
 
-const slabKey = (slab: RateSlab) => `${slab.weight_from}|${slab.weight_to ?? 'open'}`
-
-const getMatchingZoneSlab = (
-  rate: ShippingRate,
-  zoneName: string,
-  slabType: 'forward' | 'rto' | 'reverse_pickup',
-  rangeKey: string,
-) => rate.zone_slabs?.[zoneName]?.[slabType]?.find((candidate) => slabKey(candidate) === rangeKey)
-
-const sortZones = (zones: ZoneItem[]) =>
-  [...zones].sort((left, right) => {
-    const leftIndex = ZONE_ORDER.indexOf(String(left.code || '').toUpperCase())
-    const rightIndex = ZONE_ORDER.indexOf(String(right.code || '').toUpperCase())
-    const safeLeft = leftIndex >= 0 ? leftIndex : ZONE_ORDER.length + 1
-    const safeRight = rightIndex >= 0 ? rightIndex : ZONE_ORDER.length + 1
-    if (safeLeft !== safeRight) return safeLeft - safeRight
-    return String(left.name || '').localeCompare(String(right.name || ''))
-  })
-
-const buildZoneMeta = (zone: ZoneItem, index: number) => ({
-  key: zone.id || zone.code || zone.name,
-  title: `ZONE ${String.fromCharCode(65 + index)}`,
-  subtitle: zone.name,
-  note: zone.description || '',
-})
-
-const getRepresentativeForwardSlabs = (rate: ShippingRate, zones: ZoneItem[]) => {
-  for (const zone of zones) {
-    const slabs = rate.zone_slabs?.[zone.name]?.forward || []
-    if (slabs.length) return slabs
-  }
-  return []
-}
-
-const buildB2CMatrixRows = (rate: ShippingRate, zones: ZoneItem[]): RateMatrixRow[] => {
-  const forwardSlabs = getRepresentativeForwardSlabs(rate, zones)
-  const rows: RateMatrixRow[] = []
-  const codLabel = `${formatCurrency(rate.cod_charges, false)} | ${formatCurrency(rate.cod_percent, false)}`
-  const otherLabel =
-    rate.other_charges === null || rate.other_charges === undefined || rate.other_charges === ''
-      ? 'NA'
-      : formatCurrency(rate.other_charges, false)
-
-  if (!forwardSlabs.length) {
-    rows.push({
-      id: `${rate.id}-fallback`,
-      isPrimary: true,
-      courierLabel: rate.courier_name,
-      mode: rate.mode,
-      weightLabel: rate.min_weight ? `Per ${formatWeightUnit(rate.min_weight)}` : 'Base rate',
-      zoneValues: Object.fromEntries(
-        zones.map((zone) => {
-          const zoneRates = rate.rates?.[zone.name]
-          return [
-            zone.id || zone.code || zone.name,
-            formatZoneRateSummary(
-              getForwardRateValue(zoneRates, 'b2c'),
-              getRtoRateValue(zoneRates, 'b2c'),
-              getReverseRateValue(zoneRates, 'b2c'),
-            ),
-          ]
-        }),
-      ),
-      codLabel,
-      otherLabel,
-      badgeLabel: 'Forward',
-    })
-    return rows
-  }
-
-  forwardSlabs.forEach((slab, index) => {
-    const rangeKey = slabKey(slab)
-    rows.push({
-      id: `${rate.id}-${rangeKey}-base`,
-      isPrimary: index === 0,
-      courierLabel: index === 0 ? rate.courier_name : undefined,
-      mode: rate.mode,
-      weightLabel: formatBaseWeightLabel(slab),
-      zoneValues: Object.fromEntries(
-        zones.map((zone) => {
-          const forwardSlab = getMatchingZoneSlab(rate, zone.name, 'forward', rangeKey) || slab
-          const rtoSlab = getMatchingZoneSlab(rate, zone.name, 'rto', rangeKey)
-          const reverseSlab = getMatchingZoneSlab(rate, zone.name, 'reverse_pickup', rangeKey)
-          return [
-            zone.id || zone.code || zone.name,
-            formatZoneRateSummary(
-              forwardSlab.rate,
-              rtoSlab?.rate,
-              reverseSlab?.rate ?? rtoSlab?.rate,
-            ),
-          ]
-        }),
-      ),
-      codLabel,
-      otherLabel,
-      badgeLabel: index === 0 ? 'Forward' : undefined,
-    })
-
-    if (Number(slab.extra_rate ?? 0) > 0) {
-      rows.push({
-        id: `${rate.id}-${rangeKey}-additional`,
-        isPrimary: false,
-        mode: rate.mode,
-        weightLabel: formatAdditionalWeightLabel(slab),
-        zoneValues: Object.fromEntries(
-          zones.map((zone) => {
-            const forwardSlab = getMatchingZoneSlab(rate, zone.name, 'forward', rangeKey) || slab
-            const rtoSlab = getMatchingZoneSlab(rate, zone.name, 'rto', rangeKey)
-            const reverseSlab = getMatchingZoneSlab(rate, zone.name, 'reverse_pickup', rangeKey)
-            return [
-              zone.id || zone.code || zone.name,
-              formatZoneRateSummary(
-                forwardSlab.extra_rate,
-                rtoSlab?.extra_rate,
-                reverseSlab?.extra_rate ?? rtoSlab?.extra_rate,
-              ),
-            ]
-          }),
-        ),
-        codLabel,
-        otherLabel,
+// --- B2C Table ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const B2CClientTable = ({ data, zones }: { data: ShippingRate[]; zones: any[] }) => {
+  const renderCodSlabSummary = (slabs: ShippingRate['cod_slabs'] = []) => {
+    if (!slabs?.length) return 'Legacy fallback'
+    return slabs
+      .map((slab) => {
+        const value =
+          slab.charge_type === 'percent'
+            ? `${slab.charge_value}%`
+            : `Rs ${slab.charge_value}`
+        return `${slab.amount_from}-${slab.amount_to ?? 'open'}: ${value}`
       })
-    }
-  })
+      .join(', ')
+  }
 
-  return rows
-}
+  const columns: Column<ShippingRate>[] = [
+    {
+      id: 'courier_name',
+      label: 'Courier',
+      render: (_, row) => {
+        const displayName = getCourierDisplayName({
+          name: row.courier_name,
+          service_provider: row.service_provider,
+          serviceProvider: row.serviceProvider,
+        })
+        const logoSrc = getCourierLogo(
+          {
+            name: row.courier_name,
+            service_provider: row.service_provider,
+            serviceProvider: row.serviceProvider,
+          },
+          defaultLogo,
+        )
+        return (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Avatar
+              src={logoSrc || defaultLogo}
+              alt={displayName}
+              sx={{ width: 24, height: 24 }}
+            />
+            <Typography fontWeight={500}>{displayName}</Typography>
+          </Stack>
+        )
+      },
+    },
+    { id: 'min_weight', label: 'Min Weight (kg)' },
+    ...zones.map(
+      (zone: { code: string; description: string; name: string }) =>
+        ({
+          id: zone.code,
+          label: `${getZoneLabel(zone)} (F | RTO)`,
+          label_desc: zone?.description,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          render: (_: any, row: any) => {
+            const rates = getZoneEntry(row.rates, zone)
 
-const buildB2BMatrixRows = (rate: ShippingRate, zones: ZoneItem[]): RateMatrixRow[] => [
-  {
-    id: `${rate.id}-b2b`,
-    isPrimary: true,
-    courierLabel: rate.courier_name,
-    mode: rate.mode,
-    weightLabel: rate.min_weight ? `Per ${formatWeightUnit(rate.min_weight)}` : 'Per kg',
-    zoneValues: Object.fromEntries(
-      zones.map((zone) => {
-        const zoneRate = rate.rates?.[zone.name] || {}
-        return [
-          zone.id || zone.code || zone.name,
-          formatZoneRateSummary(
-            getForwardRateValue(zoneRate, 'b2b'),
-            getRtoRateValue(zoneRate, 'b2b'),
-            getReverseRateValue(zoneRate, 'b2b'),
-          ),
-        ]
-      }),
+            const forward = rates.forward ?? 'NA'
+            const rto = rates.rto ?? 'NA'
+
+            return `Forward: ₹${forward} | RTO: ₹${rto}`
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any),
     ),
-    codLabel: `${formatCurrency(rate.cod_charges, false)} | ${formatCurrency(rate.cod_percent, false)}`,
-    otherLabel:
-      rate.other_charges === null || rate.other_charges === undefined || rate.other_charges === ''
-        ? 'NA'
-        : formatCurrency(rate.other_charges, false),
-    badgeLabel: 'Rate',
-  },
-]
 
-const ModeBadge = ({ mode }: { mode: string }) => {
-  const normalized = String(mode || '').toLowerCase()
-  const isAir = normalized === 'air'
-  const Icon = isAir ? TbPlaneTilt : MdLocalShipping
+    {
+      id: 'cod',
+      label: 'COD Slabs',
+      render: (_, row) => renderCodSlabSummary(row.cod_slabs),
+    },
+    {
+      id: 'other',
+      label: 'Other Charges',
+      render: (_, row) => `₹${row.other_charges ?? '0'}`,
+    },
+  ]
+
   return (
-    <Box
-      sx={{
-        width: 34,
-        height: 34,
-        borderRadius: '10px',
-        border: `1px solid ${alpha('#0f172a', 0.08)}`,
-        backgroundColor: '#fff',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: isAir ? '#355DFF' : '#44546F',
-      }}
-    >
-      <Icon size={18} />
-    </Box>
+    <DataTable
+      rows={data}
+      columns={columns}
+      title="Shipping Rate Card - B2C"
+      totalCount={data.length}
+    />
   )
 }
 
-const CourierCell = ({
-  label,
-  badgeLabel,
+// --- B2B Table ---
+const B2BClientTable = ({
+  data,
+  zones,
 }: {
-  label?: string
-  badgeLabel?: string
+  data: ShippingRate[]
+  zones: { code: string; id: string; description: string; name: string }[]
 }) => {
-  if (!label) return null
+  if (!data?.length) {
+    return <Typography>No B2B rates available</Typography>
+  }
+
   return (
-    <Stack spacing={0.8}>
-      <Stack direction="row" spacing={1.2} alignItems="center">
-        <Avatar
-          src={getCourierLogo(label)}
-          alt={label}
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: '10px',
-            border: `1px solid ${alpha('#0f172a', 0.08)}`,
-          }}
-        />
-        <Typography sx={{ fontWeight: 700, color: TEXT_PRIMARY, fontSize: '0.92rem' }}>{label}</Typography>
-      </Stack>
-      {badgeLabel ? (
-        <Chip
-          label={badgeLabel}
-          size="small"
-          sx={{
-            width: 'fit-content',
-            height: 24,
-            borderRadius: '999px',
-            backgroundColor: alpha(TEAL, 0.14),
-            color: TEAL,
-            fontWeight: 700,
-            fontSize: '0.72rem',
-          }}
-        />
-      ) : null}
+    <Stack spacing={3}>
+      {data.map((courier) => (
+        <Card key={courier.courier_name} sx={{ p: 2 }}>
+          <CardContent>
+            <Stack spacing={1}>
+              <Typography variant="h6">
+                {getCourierDisplayName({
+                  name: courier.courier_name,
+                  service_provider: courier.service_provider,
+                  serviceProvider: courier.serviceProvider,
+                })}
+              </Typography>
+              <Typography variant="body2">Min Weight: {courier.min_weight} kg</Typography>
+              <Typography variant="body2">
+                COD: ₹{courier.cod_charges ?? '0'} | {courier.cod_percent ?? '0'}%
+              </Typography>
+              <Typography variant="body2">Other: ₹{courier.other_charges ?? '0'}</Typography>
+            </Stack>
+
+            <Table size="small" sx={{ mt: 2 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Zone</TableCell>
+                  <TableCell>Forward (Per Kg)</TableCell>
+                  <TableCell>RTO (Per Kg)</TableCell>
+                  <TableCell>Min Weight</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {zones.map((zone) => {
+                  const rates = getZoneEntry(courier.rates, zone)
+                  return (
+                    <TableRow key={zone.code}>
+                      <TableCell>{getZoneLabel(zone)}</TableCell>
+                      <TableCell>₹{rates.forward_per_kg ?? rates.forward ?? 'NA'}</TableCell>
+                      <TableCell>₹{rates.rto_per_kg ?? rates.rto ?? 'NA'}</TableCell>
+                      <TableCell>{rates.min_weight ?? courier.min_weight ?? 'NA'} kg</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ))}
     </Stack>
   )
 }
 
-const RateMatrixTable = ({
-  businessType,
-  rates,
-  zones,
-}: {
-  businessType: 'b2c' | 'b2b'
-  rates: ShippingRate[]
-  zones: ZoneItem[]
-}) => {
-  const orderedZones = useMemo(() => sortZones(zones), [zones])
-  const zoneColumns = orderedZones.map(buildZoneMeta)
-
-  const groupedRates = useMemo(
-    () =>
-      rates.map((rate) => ({
-        key: `${rate.courier_id || rate.courier_name}-${rate.mode}-${rate.service_provider || 'na'}`,
-        rate,
-        rows:
-          businessType === 'b2c'
-            ? buildB2CMatrixRows(rate, orderedZones)
-            : buildB2BMatrixRows(rate, orderedZones),
-      })),
-    [businessType, orderedZones, rates],
-  )
-
-  if (!groupedRates.length) {
-    return (
-      <Box
-        sx={{
-          borderRadius: 3,
-          border: `1px solid ${BORDER}`,
-          backgroundColor: '#fff',
-          px: 3,
-          py: 7,
-          textAlign: 'center',
-        }}
-      >
-        <Typography sx={{ fontWeight: 700, color: TEXT_PRIMARY, mb: 0.8 }}>
-          No rate rows available for this selection
-        </Typography>
-        <Typography sx={{ color: TEXT_MUTED, fontSize: '0.92rem' }}>
-          Try switching the business type or clearing courier filters.
-        </Typography>
-      </Box>
-    )
-  }
-
-  return (
-    <TableContainer
-      sx={{
-        borderRadius: 3,
-        border: `1px solid ${BORDER}`,
-        backgroundColor: '#fff',
-        overflowX: 'auto',
-        boxShadow: '0 18px 36px rgba(15, 23, 42, 0.05)',
-      }}
-    >
-      <Table sx={{ minWidth: 1320 }}>
-        <TableHead>
-          <TableRow>
-            <TableCell sx={headerCellSx({ minWidth: 280 })}>Couriers</TableCell>
-            <TableCell sx={headerCellSx({ minWidth: 86, textAlign: 'center' })}>Mode</TableCell>
-            <TableCell sx={headerCellSx({ minWidth: 180 })}>Weight</TableCell>
-            {zoneColumns.map((zone) => (
-              <TableCell key={zone.key} sx={headerCellSx({ minWidth: 138, textAlign: 'center' })}>
-                <Stack spacing={0.15}>
-                  <Typography sx={headerTitleSx}>{zone.title}</Typography>
-                  <Typography sx={headerSubtitleSx}>{zone.subtitle}</Typography>
-                  <Typography sx={{ ...headerSubtitleSx, fontSize: '0.68rem' }}>F | RTO | Reverse</Typography>
-                </Stack>
-              </TableCell>
-            ))}
-            <TableCell sx={headerCellSx({ minWidth: 178, textAlign: 'center' })}>
-              <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
-                <Typography sx={headerTitleSx}>COD Charges / COD %</Typography>
-                <Tooltip title="Fixed COD charge and COD percentage for each courier rate card." arrow>
-                  <Box component="span" sx={{ display: 'inline-flex', color: HEADER_TEXT }}>
-                    <MdInfoOutline size={16} />
-                  </Box>
-                </Tooltip>
-              </Stack>
-            </TableCell>
-            <TableCell sx={headerCellSx({ minWidth: 124, textAlign: 'center' })}>Other Charges</TableCell>
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {groupedRates.map(({ key, rows }) =>
-            rows.map((row, rowIndex) => (
-              <TableRow
-                key={row.id}
-                sx={{
-                  backgroundColor: rowIndex % 2 === 1 ? ROW_ALT : '#fff',
-                  '&:last-child td': {
-                    borderBottom: key === groupedRates[groupedRates.length - 1]?.key ? 0 : undefined,
-                  },
-                }}
-              >
-                <TableCell sx={bodyCellSx({ verticalAlign: row.isPrimary ? 'middle' : 'top' })}>
-                  {row.isPrimary ? <CourierCell label={row.courierLabel} badgeLabel={row.badgeLabel} /> : null}
-                </TableCell>
-                <TableCell sx={bodyCellSx({ textAlign: 'center' })}>
-                  <ModeBadge mode={row.mode} />
-                </TableCell>
-                <TableCell sx={bodyCellSx()}>
-                  <Typography sx={{ color: TEXT_PRIMARY, fontWeight: row.isPrimary ? 600 : 500, fontSize: '0.88rem' }}>
-                    {row.weightLabel}
-                  </Typography>
-                </TableCell>
-                {zoneColumns.map((zone) => (
-                  <TableCell key={`${row.id}-${zone.key}`} sx={bodyNumericCellSx}>
-                    {row.zoneValues[zone.key] ?? 'NA'}
-                  </TableCell>
-                ))}
-                <TableCell sx={bodyNumericCellSx}>{row.codLabel}</TableCell>
-                <TableCell sx={bodyNumericCellSx}>{row.otherLabel}</TableCell>
-              </TableRow>
-            )),
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  )
-}
-
-const headerCellSx = (extra: Record<string, unknown> = {}) => ({
-  backgroundColor: HEADER_BG,
-  color: HEADER_TEXT,
-  fontWeight: 800,
-  borderBottom: `1px solid ${BORDER}`,
-  py: 2,
-  px: 1.75,
-  ...extra,
-})
-
-const headerTitleSx = {
-  fontWeight: 800,
-  fontSize: '0.82rem',
-  letterSpacing: 0,
-  color: HEADER_TEXT,
-}
-
-const headerSubtitleSx = {
-  fontWeight: 600,
-  fontSize: '0.72rem',
-  lineHeight: 1.2,
-  color: SUBHEADER_TEXT,
-}
-
-const bodyCellSx = (extra: Record<string, unknown> = {}) => ({
-  borderBottom: `1px solid ${BORDER}`,
-  py: 1.8,
-  px: 1.75,
-  verticalAlign: 'middle',
-  ...extra,
-})
-
-const bodyNumericCellSx = {
-  ...bodyCellSx({ textAlign: 'center' }),
-  color: TEXT_PRIMARY,
-  fontWeight: 600,
-  fontSize: '0.88rem',
-}
-
+// --- Main Component ---
 const RateCard = () => {
   const navigate = useNavigate()
-  const [businessType, setBusinessType] = useState<'b2c' | 'b2b'>('b2c')
+  const [businessType, setBusinessType] = useState<'b2c' | 'b2b'>('b2c') // 0 = B2C, 1 = B2B
   const [filters, setFilters] = useState({
     courier: [] as string[],
     min_weight: '',
   })
 
   const { zones } = useZones(businessType)
-  const { data: couriers } = useAllCouriers()
-  const { data, isLoading, isError } = useShippingRates({
-    ...filters,
-    businessType,
-    min_weight: filters.min_weight ? Number(filters.min_weight) : undefined,
-  })
+  const { data, isLoading, isError } = useShippingRates({ ...filters, businessType: businessType })
 
-  const rates: ShippingRate[] = Array.isArray(data) ? data : []
-  const normalizedCouriers = Array.isArray(couriers)
-    ? couriers.map((courier: any) =>
-        typeof courier === 'string'
-          ? { label: courier, value: courier }
-          : { label: courier?.name || String(courier?.id || ''), value: courier?.name || String(courier?.id || '') },
-      )
-    : []
+  const rates: ShippingRate[] = data || []
 
-  const handleExportCSV = () => {
-    const csvData = rates.map((rate) => {
-      const base: Record<string, unknown> = {
-        Courier: rate.courier_name,
-        Mode: rate.mode,
-        Weight: rate.min_weight ? `Per ${formatWeightUnit(rate.min_weight)}` : 'Base rate',
-        'COD Charges': rate.cod_charges ?? 'NA',
-        'COD %': rate.cod_percent ?? 'NA',
-        'Other Charges': rate.other_charges ?? 'NA',
+  console.log('rates', rates)
+
+  // CSV export
+  const handleExportCSV = (): void => {
+    const csvData = rates.map((r) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const base: Record<string, any> = {
+        Courier: getCourierDisplayName({
+          name: r.courier_name,
+          service_provider: r.service_provider,
+          serviceProvider: r.serviceProvider,
+        }),
+        Mode: r.mode,
+        'Min Weight': r.min_weight,
       }
 
-      sortZones(Array.isArray(zones) ? zones : []).forEach((zone) => {
-        const zoneKey = zone.name
-        const zoneRates = rate.rates?.[zoneKey] || {}
-        base[zone.name] =
-          businessType === 'b2c'
-            ? formatZoneRateSummary(
-                getForwardRateValue(zoneRates, 'b2c'),
-                getRtoRateValue(zoneRates, 'b2c'),
-                getReverseRateValue(zoneRates, 'b2c'),
-              )
-            : formatZoneRateSummary(
-                getForwardRateValue(zoneRates, 'b2b'),
-                getRtoRateValue(zoneRates, 'b2b'),
-                getReverseRateValue(zoneRates, 'b2b'),
-              )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      zones.forEach((zone: any) => {
+        const zoneRates = getZoneEntry(r.rates, zone)
+        if (businessType === 'b2b') {
+          base[`${getZoneLabel(zone)} (Per Kg)`] = `F: ₹${zoneRates.forward_per_kg ?? zoneRates.forward ?? 'NA'} | RTO: ₹${
+            zoneRates.rto_per_kg ?? zoneRates.rto ?? 'NA'
+          }`
+        } else {
+          base[`${getZoneLabel(zone)} (F | RTO)`] = `F: ₹${zoneRates.forward ?? 'NA'} | RTO: ₹${
+            zoneRates.rto ?? 'NA'
+          }`
+        }
       })
+
+      base['COD Charges'] = r.cod_charges ?? 'N/A'
+      base['COD %'] = r.cod_percent ?? 'N/A'
+      if (businessType === 'b2c') {
+        base['COD Slabs'] = r.cod_slabs?.length ? JSON.stringify(r.cod_slabs) : ''
+      }
+      base['Other Charges'] = r.other_charges ?? 'N/A'
 
       return base
     })
@@ -614,91 +297,71 @@ const RateCard = () => {
     document.body.removeChild(link)
   }
 
+  // Filter fields (courier + min_weight only, business type comes from tab)
   const filterFields: FilterField[] = [
     {
       name: 'courier',
       label: 'Courier',
       type: 'multiselect',
-      options: normalizedCouriers,
+      options: DELHIVERY_COURIER_FILTER_OPTIONS_BY_NAME,
     },
-    {
-      name: 'min_weight',
-      label: businessType === 'b2c' ? 'Minimum slab' : 'Min weight (kg)',
-      type: 'text',
-      placeholder: businessType === 'b2c' ? 'e.g. 0.5 or 2' : 'Enter min weight',
-    },
+    { name: 'min_weight', label: 'Min Weight (kg)', type: 'text', placeholder: 'Enter min weight' },
   ]
 
-  const controls = (
-    <Box sx={{ px: 0.5 }}>
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', md: 'center' }}
-        spacing={2}
-      >
-        <SmartTabs
-          tabs={[
-            { label: 'B2C', value: 'b2c' },
-            { label: 'B2B', value: 'b2b' },
-          ]}
-          value={businessType}
-          onChange={(value) => setBusinessType(value)}
-        />
-
-        <FilterBar
-          fields={filterFields}
-          defaultValues={filters}
-          onApply={(applied) => {
-            setFilters({
-              courier: Array.isArray(applied?.courier)
-                ? applied.courier.map((item: any) => item?.value || item?.label || String(item))
-                : [],
-              min_weight: String(applied?.min_weight || ''),
-            })
-          }}
-          mode="button"
-          buttonLabel="Filters"
-          appliedCount={Object.values(filters).filter((value) =>
-            Array.isArray(value) ? value.length > 0 : Boolean(value),
-          ).length}
-        />
-      </Stack>
-    </Box>
-  )
-
   return (
-    <ListPageLayout
-      title="Rate Card"
-      description="A courier-by-courier rate matrix with slab rows, zone visibility, and billing details."
-      actions={[
-        {
-          label: 'Calculate Rates',
-          onClick: () => navigate('/tools/rate_calculator'),
-          icon: <MdCalculate />,
-          variant: 'outlined',
-        },
-        {
-          label: 'Download Rate Card',
-          onClick: handleExportCSV,
-          icon: <MdDownload />,
-          variant: 'contained',
-        },
-      ]}
-      controls={controls}
-    >
+    <Stack gap={3}>
+      <PageHeading
+        eyebrow="Tools Panel"
+        title="Rate Card"
+        subtitle="Review B2C and B2B rate slabs, filter courier pricing, and export the latest commercial matrix from one utility workspace."
+      />
+
+      {/* Tabs for B2C / B2B */}
+      <SmartTabs
+        tabs={[
+          { label: 'B2C', value: 'b2c' },
+          { label: 'B2B', value: 'b2b' },
+        ]}
+        value={businessType}
+        onChange={(value) => setBusinessType(value)}
+      />
+
+      <FilterBar
+        fields={filterFields}
+        defaultValues={filters}
+        onApply={(applied) => {
+          setFilters((prev) => ({
+            ...prev,
+            ...applied,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            courier: applied?.courier?.map((cour) => (cour as any)?.value),
+          }))
+        }}
+      />
+
+      <Stack justifyContent="flex-end" gap={2.5} alignItems="center" direction="row">
+        <Button
+          startIcon={<MdCalculate />}
+          variant="contained"
+          onClick={() => navigate('/tools/rate_calculator')}
+        >
+          Calculate Rates
+        </Button>
+        <Button startIcon={<MdDownload />} variant="contained" onClick={handleExportCSV}>
+          Download Rate Card
+        </Button>
+      </Stack>
+
       {isLoading ? (
         <TableSkeleton />
       ) : isError ? (
         <Typography color="error">Error loading shipping rates</Typography>
+      ) : businessType === 'b2b' ? (
+        <B2BClientTable zones={zones} data={rates} />
       ) : (
-        <RateMatrixTable
-          businessType={businessType}
-          rates={rates}
-          zones={Array.isArray(zones) ? zones : []}
-        />
+        <B2CClientTable data={rates} zones={zones} />
       )}
-    </ListPageLayout>
+    </Stack>
   )
 }
 

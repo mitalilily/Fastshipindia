@@ -5,7 +5,7 @@ const API_BASE = '/user-management' // adjust to your backend route
 
 export interface IEmployeePayload {
   id?: string
-  adminId?: string
+  adminId: string
   name: string
   email: string
   phone?: string

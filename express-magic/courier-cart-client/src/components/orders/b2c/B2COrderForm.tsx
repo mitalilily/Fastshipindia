@@ -1,26 +1,31 @@
-import { Alert, Box, Button, Grid, Paper, Stack, TextField, Typography, alpha } from '@mui/material'
+import { Box, Button, Chip, Paper, Stack, Typography, alpha } from '@mui/material'
 import { useEffect, useState } from 'react'
-import { Controller, FormProvider, useFieldArray, useForm } from 'react-hook-form'
+import { FormProvider, useFieldArray, useForm, type FieldErrors } from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
-import { FaBox, FaTruck, FaUser } from 'react-icons/fa'
+import { FaBox, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { fetchAvailableCouriers } from '../../../api/courier'
 import { fetchLocations } from '../../../api/locations'
 import type { CreateShipmentParams } from '../../../api/order.service'
-import { useCreateShipment } from '../../../hooks/Orders/useOrders'
+import { useCreateShipment, useUpdateB2COrder } from '../../../hooks/Orders/useOrders'
 import { usePaymentOptions } from '../../../hooks/usePaymentOptions'
-import { toast } from '../../UI/Toast'
+import { normalizeParcelWeightInputToGrams } from '../../../utils/weight'
 import FormSectionAccordion from '../../UI/accordion/FormSectionAccordion'
+import AmountSummaryCard from '../AmountSummaryCard'
 import DeliveryDetailsForm from '../DeliveryDetailsForm'
+import OptionalChargesForm from '../OptionalChargesForm'
 import OrderDetailsForm from '../OrderDetailsForm'
 import PickupLocationForm from '../PickupLocationForm'
-import { SelectCourierForm } from '../SelectCourierForm'
 import PackageDetailsForm from './PackageDetailsForm'
 import PackageDimensionsForm from './PackageDimensionsForm'
 
-const ACCENT = '#062A5B'
-const TEXT_PRIMARY = '#17171A'
+const ACCENT = '#0D3B8E'
+const TEXT_PRIMARY = '#102A54'
 const TEXT_MUTED = '#496189'
+const padDatePart = (value: number) => String(value).padStart(2, '0')
+const getLocalDateInputValue = () => {
+  const today = new Date()
+  return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
+}
 
 export type Product = {
   productName: string
@@ -74,17 +79,12 @@ export type B2CFormData = {
   pickupLocationId?: string
   pickupLocationPincode?: string
   pickupLocationName?: string
-  integrationType?: 'delhivery' | 'ekart' | 'shadowfax' | 'xpressbees' | 'amazon' | 'icarry'
+  integrationType?: 'delhivery' | 'xpressbees' | 'ekart' | 'deliveryone' | 'icarry'
+  shippingMode?: string
   pickupAddress?: string
   pickupLocationPOCName?: string
   courierPartnerId: string
   courierOptionKey?: string
-  amazonRequestToken?: string | null
-  amazonRateId?: string | null
-  amazonServiceId?: string | null
-  amazonCarrierId?: string | null
-  shadowfaxForwardMode?: 'marketplace' | 'warehouse'
-  shadowfaxServiceMode?: 'regular' | 'surface'
   selectedMaxSlabWeight?: number | null
   orderAmount: number
   pickupDate: string
@@ -96,15 +96,29 @@ export type B2CFormData = {
   zoneId?: string
 }
 
-export default function B2COrderFormSteps({ onClose }: { onClose?: () => void }) {
+type B2COrderFormStepsProps = {
+  onClose?: () => void
+  initialValues?: Partial<B2CFormData>
+  mode?: 'create' | 'edit'
+  existingOrderId?: string | null
+}
+
+export default function B2COrderFormSteps({
+  onClose,
+  initialValues,
+  mode = 'create',
+  existingOrderId,
+}: B2COrderFormStepsProps) {
   const createShipmentMutation = useCreateShipment(onClose)
+  const updateOrderMutation = useUpdateB2COrder(onClose)
   const navigate = useNavigate()
   const location = useLocation()
   const [currentStep, setCurrentStep] = useState(0)
-  const steps = ['Order & Delivery', 'Courier Selection']
+  const steps = ['Order & Delivery', 'Pickup Location']
   const { data: paymentOptions } = usePaymentOptions()
+  const isEditMode = mode === 'edit'
 
-  const defaultPickupDate = new Date().toISOString().split('T')[0]
+  const defaultPickupDate = getLocalDateInputValue()
 
   // Determine default order type based on enabled payment options
   const getDefaultOrderType = (): 'prepaid' | 'cod' => {
@@ -114,22 +128,27 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
     return 'prepaid' // Final fallback
   }
 
+  const baseDefaultValues: Partial<B2CFormData> = {
+    products: [{ productName: '', price: 0, quantity: 1 }],
+    weight: 0,
+    length: 0,
+    breadth: 0,
+    height: 0,
+    courierPartnerId: '',
+    pickupDate: defaultPickupDate,
+    pickupTime: '',
+    orderType: getDefaultOrderType(),
+    selectedMaxSlabWeight: null,
+  }
+
   const methods = useForm<B2CFormData>({
     defaultValues: {
-      products: [{ productName: '', price: 0, quantity: 1 }],
-      weight: 0,
-      length: 0,
-      breadth: 0,
-      height: 0,
-      courierPartnerId: '',
-      amazonRequestToken: null,
-      amazonRateId: null,
-      amazonServiceId: null,
-      amazonCarrierId: null,
-      pickupDate: defaultPickupDate,
-      pickupTime: '',
-      orderType: getDefaultOrderType(),
-      selectedMaxSlabWeight: null,
+      ...baseDefaultValues,
+      ...initialValues,
+      products:
+        initialValues?.products && initialValues.products.length > 0
+          ? initialValues.products
+          : baseDefaultValues.products,
     },
   })
 
@@ -139,7 +158,6 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
     setValue,
     handleSubmit,
     trigger,
-    register,
     formState: { errors },
   } = methods
   const { fields, append, remove } = useFieldArray({ control, name: 'products' })
@@ -162,8 +180,8 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
         const newOrderType = paymentOptions.codEnabled
           ? 'cod'
           : paymentOptions.prepaidEnabled
-            ? 'prepaid'
-            : 'prepaid'
+          ? 'prepaid'
+          : 'prepaid'
         setValue('orderType', newOrderType)
       }
     }
@@ -194,104 +212,22 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
         return
       }
 
-      if (!data.courierPartnerId) {
-        methods.setError('courierPartnerId', {
-          type: 'manual',
-          message: 'Please select a courier partner',
-        })
-        return
-      }
-
-      let amazonRequestToken = data.amazonRequestToken ?? undefined
-      let amazonRateId = data.amazonRateId ?? undefined
-      let amazonServiceId = data.amazonServiceId ?? undefined
-      let amazonCarrierId = data.amazonCarrierId ?? undefined
-
-      if (data.integrationType === 'amazon' && (!amazonRequestToken || !amazonRateId)) {
-        try {
-          const refreshedCouriers = await fetchAvailableCouriers({
-            origin: data.pickupLocationPincode,
-            destination: data.pincode,
-            pickupId: data.pickupLocationId,
-            pickupName: data.pickupLocationName,
-            pickupAddress: data.pickupAddress,
-            pickupCity: data.pickupCity,
-            pickupState: data.pickupState,
-            deliveryName: data.buyerName,
-            deliveryPhone: data.buyerPhone,
-            deliveryAddress: data.address,
-            deliveryCity: data.city,
-            deliveryState: data.state,
-            payment_type: data.orderType,
-            order_amount: subtotal,
-            cod: data.orderType === 'cod' ? 1 : 0,
-            weight: data.weight,
-            length: data.length,
-            breadth: data.breadth,
-            height: data.height,
-            shipment_type: 'b2c',
-            context: 'shipment_courier_selection',
-          })
-
-          const selectedCourierOptionKey = String(data.courierOptionKey ?? '')
-          const selectedCourierId = String(data.courierPartnerId ?? '')
-          const refreshedAmazonCourier = refreshedCouriers.find((courier) => {
-            const isAmazon = String(courier?.integration_type || '')
-              .trim()
-              .toLowerCase() === 'amazon'
-            if (!isAmazon || !courier?.amazon_request_token || !courier?.amazon_rate_id) {
-              return false
-            }
-
-            const courierOptionKey = String(
-              courier?.courier_option_key ?? courier?.id ?? courier?.courier_id ?? '',
-            )
-            return selectedCourierOptionKey
-              ? courierOptionKey === selectedCourierOptionKey
-              : String(courier?.id ?? courier?.courier_id ?? '') === selectedCourierId
-          })
-
-          if (refreshedAmazonCourier) {
-            amazonRequestToken = refreshedAmazonCourier.amazon_request_token
-            amazonRateId = refreshedAmazonCourier.amazon_rate_id
-            amazonServiceId = refreshedAmazonCourier.amazon_service_id ?? amazonServiceId
-            amazonCarrierId = refreshedAmazonCourier.amazon_carrier_id ?? amazonCarrierId
-
-            setValue('amazonRequestToken', amazonRequestToken)
-            setValue('amazonRateId', amazonRateId)
-            setValue('amazonServiceId', amazonServiceId ?? null)
-            setValue('amazonCarrierId', amazonCarrierId ?? null)
-          }
-        } catch (error) {
-          console.error('Failed to refresh Amazon rate token before booking:', error)
-        }
-
-        if (!amazonRequestToken || !amazonRateId) {
-          methods.setError('courierPartnerId', {
-            type: 'manual',
-            message: 'Amazon live rate is not available right now. Refresh courier rates and try again.',
-          })
-          toast.open({
-            message: 'Amazon live rate is not available right now. Refresh courier rates and try again.',
-            severity: 'error',
-          })
-          return
-        }
-      }
-
       const payload: CreateShipmentParams = {
         order_number: normalizedOrderId,
         payment_type: data.orderType,
         order_amount: subtotal,
+        cod_charge_basis: Math.max(totalCollectable, 0),
         order_date: data?.orderDate,
-        package_weight: data.weight,
+        package_weight: normalizeParcelWeightInputToGrams(data.weight),
         package_length: data.length,
         cod_charges: data?.courierCod,
         package_breadth: data.breadth,
         package_height: data.height,
+        shipping_mode: data.shippingMode,
         shipping_charges: Number(data?.shippingCharges ?? 0), // What seller charges customer
         freight_charges: Number(data?.forwardCharges ?? 0), // What platform charges seller (based on rate card)
         courier_cost: data?.courierCost ? Number(data.courierCost) : undefined, // Estimated courier cost from serviceability (what platform pays courier)
+        other_charges: Number(data?.otherCharges ?? 0),
         prepaid_amount: data?.prepaidAmount,
         is_rto_different: data?.isRtoSame ? 'no' : 'yes',
         discount: data.discount ?? 0,
@@ -340,29 +276,33 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
           discount: p.discount ?? 0,
           tax_rate: p.taxRate ?? 0,
         })),
-        courier_id: Number(data.courierPartnerId),
-        courier_partner: data.courierPartner,
-        courier_option_key: data.courierOptionKey,
-        amazon_request_token: amazonRequestToken,
-        amazon_rate_id: amazonRateId,
-        amazon_service_id: amazonServiceId,
-        amazon_carrier_id: amazonCarrierId,
-        shadowfax_forward_mode: data.shadowfaxForwardMode,
-        shadowfax_service_mode: data.shadowfaxServiceMode,
-        selected_max_slab_weight:
-          data.selectedMaxSlabWeight !== undefined && data.selectedMaxSlabWeight !== null
-            ? Number(data.selectedMaxSlabWeight)
-            : undefined,
         pickup_date: data.pickupDate,
         pickup_time: data.pickupTime,
-        delivery_location: data.zone,
-        zone_id: data.zoneId,
-        chargedWeight: data.chargeableWeight ?? undefined,
-        volumetricWeight: data.volumetricWeight ?? undefined,
+        ...(data.courierPartnerId
+          ? {
+              courier_id: Number(data.courierPartnerId),
+              courier_option_key: data.courierOptionKey,
+              selected_max_slab_weight:
+                data.selectedMaxSlabWeight !== undefined && data.selectedMaxSlabWeight !== null
+                  ? Number(data.selectedMaxSlabWeight)
+                  : undefined,
+              delivery_location: data.zone,
+              zone_id: data.zoneId,
+            }
+          : {}),
       }
+      if (isEditMode) {
+        if (!existingOrderId) {
+          throw new Error('Missing order ID for update')
+        }
+
+        updateOrderMutation.mutate({ orderId: existingOrderId, data: payload })
+        return
+      }
+
       createShipmentMutation.mutate(payload, {
         onSuccess: () => {
-          if (location.pathname === '/orders/create' || location.pathname === '/orders/add') {
+          if (location.pathname === '/orders/create') {
             navigate('/orders/list?status=pending')
           }
         },
@@ -399,12 +339,11 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
       const baseValid = await trigger(step1Fields)
       if (!baseValid) return false
 
+      // Real-time pincode serviceability check
       const pincode = watch('pincode')
-
       try {
         const resp = await fetchLocations({ pincode })
         const serviceable = Array.isArray(resp?.data) ? resp.data.length > 0 : !!resp?.data
-
         if (!serviceable) {
           methods.setError('pincode', {
             type: 'manual',
@@ -412,15 +351,11 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
           })
           return false
         }
-      } catch (error) {
-        console.log('error', error)
+      } catch {
+        // ignore transient failure, allow move if fields valid
       }
 
       return true
-    }
-
-    if (currentStep === 1) {
-      return await trigger(['courierPartnerId'])
     }
 
     return true
@@ -428,560 +363,290 @@ export default function B2COrderFormSteps({ onClose }: { onClose?: () => void })
 
   const nextStep = async () => {
     const valid = await validateStep()
-    if (valid) setCurrentStep((prev) => Math.min(prev + 1, 1))
+    if (valid) setCurrentStep((prev) => Math.min(prev + 1, stepLabels.length - 1))
   }
+
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0))
+
+  const stepLabels = [
+    { title: 'Order & Delivery', caption: 'Customer, products and package details' },
+    { title: 'Pickup Location', caption: 'Pickup and RTO warehouse details' },
+  ]
+
+  const stepCompletion = ((currentStep + 1) / stepLabels.length) * 100
 
   useEffect(() => {
     setValue('orderAmount', totalCollectable, { shouldValidate: true })
-  }, [totalCollectable])
-
-  useEffect(() => {
-    register('courierPartnerId', {
-      required: 'Please select a courier partner',
-    })
-    register('amazonRequestToken')
-    register('amazonRateId')
-    register('amazonServiceId')
-    register('amazonCarrierId')
-  }, [register])
-
-  const compactChargeFieldSx = {
-    '& .MuiInputBase-root': {
-      minHeight: 34,
-      fontSize: '0.82rem',
-    },
-    '& .MuiInputBase-input': {
-      py: 0.55,
-    },
-    '& .MuiInputLabel-root': {
-      fontSize: '0.78rem',
-    },
-  }
+  }, [setValue, totalCollectable])
 
   return (
     <FormProvider {...methods}>
       <Stack
-        gap={0.45}
+        gap={2}
         sx={{
           height: '100%',
           position: 'relative',
-          p: { xs: 0.25, sm: 0.3, md: 0.35 },
-          borderRadius: 1.4,
+          p: { xs: 1, sm: 1.5, md: 2 },
+          borderRadius: 4,
           border: `1px solid ${alpha(ACCENT, 0.14)}`,
           background: '#ffffff',
-          boxShadow: `0 6px 16px ${alpha(ACCENT, 0.06)}`,
+          boxShadow: `0 12px 30px ${alpha(ACCENT, 0.08)}`,
         }}
       >
-        <Stack direction="row" sx={{ flex: 1, minHeight: 0, gap: 0 }}>
-          {/* Main Form Content */}
-          <Box
-            component="form"
-            onSubmit={(e) => e.preventDefault()}
-            sx={{
-              flex: 1,
-              overflowY: 'auto',
-              p: 0.05,
-              pr: { xs: 0.25, sm: 0.35, md: 0.45 },
-              minHeight: 0,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: alpha(ACCENT, 0.35),
-                borderRadius: '999px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: alpha(ACCENT, 0.08),
-                borderRadius: '999px',
-              },
-            }}
-          >
-            {/* Step content */}
-            {currentStep === 0 && (
-              <Stack gap={0.45} mb={0.45}>
-                {/* Order Information */}
-                <Box>
-                  <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
-                    <FaBox size={12} color={ACCENT} />
-                    <Typography
-                      variant="h6"
-                      fontWeight={800}
-                      sx={{ color: TEXT_PRIMARY, fontSize: '0.86rem' }}
-                    >
-                      Order Information
-                    </Typography>
-                  </Stack>
-                  <Box
-                    sx={{
-                      px: { xs: 0.55, md: 0.65 },
-                      py: 0.45,
-                      borderRadius: 1.3,
-                      border: `1px solid ${alpha(ACCENT, 0.1)}`,
-                      background: '#f9f9f9',
-                    }}
-                  >
-                    <OrderDetailsForm />
-                  </Box>
-                </Box>
-
-                {/* Main Content - 2 Column Grid Layout */}
-                <Grid container spacing={0.45}>
-                  {/* Left Column (8 cols) - Form Fields */}
-                  <Grid size={{ xs: 12, xl: 8 }}>
-                    <Stack gap={0.45}>
-                      {/* Recipient Details */}
-                      <Box>
-                        <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
-                          <FaUser size={12} color={ACCENT} />
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
-                          >
-                            Recipient Details
-                          </Typography>
-                        </Stack>
-                        <Box
-                          sx={{
-                            px: { xs: 0.55, md: 0.65 },
-                            py: 0.45,
-                            borderRadius: 1.3,
-                            border: `1px solid ${alpha(ACCENT, 0.1)}`,
-                            background: '#f9f9f9',
-                          }}
-                        >
-                          <DeliveryDetailsForm />
-                        </Box>
-                      </Box>
-
-                      {/* Shipment Details */}
-                      <Box>
-                        <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
-                          <FaBox size={12} color={ACCENT} />
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
-                          >
-                            Shipment Details
-                          </Typography>
-                        </Stack>
-                        <Box
-                          sx={{
-                            px: { xs: 0.55, md: 0.65 },
-                            py: 0.45,
-                            borderRadius: 1.3,
-                            border: `1px solid ${alpha(ACCENT, 0.1)}`,
-                            background: '#f9f9f9',
-                          }}
-                        >
-                          <Stack spacing={0.45}>
-                            <Box>
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                sx={{
-                                  color: TEXT_MUTED,
-                                  mb: 0.25,
-                                  display: 'block',
-                                  fontSize: '0.74rem',
-                                }}
-                              >
-                                Products
-                              </Typography>
-                              <PackageDetailsForm
-                                append={append}
-                                control={control}
-                                fields={fields}
-                                remove={remove}
-                              />
-                            </Box>
-                            <Box>
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                sx={{
-                                  color: TEXT_MUTED,
-                                  mb: 0.25,
-                                  display: 'block',
-                                  fontSize: '0.74rem',
-                                }}
-                              >
-                                Package Details
-                              </Typography>
-                              <PackageDimensionsForm />
-                            </Box>
-                          </Stack>
-                        </Box>
-                      </Box>
-                    </Stack>
-                  </Grid>
-
-                  {/* Right Column (4 cols) - Order Summary */}
-                  <Grid size={{ xs: 12, xl: 4 }}>
-                    <Stack gap={0.45} sx={{ position: { xl: 'sticky' }, top: 2 }}>
-                      <Box>
-                        <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
-                          <BiRupee size={12} color={ACCENT} />
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={700}
-                            sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
-                          >
-                            Order Summary
-                          </Typography>
-                        </Stack>
-
-                        {/* Charges Section */}
-                        <Paper
-                          sx={{
-                            p: 0.65,
-                            borderRadius: 1.3,
-                            border: `1px solid ${alpha(ACCENT, 0.1)}`,
-                            background: '#ffffff',
-                            mb: 0.45,
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: TEXT_MUTED,
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                              fontSize: '0.68rem',
-                              display: 'block',
-                              mb: 0.45,
-                            }}
-                          >
-                            Additional Charges
-                          </Typography>
-                          <Grid container spacing={0.45}>
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Controller
-                                name="shippingCharges"
-                                control={control}
-                                render={({ field }) => (
-                                  <TextField
-                                    {...field}
-                                    fullWidth
-                                    type="number"
-                                    label="Shipping Charge"
-                                    size="small"
-                                    variant="outlined"
-                                    InputProps={{
-                                      startAdornment: (
-                                        <BiRupee
-                                          size={14}
-                                          color={ACCENT}
-                                          style={{ marginRight: 8 }}
-                                        />
-                                      ),
-                                    }}
-                                    sx={compactChargeFieldSx}
-                                  />
-                                )}
-                              />
-                            </Grid>
-
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Controller
-                                name="transactionFee"
-                                control={control}
-                                render={({ field }) => (
-                                  <TextField
-                                    {...field}
-                                    fullWidth
-                                    type="number"
-                                    label="Transaction Fee"
-                                    size="small"
-                                    variant="outlined"
-                                    InputProps={{
-                                      startAdornment: (
-                                        <BiRupee
-                                          size={14}
-                                          color={ACCENT}
-                                          style={{ marginRight: 8 }}
-                                        />
-                                      ),
-                                    }}
-                                    sx={compactChargeFieldSx}
-                                  />
-                                )}
-                              />
-                            </Grid>
-
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Controller
-                                name="discount"
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  fullWidth
-                                  type="number"
-                                  label="Discount"
-                                  size="small"
-                                  variant="outlined"
-                                  InputProps={{
-                                    startAdornment: (
-                                      <Typography sx={{ color: ACCENT, fontSize: '0.9rem', mr: 1 }}>
-                                        -₹
-                                      </Typography>
-                                    ),
-                                  }}
-                                  sx={compactChargeFieldSx}
-                                />
-                              )}
-                              />
-                            </Grid>
-
-                            <Grid size={{ xs: 12, sm: 6 }}>
-                              <Controller
-                                name="prepaidAmount"
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  fullWidth
-                                  type="number"
-                                  label="Prepaid Amount"
-                                  size="small"
-                                  variant="outlined"
-                                  InputProps={{
-                                    startAdornment: (
-                                      <Typography sx={{ color: ACCENT, fontSize: '0.9rem', mr: 1 }}>
-                                        -₹
-                                      </Typography>
-                                    ),
-                                  }}
-                                  sx={compactChargeFieldSx}
-                                />
-                              )}
-                              />
-                            </Grid>
-                          </Grid>
-                        </Paper>
-
-                        {/* Summary Section */}
-                        <Paper
-                          sx={{
-                            p: 0.65,
-                            borderRadius: 1.3,
-                            border: `2px solid ${ACCENT}`,
-                            background: alpha(ACCENT, 0.04),
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <Stack gap={0.4}>
-                            <Box sx={{ pb: 0.4, borderBottom: `1px solid ${alpha(ACCENT, 0.2)}` }}>
-                              <Stack
-                                direction="row"
-                                justifyContent="space-between"
-                                alignItems="center"
-                              >
-                                <Typography
-                                  variant="body2"
-                                  sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}
-                                >
-                                  Subtotal
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.8rem' }}
-                                >
-                                  ₹{' '}
-                                  {subtotal.toLocaleString('en-IN', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </Typography>
-                              </Stack>
-                            </Box>
-
-                            <Box>
-                              <Stack
-                                direction="row"
-                                justifyContent="space-between"
-                                alignItems="center"
-                              >
-                                <Typography
-                                  variant="body2"
-                                  sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}
-                                >
-                                  Total Order Value
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  sx={{ color: TEXT_PRIMARY, fontWeight: 600, fontSize: '0.8rem' }}
-                                >
-                                  ₹{' '}
-                                  {totalOrderValue.toLocaleString('en-IN', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </Typography>
-                              </Stack>
-                            </Box>
-
-                            <Box
-                              sx={{
-                                pt: 0.45,
-                                mt: 0.15,
-                                borderTop: `2px solid ${ACCENT}`,
-                                background: alpha(ACCENT, 0.08),
-                                px: 0.8,
-                                py: 0.5,
-                                borderRadius: 1,
-                                my: -0.3,
-                                mx: -0.3,
-                              }}
-                            >
-                              <Stack
-                                direction="row"
-                                justifyContent="space-between"
-                                alignItems="center"
-                              >
-                                <Typography
-                                  variant="body2"
-                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.8rem' }}
-                                >
-                                  Amount Collectable
-                                </Typography>
-                                <Typography
-                                  sx={{ color: ACCENT, fontWeight: 800, fontSize: '0.9rem' }}
-                                >
-                                  ₹{' '}
-                                  {totalCollectable.toLocaleString('en-IN', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </Typography>
-                              </Stack>
-                            </Box>
-                          </Stack>
-                        </Paper>
-
-                        <Box sx={{ mt: 0.45 }}>
-                          <Stack direction="row" alignItems="center" gap={0.45} sx={{ mb: 0.25 }}>
-                            <FaTruck size={12} color={ACCENT} />
-                            <Typography
-                              variant="subtitle1"
-                              fontWeight={700}
-                              sx={{ color: TEXT_PRIMARY, fontSize: '0.84rem' }}
-                            >
-                              Pickup Information
-                            </Typography>
-                          </Stack>
-                          <Box
-                            sx={{
-                              px: { xs: 0.55, md: 0.65 },
-                              py: 0.45,
-                              borderRadius: 1.3,
-                              border: `1px solid ${alpha(ACCENT, 0.1)}`,
-                              background: '#f9f9f9',
-                            }}
-                          >
-                            <PickupLocationForm compact />
-                          </Box>
-                        </Box>
-                      </Box>
-                    </Stack>
-                  </Grid>
-                </Grid>
-              </Stack>
-            )}
-
-            {currentStep === 1 && (
-              <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded compact>
-                {errors.courierPartnerId && (
-                <Alert severity="error" sx={{ mb: 0.7 }}>
-                    {errors.courierPartnerId.message as string}
-                  </Alert>
-                )}
-                <SelectCourierForm shipment_type="b2c" />
-
-                {/* Error shown as Alert */}
-              </FormSectionAccordion>
-            )}
-
-            {/* Sticky footer inside scroll */}
+        <Paper
+          elevation={0}
+          sx={{
+            px: { xs: 2, sm: 2.5, md: 3 },
+            py: { xs: 2, sm: 2.25 },
+            borderRadius: 3,
+            border: `1px solid ${alpha(ACCENT, 0.14)}`,
+            background: alpha(ACCENT, 0.03),
+          }}
+        >
+          <Stack gap={1}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+              gap={1}
+            >
+              <Typography variant="h6" fontWeight={800} sx={{ color: TEXT_PRIMARY }}>
+                {isEditMode ? 'Edit B2C Order' : 'B2C Order Creation'}
+              </Typography>
+              <Chip
+                label={`Step ${currentStep + 1} of ${stepLabels.length}`}
+                size="small"
+                sx={{
+                  fontWeight: 700,
+                  color: TEXT_PRIMARY,
+                  backgroundColor: '#ffffff',
+                  border: `1px solid ${alpha(ACCENT, 0.2)}`,
+                }}
+              />
+            </Stack>
+            <Typography variant="body2" sx={{ color: TEXT_MUTED }}>
+              {isEditMode
+                ? 'Update the draft order details and save your changes before shipping.'
+                : 'Build shipments faster with a guided flow. Only the active step is editable.'}
+            </Typography>
             <Box
               sx={{
-                py: 0.25,
-                px: { xs: 0.55, sm: 0.75 },
-                background: '#ffffff',
-                border: `1px solid ${alpha(ACCENT, 0.16)}`,
-                borderRadius: '10px',
-                position: 'sticky',
-                bottom: 0,
-                zIndex: 10,
-                mt: 0.35,
-                boxShadow: `0 6px 12px ${alpha(ACCENT, 0.06)}`,
+                mt: 0.5,
+                width: '100%',
+                height: 8,
+                borderRadius: 99,
+                overflow: 'hidden',
+                bgcolor: alpha(ACCENT, 0.08),
+                border: `1px solid ${alpha(ACCENT, 0.12)}`,
               }}
             >
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-                alignItems={{ xs: 'stretch', sm: 'center' }}
-                gap={0.5}
-              >
-                <Typography variant="body2" sx={{ color: TEXT_MUTED, fontWeight: 600 }}>
-                  {steps[currentStep]}
-                </Typography>
-                {currentStep > 0 && (
-                  <Button
-                    type="button" // ✅ no accidental submit
-                    loading={createShipmentMutation?.isPending}
-                    variant="outlined"
-                    onClick={prevStep}
-                    fullWidth={false}
-                    size="small"
-                    sx={{
-                      minWidth: { xs: '100%', sm: 120 },
-                      borderColor: alpha(ACCENT, 0.35),
-                      color: ACCENT,
-                      '&:hover': { borderColor: ACCENT, backgroundColor: alpha(ACCENT, 0.07) },
-                    }}
-                  >
-                    Back
-                  </Button>
-                )}
-                {currentStep < 1 ? (
-                  <Button
-                    type="button" // ✅ no accidental submit
-                    variant="contained"
-                    onClick={nextStep}
-                    size="small"
-                    sx={{
-                      minWidth: { xs: '100%', sm: 130 },
-                      fontWeight: 700,
-                      background: ACCENT,
-                    }}
-                  >
-                    Next
-                  </Button>
-                ) : (
-                  <Button
-                    type="button" // ✅ prevent browser reload
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSubmit(onSubmit)} // ✅ react-hook-form submit
-                    loading={createShipmentMutation?.isPending}
-                    size="small"
-                    sx={{
-                      minWidth: { xs: '100%', sm: 210 },
-                      fontWeight: 800,
-                      background: ACCENT,
-                    }}
-                  >
-                    Create & Book Order
-                  </Button>
-                )}
-              </Stack>
+              <Box
+                sx={{
+                  width: `${stepCompletion}%`,
+                  height: '100%',
+                  transition: 'width 240ms ease',
+                  background: ACCENT,
+                }}
+              />
             </Box>
+          </Stack>
+        </Paper>
+
+        <Box
+          component="form"
+          onSubmit={(e) => e.preventDefault()}
+          sx={{
+            flex: 1,
+            overflowY: 'auto',
+            p: { xs: 0.5, sm: 1, md: 1.5 },
+            pr: { xs: 1, sm: 2, md: 2.5 },
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: alpha(ACCENT, 0.35),
+              borderRadius: '999px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: alpha(ACCENT, 0.08),
+              borderRadius: '999px',
+            },
+          }}
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} gap={1.25} mb={2.5}>
+            {stepLabels.map((step, index) => {
+              const isActive = index === currentStep
+              const isCompleted = index < currentStep
+              return (
+                <Paper
+                  key={step.title}
+                  elevation={0}
+                  sx={{
+                    flex: 1,
+                    px: 1.5,
+                    py: 1.25,
+                    borderRadius: 2.5,
+                    border: `1px solid ${
+                      isActive
+                        ? alpha(ACCENT, 0.3)
+                        : isCompleted
+                        ? alpha(ACCENT, 0.2)
+                        : alpha('#64748B', 0.25)
+                    }`,
+                    background: isActive
+                      ? alpha(ACCENT, 0.08)
+                      : isCompleted
+                      ? alpha(ACCENT, 0.05)
+                      : '#ffffff',
+                    boxShadow: isActive ? `0 8px 20px ${alpha(ACCENT, 0.12)}` : 'none',
+                    transition: 'all 200ms ease',
+                  }}
+                >
+                  <Stack direction="row" gap={1.25} alignItems="center">
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        color: isActive || isCompleted ? '#fff' : '#6b7280',
+                        bgcolor: isActive ? ACCENT : isCompleted ? alpha(ACCENT, 0.75) : '#f1f5f9',
+                      }}
+                    >
+                      {index + 1}
+                    </Box>
+                    <Stack spacing={0.1}>
+                      <Typography variant="body2" fontWeight={700} sx={{ color: TEXT_PRIMARY }}>
+                        {step.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: TEXT_MUTED, lineHeight: 1.3 }}>
+                        {step.caption}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                </Paper>
+              )
+            })}
+          </Stack>
+
+          {/* Step content */}
+          {currentStep === 0 && (
+            <Stack gap={2} mb={2}>
+              <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded>
+                <OrderDetailsForm />
+              </FormSectionAccordion>
+
+              <FormSectionAccordion title="Recipient Details" icon={<FaUser />} defaultExpanded>
+                <DeliveryDetailsForm />
+              </FormSectionAccordion>
+
+              <FormSectionAccordion title="Products" icon={<FaBox />} defaultExpanded>
+                <PackageDetailsForm
+                  append={append}
+                  control={control}
+                  fields={fields}
+                  remove={remove}
+                />
+              </FormSectionAccordion>
+
+              <FormSectionAccordion defaultExpanded title="Package Details" icon={<FaBox />}>
+                <PackageDimensionsForm />
+              </FormSectionAccordion>
+
+              <FormSectionAccordion
+                title="Optional Charges & Summary"
+                icon={<BiRupee />}
+                defaultExpanded
+              >
+                <OptionalChargesForm />
+              </FormSectionAccordion>
+
+              <AmountSummaryCard
+                subtotal={subtotal}
+                totalCollectable={totalCollectable}
+                totalOrderValue={totalOrderValue}
+                errors={errors as FieldErrors<B2CFormData>}
+              />
+            </Stack>
+          )}
+
+          {currentStep === 1 && <PickupLocationForm />}
+          {/* Sticky footer inside scroll */}
+          <Box
+            sx={{
+              py: 1.5,
+              px: { xs: 1.5, sm: 2.25 },
+              background: '#ffffff',
+              border: `1px solid ${alpha(ACCENT, 0.16)}`,
+              borderRadius: '14px',
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 10,
+              mt: 2.5,
+              boxShadow: `0 10px 20px ${alpha(ACCENT, 0.08)}`,
+            }}
+          >
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              gap={1.5}
+            >
+              <Typography variant="body2" sx={{ color: TEXT_MUTED, fontWeight: 600 }}>
+                {steps[currentStep]}
+              </Typography>
+              {currentStep > 0 && (
+                <Button
+                  type="button" // ✅ no accidental submit
+                  loading={isEditMode ? updateOrderMutation?.isPending : createShipmentMutation?.isPending}
+                  variant="outlined"
+                  onClick={prevStep}
+                  fullWidth={false}
+                  sx={{
+                    minWidth: { xs: '100%', sm: 120 },
+                    borderColor: alpha(ACCENT, 0.35),
+                    color: ACCENT,
+                    '&:hover': { borderColor: ACCENT, backgroundColor: alpha(ACCENT, 0.07) },
+                  }}
+                >
+                  Back
+                </Button>
+              )}
+              {currentStep < stepLabels.length - 1 ? (
+                <Button
+                  type="button" // ✅ no accidental submit
+                  variant="contained"
+                  onClick={nextStep}
+                  sx={{
+                    minWidth: { xs: '100%', sm: 130 },
+                    fontWeight: 700,
+                    background: ACCENT,
+                  }}
+                >
+                  Next
+                </Button>
+              ) : (
+                <Button
+                  type="button" // ✅ prevent browser reload
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSubmit(onSubmit)} // ✅ react-hook-form submit
+                  loading={isEditMode ? updateOrderMutation?.isPending : createShipmentMutation?.isPending}
+                  sx={{
+                    minWidth: { xs: '100%', sm: 210 },
+                    fontWeight: 800,
+                    background: ACCENT,
+                  }}
+                >
+                  {isEditMode ? 'Update Order' : 'Create Order'}
+                </Button>
+              )}
+            </Stack>
           </Box>
-        </Stack>
+        </Box>
       </Stack>
     </FormProvider>
   )

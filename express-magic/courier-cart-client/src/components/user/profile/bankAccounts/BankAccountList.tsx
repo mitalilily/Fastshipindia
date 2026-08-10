@@ -1,5 +1,4 @@
 import {
-  alpha,
   Box,
   Button,
   Card,
@@ -16,19 +15,20 @@ import { FcCancel } from 'react-icons/fc'
 import { MdCheckCircle, MdDeleteOutline } from 'react-icons/md'
 import type { BankAccount } from '../../../../types/user.types'
 import { toast } from '../../../UI/Toast'
+import { BRAND_GRADIENT } from '../UserProfileForm'
 
 /* ---------- Styled components ---------- */
 const GlassCard = styled(Card)(() => ({
   backgroundColor: '#FFFFFF',
-  border: '1px solid rgba(15, 23, 42, 0.08)',
-  borderRadius: 0,
+  border: '1px solid #E0E6ED',
+  borderRadius: 16,
   overflow: 'hidden',
   minHeight: 150,
-  boxShadow: 'none',
-  transition: 'border-color 0.2s ease, background-color 0.2s ease',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  transition: 'all 0.3s ease',
   '&:hover': {
-    borderColor: 'rgba(217, 4, 22, 0.22)',
-    backgroundColor: '#FBFCFE',
+    transform: 'translateY(-4px)',
+    boxShadow: '0 8px 20px rgba(51, 51, 105, 0.12)',
   },
 }))
 
@@ -37,8 +37,9 @@ const GradientBg = styled('div')(() => ({
   top: 0,
   left: 0,
   right: 0,
-  height: 3,
-  background: '#ED1C24',
+  height: 4,
+  borderRadius: '16px 16px 0 0',
+  background: BRAND_GRADIENT,
   zIndex: 2,
 }))
 
@@ -46,16 +47,16 @@ const PrimaryRibbon = styled('div')(() => ({
   position: 'absolute',
   top: 16,
   right: 16,
-  background: '#16181D',
+  background: 'linear-gradient(135deg, #3DD598 0%, #2AB87B 100%)',
   color: '#FFFFFF',
   padding: '6px 14px',
-  borderRadius: 0,
+  borderRadius: 8,
   fontSize: '0.7rem',
   fontWeight: 700,
   letterSpacing: 0.5,
   textTransform: 'uppercase',
   zIndex: 3,
-  boxShadow: 'none',
+  boxShadow: '0 4px 12px rgba(61, 213, 152, 0.3)',
 }))
 
 /* ---------- List container ---------- */
@@ -81,7 +82,7 @@ export const BankAccountsList: React.FC<{
             mt: 4,
             pl: 0.5,
             fontWeight: 700,
-            color: '#111827',
+            color: '#333369',
             display: 'flex',
             alignItems: 'center',
             gap: 1,
@@ -89,7 +90,8 @@ export const BankAccountsList: React.FC<{
               content: '""',
               width: 4,
               height: 24,
-              bgcolor: '#ED1C24',
+              bgcolor: '#3DD598',
+              borderRadius: 1,
             },
           }}
         >
@@ -142,7 +144,7 @@ export const BankAccountCard: React.FC<{
   }
 
   return (
-    <Box sx={{ position: 'relative', borderRadius: 0, overflow: 'visible' }}>
+    <Box sx={{ position: 'relative', borderRadius: 16, overflow: 'visible' }}>
       {a.isPrimary && <PrimaryRibbon>Primary</PrimaryRibbon>}
 
       <GlassCard sx={{ position: 'relative', zIndex: 1 }}>
@@ -218,17 +220,20 @@ export const BankAccountCard: React.FC<{
                     disabled={a.isPrimary || a.status !== 'verified'}
                     onClick={() => onMakePrimary?.(a.id)}
                     sx={{
-                      bgcolor: '#16181D',
+                      bgcolor: '#3DD598',
                       color: '#FFFFFF',
                       fontWeight: 600,
                       px: 2,
                       py: 0.8,
-                      borderRadius: 0,
+                      borderRadius: 1.5,
                       textTransform: 'none',
-                      boxShadow: 'none',
+                      boxShadow: '0 2px 8px rgba(61, 213, 152, 0.3)',
                       '&:hover': {
-                        bgcolor: '#111827',
+                        bgcolor: '#2AB87B',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(61, 213, 152, 0.4)',
                       },
+                      transition: 'all 0.3s ease',
                     }}
                   >
                     Make Primary
@@ -241,12 +246,14 @@ export const BankAccountCard: React.FC<{
                     aria-label="Edit account"
                     onClick={() => onEdit?.(a.id)}
                     sx={{
-                      color: '#111827',
-                      bgcolor: '#FFFFFF',
-                      border: '1px solid rgba(15, 23, 42, 0.12)',
+                      color: '#333369',
+                      bgcolor: '#F5F7FA',
+                      border: '1px solid #E0E6ED',
                       '&:hover': {
-                        bgcolor: '#F8FAFC',
+                        bgcolor: '#E0E6ED',
+                        transform: 'scale(1.1)',
                       },
+                      transition: 'all 0.3s ease',
                     }}
                   >
                     <BiEdit size={18} />
@@ -259,11 +266,13 @@ export const BankAccountCard: React.FC<{
                   onClick={handleDelete}
                   sx={{
                     color: '#E74C3C',
-                    bgcolor: alpha('#E74C3C', 0.08),
+                    bgcolor: 'rgba(231, 76, 60, 0.1)',
                     border: '1px solid rgba(231, 76, 60, 0.2)',
                     '&:hover': {
-                      bgcolor: alpha('#E74C3C', 0.14),
+                      bgcolor: 'rgba(231, 76, 60, 0.2)',
+                      transform: 'scale(1.1)',
                     },
+                    transition: 'all 0.3s ease',
                   }}
                 >
                   <MdDeleteOutline size={18} />

@@ -3,660 +3,390 @@ import {
   Badge,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  CircularProgress,
   Divider,
   IconButton,
-  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
   Popover,
   Stack,
-  TextField,
-  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useState, type ReactNode } from 'react'
-import {
-  MdAddCircle,
-  MdCalculate,
-  MdClose,
-  MdKeyboardArrowDown,
-  MdLocalShipping,
-  MdMenu,
-  MdNotificationsNone,
-  MdOpenInNew,
-  MdPlaylistAdd,
-  MdRefresh,
-  MdRoute,
-  MdViewModule,
-} from 'react-icons/md'
-import { useNavigate } from 'react-router-dom'
-import { BRAND } from '../../config/brand'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MdDarkMode, MdLightMode, MdNotifications, MdSearch } from 'react-icons/md'
+import { TbHeadphones, TbLayoutSidebarLeftCollapseFilled } from 'react-icons/tb'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/auth/AuthContext'
+import { useClientThemeMode } from '../../context/theme/ClientThemeContext'
+import { useClientNotifications } from '../../hooks/useClientNotifications'
+import WalletMenu from './WalletMenu'
 import UserMenu from './UserMenu'
 
 interface NavbarProps {
   handleDrawerToggle: () => void
-  pinned?: boolean
-  onPinChange?: (pinned: boolean) => void
+  pinned: boolean
+  name?: string
 }
 
-const BRAND_SURFACE = BRAND.colors.paper
-const BRAND_TEXT = BRAND.colors.ink
-const SHIPMOZO_BLUE = '#0789ad'
-const SHIPMOZO_NAVY = '#313456'
+const ACTIVE = '#7657ff'
+const ORANGE = '#ff7a17'
 
-const searchOptions = [
-  { label: 'AWB ID', placeholder: 'Search Order by AWB ID', compactPlaceholder: 'Search AWB', queryKey: 'awb', path: '/tools/track-order' },
-  { label: 'Order ID', placeholder: 'Search by Order ID', compactPlaceholder: 'Order ID', queryKey: 'orderId', path: '/orders/new' },
-  { label: 'Ref. ID', placeholder: 'Search by Reference ID', compactPlaceholder: 'Ref. ID', queryKey: 'referenceId', path: '/orders/new' },
-  { label: 'Mobile No.', placeholder: 'Search by Mobile No.', compactPlaceholder: 'Mobile', queryKey: 'mobile', path: '/other/customers' },
-  { label: 'Email', placeholder: 'Search by Email', compactPlaceholder: 'Email', queryKey: 'email', path: '/other/customers' },
-  { label: 'Name', placeholder: 'Search by Name', compactPlaceholder: 'Name', queryKey: 'name', path: '/other/customers' },
-]
+const getSectionLabel = (pathname: string) =>
+  (
+    [
+      { label: 'Home', match: '/home' },
+      { label: 'Orders', match: '/orders' },
+      { label: 'Dashboard', match: '/dashboard' },
+      { label: 'Reports', match: '/reports' },
+      { label: 'Wallet', match: '/billing/wallet_transactions' },
+      { label: 'Billings', match: '/billing/invoice_management' },
+      { label: 'COD Remittance', match: '/cod-remittance' },
+      { label: 'Reconciliation', match: '/reconciliation' },
+      { label: 'Operations', match: '/ops' },
+      { label: 'Tools', match: '/tools' },
+      { label: 'Support', match: '/support' },
+      { label: 'Settings', match: '/settings' },
+      { label: 'Channels', match: '/channels' },
+      { label: 'Couriers', match: '/couriers' },
+      { label: 'Profile', match: '/profile' },
+    ] as const
+  ).find((section) => pathname.startsWith(section.match))?.label || 'Home'
 
-export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange }: NavbarProps) {
+export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const isCompactNavbar = useMediaQuery(theme.breakpoints.down('lg'))
   const navigate = useNavigate()
-  const { walletBalance } = useAuth()
-  const [rechargeOpen, setRechargeOpen] = useState(false)
-  const [rechargeAmount, setRechargeAmount] = useState('')
-  const [promoCode, setPromoCode] = useState('')
-  const [quickAnchor, setQuickAnchor] = useState<HTMLElement | null>(null)
-  const [updatesAnchor, setUpdatesAnchor] = useState<HTMLElement | null>(null)
-  const [searchAnchor, setSearchAnchor] = useState<HTMLElement | null>(null)
-  const [searchType, setSearchType] = useState(searchOptions[0])
-  const [searchValue, setSearchValue] = useState('')
-  const handlePinToggle = () => {
-    onPinChange?.(!pinned)
-  }
-  const closeQuickActions = () => setQuickAnchor(null)
-  const closeUpdates = () => setUpdatesAnchor(null)
-  const closeSearchMenu = () => setSearchAnchor(null)
+  const location = useLocation()
+  const topBarRef = useRef<HTMLDivElement | null>(null)
+  const [notificationAnchor, setNotificationAnchor] = useState<HTMLElement | null>(null)
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const activeSection = getSectionLabel(location.pathname)
+  const { walletBalance, isAuthenticated } = useAuth()
+  const { mode, setMode } = useClientThemeMode()
+  const isDark = theme.palette.mode === 'dark'
+  const navBg = isDark ? '#151b23' : '#ffffff'
+  const panelBg = isDark ? '#101720' : '#f8fafc'
+  const borderColor = isDark ? '#2a313a' : alpha('#0f172a', 0.1)
+  const textColor = isDark ? '#f8fafc' : '#11182d'
+  const mutedColor = isDark ? '#93a4ba' : '#64748b'
+  const hoverBg = isDark ? alpha('#fff', 0.05) : alpha('#11182d', 0.055)
+  const notificationOpen = Boolean(notificationAnchor)
+  const {
+    data: notifications = [],
+    isLoading: notificationsLoading,
+    markRead,
+    markAllRead,
+    markingAllRead,
+  } = useClientNotifications(isAuthenticated)
 
-  const runSearch = () => {
-    const value = searchValue.trim()
-    if (!value) return
-    const params = new URLSearchParams({ [searchType.queryKey]: value, searchBy: searchType.label })
-    navigate(`${searchType.path}?${params.toString()}`)
-  }
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !Boolean(notification.read ?? notification.isRead)).length,
+    [notifications],
+  )
 
-  const goTo = (path: string) => {
-    closeQuickActions()
-    navigate(path)
-  }
+  const latestNotifications = useMemo(() => notifications.slice(0, 8), [notifications])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const setTopBarOffset = () => {
+      const height = Math.ceil(topBarRef.current?.getBoundingClientRect().height ?? 0)
+      if (height > 0) root.style.setProperty('--client-navbar-offset', `${height}px`)
+    }
+
+    setTopBarOffset()
+
+    if (typeof ResizeObserver === 'undefined' || !topBarRef.current) {
+      return () => root.style.removeProperty('--client-navbar-offset')
+    }
+
+    const observer = new ResizeObserver(() => setTopBarOffset())
+    observer.observe(topBarRef.current)
+
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--client-navbar-offset')
+    }
+  }, [])
 
   return (
     <Box
+      ref={topBarRef}
+      component="header"
       sx={{
         position: 'sticky',
         top: 0,
-        zIndex: (currentTheme) => currentTheme.zIndex.appBar,
-        bgcolor: '#fff',
-        backgroundImage: 'none',
-        overflow: 'hidden',
+        zIndex: (muiTheme) => muiTheme.zIndex.drawer + 2,
+        minHeight: 72,
+        px: { xs: 1.5, md: 3 },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 2,
+        bgcolor: navBg,
+        borderBottom: `1px solid ${borderColor}`,
+        boxShadow: isDark ? 'none' : '0 8px 24px rgba(15, 23, 42, 0.06)',
       }}
     >
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
+        <IconButton
+          size="small"
+          onClick={handleDrawerToggle}
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: 1,
+            color: mutedColor,
+            '&:hover': { bgcolor: hoverBg, color: textColor },
+          }}
+        >
+          <TbLayoutSidebarLeftCollapseFilled
+            size={20}
+            style={{ transform: pinned ? 'none' : 'rotate(180deg)' }}
+          />
+        </IconButton>
+
+        <Typography
+          sx={{
+            color: textColor,
+            fontSize: { xs: '1rem', sm: '1.1rem' },
+            fontWeight: 850,
+            letterSpacing: '-0.02em',
+          }}
+          noWrap
+        >
+          {activeSection}
+        </Typography>
+      </Stack>
+
       <Stack
         direction="row"
+        spacing={{ xs: 0.7, sm: 1 }}
         alignItems="center"
-        justifyContent="space-between"
-        spacing={{ xs: 0.5, sm: 0.6, md: 0.8, lg: 1.0 }}
-        sx={{
-          px: { xs: 1, sm: 1.2, md: 1.6, lg: 2 },
-          py: 0,
-          borderRadius: 0,
-          bgcolor: BRAND_SURFACE,
-          backgroundImage: 'none',
-          borderBottom: 'none',
-          boxShadow: 'none',
-          minHeight: { xs: 56, md: 68 },
-          position: 'relative',
-          overflow: 'hidden',
-          transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
+        justifyContent="flex-end"
+        sx={{ minWidth: 0 }}
       >
-        <Stack
-          direction="row"
-          spacing={{ xs: 0.6, sm: 0.8, md: 1.0, lg: 1.2 }}
-          alignItems="center"
-          minWidth={0}
-          flex="1 1 auto"
+        {!isMobile ? (
+          <IconButton
+            aria-label="Search"
+            onClick={() => navigate('/orders/list')}
+            sx={{ width: 40, height: 40, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
+          >
+            <MdSearch size={23} />
+          </IconButton>
+        ) : null}
+
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <WalletMenu compactLabel={`\u20B9${Number(walletBalance ?? 0).toLocaleString('en-IN')}`} />
+        </Box>
+
+        <Box
+          onClick={() => navigate('/support/tickets')}
           sx={{
-            position: 'relative',
-            zIndex: 1,
-            bgcolor: '#fff',
-            backgroundImage: 'none',
+            display: { xs: 'none', md: 'inline-flex' },
+            alignItems: 'center',
+            gap: 0.8,
+            height: 38,
+            px: 1.35,
+            borderRadius: 2,
+            cursor: 'pointer',
+            border: `1px solid ${borderColor}`,
+            color: textColor,
+            bgcolor: panelBg,
+            fontSize: '0.9rem',
+            fontWeight: 850,
+            '& svg': { color: ACTIVE },
+            '&:hover': { borderColor: alpha(ACTIVE, 0.5) },
           }}
         >
-          {isMobile && (
-            <IconButton
-              onClick={handleDrawerToggle}
-              title="Open navigation menu"
-              aria-label="Open navigation menu"
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2,
-                bgcolor: 'transparent',
-                color: BRAND_TEXT,
-                padding: 0,
-                '&:hover': {
-                  bgcolor: alpha(SHIPMOZO_BLUE, 0.08),
-                  color: SHIPMOZO_BLUE,
-                },
-              }}
-            >
-              <MdMenu size={21} />
-            </IconButton>
-          )}
-
-          {!isMobile && (
-            <Tooltip title={pinned ? 'Collapse sidebar' : 'Expand sidebar'} placement="bottom">
-              <IconButton
-                onClick={handlePinToggle}
-                size="small"
-                sx={{
-                  width: 32,
-                  height: 32,
-                  color: BRAND_TEXT,
-                  transition: 'all 200ms ease',
-                  padding: 0,
-                  '&:hover': {
-                    color: SHIPMOZO_BLUE,
-                    background: alpha(SHIPMOZO_BLUE, 0.08),
-                  },
-                }}
-              >
-                <MdMenu size={24} />
-              </IconButton>
-            </Tooltip>
-          )}
-
-          <Box
-            component="form"
-            onSubmit={(event) => {
-              event.preventDefault()
-              runSearch()
-            }}
-            sx={{
-              display: { xs: 'none', sm: 'flex' },
-              alignItems: 'stretch',
-              height: 50,
-              width: { sm: 280, md: 330, lg: 420 },
-              maxWidth: '38vw',
-              border: '1px solid #d5dce6',
-              borderRadius: '25px',
-              overflow: 'hidden',
-              boxSizing: 'border-box',
-              bgcolor: '#fff',
-              backgroundImage: 'none',
-              position: 'relative',
-              zIndex: 1,
-              ml: { md: 1.5, lg: 3 },
-            }}
-          >
-            <Button
-              onClick={(event) => setSearchAnchor(event.currentTarget)}
-              sx={{
-                width: 106,
-                minWidth: 106,
-                height: '100%',
-                minHeight: 0,
-                bgcolor: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 0.8,
-                color: '#334155',
-                fontSize: 14,
-                fontWeight: 600,
-                flexShrink: 0,
-                borderRadius: 0,
-                boxShadow: 'none',
-                textTransform: 'none',
-                whiteSpace: 'nowrap',
-                '&:hover': { bgcolor: '#fff' },
-              }}
-            >
-              {searchType.label} <MdKeyboardArrowDown size={18} />
-            </Button>
-            <Box
-              component="input"
-              value={searchValue}
-              placeholder={isCompactNavbar ? searchType.compactPlaceholder : searchType.placeholder}
-              onChange={(event) => setSearchValue(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') setSearchValue('')
-              }}
-              sx={{
-                flex: 1,
-                border: 0,
-                outline: 0,
-                px: 1.4,
-                color: BRAND_TEXT,
-                fontSize: 14,
-                bgcolor: '#fff',
-                backgroundImage: 'none',
-              }}
-            />
-          </Box>
-        </Stack>
+          <TbHeadphones size={18} />
+          Support
+        </Box>
 
         <Stack
           direction="row"
-          spacing={{ xs: 0.4, sm: 0.5, md: 0.7, lg: 0.85 }}
-          alignItems="center"
-          justifyContent="flex-end"
-          flexShrink={0}
-          sx={{ minWidth: 0, overflow: 'visible' }}
+          spacing={0.25}
+          sx={{
+            height: 38,
+            alignItems: 'center',
+            p: 0.35,
+            borderRadius: 999,
+            bgcolor: isDark ? '#211f4d' : alpha(ACTIVE, 0.08),
+            border: `1px solid ${alpha(ACTIVE, 0.18)}`,
+          }}
         >
-          <Typography
+          <IconButton
+            size="small"
+            aria-label="Switch to light mode"
+            aria-pressed={mode === 'light'}
+            onClick={() => setMode('light')}
             sx={{
-              display: { xs: 'none', xl: 'block' },
-              color: SHIPMOZO_BLUE,
-              fontSize: 14,
-              fontWeight: 800,
-              whiteSpace: 'nowrap',
+              width: 30,
+              height: 30,
+              color: mode === 'light' ? ORANGE : mutedColor,
+              bgcolor: mode === 'light' ? alpha(ORANGE, 0.16) : 'transparent',
             }}
           >
-            Notification Credits: 0
-          </Typography>
-          <Box sx={{ display: { xs: 'none', xl: 'block' }, width: 1, height: 24, bgcolor: '#d8e2ec', flexShrink: 0 }} />
-          <IconButton sx={{ display: { xs: 'none', sm: 'inline-flex' }, color: '#667085' }}>
-            <MdRefresh size={22} />
+            <MdLightMode size={16} />
           </IconButton>
-          <Stack direction="row" sx={{ display: { xs: 'none', md: 'flex' }, border: `1px solid ${SHIPMOZO_BLUE}`, borderRadius: '11px', overflow: 'hidden', height: 40, width: 184, flexShrink: 0 }}>
-            <Button
-              onClick={() => setRechargeOpen(true)}
-              sx={{ px: 0.9, color: SHIPMOZO_BLUE, textTransform: 'none', fontWeight: 900, minWidth: 92, width: 92, whiteSpace: 'nowrap' }}
-            >
-              {'\u20B9 '}
-              {Number(walletBalance ?? 269.75).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Button>
-            <Button onClick={() => setRechargeOpen(true)} sx={{ px: 0, bgcolor: SHIPMOZO_BLUE, color: '#fff', borderRadius: 0, textTransform: 'none', fontWeight: 900, minWidth: 92, width: 92, whiteSpace: 'nowrap', '&:hover': { bgcolor: '#06799a' } }}>
-              Recharge
-            </Button>
-          </Stack>
-          <Button
-            onClick={(event) => setQuickAnchor(event.currentTarget)}
-            endIcon={<MdKeyboardArrowDown size={18} />}
-            sx={{ display: { xs: 'none', md: 'inline-flex' }, ...navButtonSx, minWidth: 150, bgcolor: SHIPMOZO_BLUE }}
+          <IconButton
+            size="small"
+            aria-label="Switch to dark mode"
+            aria-pressed={mode === 'dark'}
+            onClick={() => setMode('dark')}
+            sx={{
+              width: 30,
+              height: 30,
+              color: mode === 'dark' ? '#9b8cff' : mutedColor,
+              bgcolor: mode === 'dark' ? alpha(ACTIVE, 0.16) : 'transparent',
+            }}
           >
-            Quick Actions
-          </Button>
-          <Button onClick={() => navigate('/tickets')} sx={{ display: { xs: 'none', lg: 'inline-flex' }, ...navButtonSx, minWidth: 88, bgcolor: SHIPMOZO_NAVY }}>
-            Tickets
-          </Button>
-          <Badge badgeContent={4} color="error" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
-            <IconButton onClick={(event) => setUpdatesAnchor(event.currentTarget)} sx={{ color: BRAND_TEXT }}>
-              <MdNotificationsNone size={26} />
-            </IconButton>
-          </Badge>
-          <Button
-            startIcon={<MdAddCircle size={18} />}
-            onClick={() => navigate('/orders/new')}
-            sx={{ display: { xs: 'none', xl: 'inline-flex' }, ...navButtonSx, bgcolor: SHIPMOZO_BLUE }}
-          >
-            Add Order
-          </Button>
-          <UserMenu />
+            <MdDarkMode size={16} />
+          </IconButton>
         </Stack>
-      </Stack>
 
-      <Popover
-        open={Boolean(searchAnchor)}
-        anchorEl={searchAnchor}
-        onClose={closeSearchMenu}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        slotProps={{
-          paper: {
+        <IconButton
+          aria-label="Notifications"
+          onClick={(event) => setNotificationAnchor(event.currentTarget)}
+          sx={{ width: 38, height: 38, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
+        >
+          <Badge
+            badgeContent={unreadCount}
+            max={99}
+            color="primary"
+            sx={{
+              '& .MuiBadge-badge': {
+                bgcolor: ORANGE,
+                color: '#fff',
+                fontWeight: 900,
+                minWidth: 18,
+                height: 18,
+                fontSize: '0.68rem',
+              },
+            }}
+          >
+            <MdNotifications size={21} />
+          </Badge>
+        </IconButton>
+
+        <Popover
+          open={notificationOpen}
+          anchorEl={notificationAnchor}
+          onClose={() => setNotificationAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          PaperProps={{
+            elevation: 0,
             sx: {
-              mt: 0.8,
-              width: 110,
-              borderRadius: '0 0 12px 12px',
-              border: '1px solid #dfe6ee',
-              boxShadow: '0 14px 30px rgba(15, 23, 42, 0.12)',
+              mt: 1.15,
+              width: { xs: 320, sm: 380 },
+              maxWidth: 'calc(100vw - 24px)',
+              borderRadius: 2,
+              border: `1px solid ${borderColor}`,
+              bgcolor: navBg,
+              color: textColor,
+              boxShadow: isDark ? '0 24px 54px rgba(0,0,0,0.36)' : '0 20px 42px rgba(15,23,42,0.14)',
               overflow: 'hidden',
             },
-          },
-        }}
-      >
-        <Stack sx={{ py: 0.5 }}>
-          {searchOptions.map((option) => (
-            <Button
-              key={option.label}
-              onClick={() => {
-                setSearchType(option)
-                setSearchValue('')
-                closeSearchMenu()
-              }}
-              sx={{
-                justifyContent: 'flex-start',
-                height: 44,
-                px: 2,
-                borderRadius: 0,
-                bgcolor: option.label === searchType.label ? '#eef7fb' : '#fff',
-                color: '#334155',
-                fontSize: 14,
-                textTransform: 'none',
-                '&:hover': { bgcolor: '#f4f8fb' },
-              }}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </Stack>
-      </Popover>
-      <QuickActionsPopover anchorEl={quickAnchor} onClose={closeQuickActions} onNavigate={goTo} />
-      <UpdatesPopover anchorEl={updatesAnchor} onClose={closeUpdates} />
-      <RechargeWalletDialog
-        open={rechargeOpen}
-        amount={rechargeAmount}
-        promoCode={promoCode}
-        onAmountChange={setRechargeAmount}
-        onPromoCodeChange={setPromoCode}
-        onClose={() => setRechargeOpen(false)}
-      />
-    </Box>
-  )
-}
-
-const navButtonSx = {
-  height: 40,
-  px: 1.7,
-  flexShrink: 0,
-  borderRadius: '11px',
-  color: '#fff',
-  textTransform: 'none',
-  fontWeight: 900,
-  whiteSpace: 'nowrap',
-  '&:hover': {
-    bgcolor: '#06799a',
-  },
-}
-
-interface QuickActionsPopoverProps {
-  anchorEl: HTMLElement | null
-  onClose: () => void
-  onNavigate: (path: string) => void
-}
-
-const quickActions = [
-  {
-    title: 'Rate Calculator',
-    subtitle: 'Calculate your shipping rate',
-    icon: <MdCalculate size={25} />,
-    color: '#ff8f78',
-    path: '/tools/rate-calculator',
-  },
-  {
-    title: 'Shipping Notification',
-    subtitle: 'Configure your shipping notification',
-    icon: <MdLocalShipping size={25} />,
-    color: '#5d86ff',
-    path: '/settings/shipping-notification',
-  },
-  {
-    title: 'Quick Add Order',
-    subtitle: 'Add a new quick order',
-    icon: <MdViewModule size={25} />,
-    color: '#9189ff',
-    path: '/orders/create',
-  },
-  {
-    title: 'Add Order',
-    subtitle: 'Add a new order',
-    icon: <MdPlaylistAdd size={25} />,
-    color: '#45dbc1',
-    path: '/orders/new',
-  },
-  {
-    title: 'Track Order',
-    subtitle: 'Track current status of your order',
-    icon: <MdRoute size={25} />,
-    color: '#22b8cf',
-    path: '/tools/track-order',
-  },
-]
-
-function QuickActionsPopover({ anchorEl, onClose, onNavigate }: QuickActionsPopoverProps) {
-  return (
-    <Popover
-      open={Boolean(anchorEl)}
-      anchorEl={anchorEl}
-      onClose={onClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      slotProps={{ paper: { sx: actionPopoverPaperSx } }}
-    >
-      <Stack spacing={1.35} sx={{ p: 2.4 }}>
-        {quickActions.map((item) => (
-          <ButtonBaseRow key={item.title} onClick={() => onNavigate(item.path)} icon={item.icon} color={item.color} title={item.title} subtitle={item.subtitle} />
-        ))}
-      </Stack>
-    </Popover>
-  )
-}
-
-interface ButtonBaseRowProps {
-  icon: ReactNode
-  color: string
-  title: string
-  subtitle: string
-  onClick?: () => void
-}
-
-function ButtonBaseRow({ icon, color, title, subtitle, onClick }: ButtonBaseRowProps) {
-  return (
-    <Button
-      onClick={onClick}
-      fullWidth
-      sx={{
-        justifyContent: 'flex-start',
-        gap: 1.6,
-        p: 0,
-        color: '#2f3747',
-        textAlign: 'left',
-        textTransform: 'none',
-        borderRadius: '10px',
-        '&:hover': { bgcolor: '#f7fafc' },
-      }}
-    >
-      <Box
-        sx={{
-          width: 56,
-          height: 56,
-          borderRadius: '12px',
-          display: 'grid',
-          placeItems: 'center',
-          color,
-          bgcolor: '#f2f6fb',
-          flexShrink: 0,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography sx={{ color: '#2f3747', fontSize: 14, fontWeight: 900, lineHeight: 1.2 }}>{title}</Typography>
-        <Typography sx={{ color: '#334155', fontSize: 14, fontWeight: 500, mt: 0.6, lineHeight: 1.25 }}>{subtitle}</Typography>
-      </Box>
-    </Button>
-  )
-}
-
-function UpdatesPopover({ anchorEl, onClose }: { anchorEl: HTMLElement | null; onClose: () => void }) {
-  return (
-    <Popover
-      open={Boolean(anchorEl)}
-      anchorEl={anchorEl}
-      onClose={onClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      slotProps={{ paper: { sx: { ...actionPopoverPaperSx, width: 450, maxHeight: 625 } } }}
-    >
-      <Box sx={{ p: 2, borderBottom: '1px solid #e6edf5' }}>
-        <Typography sx={{ fontSize: 18, fontWeight: 900, color: '#2f3747' }}>Updates</Typography>
-      </Box>
-      <Stack spacing={1.2} sx={{ p: 1.6 }}>
-        <Box sx={{ border: '1px solid #dfe6ee', borderRadius: '10px', p: 2.4 }}>
-          <Stack direction="row" justifyContent="space-between" gap={2}>
+          }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.7, py: 1.35 }}>
             <Box>
-              <Typography sx={{ fontSize: 15, fontWeight: 900, color: '#2f3747' }}>Price Alert-</Typography>
-              <Typography sx={{ fontSize: 14, color: '#334155', mt: 0.7, lineHeight: 1.45 }}>
-                Due to the recent diesel price hike, freight charges for a few courier partners have been revised.
+              <Typography sx={{ color: textColor, fontWeight: 900, fontSize: '0.98rem' }}>
+                Notifications
+              </Typography>
+              <Typography sx={{ color: mutedColor, fontWeight: 650, fontSize: '0.78rem', mt: 0.2 }}>
+                {unreadCount ? `${unreadCount} unread` : 'All caught up'}
               </Typography>
             </Box>
-          </Stack>
-          <Typography sx={{ mt: 2, textAlign: 'right', color: '#334155', fontSize: 14 }}>27 Jul 2026</Typography>
-        </Box>
-        <Box sx={{ border: '1px solid #dfe6ee', borderRadius: '10px', p: 2.2 }}>
-          <Typography sx={{ fontSize: 16, fontWeight: 900, color: '#2f3747', mb: 1.3 }}>We've Made Things Even Better</Typography>
-          <Box
-            sx={{
-              height: 188,
-              borderRadius: '7px',
-              bgcolor: '#eaf3ff',
-              display: 'grid',
-              placeItems: 'center',
-              color: '#3b82f6',
-              fontSize: 26,
-              fontWeight: 900,
-              textAlign: 'center',
-              mb: 1.4,
-            }}
-          >
-            We've
-            <br />
-            Upgraded!
-          </Box>
-          <Typography sx={{ fontSize: 14, color: '#334155', lineHeight: 1.45 }}>
-            We're excited to announce the latest updates to Shipmozo, designed to improve your shipping and order management experience.
-          </Typography>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}>
-            <Button endIcon={<MdOpenInNew size={16} />} sx={{ p: 0, minWidth: 0, color: '#2563eb', textTransform: 'none', fontWeight: 800 }}>
-              Open to know more
-            </Button>
-            <Typography sx={{ color: '#334155', fontSize: 14 }}>30 Jun 2026</Typography>
-          </Stack>
-        </Box>
-      </Stack>
-    </Popover>
-  )
-}
-
-interface RechargeWalletDialogProps {
-  open: boolean
-  amount: string
-  promoCode: string
-  onAmountChange: (value: string) => void
-  onPromoCodeChange: (value: string) => void
-  onClose: () => void
-}
-
-function RechargeWalletDialog({ open, amount, promoCode, onAmountChange, onPromoCodeChange, onClose }: RechargeWalletDialogProps) {
-  const quickAmounts = ['+1000', '+2000', '+5000', '+10000', '+20000']
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '12px', maxWidth: 556 } }}>
-      <DialogTitle sx={{ px: 3, py: 2.3 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography sx={{ fontSize: 20, fontWeight: 900, color: '#2f3747' }}>Recharge Wallet</Typography>
-          <IconButton onClick={onClose} sx={{ color: '#6b7c93' }}>
-            <MdClose size={24} />
-          </IconButton>
-        </Stack>
-      </DialogTitle>
-      <Divider />
-      <DialogContent sx={{ px: 3, py: 2.4 }}>
-        <Typography sx={{ color: '#2f3747', fontSize: 14, fontWeight: 800, mb: 1 }}>
-          Amount <Box component="span" sx={{ color: '#ff6f61' }}>*</Box>
-        </Typography>
-        <TextField
-          fullWidth
-          value={amount}
-          onChange={(event) => onAmountChange(event.target.value)}
-          placeholder="Enter amount"
-          type="number"
-          sx={fieldSx}
-          InputProps={{ startAdornment: amount ? <InputAdornment position="start">{'\u20B9'}</InputAdornment> : undefined }}
-        />
-        <Stack direction="row" flexWrap="wrap" gap={0.8} sx={{ mt: 1 }}>
-          {quickAmounts.map((item) => (
             <Button
-              key={item}
-              onClick={() => onAmountChange(item.replace('+', ''))}
-              sx={{
-                minWidth: 0,
-                height: 30,
-                px: 1.25,
-                borderRadius: '10px',
-                border: `1px solid ${SHIPMOZO_BLUE}`,
-                color: SHIPMOZO_BLUE,
-                bgcolor: '#fff',
-                fontSize: 13,
-                fontWeight: 800,
-                textTransform: 'none',
-              }}
+              size="small"
+              disabled={!unreadCount || markingAllRead}
+              onClick={() => markAllRead()}
+              sx={{ color: ORANGE, fontWeight: 850 }}
             >
-              {item}
+              Mark all read
             </Button>
-          ))}
-        </Stack>
-        <Typography sx={{ color: '#2f3747', fontSize: 14, fontWeight: 800, mt: 2.2, mb: 1 }}>Promo code</Typography>
-        <TextField
-          fullWidth
-          value={promoCode}
-          onChange={(event) => onPromoCodeChange(event.target.value)}
-          placeholder="Enter your code"
-          sx={fieldSx}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Button sx={{ minWidth: 80, height: 33, borderRadius: '10px', bgcolor: SHIPMOZO_BLUE, color: '#fff', textTransform: 'none', fontWeight: 900, '&:hover': { bgcolor: '#06799a' } }}>
-                  Apply
-                </Button>
-              </InputAdornment>
-            ),
-          }}
-        />
-        <Button endIcon={<MdKeyboardArrowDown size={20} />} sx={{ mt: 1.2, p: 0, minWidth: 0, color: '#2f3747', textTransform: 'none', fontWeight: 900 }}>
-          View Available Promo Codes
-        </Button>
-      </DialogContent>
-      <Divider />
-      <DialogActions sx={{ p: 2.4 }}>
-        <Button onClick={onClose} sx={{ height: 40, px: 2.7, borderRadius: '10px', bgcolor: SHIPMOZO_BLUE, color: '#fff', textTransform: 'none', fontWeight: 900, '&:hover': { bgcolor: '#06799a' } }}>
-          Recharge
-        </Button>
-      </DialogActions>
-    </Dialog>
+          </Stack>
+          <Divider sx={{ borderColor }} />
+          {notificationsLoading ? (
+            <Stack alignItems="center" justifyContent="center" sx={{ py: 5 }}>
+              <CircularProgress size={24} sx={{ color: ORANGE }} />
+            </Stack>
+          ) : latestNotifications.length ? (
+            <List sx={{ p: 0, maxHeight: 420, overflowY: 'auto' }}>
+              {latestNotifications.map((notification) => {
+                const unread = !Boolean(notification.read ?? notification.isRead)
+                return (
+                  <ListItemButton
+                    key={notification.id}
+                    onClick={() => {
+                      if (unread) markRead(notification.id)
+                    }}
+                    sx={{
+                      alignItems: 'flex-start',
+                      gap: 1.2,
+                      px: 1.7,
+                      py: 1.35,
+                      bgcolor: unread ? alpha(ORANGE, isDark ? 0.12 : 0.08) : 'transparent',
+                      borderBottom: `1px solid ${borderColor}`,
+                      '&:hover': { bgcolor: hoverBg },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        mt: 0.5,
+                        width: 9,
+                        height: 9,
+                        borderRadius: '50%',
+                        bgcolor: unread ? ORANGE : alpha(mutedColor, 0.35),
+                        flexShrink: 0,
+                      }}
+                    />
+                    <ListItemText
+                      primary={notification.title || 'Notification'}
+                      secondary={
+                        <>
+                          <Typography component="span" sx={{ display: 'block', color: mutedColor, fontSize: '0.82rem', lineHeight: 1.45 }}>
+                            {notification.message}
+                          </Typography>
+                          {notification.createdAt ? (
+                            <Typography component="span" sx={{ display: 'block', color: alpha(mutedColor, 0.82), fontSize: '0.72rem', mt: 0.6, fontWeight: 700 }}>
+                              {new Date(notification.createdAt).toLocaleString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </Typography>
+                          ) : null}
+                        </>
+                      }
+                      primaryTypographyProps={{
+                        color: textColor,
+                        fontWeight: unread ? 900 : 750,
+                        fontSize: '0.9rem',
+                        lineHeight: 1.35,
+                      }}
+                    />
+                  </ListItemButton>
+                )
+              })}
+            </List>
+          ) : (
+            <Stack alignItems="center" textAlign="center" sx={{ px: 3, py: 5 }}>
+              <MdNotifications size={30} color={mutedColor} />
+              <Typography sx={{ mt: 1, color: textColor, fontWeight: 850 }}>No notifications yet</Typography>
+              <Typography sx={{ mt: 0.5, color: mutedColor, fontSize: '0.82rem' }}>
+                New order and shipment updates will appear here.
+              </Typography>
+            </Stack>
+          )}
+        </Popover>
+
+        <UserMenu compact />
+      </Stack>
+    </Box>
   )
-}
-
-const actionPopoverPaperSx = {
-  mt: 0.8,
-  width: 422,
-  borderRadius: '10px',
-  border: '1px solid #e5ebf2',
-  boxShadow: '0 20px 42px rgba(15, 23, 42, 0.12)',
-  overflow: 'hidden',
-}
-
-const fieldSx = {
-  '& .MuiOutlinedInput-root': {
-    height: 50,
-    borderRadius: '11px',
-    bgcolor: '#fff',
-    '& fieldset': { borderColor: '#d5dce6' },
-    '&:hover fieldset': { borderColor: '#c6d0dc' },
-    '&.Mui-focused fieldset': { borderColor: SHIPMOZO_BLUE, borderWidth: 1 },
-  },
-  '& input': { color: '#334155', fontSize: 14 },
 }

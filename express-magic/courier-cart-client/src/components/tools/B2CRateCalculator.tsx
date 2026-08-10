@@ -1,16 +1,12 @@
 import { Alert, Box, Grid, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import { useMemo } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { FiInfo } from 'react-icons/fi'
 import { TbRulerMeasure, TbScale } from 'react-icons/tb'
-import { BRAND } from '../../config/brand'
-import {
-  B2C_MIN_CHARGEABLE_WEIGHT_GRAMS,
-  B2C_MIN_CHARGEABLE_WEIGHT_KG,
-} from '../../utils/constants'
+import { brand } from '../../theme/brand'
+import { kgToGrams, MIN_B2C_CHARGEABLE_WEIGHT_GRAMS } from '../../utils/weight'
 import CustomInput from '../UI/inputs/CustomInput'
-
-const { teal, orange, tealSoft, border, muted } = BRAND.colors
 
 export default function B2CRateCalculator() {
   const {
@@ -19,64 +15,66 @@ export default function B2CRateCalculator() {
     formState: { errors },
   } = useFormContext()
 
-  // Watch form values
   const length = useWatch({ control, name: 'length' }) || 0
   const breadth = useWatch({ control, name: 'breadth' }) || 0
   const height = useWatch({ control, name: 'height' }) || 0
-  const actualWeightKg = useWatch({ control, name: 'weight' }) || 0 // kg
+  const actualWeightKg = useWatch({ control, name: 'weight' }) || 0
 
-  // Volumetric weight in grams (unchanged – API still expects grams)
   const volumetricWeightGrams = useMemo(() => {
     const volKg = (Number(length) * Number(breadth) * Number(height)) / 5000
     const volGrams = volKg * 1000
     return isNaN(volGrams) ? 0 : Math.round(volGrams)
   }, [length, breadth, height])
 
-  // Applicable weight in grams
   const applicableWeightGrams = useMemo(() => {
-    const actualWeightGrams = (Number(actualWeightKg) || 0) * 1000
-    return Math.max(actualWeightGrams, volumetricWeightGrams, B2C_MIN_CHARGEABLE_WEIGHT_GRAMS)
+    const actualWeightGrams = kgToGrams(actualWeightKg)
+    return Math.max(actualWeightGrams, volumetricWeightGrams, MIN_B2C_CHARGEABLE_WEIGHT_GRAMS)
   }, [actualWeightKg, volumetricWeightGrams])
 
-  // Convert to Kg for display
   const volumetricWeightKg = (volumetricWeightGrams / 1000).toFixed(2)
   const applicableWeightKg = (applicableWeightGrams / 1000).toFixed(2)
 
+  const metricCardSx = {
+    p: 2,
+    borderRadius: '24px',
+    border: `1px solid ${alpha(brand.ink, 0.08)}`,
+    backgroundColor: alpha('#FFFFFF', 0.88),
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1.2,
+  }
+
   return (
-    <Grid container spacing={2}>
-      {/* Actual Weight (in Kg for input) */}
+    <Grid container spacing={1.6}>
       <Grid size={{ xs: 12, md: 6 }}>
         <CustomInput
-          label="Actual Weight *"
+          label="Actual Weight"
           type="number"
           {...register('weight', {
             required: 'Actual weight is required',
             min: { value: 0.1, message: 'Weight must be greater than 0' },
           })}
-          postfix="Kg" // ✅ customer inputs in Kg (e.g. 0.5, 1, 2)
+          postfix="Kg"
           fullWidth
           error={!!errors.weight}
           helperText={errors.weight?.message as string}
+          topMargin={false}
         />
       </Grid>
 
-      {/* Clear Note */}
-      <Grid mt={{ xs: 0, md: 4 }} size={{ xs: 12, md: 6 }} display="flex" alignItems="center">
+      <Grid size={{ xs: 12, md: 6 }} display="flex" alignItems="center">
         <Alert
           icon={<FiInfo size={18} />}
           severity="info"
           sx={{
             width: '100%',
-            border: `1px solid ${border}`,
-            bgcolor: tealSoft,
-            color: muted,
-            '& .MuiAlert-icon': { color: teal },
+            borderRadius: '20px',
+            color: brand.ink,
+            border: `1px solid ${alpha(brand.accent, 0.22)}`,
+            backgroundColor: alpha(brand.accent, 0.08),
           }}
         >
-          Minimum chargeable weight is{' '}
-          <b>
-            {B2C_MIN_CHARGEABLE_WEIGHT_GRAMS} g ({B2C_MIN_CHARGEABLE_WEIGHT_KG.toFixed(2)} Kg)
-          </b>
+          Minimum chargeable weight is <b>500 g (0.5 Kg)</b>.
         </Alert>
       </Grid>
 
@@ -120,22 +118,27 @@ export default function B2CRateCalculator() {
         />
       </Grid>
 
-      {/* Calculations */}
       <Grid size={{ xs: 12, md: 6 }}>
-        <Box
-          sx={{
-            p: 2,
-            border: `1px solid ${border}`,
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <TbRulerMeasure size={24} color={teal} />
+        <Box sx={metricCardSx}>
+          <Box
+            sx={{
+              width: 42,
+              height: 42,
+              borderRadius: '16px',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: alpha(brand.accent, 0.14),
+              color: brand.accent,
+              flexShrink: 0,
+            }}
+          >
+            <TbRulerMeasure size={22} />
+          </Box>
           <Box>
-            <Typography variant="subtitle2">Volumetric Weight</Typography>
-            <Typography variant="h6">
+            <Typography sx={{ color: brand.inkSoft, fontSize: '0.8rem', fontWeight: 700 }}>
+              Volumetric Weight
+            </Typography>
+            <Typography sx={{ color: brand.ink, fontWeight: 800, fontSize: '1.08rem' }}>
               {volumetricWeightGrams} g ({volumetricWeightKg} Kg)
             </Typography>
           </Box>
@@ -143,26 +146,34 @@ export default function B2CRateCalculator() {
       </Grid>
 
       <Grid size={{ xs: 12, md: 6 }}>
-        <Box
-          sx={{
-            p: 2,
-            border: `1px solid ${border}`,
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <TbScale size={24} color={orange} />
+        <Box sx={metricCardSx}>
+          <Box
+            sx={{
+              width: 42,
+              height: 42,
+              borderRadius: '16px',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: alpha(brand.success, 0.16),
+              color: brand.success,
+              flexShrink: 0,
+            }}
+          >
+            <TbScale size={22} />
+          </Box>
           <Box>
-            <Typography variant="subtitle2">Applicable Weight</Typography>
+            <Typography sx={{ color: brand.inkSoft, fontSize: '0.8rem', fontWeight: 700 }}>
+              Applicable Weight
+            </Typography>
             <Typography
-              variant="h6"
-              color={
-                applicableWeightGrams === B2C_MIN_CHARGEABLE_WEIGHT_GRAMS
-                  ? 'error'
-                  : 'text.primary'
-              }
+              sx={{
+                color:
+                  applicableWeightGrams === MIN_B2C_CHARGEABLE_WEIGHT_GRAMS
+                    ? brand.accent
+                    : brand.ink,
+                fontWeight: 800,
+                fontSize: '1.08rem',
+              }}
             >
               {applicableWeightGrams} g ({applicableWeightKg} Kg)
             </Typography>

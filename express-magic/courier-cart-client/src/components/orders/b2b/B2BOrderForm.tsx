@@ -1,12 +1,9 @@
-import { Box, Button, Stack, Typography, alpha } from '@mui/material'
+import { Box, Button, Stack, Step, StepLabel, Stepper } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { FormProvider, useForm, type FieldErrors } from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
 import { FaBox, FaFileInvoice, FaTruck, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
-
-const ACCENT = '#062A5B'
-const TEXT_PRIMARY = '#17171A'
 import type { CreateB2BShipmentParams } from '../../../api/order.service'
 import { useCreateB2BShipment } from '../../../hooks/Orders/useOrders'
 import { usePaymentOptions } from '../../../hooks/usePaymentOptions'
@@ -80,13 +77,8 @@ export type B2BFormData = {
   courierCost?: number | null // Estimated courier cost from serviceability (what platform pays courier)
   forwardCharges?: number
   otherCharges?: number
-  integrationType?: 'delhivery' | 'ekart' | 'shadowfax' | 'xpressbees' | 'amazon' | 'icarry'
-  amazonRequestToken?: string | null
-  amazonRateId?: string | null
-  amazonServiceId?: string | null
-  amazonCarrierId?: string | null
-  shadowfaxForwardMode?: 'marketplace' | 'warehouse'
-  shadowfaxServiceMode?: 'regular' | 'surface'
+  integrationType?: 'delhivery'
+  shippingMode?: string
 
   // Pickup location (optional)
   pickupLocationId?: string
@@ -197,6 +189,16 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
   const totalOrderValue = subtotal + transactionFee - discount
   const totalCollectable = totalOrderValue - prepaidAmount
+  const getPackageSummary = (boxes: Box[] = []) => {
+    const validBoxes = boxes.filter(Boolean)
+    return {
+      packageWeight: validBoxes.reduce((sum, box) => sum + Number(box.weightKg || 0), 0),
+      packageLength: Math.max(0, ...validBoxes.map((box) => Number(box.lengthCm || 0))),
+      packageBreadth: Math.max(0, ...validBoxes.map((box) => Number(box.breadthCm || 0))),
+      packageHeight: Math.max(0, ...validBoxes.map((box) => Number(box.heightCm || 0))),
+    }
+  }
+
   const onSubmit = async (data: B2BFormData) => {
     try {
       const normalizedOrderId = data.orderId.trim()
@@ -209,12 +211,18 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         return
       }
 
+      const packageSummary = getPackageSummary(data.boxes)
+
       // Prepare B2B shipment payload
       const payload: CreateB2BShipmentParams = {
         order_number: normalizedOrderId,
         order_date: data.orderDate,
         payment_type: data.orderType,
         order_amount: totalCollectable,
+        package_weight: packageSummary.packageWeight,
+        package_length: packageSummary.packageLength,
+        package_breadth: packageSummary.packageBreadth,
+        package_height: packageSummary.packageHeight,
         shipping_charges: 0,
         freight_charges: data.forwardCharges ?? 0, // What platform charges seller (based on rate card)
         courier_cost: data.courierCost ? Number(data.courierCost) : undefined, // Estimated courier cost from serviceability (what platform pays courier)
@@ -238,8 +246,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           warehouse_name: data.pickupLocationName ?? '',
           address: data.pickupAddress ?? '',
           name: data.pickupLocationPOCName ?? '',
-          city: data.pickupCity ?? data.city,
-          state: data.pickupState ?? data.state,
+          city: data.pickupCity ?? '',
+          state: data.pickupState ?? '',
           pincode: data.pickupLocationPincode ?? data.pincode,
           phone: data.pickupLocationPOCPhone ?? data.buyerPhone,
         },
@@ -296,19 +304,13 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       if (data.integrationType) {
         payload.integration_type = data.integrationType
       }
-      if (data.shadowfaxForwardMode) {
-        payload.shadowfax_forward_mode = data.shadowfaxForwardMode
-      }
-      if (data.shadowfaxServiceMode) {
-        payload.shadowfax_service_mode = data.shadowfaxServiceMode
-      }
 
       console.log('B2B Shipment Payload:', payload)
 
       // Call the mutation
       createShipmentMutation.mutate(payload, {
         onSuccess: () => {
-          if (location.pathname === '/orders/create' || location.pathname === '/orders/add') {
+          if (location.pathname === '/orders/create') {
             navigate('/orders/list?status=pending')
           }
         },
@@ -327,113 +329,132 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
   useEffect(() => {
     setValue('orderAmount', totalCollectable, { shouldValidate: true })
-  }, [totalCollectable])
+  }, [setValue, totalCollectable])
 
   return (
     <FormProvider {...methods}>
-      <Stack
-        gap={0.45}
-        sx={{
-          height: '100%',
-          position: 'relative',
-          p: { xs: 0.25, sm: 0.3, md: 0.35 },
-          borderRadius: 1.4,
-          border: `1px solid ${alpha(ACCENT, 0.14)}`,
-          background: '#ffffff',
-          boxShadow: `0 6px 16px ${alpha(ACCENT, 0.06)}`,
-        }}
-      >
-        {/* Step Indicator */}
-        <Box
-          sx={{
-            px: { xs: 0.5, sm: 0.65 },
-            py: { xs: 0.25, sm: 0.3 },
-            borderRadius: 1.3,
-            background: alpha(ACCENT, 0.05),
-            border: `1px solid ${alpha(ACCENT, 0.1)}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.45,
-            flexWrap: 'wrap',
-          }}
-        >
-          {steps.map((label, index) => (
-            <Stack key={label} direction="row" alignItems="center" gap={0.35}>
-              <Box
-                sx={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor:
-                    index < currentStep
-                      ? ACCENT
-                      : index === currentStep
-                      ? alpha(ACCENT, 0.2)
-                      : alpha(TEXT_PRIMARY, 0.08),
-                  color: index < currentStep || index === currentStep ? ACCENT : TEXT_PRIMARY,
-                  fontWeight: 700,
-                  fontSize: '0.72rem',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {index < currentStep ? '✓' : index + 1}
-              </Box>
-              <Typography
-                sx={{
-                  fontSize: '0.76rem',
-                  fontWeight: index === currentStep ? 600 : 500,
-                  color: index === currentStep ? TEXT_PRIMARY : alpha(TEXT_PRIMARY, 0.7),
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {label}
-              </Typography>
-              {index < steps.length - 1 && (
-                <Box
-                  sx={{
-                    width: 8,
-                    height: '1px',
-                    background: index < currentStep ? ACCENT : alpha(TEXT_PRIMARY, 0.2),
-                    transition: 'all 0.2s ease',
-                    display: { xs: 'none', sm: 'block' },
-                  }}
-                />
-              )}
-            </Stack>
-          ))}
-        </Box>
-
+      <Stack gap={2} sx={{ height: '100%', position: 'relative' }}>
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit)}
-          sx={{ flex: 1, overflowY: 'auto', p: 0.05, pr: { xs: 0.25, sm: 0.35, md: 0.45 } }}
+          sx={{ flex: 1, overflowY: 'auto', p: 2 }}
         >
+          <Box
+            sx={{
+              p: { xs: 2, sm: 3 },
+              background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)',
+              borderRadius: '16px',
+              mb: 3,
+              boxShadow: '0 8px 24px rgba(26, 35, 126, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+            }}
+          >
+            <Stepper
+              activeStep={currentStep}
+              alternativeLabel
+              sx={{
+                '& .MuiStepConnector-root': {
+                  top: '22px',
+                  left: 'calc(-50% + 20px)',
+                  right: 'calc(50% + 20px)',
+                },
+                '& .MuiStepConnector-line': {
+                  borderTopWidth: '3px',
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                },
+                '& .Mui-active .MuiStepConnector-line': {
+                  borderColor: '#4caf50',
+                },
+                '& .Mui-completed .MuiStepConnector-line': {
+                  borderColor: '#4caf50',
+                },
+              }}
+            >
+              {steps.map((label, index) => (
+                <Step key={label} completed={index < currentStep} active={index === currentStep}>
+                  <StepLabel
+                    StepIconComponent={({ active, completed, icon }) => (
+                      <Box
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: active
+                            ? '#4caf50'
+                            : completed
+                            ? '#4caf50'
+                            : 'rgba(255, 255, 255, 0.2)',
+                          border: active
+                            ? '3px solid #ffffff'
+                            : completed
+                            ? '3px solid #ffffff'
+                            : '3px solid rgba(255, 255, 255, 0.4)',
+                          boxShadow: active
+                            ? '0 0 0 4px rgba(76, 175, 80, 0.3), 0 4px 12px rgba(76, 175, 80, 0.4)'
+                            : completed
+                            ? '0 4px 8px rgba(76, 175, 80, 0.3)'
+                            : '0 2px 4px rgba(0, 0, 0, 0.2)',
+                          transition: 'all 0.3s ease',
+                          fontSize: '18px',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                        }}
+                      >
+                        {completed ? '✓' : icon}
+                      </Box>
+                    )}
+                    sx={{
+                      '& .MuiStepLabel-label': {
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 600,
+                        fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
+                        mt: 1,
+                        textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                      },
+                      '& .MuiStepLabel-label.Mui-active': {
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1.05rem' },
+                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                      },
+                      '& .MuiStepLabel-label.Mui-completed': {
+                        color: '#c8e6c9',
+                        fontWeight: 600,
+                      },
+                    }}
+                  >
+                    {label}
+                  </StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+          </Box>
 
           {currentStep === 0 && (
-            <Stack gap={0.45} mb={0.45}>
-              <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded compact>
+            <Stack gap={2} mb={2}>
+              <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded>
                 <OrderDetailsForm />
               </FormSectionAccordion>
 
-              <FormSectionAccordion title="Recipient Details" icon={<FaUser />} defaultExpanded compact>
+              <FormSectionAccordion title="Recipient Details" icon={<FaUser />} defaultExpanded>
                 <DeliveryDetailsForm type="b2b" />
               </FormSectionAccordion>
 
               {/* Boxes */}
-              <FormSectionAccordion title="Boxes" icon={<FaBox />} defaultExpanded compact>
+              <FormSectionAccordion title="Boxes" icon={<FaBox />} defaultExpanded>
                 <B2BProductsForm />
               </FormSectionAccordion>
 
               {/* Invoices */}
-              <FormSectionAccordion title="Invoices" icon={<FaFileInvoice />} defaultExpanded compact>
+              <FormSectionAccordion title="Invoices" icon={<FaFileInvoice />} defaultExpanded>
                 <B2BInvoicesForm />
               </FormSectionAccordion>
 
               {/* Products */}
-              <FormSectionAccordion title="Products & Boxes" icon={<FaBox />} defaultExpanded compact>
+              <FormSectionAccordion title="Products & Boxes" icon={<FaBox />} defaultExpanded>
                 <B2BProductsForm />
               </FormSectionAccordion>
 
@@ -441,7 +462,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                 title="Optional Charges & Summary"
                 icon={<BiRupee />}
                 defaultExpanded
-                compact
               >
                 <OptionalChargesForm />
               </FormSectionAccordion>
@@ -458,37 +478,37 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           {currentStep === 1 && <PickupLocationForm />}
 
           {currentStep === 2 && (
-            <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded compact>
+            <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded>
               <SelectCourierForm shipment_type="b2b" />
             </FormSectionAccordion>
           )}
 
           <Box
             sx={{
-              py: 0.25,
-              px: { xs: 0.55, sm: 0.75 },
+              py: 2,
+              px: 2,
               background: '#FFFFFF',
               border: '1px solid #E2E8F0',
-              borderRadius: '10px',
+              borderRadius: '15px',
               position: 'sticky',
               bottom: 0,
               zIndex: 10,
-              boxShadow: '0 3px 8px rgba(0,0,0,0.07)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           >
-            <Stack direction="row" justifyContent="space-between" gap={0.5}>
+            <Stack direction="row" justifyContent="space-between">
               {currentStep > 0 && (
                 <Button
+                  type="button"
                   loading={createShipmentMutation?.isPending}
                   variant="outlined"
                   onClick={prevStep}
-                  size="small"
                 >
                   Back
                 </Button>
               )}
               {currentStep < 2 ? (
-                <Button variant="contained" onClick={nextStep} size="small">
+                <Button type="button" variant="contained" onClick={nextStep}>
                   Next
                 </Button>
               ) : (
@@ -498,7 +518,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                   onClick={handleSubmit(onSubmit)}
                   color="primary"
                   loading={createShipmentMutation?.isPending}
-                  size="small"
                 >
                   Create & Book Order
                 </Button>

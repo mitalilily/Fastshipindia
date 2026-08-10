@@ -1,12 +1,12 @@
-import { Box, LinearProgress, Skeleton, Stack, Typography } from '@mui/material'
+import { alpha, Box, LinearProgress, Skeleton, Stack, Typography } from '@mui/material'
 import { FaTruck } from 'react-icons/fa6'
 import type { CourierDistribution as CourierDistributionType } from '../../api/dashboard.api'
 
-const BRAND_PRIMARY = '#062A5B'
-const INK = '#111827'
-const MUTED = '#6B7280'
+const DE_BLUE = '#0052CC'
+const TEXT_PRIMARY = '#172B4D'
+const TEXT_SECONDARY = '#42526E'
 
-const barColors = ['#062A5B', '#244f9e', '#ED1C24', '#D95C00', '#6B7280', '#17171A']
+const barColors = ['#0052CC', '#0065FF', '#FFAB00', '#FFC400', '#36B37E', '#172B4D']
 
 type CourierDistributionProps = {
   data?: CourierDistributionType[]
@@ -27,13 +27,13 @@ const CourierDistribution = ({
   return (
     <Stack gap={1.8}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, color: INK }}>
+        <Typography sx={{ fontSize: '1.02rem', fontWeight: 800, color: TEXT_PRIMARY }}>
           Courier Distribution
         </Typography>
-        <Typography sx={{ fontSize: '12px', color: MUTED, fontWeight: 600 }}>Order Share</Typography>
+        <Typography sx={{ fontSize: '12px', color: TEXT_SECONDARY, fontWeight: 700 }}>Order Share</Typography>
       </Stack>
       {errorMessage && (
-        <Typography sx={{ fontSize: '0.75rem', color: '#b42318', fontWeight: 600 }}>
+        <Typography sx={{ fontSize: '0.75rem', color: '#DE350B', fontWeight: 600 }}>
           {errorMessage}
         </Typography>
       )}
@@ -41,7 +41,7 @@ const CourierDistribution = ({
       {isLoading ? (
         <Stack gap={1.2}>
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={70} variant="rectangular" sx={{ borderRadius: 0 }} />
+            <Skeleton key={i} height={70} variant="rectangular" sx={{ borderRadius: 1 }} />
           ))}
         </Stack>
       ) : !distribution || distribution.length === 0 ? (
@@ -49,14 +49,14 @@ const CourierDistribution = ({
           sx={{
             textAlign: 'center',
             py: 4,
-            borderRadius: 0,
-            border: '1px dashed rgba(17, 24, 39, 0.18)',
-            bgcolor: '#F8FAFC',
+            borderRadius: 1,
+            border: `1px dashed ${alpha(DE_BLUE, 0.2)}`,
+            bgcolor: alpha(DE_BLUE, 0.02),
           }}
         >
-          <FaTruck size={30} style={{ color: BRAND_PRIMARY, opacity: 0.55 }} />
-          <Typography sx={{ mt: 0.8, fontSize: '0.88rem', color: MUTED, fontWeight: 600 }}>
-            No courier distribution available
+          <FaTruck size={30} style={{ color: DE_BLUE, opacity: 0.5 }} />
+          <Typography sx={{ mt: 0.8, fontSize: '0.88rem', color: TEXT_SECONDARY, fontWeight: 600 }}>
+            No courier data found
           </Typography>
         </Box>
       ) : (
@@ -70,16 +70,16 @@ const CourierDistribution = ({
                 key={index}
                 sx={{
                   p: 1.4,
-                  borderRadius: 0,
-                  border: '1px solid rgba(17, 24, 39, 0.08)',
+                  borderRadius: 1,
+                  border: `1px solid ${alpha(DE_BLUE, 0.08)}`,
                   bgcolor: '#ffffff',
                 }}
               >
                 <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.95}>
-                  <Typography noWrap sx={{ maxWidth: '70%', fontSize: '0.88rem', color: INK, fontWeight: 700 }}>
+                  <Typography noWrap sx={{ maxWidth: '70%', fontSize: '0.88rem', color: TEXT_PRIMARY, fontWeight: 700 }}>
                     {item.courier || 'Unknown Courier'}
                   </Typography>
-                  <Typography sx={{ fontSize: '0.76rem', color: MUTED, fontWeight: 700 }}>
+                  <Typography sx={{ fontSize: '0.76rem', color: TEXT_SECONDARY, fontWeight: 700 }}>
                     {item.count} {item.count === 1 ? 'order' : 'orders'}
                   </Typography>
                 </Stack>
@@ -88,22 +88,22 @@ const CourierDistribution = ({
                   variant="determinate"
                   value={percentage}
                   sx={{
-                    height: 9,
-                    borderRadius: 0,
-                    bgcolor: '#E5E7EB',
+                    height: 6,
+                    borderRadius: 1,
+                    bgcolor: alpha(DE_BLUE, 0.1),
                     '& .MuiLinearProgress-bar': {
-                      borderRadius: 0,
+                      borderRadius: 1,
                       bgcolor: color,
                     },
                   }}
                 />
 
                 <Stack direction="row" justifyContent="space-between" mt={0.6}>
-                  <Typography sx={{ fontSize: '11px', color: MUTED }}>Share</Typography>
+                  <Typography sx={{ fontSize: '11px', color: TEXT_SECONDARY }}>Share</Typography>
                   <Typography
                     sx={{
                       fontSize: '11px',
-                      color: percentage > 35 ? '#8a3e00' : BRAND_PRIMARY,
+                      color: percentage > 35 ? '#8a3e00' : DE_BLUE,
                       fontWeight: 700,
                     }}
                   >
@@ -117,8 +117,8 @@ const CourierDistribution = ({
       )}
 
       {distribution && distribution.length > 0 && (
-        <Box sx={{ p: 1.2, borderRadius: 0, bgcolor: '#F8FAFC', border: '1px solid rgba(17, 24, 39, 0.08)' }}>
-          <Typography sx={{ fontSize: '12px', color: INK, fontWeight: 700 }}>
+        <Box sx={{ p: 1.2, borderRadius: 1, bgcolor: alpha('#FFAB00', 0.1), border: `1px solid ${alpha('#FFAB00', 0.2)}` }}>
+          <Typography sx={{ fontSize: '12px', color: '#8a3e00', fontWeight: 700 }}>
             Total orders processed: {totalOrders}
           </Typography>
         </Box>

@@ -2,6 +2,7 @@ import { Box, Button, IconButton, Stack, Typography } from '@mui/material'
 import { MdContentCopy, MdDownload } from 'react-icons/md'
 import CustomInput from '../../../components/UI/inputs/CustomInput'
 import CustomDialog from '../../../components/UI/modal/CustomModal'
+import { brand } from '../../../theme/brand'
 
 interface ViewApiKeyModalProps {
   open: boolean
@@ -25,11 +26,11 @@ export const ViewApiKeyModal = ({
   if (!apiKey) return null
 
   const handleDownloadCredentials = () => {
-    const content = `FastShip API Credentials
+    const content = `Ship Aggregator API Credentials
 Generated: ${new Date().toISOString()}
 Key Name: ${apiKey.key_name}
 
-⚠️ IMPORTANT: Keep these credentials secure and never share them publicly.
+IMPORTANT: Keep these credentials secure and never share them publicly.
 
 API Key:
 ${apiKey.api_key}
@@ -45,7 +46,7 @@ This file contains sensitive credentials. Store it securely and never commit it 
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `fastship-api-credentials-${apiKey.key_name
+    link.download = `shipaggregator-api-credentials-${apiKey.key_name
       .replace(/\s+/g, '-')
       .toLowerCase()}-${new Date().toISOString().split('T')[0]}.txt`
     document.body.appendChild(link)
@@ -80,16 +81,16 @@ This file contains sensitive credentials. Store it securely and never commit it 
         <Box
           sx={{
             p: 2,
-            bgcolor: '#FFF4E6',
-            borderRadius: 1,
+            bgcolor: 'rgba(255, 248, 239, 0.96)',
+            borderRadius: '22px',
             border: '1px solid',
-            borderColor: '#FFA726',
+            borderColor: 'rgba(245, 158, 11, 0.24)',
           }}
         >
-          <Typography sx={{ fontWeight: 600, color: '#E65100', mb: 1, fontSize: '0.875rem' }}>
-            ⚠️ Important: Save these credentials securely
+          <Typography sx={{ fontWeight: 600, color: brand.ink, mb: 1, fontSize: '0.875rem' }}>
+            Important: Save these credentials securely
           </Typography>
-          <Typography sx={{ fontSize: '0.75rem', color: '#E65100', m: 0, mt: 1 }}>
+          <Typography sx={{ fontSize: '0.75rem', color: brand.inkSoft, m: 0, mt: 1 }}>
             You will not be able to view the API key and secret again after closing this dialog.
           </Typography>
         </Box>
@@ -97,7 +98,7 @@ This file contains sensitive credentials. Store it securely and never commit it 
           <Typography
             sx={{
               fontSize: '13px',
-              color: '#062A5B',
+              color: brand.ink,
               fontWeight: 500,
               mb: 0.5,
             }}
@@ -113,8 +114,8 @@ This file contains sensitive credentials. Store it securely and never commit it 
                 onClick={() => onCopy(apiKey.api_key, 'key')}
                 size="small"
                 sx={{
-                  color: copiedKey === 'key' ? '#4CAF50' : '#062A5B',
-                  '&:hover': { bgcolor: 'rgba(51, 51, 105, 0.08)' },
+                  color: copiedKey === 'key' ? brand.success : brand.ink,
+                  '&:hover': { bgcolor: 'rgba(16, 50, 74, 0.08)' },
                 }}
               >
                 <MdContentCopy size={18} />
@@ -126,7 +127,7 @@ This file contains sensitive credentials. Store it securely and never commit it 
           <Typography
             sx={{
               fontSize: '13px',
-              color: '#062A5B',
+              color: brand.ink,
               fontWeight: 500,
               mb: 0.5,
             }}
@@ -142,8 +143,8 @@ This file contains sensitive credentials. Store it securely and never commit it 
                 onClick={() => onCopy(apiKey.api_secret, 'secret')}
                 size="small"
                 sx={{
-                  color: copiedKey === 'secret' ? '#4CAF50' : '#062A5B',
-                  '&:hover': { bgcolor: 'rgba(51, 51, 105, 0.08)' },
+                  color: copiedKey === 'secret' ? brand.success : brand.ink,
+                  '&:hover': { bgcolor: 'rgba(16, 50, 74, 0.08)' },
                 }}
               >
                 <MdContentCopy size={18} />
@@ -155,3 +156,5 @@ This file contains sensitive credentials. Store it securely and never commit it 
     </CustomDialog>
   )
 }
+
+

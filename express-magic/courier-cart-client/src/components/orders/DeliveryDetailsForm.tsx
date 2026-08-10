@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { CircularProgress, Grid } from '@mui/material'
 import { useEffect } from 'react'
 import { Controller, type FieldErrors, useFormContext } from 'react-hook-form'
-import { normalizePincode, type ServiceabilityLocation } from '../../api/locations'
 import { useLocations } from '../../hooks/useLocations'
 import CustomInput from '../UI/inputs/CustomInput'
 import type { B2BFormData } from './b2b/B2BOrderForm'
@@ -10,16 +8,7 @@ import type { B2CFormData } from './b2c/B2COrderForm'
 
 type FormType = 'b2b' | 'b2c'
 
-const getExactLocation = (rows: ServiceabilityLocation[] = [], pincode: string) =>
-  rows.find((row) => String(row?.pincode || '') === pincode) ?? rows[0]
-
-const DeliveryDetailsForm = ({
-  type = 'b2c',
-  allowResolvedLocationEdit = false,
-}: {
-  type?: FormType
-  allowResolvedLocationEdit?: boolean
-}) => {
+const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
   const {
     control,
     setValue,
@@ -31,25 +20,20 @@ const DeliveryDetailsForm = ({
   } = useFormContext<B2CFormData | B2BFormData>()
 
   const pincode = watch('pincode')
-  const normalizedPincode = normalizePincode(pincode)
+  const normalizedPincode = String(pincode ?? '').trim()
 
   const {
     data: locationData,
     isFetching: pinFetching,
     isError,
   } = useLocations(
-    { pincode: normalizedPincode },
-    Boolean(/^\d{6}$/.test(normalizedPincode)), // only when valid pincode
+    { pincode: normalizedPincode, limit: 1 },
+    Boolean(/^[1-9][0-9]{5}$/.test(normalizedPincode)), // only when valid pincode
     ['locationLookup', normalizedPincode],
   )
 
   useEffect(() => {
-    if (!/^\d{6}$/.test(normalizedPincode)) {
-      clearErrors('pincode')
-      setValue('city', '', { shouldValidate: false })
-      setValue('state', '', { shouldValidate: false })
-      return
-    }
+    if (!/^[1-9][0-9]{5}$/.test(normalizedPincode)) return
 
     if (isError) {
       setError('pincode', { type: 'manual', message: 'PIN lookup failed' })
@@ -57,17 +41,11 @@ const DeliveryDetailsForm = ({
     }
 
     if (locationData) {
-      const rows: ServiceabilityLocation[] = Array.isArray(locationData?.data)
-        ? locationData.data
-        : []
-      const location = getExactLocation(rows, normalizedPincode)
-      const city = location?.city
-      const state = location?.state
+      const city = locationData?.data?.[0]?.city
+      const state = locationData?.data?.[0]?.state
 
       if (!city || !state) {
         setError('pincode', { type: 'manual', message: 'Invalid pincode' })
-        setValue('city', '', { shouldValidate: false })
-        setValue('state', '', { shouldValidate: false })
       } else {
         clearErrors('pincode')
 
@@ -101,36 +79,22 @@ const DeliveryDetailsForm = ({
   }
 
   return (
-    <Grid container spacing={0.65}>
+    <Grid container spacing={2}>
       {fields.map((fieldItem) => {
-        const isNonEditable =
-          !allowResolvedLocationEdit && (fieldItem.name === 'city' || fieldItem.name === 'state')
+        const isNonEditable = fieldItem.name === 'city' || fieldItem.name === 'state'
         const showLoader = fieldItem.name === 'pincode' ? pinFetching : false
 
         return (
-          <Grid
-            key={fieldItem.name}
-            size={{
-              xs: 12,
-              sm: fieldItem?.name === 'address' ? 12 : 6,
-              md: fieldItem?.name === 'address' ? 12 : 4,
-              xl: fieldItem?.name === 'address' ? 4 : 2,
-            }}
-          >
+          <Grid key={fieldItem.name} size={{ xs: 12, md: fieldItem?.name === 'address' ? 12 : 4 }}>
             <Controller
-              name={fieldItem.name as any}
-              control={control as any}
+              name={fieldItem.name as keyof (B2CFormData & B2BFormData)}
+              control={control}
               rules={{
                 ...(fieldItem.name !== 'gstin' && fieldItem.name !== 'buyerEmail' // 👈 skip required for buyerEmail
                   ? { required: `${fieldItem.label} is required` }
                   : {}),
                 ...(fieldItem.name === 'buyerPhone' && {
-                  validate: (value) => {
-                    const digits = String(value ?? '').replace(/\D/g, '')
-                    return /^(91)?\d{10}$/.test(digits)
-                      ? true
-                      : 'Enter valid 10-digit phone or +91 number'
-                  },
+                  pattern: { value: /^[0-9]{10}$/, message: 'Enter valid 10-digit phone' },
                 }),
                 ...(fieldItem.name === 'pincode' && {
                   pattern: { value: /^\d{6}$/, message: 'Enter 6-digit pincode' },
@@ -141,22 +105,13 @@ const DeliveryDetailsForm = ({
                   label={fieldItem.label}
                   required={fieldItem?.name !== 'buyerEmail' && fieldItem?.name !== 'gstin'} // 👈 not required for email
                   {...field}
-                  onChange={(event) => {
-                    if (fieldItem.name === 'pincode') {
-                      field.onChange(normalizePincode(event.target.value))
-                      return
-                    }
-                    field.onChange(event)
-                  }}
                   multiline={fieldItem.name === 'address'}
-                  rows={fieldItem.name === 'address' ? 1 : undefined}
+                  rows={fieldItem.name === 'address' ? 2 : undefined}
                   maxLength={fieldItem.name === 'address' ? 200 : undefined}
                   disabled={isNonEditable}
                   error={!!getFieldError(fieldItem.name)}
                   helperText={getFieldError(fieldItem.name)}
                   postfix={showLoader ? <CircularProgress size={16} /> : null}
-                  topMargin={false}
-                  dense
                 />
               )}
             />

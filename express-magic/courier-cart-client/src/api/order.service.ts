@@ -8,15 +8,18 @@ export interface CreateShipmentParams {
   prepaid_amount?: number
   package_breadth?: number
   package_height?: number
+  shipping_mode?: string
   transaction_fee?: number
-  integration_type?: 'delhivery' | 'ekart' | 'shadowfax' | 'xpressbees' | 'amazon' | 'icarry'
+  integration_type?: 'delhivery' | 'xpressbees' | 'ekart' | 'deliveryone' | 'icarry'
   request_auto_pickup?: 'Yes' | 'No'
   gift_wrap?: number
   shipping_charges?: number // What seller charges customer (customer-facing price)
-  other_charges?: number
   freight_charges?: number // What platform charges seller (based on rate card)
   courier_cost?: number // Estimated courier cost from serviceability (what platform pays courier - can be updated via webhook)
   cod_charges?: number
+  other_charges?: number
+  cod_charge_basis?: number
+  codChargeBasis?: number
   discount?: number
   order_date: string
   order_amount: number
@@ -67,7 +70,6 @@ export interface CreateShipmentParams {
     tax_rate: number
   }[]
   courier_id?: number
-  courier_partner?: string
   is_insurance?: 0 | 1
   tags?: string
   pickup_date?: string
@@ -75,28 +77,15 @@ export interface CreateShipmentParams {
   delivery_location?: string
   zone_id?: string
   selected_max_slab_weight?: number
-  chargedWeight?: number | null
-  volumetricWeight?: number | null
   courier_option_key?: string
-  amazon_request_token?: string
-  amazon_rate_id?: string
-  amazon_service_id?: string
-  amazon_carrier_id?: string
-  shadowfax_forward_mode?: 'marketplace' | 'warehouse'
-  shadowfax_service_mode?: 'regular' | 'surface'
 }
 
-export interface CreateShipmentResponse {
-  success: boolean
-  shipment?: unknown
-}
+export type UpdateB2COrderParams = CreateShipmentParams
 
-export const createShipment = async (
-  data: CreateShipmentParams,
-): Promise<CreateShipmentResponse> => {
+export const createShipment = async (data: CreateShipmentParams) => {
   try {
     // Set longer timeout (3.5 minutes) for B2C order creation as external courier API calls can take time
-    const res = await axiosInstance.post<CreateShipmentResponse>('/orders/b2c/create', data, {
+    const res = await axiosInstance.post('/orders/b2c/create', data, {
       timeout: 210000, // 3.5 minutes (210 seconds)
     })
     return res.data
@@ -107,56 +96,41 @@ export const createShipment = async (
   }
 }
 
-export const bookExistingB2COrderCourier = async (
-  orderId: string,
-  data: Omit<CreateShipmentParams, 'order_number' | 'order_date'>,
-): Promise<CreateShipmentResponse> => {
+export const updateB2COrder = async (orderId: string, data: UpdateB2COrderParams) => {
   try {
-    const res = await axiosInstance.post<CreateShipmentResponse>(
-      `/orders/b2c/${orderId}/book-courier`,
-      data,
-      {
-        timeout: 210000,
-      },
-    )
+    const res = await axiosInstance.patch(`/orders/b2c/${orderId}`, data, {
+      timeout: 210000,
+    })
     return res.data
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error('Error booking courier for existing B2C order:', error.response?.data || error.message)
+    console.error('Error updating B2C order:', error.response?.data || error.message)
     throw error
   }
 }
 
-export interface BulkCreateShipmentItem extends CreateShipmentParams {
-  client_row_number?: number
-}
-
-export interface BulkCreateShipmentResult {
-  rowNumber: number
-  orderNumber: string | null
-  success: boolean
-  shipment?: unknown
-  message: string
-}
-
-export interface BulkCreateShipmentResponse {
-  success: boolean
-  message: string
-  summary: {
-    total: number
-    successCount: number
-    failedCount: number
+export const deleteB2COrder = async (orderId: string) => {
+  try {
+    const res = await axiosInstance.delete(`/orders/b2c/${orderId}`)
+    return res.data
+  } catch (error: any) {
+    console.error('Error deleting B2C order:', error.response?.data || error.message)
+    throw error
   }
-  results: BulkCreateShipmentResult[]
 }
 
-export const createBulkShipments = async (orders: BulkCreateShipmentItem[]) => {
-  const res = await axiosInstance.post<BulkCreateShipmentResponse>(
-    '/orders/b2c/bulk-create',
-    { orders },
-    { timeout: 600000 },
-  )
-  return res.data
+export type BookB2CCourierParams = CreateShipmentParams
+
+export const bookB2CCourier = async (orderId: string, data: BookB2CCourierParams) => {
+  try {
+    const res = await axiosInstance.post(`/orders/b2c/${orderId}/select-courier`, data, {
+      timeout: 210000,
+    })
+    return res.data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    console.error('Error booking B2C courier:', error.response?.data || error.message)
+    throw error
+  }
 }
 
 export type CreateB2BShipmentParams = {
@@ -164,6 +138,10 @@ export type CreateB2BShipmentParams = {
   order_date: string
   payment_type: 'prepaid' | 'cod'
   order_amount: number
+  package_weight?: number
+  package_length?: number
+  package_breadth?: number
+  package_height?: number
   shipping_charges?: number
   freight_charges?: number // What platform charges seller (based on rate card)
   courier_cost?: number // Estimated courier cost from serviceability (what platform pays courier - can be updated via webhook)
@@ -228,8 +206,6 @@ export type CreateB2BShipmentParams = {
   pickup_date?: string
   pickup_time?: string
   integration_type?: string
-  shadowfax_forward_mode?: 'marketplace' | 'warehouse'
-  shadowfax_service_mode?: 'regular' | 'surface'
   tags?: string
   delivery_location?: string
   zone_id?: string
@@ -256,7 +232,7 @@ export const checkOrderNumberAvailability = async (orderNumber: string) => {
 export interface FetchOrdersListParams {
   page?: number
   limit?: number
-  status?: string
+  status?: string | string[]
   type?: string
   courier?: string
   warehouse?: string
@@ -265,8 +241,6 @@ export interface FetchOrdersListParams {
   fromDate?: string
   toDate?: string
   search?: string
-  productQuery?: string
-  fetchAll?: boolean
 }
 
 export const fetchB2COrdersByUser = async (params: FetchOrdersListParams = {}) => {
@@ -326,8 +300,8 @@ export interface GenerateManifestParams {
   type: 'b2c' | 'b2b'
   pickup_date?: string
   pickup_time?: string
-  pickup_location?: string
   expected_package_count?: number
+  skip_pickup_request?: boolean
 }
 
 export interface GenerateManifestResponse {
@@ -343,33 +317,80 @@ export const generateManifestService = async (params: GenerateManifestParams) =>
   return res.data
 }
 
-export const downloadBulkB2CLabelsService = async (orderIds: Array<string | number>) => {
-  const res = await axiosInstance.post('/orders/b2c/bulk-labels', { orderIds }, {
-    responseType: 'blob',
-    timeout: 600000,
-  })
-  return {
-    blob: res.data as Blob,
-    generated: Number(res.headers?.['x-bulk-label-generated'] || 0),
-    failed: Number(res.headers?.['x-bulk-label-failed'] || 0),
-    total: Number(res.headers?.['x-bulk-label-total'] || orderIds.length),
-    warnings: res.headers?.['x-bulk-label-warnings']
-      ? decodeURIComponent(String(res.headers['x-bulk-label-warnings']))
-      : '',
-  }
-}
-
 export interface RetryManifestResponse extends GenerateManifestResponse {
   manifest_key?: string | null
   retry_count: number
   retries_remaining: number
   order_status: string | null
-  retry_action?: 'manifest_generation' | 'pickup_request'
 }
 
 export const retryFailedManifestService = async (orderId: string) => {
   const res = await axiosInstance.post<RetryManifestResponse>(
     `/orders/b2c/${orderId}/retry-manifest`,
+  )
+  return res.data
+}
+
+export interface RequestB2CPickupParams {
+  pickup_date?: string
+  pickup_time?: string
+  expected_package_count?: number
+}
+
+export interface RequestB2CPickupResponse {
+  success: boolean
+  message: string
+  data?: {
+    order_id: string
+    order_number: string
+    awb_number: string
+    pickup_date: string
+    pickup_time: string
+    expected_package_count?: number
+    pickup_location: string
+    pickup_status: string
+    existing?: boolean
+    pickup_id?: string | number | null
+  }
+}
+
+export const requestB2CPickupService = async (
+  orderId: string,
+  params: RequestB2CPickupParams,
+) => {
+  const res = await axiosInstance.post<RequestB2CPickupResponse>(
+    `/orders/b2c/${orderId}/request-pickup`,
+    params,
+    { timeout: 60000 },
+  )
+  return res.data
+}
+
+export interface SyncB2CTrackingResponse {
+  success: boolean
+  message: string
+  data?: {
+    order_id: string
+    order_number: string
+    awb_number: string
+    courier_partner: string
+    previous_status?: string | null
+    status?: string | null
+    raw_status?: string | null
+    status_type?: string | null
+    changed: boolean
+    status_changed: boolean
+    edd?: string | null
+    delivery_message?: string | null
+    synced_at: string
+  }
+}
+
+export const syncB2COrderTrackingService = async (orderId: string) => {
+  const res = await axiosInstance.post<SyncB2CTrackingResponse>(
+    `/orders/b2c/${orderId}/sync-tracking`,
+    undefined,
+    { timeout: 60000 },
   )
   return res.data
 }
@@ -385,7 +406,12 @@ export const regenerateOrderDocumentsService = async (
   return res.data
 }
 
-export const fetchAllOrders = async (params: FetchOrdersListParams = {}) => {
+interface FetchOrdersParams {
+  page?: number
+  limit?: number
+}
+
+export const fetchAllOrders = async (params: FetchOrdersParams = {}) => {
   try {
     const res = await axiosInstance.get('/orders/all', { params })
     return res.data // { success, orders, totalCount, totalPages }

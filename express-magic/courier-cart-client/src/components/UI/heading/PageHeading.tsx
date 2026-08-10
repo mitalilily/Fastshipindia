@@ -1,178 +1,127 @@
-import { alpha, Box, Chip, Stack, Typography, useTheme } from '@mui/material'
+import { alpha, Box, Stack, Typography } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import { motion } from 'framer-motion'
 import React from 'react'
+import { TbSparkles } from 'react-icons/tb'
+import { brand, brandGradients } from '../../../theme/brand'
 
 interface PageHeadingProps {
   title: string | React.ReactNode
   subtitle?: string
   center?: boolean
-  fontSize?: string | number | object
+  fontSize?: string | number
   icon?: React.ReactNode
-  badge?: string
-  actions?: React.ReactNode
+  eyebrow?: string
 }
+
+const normalizeHeadingText = (value: string) =>
+  value
+    .replace(/â€“|â€”/g, '-')
+    .replace(/â€˜|â€™/g, "'")
+    .replace(/â€œ|â€�/g, '"')
+    .replace(/â€¢/g, '•')
+    .replace(/â€¦/g, '...')
+    .replace(/Â©/g, '©')
+    .replace(/Â®/g, '®')
 
 const PageHeading: React.FC<PageHeadingProps> = ({
   title,
   subtitle,
   center = false,
   fontSize,
-  icon,
-  badge,
-  actions,
+  icon = <TbSparkles size={18} />,
+  eyebrow = 'Panel',
 }) => {
   const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
+  const normalizedTitle = typeof title === 'string' ? normalizeHeadingText(title) : title
+  const normalizedSubtitle =
+    typeof subtitle === 'string' ? normalizeHeadingText(subtitle) : subtitle
+  const normalizedEyebrow = typeof eyebrow === 'string' ? normalizeHeadingText(eyebrow) : eyebrow
 
   return (
     <Box
       sx={{
         position: 'relative',
-        width: '100%',
-        minWidth: 0,
-        maxWidth: '100%',
         overflow: 'hidden',
-        borderRadius: { xs: 2, md: 3 },
-        bgcolor: theme.palette.background.paper,
-        border: `1px solid ${alpha(theme.palette.divider, 0.75)}`,
-        px: { xs: 2, sm: 3, md: 3.5 },
-        py: { xs: 2, md: 2.4 },
-        boxShadow: '0 4px 18px rgba(15,23,42,0.04)',
-
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 2,
-          background: alpha(theme.palette.primary.main, 0.9),
-        },
-
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: 220,
-          height: '100%',
-          background: `linear-gradient(90deg, transparent 0%, ${alpha(
-            theme.palette.primary.main,
-            0.025,
-          )} 100%)`,
-          pointerEvents: 'none',
-        },
+        borderRadius: '14px',
+        border: `1px solid ${isDark ? alpha('#f8fafc', 0.1) : alpha('#FFFFFF', 0.7)}`,
+        background: isDark ? '#151b23' : brandGradients.surface,
+        px: { xs: 1.8, sm: 2.4 },
+        py: { xs: 1.8, sm: 2.1 },
+        boxShadow: isDark ? '0 14px 34px rgba(0,0,0,0.18)' : '0 20px 42px rgba(15,44,67,0.08)',
       }}
     >
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={2}
-        alignItems={{ xs: center ? 'center' : 'flex-start', md: 'center' }}
-        justifyContent="space-between"
-        sx={{ position: 'relative', zIndex: 1 }}
-      >
-        {/* LEFT */}
+      <Stack spacing={1} textAlign={center ? 'center' : 'left'} position="relative" zIndex={1}>
         <Stack
-          spacing={0.75}
-          sx={{ flex: 1, minWidth: 0 }}
-          alignItems={center ? 'center' : 'flex-start'}
-          textAlign={center ? 'center' : 'left'}
+          direction="row"
+          spacing={1.2}
+          alignItems="center"
+          sx={{
+            justifyContent: center ? 'center' : 'flex-start',
+          }}
         >
-          {/* badge */}
-          {badge && (
-            <Chip
-              label={badge}
-              size="small"
-              sx={{
-                height: 24,
-                borderRadius: 2,
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                bgcolor: alpha(theme.palette.primary.main, 0.08),
-                color: theme.palette.primary.main,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-              }}
-            />
-          )}
-
-          {/* title row */}
-          <Stack
-            direction="row"
-            spacing={1.2}
-            alignItems="center"
-            justifyContent={center ? 'center' : 'flex-start'}
-            sx={{ width: '100%' }}
+          <motion.div
+            initial={{ rotate: -18, scale: 0.82, opacity: 0 }}
+            animate={{ rotate: 0, scale: 1, opacity: 1 }}
+            whileHover={{ rotate: 12, scale: 1.06 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 18 }}
           >
-            {icon && (
-              <Box
-                sx={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 2.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: alpha(theme.palette.primary.main, 0.07),
-                  color: theme.palette.primary.main,
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
-                  flexShrink: 0,
-                }}
-              >
-                {icon}
-              </Box>
-            )}
-
-            <Typography
+            <Box
               sx={{
-                fontSize: fontSize ?? { xs: '1.1rem', md: '1.45rem' },
-                fontWeight: 800,
-                lineHeight: 1.15,
-                letterSpacing: 0,
-                color: theme.palette.text.primary,
-                overflowWrap: 'anywhere',
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                background: brandGradients.button,
+                color: brand.ink,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 10px 20px rgba(130,194,255,0.24)',
               }}
             >
-              {title}
+              {icon}
+            </Box>
+          </motion.div>
+          <Stack spacing={0.4}>
+            <Typography
+              sx={{
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                textTransform: 'uppercase',
+                letterSpacing: 0,
+              }}
+            >
+              {normalizedEyebrow}
+            </Typography>
+            <Typography
+              fontSize={fontSize ?? { xs: '1.45rem', md: '1.95rem' }}
+              fontWeight={700}
+              lineHeight={1.08}
+              sx={{
+                color: theme.palette.text.primary,
+                letterSpacing: 0,
+              }}
+            >
+              {normalizedTitle}
             </Typography>
           </Stack>
-
-          {/* subtitle */}
-          {subtitle && (
-            <Typography
-              sx={{
-                fontSize: { xs: '0.9rem', md: '0.96rem' },
-                color: alpha(theme.palette.text.secondary, 0.95),
-                lineHeight: 1.55,
-                maxWidth: 760,
-                overflowWrap: 'anywhere',
-              }}
-            >
-              {subtitle}
-            </Typography>
-          )}
         </Stack>
 
-        {/* RIGHT */}
-        {actions && (
-          <Box
+        {normalizedSubtitle && (
+          <Typography
             sx={{
-              flexShrink: 0,
-              width: { xs: '100%', md: 'auto' },
-              display: 'flex',
-              justifyContent: {
-                xs: center ? 'center' : 'flex-start',
-                md: 'flex-end',
-              },
-              alignItems: 'center',
-              minWidth: 0,
-              maxWidth: '100%',
-              flexWrap: 'wrap',
-              gap: 1,
-              '& > *': {
-                maxWidth: '100%',
-              },
+              color: theme.palette.text.secondary,
+              fontSize: { xs: '0.9rem', md: '0.96rem' },
+              maxWidth: center ? 820 : 760,
+              mx: center ? 'auto' : 0,
+              lineHeight: 1.75,
+              pl: center ? 0 : { xs: 0, sm: 6 },
             }}
           >
-            {actions}
-          </Box>
+            {normalizedSubtitle}
+          </Typography>
         )}
       </Stack>
     </Box>

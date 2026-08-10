@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import CustomInput from "./CustomInput";
 
-const BRAND_GREEN = '#062A5B'
+const DE_BLUE = '#0052CC'
 
 export interface DropdownItem {
   key: string;
@@ -98,115 +98,71 @@ export default function CustomSelectSearchable({
               {open && (
                 <ClickAwayListener onClickAway={handleClose}>
                   <Paper
-                    elevation={0}
+                    elevation={4}
                     sx={{
-                      bgcolor: '#FFFFFF',
-                      border: `1px solid ${alpha(BRAND_GREEN, 0.15)}`,
-                      borderRadius: 3,
-                      boxShadow: `0 8px 32px ${alpha(BRAND_GREEN, 0.15)}`,
-                      width: anchorRef.current?.getBoundingClientRect().width ?? 300,
-                      maxHeight: 320,
+                      width: anchorRef.current?.offsetWidth || 250,
+                      maxHeight: 280,
                       overflowY: 'auto',
-                      '&::-webkit-scrollbar': {
-                        width: 6,
-                      },
-                      '&::-webkit-scrollbar-track': {
-                        background: 'transparent',
-                      },
-                      '&::-webkit-scrollbar-thumb': {
-                        background: alpha(BRAND_GREEN, 0.2),
-                        borderRadius: 3,
-                        '&:hover': {
-                          background: alpha(BRAND_GREEN, 0.35),
-                        },
-                      },
+                      borderRadius: 1,
+                      mt: 1,
+                      border: `1px solid ${alpha(DE_BLUE, 0.1)}`,
+                      boxShadow: `0 12px 32px ${alpha(DE_BLUE, 0.12)}`,
                     }}
                   >
-                    <List dense disablePadding>
-                      {filteredItems.map((item) => (
-                        <ListItemButton
-                          key={item.key}
-                          selected={value === item.key}
-                          onClick={() => handleSelect(item.key)}
-                          sx={{
-                            px: 2,
-                            py: 1.25,
-                            borderRadius: 1.5,
-                            mx: 0.5,
-                            mt: value === item.key ? 0.5 : 0,
-                            mb: 0.5,
-                            transition: 'all 0.2s ease',
-                            '&.Mui-selected': {
-                              bgcolor: alpha(BRAND_GREEN, 0.1),
-                              color: BRAND_GREEN,
-                              border: `1px solid ${alpha(BRAND_GREEN, 0.2)}`,
-                              '&:hover': {
-                                bgcolor: alpha(BRAND_GREEN, 0.15),
-                                borderColor: alpha(BRAND_GREEN, 0.3),
-                              },
-                              '& .MuiListItemIcon-root': {
-                                color: BRAND_GREEN,
-                              },
-                            },
-                            '&:hover': {
-                              bgcolor: alpha(BRAND_GREEN, 0.06),
-                              transform: 'translateX(2px)',
-                            },
-                          }}
-                        >
-                          {item.icon && (
-                            <ListItemIcon
-                              sx={{
-                                color: value === item.key ? BRAND_GREEN : '#6b6b6b',
-                                minWidth: 36,
-                              }}
-                            >
-                              {item.icon}
-                            </ListItemIcon>
-                          )}
-                          <ListItemText
-                            primary={
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontWeight: value === item.key ? 600 : 500,
-                                  color: value === item.key ? BRAND_GREEN : '#1a1a1a',
-                                }}
-                              >
-                                {item.label}
-                              </Typography>
-                            }
-                            secondary={
-                              item.description && (
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    color: '#6b6b6b',
-                                    fontSize: '0.8rem',
-                                  }}
-                                >
-                                  {item.description}
-                                </Typography>
-                              )
-                            }
-                          />
-                        </ListItemButton>
-                      ))}
-                      {filteredItems.length === 0 && (
-                        <Box
-                          p={3}
-                          sx={{
-                            textAlign: 'center',
-                            bgcolor: alpha(BRAND_GREEN, 0.04),
-                            borderRadius: 2,
-                            mx: 0.5,
-                            my: 0.5,
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: '#6b6b6b', fontSize: '0.85rem' }}>
-                            No matches found.
+                    <List disablePadding>
+                      {filteredItems.length === 0 ? (
+                        <Box sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography variant="body2" sx={{ color: '#6B778C' }}>
+                            No options found
                           </Typography>
                         </Box>
+                      ) : (
+                        filteredItems.map((item) => {
+                          const isSelected = item.key === value
+                          return (
+                            <ListItemButton
+                              key={item.key}
+                              onClick={() => handleSelect(item.key)}
+                              sx={{
+                                py: 1.2,
+                                px: 1.8,
+                                borderBottom: `1px solid ${alpha(DE_BLUE, 0.05)}`,
+                                '&:last-child': { borderBottom: 'none' },
+                                bgcolor: isSelected ? alpha(DE_BLUE, 0.06) : 'transparent',
+                                color: isSelected ? DE_BLUE : 'inherit',
+                                '&:hover': {
+                                  bgcolor: alpha(DE_BLUE, 0.04),
+                                  '& .MuiListItemText-primary': { color: DE_BLUE },
+                                },
+                              }}
+                            >
+                              {item.icon && (
+                                <ListItemIcon
+                                  sx={{
+                                    minWidth: 32,
+                                    color: isSelected ? DE_BLUE : '#42526E',
+                                  }}
+                                >
+                                  {item.icon}
+                                </ListItemIcon>
+                              )}
+                              <ListItemText
+                                primary={item.label}
+                                secondary={item.description}
+                                primaryTypographyProps={{
+                                  fontSize: '0.88rem',
+                                  fontWeight: isSelected ? 800 : 600,
+                                  color: isSelected ? DE_BLUE : '#172B4D',
+                                }}
+                                secondaryTypographyProps={{
+                                  fontSize: '0.75rem',
+                                  color: alpha('#42526E', 0.7),
+                                  mt: 0.2,
+                                }}
+                              />
+                            </ListItemButton>
+                          )
+                        })
                       )}
                     </List>
                   </Paper>

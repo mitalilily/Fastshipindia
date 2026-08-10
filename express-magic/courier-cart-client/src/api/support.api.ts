@@ -12,24 +12,6 @@ export interface CreateTicketPayload {
   dueDate?: string // ISO string
 }
 
-export interface SupportTicketOrderReference {
-  orderId: string
-  orderNumber: string
-  awbNumber?: string | null
-  buyerName?: string | null
-  buyerPhone?: string | null
-  buyerEmail?: string | null
-  courierPartner?: string | null
-  warehouseName?: string | null
-  shipmentType?: 'b2c' | 'b2b'
-  orderType?: 'prepaid' | 'cod' | string
-  orderStatus?: string | null
-}
-
-export interface SupportTicketPrefill {
-  orderReferences: SupportTicketOrderReference[]
-}
-
 export interface SupportTicket {
   id: string
   subject: string

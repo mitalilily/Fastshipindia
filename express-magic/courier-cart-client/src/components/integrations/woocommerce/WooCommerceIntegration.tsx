@@ -25,7 +25,6 @@ export interface WooCommerceForm {
   status?: "active" | "inactive";
   settings?: {
     autoUpdateStatus?: boolean;
-    autoUpdateShipmentStatus?: boolean;
     markCodPaid?: boolean;
   };
 }
@@ -64,22 +63,14 @@ export default function WooCommerceIntegration({
     const errors: Partial<WooCommerceForm> = {};
     if (!wooDetails.storeUrl.trim()) {
       errors.storeUrl = "Store URL is required";
-    } else if (
-      !/^(https?:\/\/)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(
-        wooDetails.storeUrl.trim()
-      )
-    ) {
-      errors.storeUrl = "Enter a valid store URL";
+    } else if (!/^https?:\/\/.+/.test(wooDetails.storeUrl)) {
+      errors.storeUrl = "Enter a valid URL with http or https";
     }
     if (!wooDetails.consumerKey.trim()) {
       errors.consumerKey = "Consumer Key is required";
-    } else if (!wooDetails.consumerKey.trim().startsWith("ck_")) {
-      errors.consumerKey = "Consumer Key should start with ck_";
     }
     if (!wooDetails.consumerSecret.trim()) {
       errors.consumerSecret = "Consumer Secret is required";
-    } else if (!wooDetails.consumerSecret.trim().startsWith("cs_")) {
-      errors.consumerSecret = "Consumer Secret should start with cs_";
     }
     setInputErrors(errors);
     return Object.values(errors).every((val) => !val);
@@ -87,14 +78,12 @@ export default function WooCommerceIntegration({
 
   const handleConnect = () => {
     if (!validateFields()) return;
+    console.log("woo", wooDetails);
     integrateWooCommerce(
-      { ...wooDetails, userId: user?.userId },
+      { ...wooDetails },
       {
         onSuccess: (data) => {
-          toast.open({
-            message: data?.warning ? `${data.message}. ${data.warning}` : data.message,
-            severity: data?.warning ? "warning" : "success",
-          });
+          toast.open({ message: data.message, severity: "success" });
           setOpenModal(false);
           if (!forOnboarding && !fromChannelList) {
             queryClient.invalidateQueries({ queryKey: ["stores"] });
@@ -103,13 +92,9 @@ export default function WooCommerceIntegration({
             navigate("/channels/connected");
           }
         },
-        onError: (error: any) => {
-          const message =
-            error?.response?.data?.error ||
-            error?.response?.data?.message ||
-            "Error connecting WooCommerce store";
+        onError: () => {
           toast.open({
-            message,
+            message: "Error connecting WooCommerce store",
             severity: "error",
           });
         },

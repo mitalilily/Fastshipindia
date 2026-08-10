@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { UseFormClearErrors, UseFormSetError, UseFormSetValue } from 'react-hook-form'
-import { lookupPincodeLocation, normalizePincode } from '../../api/locations'
-
-const PINCODE_PATTERN = /^\d{6}$/
+import { fetchLocations } from '../../api/locations'
 
 export function usePincodeLookup(
   pincode: string,
@@ -17,26 +15,26 @@ export function usePincodeLookup(
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    let isActive = true
+    let isCurrentLookup = true
 
     async function fetchLocation() {
-      const normalizedPincode = normalizePincode(pincode)
+      const normalizedPincode = String(pincode ?? '').trim()
 
-      if (!PINCODE_PATTERN.test(normalizedPincode)) {
+      if (!/^[1-9][0-9]{5}$/.test(normalizedPincode)) {
         clearErrors(`${type}Pincode`)
         setValue(`${type}City`, '')
         setValue(`${type}State`, '')
-        setLoading(false)
         return
       }
 
       setLoading(true)
       try {
-        const location = await lookupPincodeLocation(normalizedPincode)
+        const data = await fetchLocations({ pincode: normalizedPincode, limit: 1 })
+        if (!isCurrentLookup) return
 
-        if (!isActive) return
+        const loc = data?.data?.[0]
 
-        if (!location) {
+        if (!loc?.city || !loc?.state) {
           setError(`${type}Pincode`, {
             type: 'manual',
             message: `Invalid ${type} pincode`,
@@ -45,12 +43,11 @@ export function usePincodeLookup(
           setValue(`${type}State`, '')
         } else {
           clearErrors(`${type}Pincode`)
-          setValue(`${type}City`, location.city)
-          setValue(`${type}State`, location.state)
+          setValue(`${type}City`, loc.city || '', { shouldValidate: true })
+          setValue(`${type}State`, loc.state || '', { shouldValidate: true })
         }
       } catch {
-        if (!isActive) return
-
+        if (!isCurrentLookup) return
         setError(`${type}Pincode`, {
           type: 'manual',
           message: `Failed to fetch ${type} location`,
@@ -58,14 +55,14 @@ export function usePincodeLookup(
         setValue(`${type}City`, '')
         setValue(`${type}State`, '')
       } finally {
-        if (isActive) setLoading(false)
+        if (isCurrentLookup) setLoading(false)
       }
     }
 
     fetchLocation()
 
     return () => {
-      isActive = false
+      isCurrentLookup = false
     }
   }, [pincode, type, setValue, setError, clearErrors])
 
