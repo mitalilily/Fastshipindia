@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/create-route-entries.mjs",
+    "build": "node scripts/build-render-service.mjs",
+    "build:landing": "vite build && node scripts/create-route-entries.mjs",
     "preview": "vite preview",
     "test": "npm run build && go test ./..."
   },
