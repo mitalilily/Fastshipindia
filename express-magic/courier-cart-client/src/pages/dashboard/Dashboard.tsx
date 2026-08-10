@@ -2,7 +2,6 @@ import {
   alpha,
   Box,
   Button,
-  CircularProgress,
   Container,
   Grid,
   Typography,
@@ -69,8 +68,6 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState(maxDate)
   const {
     data: stats,
-    isLoading,
-    error,
     refetch,
     isRefetching,
     isPlaceholderData,
@@ -143,30 +140,7 @@ export default function Dashboard() {
     URL.revokeObjectURL(url)
   }
 
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          minHeight: '58vh',
-          borderRadius: '16px',
-          display: 'grid',
-          placeItems: 'center',
-          border: `1px solid ${dashboardPalette.line}`,
-          bgcolor: dashboardPalette.surface,
-          boxShadow: '0 14px 34px rgba(15,23,42,0.06)',
-        }}
-      >
-        <Box textAlign="center">
-          <CircularProgress size={44} sx={{ color: dashboardPalette.orange }} />
-          <Typography color="text.secondary" sx={{ mt: 1.2, fontWeight: 600 }}>
-            Optimizing your command center...
-          </Typography>
-        </Box>
-      </Box>
-    )
-  }
-
-  if (error || !stats) {
+  if (!stats) {
     return (
       <Box
         sx={{
