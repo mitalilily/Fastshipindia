@@ -20,10 +20,7 @@ const getApiBaseUrl = () => {
     const pointsToLegacyAggregatorApi = candidate.hostname === LEGACY_AGGREGATOR_API_HOST
     const pointsToLegacyRailwayApi = candidate.hostname === LEGACY_RAILWAY_API_HOST
     const pointsToPlaceholderApi = candidate.hostname === PLACEHOLDER_API_HOST
-    const isHostedFrontend =
-      currentHost.endsWith('netlify.app') ||
-      currentHost.endsWith('vercel.app') ||
-      currentHost.endsWith('up.railway.app')
+    const isHostedFrontend = currentHost.endsWith('onrender.com')
     const isLocalhost =
       currentHost === 'localhost' ||
       currentHost === '127.0.0.1' ||
