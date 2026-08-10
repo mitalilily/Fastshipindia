@@ -1,6 +1,7 @@
 import { io, type Socket } from 'socket.io-client'
 
-const DEFAULT_SOCKET_URL = 'https://aggregator-backend-7gmk.onrender.com'
+const DEFAULT_SOCKET_URL = 'https://fastshipindia.onrender.com'
+const LEGACY_AGGREGATOR_API_HOST = 'aggregator-backend-7gmk.onrender.com'
 const PLACEHOLDER_API_HOST = 'your-backend-url.onrender.com'
 
 const getSocketUrl = () => {
@@ -16,9 +17,14 @@ const getSocketUrl = () => {
       currentHost.endsWith('vercel.app') ||
       currentHost.endsWith('up.railway.app')
     const pointsBackToFrontend = candidate.hostname === currentHost
+    const pointsToLegacyAggregatorApi = candidate.hostname === LEGACY_AGGREGATOR_API_HOST
     const pointsToPlaceholderApi = candidate.hostname === PLACEHOLDER_API_HOST
 
-    if ((isHostedFrontend && pointsBackToFrontend) || pointsToPlaceholderApi) {
+    if (
+      (isHostedFrontend && pointsBackToFrontend) ||
+      pointsToLegacyAggregatorApi ||
+      pointsToPlaceholderApi
+    ) {
       return DEFAULT_SOCKET_URL
     }
 

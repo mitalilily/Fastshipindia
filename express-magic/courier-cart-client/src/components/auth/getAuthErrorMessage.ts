@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../../api/axiosInstance'
+
 type RawAuthError = {
   response?: { data?: unknown }
   code?: string
@@ -41,8 +43,6 @@ export const getAuthErrorMessage = (err: unknown, fallback: string) => {
   const isNetwork = errObj.code === 'ERR_NETWORK' || !errObj.response
   if (!isNetwork) return message
 
-  const base =
-    import.meta.env.VITE_API_URL || 'https://aggregator-backend-7gmk.onrender.com/api'
-  return `Cannot reach the FastShip API (${base}). Please try again in a minute.`
+  return `Cannot reach the FastShip API (${API_BASE_URL}). Please try again in a minute.`
 }
 
