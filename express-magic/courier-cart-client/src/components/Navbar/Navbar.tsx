@@ -83,7 +83,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
   } = useClientNotifications(isAuthenticated)
 
   const unreadCount = useMemo(
-    () => notifications.filter((notification) => !Boolean(notification.read ?? notification.isRead)).length,
+    () => notifications.filter((notification) => !(notification.read ?? notification.isRead)).length,
     [notifications],
   )
 
@@ -119,8 +119,8 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         position: 'sticky',
         top: 0,
         zIndex: (muiTheme) => muiTheme.zIndex.drawer + 2,
-        minHeight: 72,
-        px: { xs: 1.5, md: 3 },
+        minHeight: { xs: 72, md: 64 },
+        px: { xs: 1.5, md: 2 },
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -130,13 +130,13 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         boxShadow: isDark ? 'none' : '0 8px 24px rgba(15, 23, 42, 0.06)',
       }}
     >
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
+      <Stack direction="row" spacing={{ xs: 2, md: 1.5 }} alignItems="center" sx={{ minWidth: 0 }}>
         <IconButton
           size="small"
           onClick={handleDrawerToggle}
           sx={{
-            width: 36,
-            height: 36,
+            width: { xs: 36, md: 32 },
+            height: { xs: 36, md: 32 },
             borderRadius: 1,
             color: mutedColor,
             '&:hover': { bgcolor: hoverBg, color: textColor },
@@ -151,7 +151,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         <Typography
           sx={{
             color: textColor,
-            fontSize: { xs: '1rem', sm: '1.1rem' },
+            fontSize: { xs: '1rem', sm: '1.05rem', md: '1rem' },
             fontWeight: 850,
             letterSpacing: '-0.02em',
           }}
@@ -174,7 +174,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
           <IconButton
             aria-label="Search"
             onClick={() => navigate('/orders/list')}
-            sx={{ width: 40, height: 40, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
+            sx={{ width: 36, height: 36, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
           >
             <MdSearch size={23} />
           </IconButton>
@@ -190,14 +190,14 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
             display: { xs: 'none', md: 'inline-flex' },
             alignItems: 'center',
             gap: 0.8,
-            height: 38,
+            height: 36,
             px: 1.35,
             borderRadius: 2,
             cursor: 'pointer',
             border: `1px solid ${borderColor}`,
             color: textColor,
             bgcolor: panelBg,
-            fontSize: '0.9rem',
+            fontSize: '0.84rem',
             fontWeight: 850,
             '& svg': { color: ACTIVE },
             '&:hover': { borderColor: alpha(ACTIVE, 0.5) },
@@ -211,7 +211,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
           direction="row"
           spacing={0.25}
           sx={{
-            height: 38,
+            height: 36,
             alignItems: 'center',
             p: 0.35,
             borderRadius: 999,
@@ -225,8 +225,8 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
             aria-pressed={mode === 'light'}
             onClick={() => setMode('light')}
             sx={{
-              width: 30,
-              height: 30,
+              width: 28,
+              height: 28,
               color: mode === 'light' ? ORANGE : mutedColor,
               bgcolor: mode === 'light' ? alpha(ORANGE, 0.16) : 'transparent',
             }}
@@ -239,8 +239,8 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
             aria-pressed={mode === 'dark'}
             onClick={() => setMode('dark')}
             sx={{
-              width: 30,
-              height: 30,
+              width: 28,
+              height: 28,
               color: mode === 'dark' ? '#9b8cff' : mutedColor,
               bgcolor: mode === 'dark' ? alpha(ACTIVE, 0.16) : 'transparent',
             }}
@@ -252,7 +252,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         <IconButton
           aria-label="Notifications"
           onClick={(event) => setNotificationAnchor(event.currentTarget)}
-          sx={{ width: 38, height: 38, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
+          sx={{ width: 36, height: 36, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
         >
           <Badge
             badgeContent={unreadCount}
@@ -320,7 +320,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
           ) : latestNotifications.length ? (
             <List sx={{ p: 0, maxHeight: 420, overflowY: 'auto' }}>
               {latestNotifications.map((notification) => {
-                const unread = !Boolean(notification.read ?? notification.isRead)
+                const unread = !(notification.read ?? notification.isRead)
                 return (
                   <ListItemButton
                     key={notification.id}

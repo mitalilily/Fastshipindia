@@ -101,8 +101,8 @@ export default function QuickActions() {
           aria-expanded={open}
           onClick={handleOpen}
           sx={{
-            height: 40,
-            minWidth: 40,
+            height: { xs: 40, md: 36 },
+            minWidth: { xs: 40, md: 36 },
             px: { xs: 0, lg: 1.25 },
             borderRadius: 2,
             border: `1px solid ${open ? alpha(accent, 0.55) : border}`,
@@ -144,7 +144,7 @@ export default function QuickActions() {
             elevation: 0,
             sx: {
               mt: 1.15,
-              width: { xs: 'calc(100vw - 24px)', sm: 600, md: 780 },
+              width: { xs: 'calc(100vw - 24px)', sm: 600, md: 700 },
               maxWidth: 'calc(100vw - 24px)',
               borderRadius: 2,
               border: `1px solid ${border}`,
@@ -191,7 +191,7 @@ export default function QuickActions() {
               onClick={() => handleAction(action)}
               sx={{
                 minWidth: 0,
-                minHeight: 126,
+                minHeight: { xs: 126, md: 108 },
                 px: 1,
                 py: 1.2,
                 borderRadius: 1.5,
@@ -218,8 +218,8 @@ export default function QuickActions() {
                 aria-hidden="true"
                 sx={{
                   display: 'block',
-                  width: 72,
-                  height: 72,
+                  width: { xs: 72, md: 60 },
+                  height: { xs: 72, md: 60 },
                   objectFit: 'contain',
                   flexShrink: 0,
                 }}
