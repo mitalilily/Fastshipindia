@@ -15,6 +15,7 @@ import AuthCodePreview from './AuthCodePreview'
 import CodeInput from './CodeInput'
 import { extractInlineCode } from './inlineCode'
 import { brand } from '../../theme/brand'
+import { DEMO_OTP, isDemoLoginEnabled } from '../../utils/demoAuth'
 
 interface OtpLoginPanelProps {
   showIntro?: boolean
@@ -34,6 +35,7 @@ type AuthResponse = Record<string, unknown> & {
 
 const AUTH_NAVY = '#0D1B4D'
 const AUTH_ORANGE = '#E86F00'
+const isDemoLogin = isDemoLoginEnabled()
 
 const loginButtonStyles = {
   width: '100%',
@@ -59,7 +61,7 @@ export default function OtpLoginPanel({
   compactLogin = false,
 }: OtpLoginPanelProps) {
   const navigate = useNavigate()
-  const { setTokens, setUserId } = useAuth()
+  const { setTokens, setUserId, startDemoSession } = useAuth()
   const [step, setStep] = useState<'request' | 'verify'>('request')
   const [email, setEmail] = useState(sessionStorage.getItem('activeEmail') ?? '')
   const [code, setCode] = useState('')
@@ -90,6 +92,20 @@ export default function OtpLoginPanel({
     }
 
     setError('')
+
+    if (isDemoLogin) {
+      const normalizedEmail = email.trim().toLowerCase()
+      sessionStorage.setItem('activeEmail', normalizedEmail)
+      setInlineOtp(DEMO_OTP)
+      setStep('verify')
+      setCode(DEMO_OTP)
+      toast.open({
+        message: 'Demo verification code generated. Use the code shown on screen.',
+        severity: 'success',
+      })
+      return
+    }
+
     requestOtp(email.trim().toLowerCase(), {
       onSuccess: (response: AuthResponse) => {
         const inlineCode = extractInlineCode(response)
@@ -118,6 +134,13 @@ export default function OtpLoginPanel({
     }
 
     setError('')
+
+    if (isDemoLogin && code === DEMO_OTP) {
+      startDemoSession(email)
+      navigate('/dashboard', { replace: true })
+      return
+    }
+
     verifyOtp(
       { email, otp: code },
       {

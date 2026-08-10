@@ -1,6 +1,7 @@
 // src/api/axiosInstance.ts
 import axios from 'axios'
 import { clearAuthTokens, getAuthTokens, setAuthTokens } from './tokenVault'
+import { isDemoSessionActive } from '../utils/demoAuth'
 
 const RAW_API_BASE_URL = import.meta.env.VITE_API_URL
 const DEFAULT_API_BASE_URL = 'https://fastshipindia.onrender.com/api'
@@ -111,6 +112,8 @@ api.interceptors.request.use((cfg) => {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
+    if (isDemoSessionActive()) return Promise.reject(err)
+
     const original = err.config
     const requestUrl = original?.url || ''
 

@@ -15,7 +15,7 @@ const AUTH_ORANGE = '#E86F00'
 export default function Login() {
   const { loading, isAuthenticated, user } = useAuth()
   const location = useLocation()
-  const [mode, setMode] = useState<'otp' | 'password'>('password')
+  const [mode, setMode] = useState<'otp' | 'password'>('otp')
   const isExplicitLoginEntry = Boolean(
     (location.state as { explicitLoginEntry?: boolean } | null)?.explicitLoginEntry,
   )
