@@ -1,7 +1,7 @@
 import { Box, Button, Stack } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import AuthShell from '../../components/auth/AuthShell'
 import CredentialAuthForm from '../../components/auth/CredentialAuthForm'
 import OtpLoginPanel from '../../components/auth/OtpLoginPanel'
@@ -14,10 +14,14 @@ const AUTH_ORANGE = '#E86F00'
 
 export default function Login() {
   const { loading, isAuthenticated, user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [mode, setMode] = useState<'otp' | 'password'>('password')
+  const isExplicitLoginEntry = searchParams.get('entry') === 'login'
 
-  if (loading) return <FullScreenLoader />
-  if (isAuthenticated) return <Navigate to={getPostAuthRedirect(user)} replace />
+  if (loading && !isExplicitLoginEntry) return <FullScreenLoader />
+  if (isAuthenticated && !isExplicitLoginEntry) {
+    return <Navigate to={getPostAuthRedirect(user)} replace />
+  }
 
   return (
     <AuthShell

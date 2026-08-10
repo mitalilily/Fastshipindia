@@ -17,6 +17,8 @@ const navItems = [
   ['Weight calculator', '/weight-calculator'],
 ]
 
+const loginPath = '/login?entry=login'
+
 function RouteEffects() {
   const { pathname } = useLocation()
   useEffect(() => {
@@ -56,9 +58,9 @@ function Header() {
       <nav className={`main-nav ${open ? 'is-open' : ''}`}>
         {navItems.map(([label, to]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}>{label}</NavLink>)}
         <NavLink className="nav-track" to="/tracking" onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</NavLink>
-        <a className="nav-login-mobile" href="/login" onClick={() => setOpen(false)}>Log in</a>
+        <Link className="nav-login-mobile" to={loginPath} onClick={() => setOpen(false)}>Log in</Link>
       </nav>
-      <div className="nav-actions"><a className="text-link login-link" href="/login">Log in</a><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>
+      <div className="nav-actions"><Link className="text-link login-link" to={loginPath}>Log in</Link><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>
       <button className="menu-button" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
     </div>
   </header>
