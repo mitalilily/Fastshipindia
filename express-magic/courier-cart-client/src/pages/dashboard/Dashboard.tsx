@@ -13,15 +13,20 @@ import CourierComparisonChart from '../../components/dashboard/CourierComparison
 import CourierPerformanceCard from '../../components/dashboard/CourierPerformanceCard'
 import DashboardCustomizationDialog from '../../components/dashboard/DashboardCustomizationDialog'
 import DashboardHeader from '../../components/dashboard/DashboardHeader'
+import DeliveryHealthRings from '../../components/dashboard/DeliveryHealthRings'
 import FinancialHealthCard from '../../components/dashboard/FinancialHealthCard'
 import InsightsCard from '../../components/dashboard/InsightsCard'
 import MetricsOverviewCard from '../../components/dashboard/MetricsOverviewCard'
 import OrderStatusChart from '../../components/dashboard/OrderStatusChart'
 import OrdersTrendChart from '../../components/dashboard/OrdersTrendChart'
+import PaymentMixChart from '../../components/dashboard/PaymentMixChart'
 import PerformanceMetricsCard from '../../components/dashboard/PerformanceMetricsCard'
 import QuickActionsCard from '../../components/dashboard/QuickActionsCard'
 import QuickStatsCards from '../../components/dashboard/QuickStatsCards'
 import RecentActivityCard from '../../components/dashboard/RecentActivityCard'
+import RevenueByTypeChart from '../../components/dashboard/RevenueByTypeChart'
+import RevenueChart from '../../components/dashboard/RevenueChart'
+import ShipmentFlowChart from '../../components/dashboard/ShipmentFlowChart'
 import TodaysOperationsCard from '../../components/dashboard/TodaysOperationsCard'
 import TopDestinationsCard from '../../components/dashboard/TopDestinationsCard'
 import { useMerchantDashboardStats } from '../../hooks/useDashboard'
@@ -41,8 +46,13 @@ const widgetComponents: Record<string, React.ComponentType<any>> = {
   quickActions: QuickActionsCard,
   insights: InsightsCard,
   actionItems: ActionItemsCard,
+  deliveryHealth: DeliveryHealthRings,
+  paymentMix: PaymentMixChart,
   performanceMetrics: PerformanceMetricsCard,
   ordersTrend: OrdersTrendChart,
+  shipmentFlow: ShipmentFlowChart,
+  revenueChart: RevenueChart,
+  revenueByTypeChart: RevenueByTypeChart,
   financialHealth: FinancialHealthCard,
   recentActivity: RecentActivityCard,
   todaysOperations: TodaysOperationsCard,
@@ -52,6 +62,28 @@ const widgetComponents: Record<string, React.ComponentType<any>> = {
   courierPerformance: CourierPerformanceCard,
   topDestinations: TopDestinationsCard,
 }
+
+const defaultWidgetOrder = [
+  'quickStats',
+  'deliveryHealth',
+  'paymentMix',
+  'metricsOverview',
+  'ordersTrend',
+  'performanceMetrics',
+  'shipmentFlow',
+  'orderStatusChart',
+  'revenueChart',
+  'revenueByTypeChart',
+  'quickActions',
+  'insights',
+  'actionItems',
+  'financialHealth',
+  'recentActivity',
+  'todaysOperations',
+  'courierPerformance',
+  'courierComparison',
+  'topDestinations',
+]
 
 const toLocalDateInput = (date = new Date()) => {
   const year = date.getFullYear()
@@ -177,28 +209,23 @@ export default function Dashboard() {
   const actions = stats.actions || {}
   const couriers = stats.couriers || {}
   const charts = stats.charts || {}
+  const metrics = stats.metrics || {
+    avgOrderValue: 0,
+    totalPrepaidOrders: 0,
+    totalCodOrders: 0,
+    prepaidRevenue: 0,
+    codRevenue: 0,
+    topRevenueCities: [],
+  }
   const hasActionItems =
     (actions.ndrCount || 0) > 0 || (actions.rtoCount || 0) > 0 || (actions.pendingInvoices || 0) > 0
 
-  // Get widget order from preferences or use default
-  const widgetOrder =
-    preferences?.widgetOrder ||
-    [
-      'quickStats',
-      'quickActions',
-      'insights',
-      'actionItems',
-      'performanceMetrics',
-      'ordersTrend',
-      'financialHealth',
-      'recentActivity',
-      'todaysOperations',
-      'orderStatusChart',
-      'courierComparison',
-      'metricsOverview',
-      'courierPerformance',
-      'topDestinations',
-    ].filter((widget) => widget !== 'revenueChart' && widget !== 'revenueByTypeChart')
+  // Preserve the merchant's saved order and append newly released analytics automatically.
+  const preferredWidgetOrder = preferences?.widgetOrder || []
+  const widgetOrder = [
+    ...preferredWidgetOrder,
+    ...defaultWidgetOrder.filter((widgetId) => !preferredWidgetOrder.includes(widgetId)),
+  ]
 
   const widgetVisibility = preferences?.widgetVisibility || {}
 
@@ -233,6 +260,8 @@ export default function Dashboard() {
       actions,
     },
     actionItems: { actions, formatCurrency },
+    deliveryHealth: { operational, ChartComponent },
+    paymentMix: { metrics, ChartComponent, formatCurrency },
     performanceMetrics: { operational, formatPercentage },
     ordersTrend: {
       sevenDayOrders: charts.ordersByDate || [],
@@ -240,6 +269,17 @@ export default function Dashboard() {
       sevenDayRevenue: charts.revenueByDate || [],
       thirtyDayRevenue: charts.revenueByDate30 || [],
       ChartComponent,
+    },
+    shipmentFlow: { todayOps, ChartComponent },
+    revenueChart: {
+      chartData: charts.revenueByDate || [],
+      ChartComponent,
+      formatCurrency,
+    },
+    revenueByTypeChart: {
+      chartData: charts.revenueByOrderType || [],
+      ChartComponent,
+      formatCurrency,
     },
     financialHealth: {
       financial,
@@ -264,11 +304,7 @@ export default function Dashboard() {
       ChartComponent,
     },
     metricsOverview: {
-      metrics: stats.metrics || {
-        avgOrderValue: 0,
-        totalPrepaidOrders: 0,
-        totalCodOrders: 0,
-      },
+      metrics,
       formatCurrency,
     },
     courierPerformance: {
@@ -290,13 +326,18 @@ export default function Dashboard() {
       quickActions: { xs: 12, md: 6 },
       insights: { xs: 12, md: 6 },
       actionItems: { xs: 12, md: 8 },
+      deliveryHealth: { xs: 12, md: 4 },
+      paymentMix: { xs: 12, md: 4 },
       performanceMetrics: { xs: 12, md: 4 },
       ordersTrend: { xs: 12, md: 8 },
+      shipmentFlow: { xs: 12, md: 6 },
+      revenueChart: { xs: 12, md: 6 },
+      revenueByTypeChart: { xs: 12, md: 6 },
       financialHealth: { xs: 12, md: 6 },
       recentActivity: { xs: 12, md: 6 },
       todaysOperations: { xs: 12, md: 6 },
       orderStatusChart: { xs: 12, md: 6 },
-      courierComparison: { xs: 12, md: 8 },
+      courierComparison: { xs: 12, md: 6 },
       metricsOverview: { xs: 12, md: 4 },
       courierPerformance: { xs: 12, md: 6 },
       topDestinations: { xs: 12, md: 6 },
@@ -425,11 +466,7 @@ export default function Dashboard() {
             />
           )}
           <Grid container spacing={spacing} sx={{ position: 'relative', zIndex: 1 }}>
-            {visibleWidgetOrder
-              .filter(
-                (widgetId) => widgetId !== 'revenueChart' && widgetId !== 'revenueByTypeChart',
-              )
-              .map((widgetId, index) => {
+            {visibleWidgetOrder.map((widgetId, index) => {
                 const WidgetComponent = widgetComponents[widgetId]
                 const gridSize = getGridSize(widgetId, index, visibleWidgetOrder)
 
