@@ -165,7 +165,7 @@ export default function OtpLoginPanel({
           <CustomInput
             type="email"
             label={compactLogin ? 'Email' : 'Work Email'}
-            placeholder={compactLogin ? 'e.g., yourname@shipaggregator.com' : ''}
+            placeholder={compactLogin ? 'e.g., yourname@fastship.com' : ''}
             value={email}
             name="email"
             id="otp-email"

@@ -1,4 +1,4 @@
-﻿import { Box, FormControlLabel, Link, Stack, Typography } from '@mui/material'
+import { Box, FormControlLabel, Link, Stack, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import { useMemo, useState } from 'react'
 import { FiArrowRight, FiMail, FiUser } from 'react-icons/fi'
@@ -238,7 +238,7 @@ export default function CredentialAuthForm({
     mode === 'signup' ? 'Create your account with password access' : 'Sign in with email and password'
   const description =
     mode === 'signup'
-      ? 'Set up your Ship Aggregator account and move into onboarding, courier setup, and shipment management.'
+      ? 'Set up your FastShip account and move into onboarding, courier setup, and shipment management.'
       : 'Sign in with your email and password to access bookings, tracking, and courier operations.'
 
   return (
@@ -284,7 +284,7 @@ export default function CredentialAuthForm({
             label="Email"
             name="email"
             type="email"
-            placeholder={compactLogin ? 'e.g., yourname@shipaggregator.com' : ''}
+            placeholder={compactLogin ? 'e.g., yourname@fastship.com' : ''}
             value={email}
             onChange={(event) => {
               setEmail(event.target.value)

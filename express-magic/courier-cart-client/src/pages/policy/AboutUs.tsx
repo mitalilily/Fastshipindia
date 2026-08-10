@@ -39,7 +39,7 @@ const AboutUs = () => {
 
   return (
     <Stack gap={3} sx={{ py: 4, px: 4 }}>
-      <PageHeading title="About Us - Ship Aggregator" />
+      <PageHeading title="About Us - FastShip" />
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
@@ -83,7 +83,7 @@ const AboutUs = () => {
             <Box
               component="img"
               src="/images/about-us-seller.jpeg"
-              alt="Ship Aggregator team portrait"
+              alt="FastShip team portrait"
               loading="lazy"
               sx={{
                 width: '100%',

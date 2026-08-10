@@ -181,7 +181,7 @@ export default function UserOnboarding() {
           variant="h6"
           sx={{ fontWeight: 900, color: DE_BLUE, letterSpacing: -0.5, fontSize: '1.4rem' }}
         >
-          Ship Aggregator Seller Panel
+          FastShip Seller Panel
         </Typography>
         <SwitchAccountButton />
       </Stack>
@@ -333,7 +333,7 @@ export default function UserOnboarding() {
                   mb: 0.75,
                 }}
               >
-                Ship Aggregator onboarding
+                FastShip onboarding
               </Typography>
               <Typography
                 sx={{

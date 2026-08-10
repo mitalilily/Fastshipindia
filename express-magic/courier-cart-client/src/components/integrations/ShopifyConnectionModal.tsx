@@ -388,7 +388,7 @@ const ShopifyConnectionModal = ({
                       },
                     }))
                   }
-                  helperText="Automatically update order statuses in Shopify when they change in the Ship Aggregator workspace."
+                  helperText="Automatically update order statuses in Shopify when they change in the FastShip workspace."
                 />
 
                 {/* Auto cancel orders */}
@@ -404,7 +404,7 @@ const ShopifyConnectionModal = ({
                       },
                     }))
                   }
-                  helperText="Automatically cancel the order in Shopify when it's marked as cancelled in the Ship Aggregator workspace."
+                  helperText="Automatically cancel the order in Shopify when it's marked as cancelled in the FastShip workspace."
                 />
 
                 {/* Mark COD Orders Paid */}

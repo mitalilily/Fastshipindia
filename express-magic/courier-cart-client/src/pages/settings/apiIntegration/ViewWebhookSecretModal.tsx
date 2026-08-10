@@ -28,12 +28,12 @@ export const ViewWebhookSecretModal = ({
 
   const handleDownloadCredentials = () => {
     const timestamp = new Date().toISOString()
-    const fileName = `shipaggregator-webhook-secret-${(webhook.name || 'webhook').replace(
+    const fileName = `fastship-webhook-secret-${(webhook.name || 'webhook').replace(
       /\s/g,
       '-',
     )}-${timestamp.split('T')[0]}.txt`
     const fileContent = `
-Ship Aggregator Webhook Secret
+FastShip Webhook Secret
 Generated: ${timestamp}
 Webhook Name: ${webhook.name || 'Unnamed'}
 Webhook URL: ${webhook.url}

@@ -12,7 +12,7 @@ const PolicyPages = () => {
       <Box display={'flex'} justifyContent={'center'}>
         <PageHeading
           title="Legal & Policy Information"
-          subtitle="All policies, terms, and privacy information for Ship Aggregator"
+          subtitle="All policies, terms, and privacy information for FastShip"
         />{' '}
       </Box>
 
@@ -37,11 +37,11 @@ const PolicyPages = () => {
           invoice via email. Once that invoice has been paid, no further charges will apply.
         </Typography>
         <Typography paragraph>
-          • Ship Aggregator (Ship Aggregator) reserves the right to modify, suspend, or terminate
+          • FastShip (FastShip) reserves the right to modify, suspend, or terminate
           the Service for any reason, without prior notice at any time.
         </Typography>
         <Typography paragraph>
-          • Fraud Prevention: Without limiting any other remedies, Ship Aggregator may suspend or
+          • Fraud Prevention: Without limiting any other remedies, FastShip may suspend or
           terminate your account if we suspect that you (through conviction, settlement,
           investigation, or otherwise) have engaged in fraudulent or unlawful activity in connection
           with the Platform.
@@ -72,7 +72,7 @@ const PolicyPages = () => {
         </Box>
         <Typography paragraph>Last Updated: [Insert Date]</Typography>
         <Typography paragraph>
-          Ship Aggregator (Ship Aggregator) ("we," "our," or "us") operates the services offered
+          FastShip (FastShip) ("we," "our," or "us") operates the services offered
           via our website and related platforms (collectively, the “Platform”). Please read this
           Privacy Policy carefully before accessing or using our Platform, as continued use
           indicates your acceptance of this Policy.

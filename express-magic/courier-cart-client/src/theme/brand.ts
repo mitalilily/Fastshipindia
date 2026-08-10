@@ -24,13 +24,13 @@ export const brandFonts = {
 }
 
 export const brandIdentity = {
-  name: 'Ship Aggregator',
-  shortName: 'Ship Aggregator',
-  tagline: 'A leading courier aggregator company that delivers customized supply chain solutions. ISO (9001:2015) certified.',
-  supportEmail: 'cs@shipaggregator.com',
-  supportPhone: '+91 94038 91046',
-  supportAddress: 'G-10, Bajrang Complex, Telipara, Bilaspur, Chhattisgarh',
-  logoSrc: '/favicon.jpg',
+  name: 'FastShip',
+  shortName: 'FastShip',
+  tagline: 'Fast. Safe. Worldwide.',
+  supportEmail: 'support@fastship.in',
+  supportPhone: '+91 84878 81121',
+  supportAddress: 'Ahmedabad, Gujarat, India',
+  logoSrc: '/fastship-logo.png',
 }
 
 export const brandGradients = {

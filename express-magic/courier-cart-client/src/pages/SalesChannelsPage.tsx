@@ -113,7 +113,7 @@ const benefits = [
   {
     title: 'Automatic Order Sync',
     description:
-      "New orders flow into your Ship Aggregator dashboard the moment they're placed &mdash; zero manual work.",
+      "New orders flow into your FastShip dashboard the moment they're placed &mdash; zero manual work.",
     icon: <FiRefreshCw />,
   },
   {
@@ -142,7 +142,7 @@ const steps = [
   },
   {
     title: 'Authorize Access',
-    description: 'Securely authorize Ship Aggregator to sync your orders and inventory.',
+    description: 'Securely authorize FastShip to sync your orders and inventory.',
   },
   {
     title: 'Start Shipping',

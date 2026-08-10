@@ -54,7 +54,7 @@ const CarrierLogos: React.FC = () => {
             fontSize: '0.95rem',
           }}
         >
-          Connected carriers and commerce brands moving inside one Ship Aggregator shipping flow.
+          Connected carriers and commerce brands moving inside one FastShip shipping flow.
         </Typography>
       </Stack>
 

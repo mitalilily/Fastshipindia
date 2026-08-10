@@ -129,7 +129,7 @@ const platformTools = [
 const testimonials = [
   {
     quote:
-      'Ship Aggregator cut our shipping costs by 30% and brought all our courier partners under one roof. The dashboard is a game changer.',
+      'FastShip cut our shipping costs by 30% and brought all our courier partners under one roof. The dashboard is a game changer.',
     initial: 'P',
     name: 'Priya Sharma',
     role: 'Founder, LoomCraft',
@@ -143,7 +143,7 @@ const testimonials = [
   },
   {
     quote:
-      'The smart routing feature alone saved us lakhs. Ship Aggregator picks the fastest, cheapest courier for every order automatically.',
+      'The smart routing feature alone saved us lakhs. FastShip picks the fastest, cheapest courier for every order automatically.',
     initial: 'A',
     name: 'Ananya Desai',
     role: 'E-commerce Manager, StyleNest',
@@ -152,9 +152,9 @@ const testimonials = [
 
 const faqs = [
   {
-    question: 'What services does Ship Aggregator provide?',
+    question: 'What services does FastShip provide?',
     answer:
-      'Ship Aggregator provides comprehensive courier & logistics services including B2B and B2C shipping solutions, express delivery, warehousing, distribution, cargo transportation, and reverse logistics. We offer domestic and international shipping services tailored to meet your business needs.',
+      'FastShip provides comprehensive courier & logistics services including B2B and B2C shipping solutions, express delivery, warehousing, distribution, cargo transportation, and reverse logistics. We offer domestic and international shipping services tailored to meet your business needs.',
   },
   {
     question: 'How can I track my shipment?',
@@ -184,7 +184,7 @@ const faqs = [
   {
     question: 'How can I contact customer support?',
     answer:
-      'Our customer support team is available 24/7 to assist you. You can reach us at +919403891046, email us at cs@shipaggregator.com, or chat with us on WhatsApp. Our office hours are 9:00 AM to 6:00 PM, Monday to Friday.',
+      'Our customer support team is available 24/7 to assist you. You can reach us at +919403891046, email us at support@fastship.in, or chat with us on WhatsApp. Our office hours are 9:00 AM to 6:00 PM, Monday to Friday.',
   },
   {
     question: 'What are the packaging guidelines?',
@@ -439,7 +439,7 @@ export default function LandingPage() {
       <Box id="platform" component="section" sx={{ py: { xs: 9, md: 13 }, bgcolor: '#fff' }}>
         <Container maxWidth="xl" sx={{ px: { xs: 2.5, sm: 4, lg: 10 } }}>
           <SectionHeading
-            eyebrow="Why Ship Aggregator"
+            eyebrow="Why FastShip"
             title="Everything you need to ship with confidence"
             copy="We built this to make shipping simpler, cheaper, and smarter for every seller across India."
           />
