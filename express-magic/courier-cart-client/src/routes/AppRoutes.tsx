@@ -115,7 +115,7 @@ const ShipmozoReportsShipmentPanel = morePanel('ShipmozoReportsShipmentPanel')
 const ShipmozoReportsNdrPanel = morePanel('ShipmozoReportsNdrPanel')
 const ShipmozoReportsCustomPanel = morePanel('ShipmozoReportsCustomPanel')
 const ShipmozoSupportPanel = morePanel('ShipmozoSupportPanel')
-const ShipmozoProfilePanel = morePanel('ShipmozoProfilePanel')
+const ShipmozoProfilePanel = lazy(() => import('../pages/shipmozo/ShipmozoProfilePanel'))
 const ShipmozoUserAgreementsPanel = morePanel('ShipmozoUserAgreementsPanel')
 const ShipmozoTicketsPanel = morePanel('ShipmozoTicketsPanel')
 
@@ -301,6 +301,10 @@ export default function AppRoutes() {
             </Route>
             <Route path="/help/shortcuts" element={<KeyboardShortcutsPage />} />
             <Route path="/profile" element={<ShipmozoProfilePanel />} />
+            <Route path="/profile/documents" element={<ShipmozoProfilePanel />} />
+            <Route path="/profile/change-password" element={<ShipmozoProfilePanel />} />
+            <Route path="/profile/security" element={<ShipmozoProfilePanel />} />
+            <Route path="/profile/other-details" element={<ShipmozoProfilePanel />} />
             <Route path="/profile/*" element={<ProfileLayout />}>
               <Route path="user_profile/*" element={<UserProfileSettings />} />
               <Route index element={<Navigate to="user_profile" replace />} />

@@ -261,6 +261,27 @@ export const logoutController = async (req: Request, res: Response): Promise<any
   return res.json({ message: 'Logged out' })
 }
 
+export const logoutOtherDevicesController = async (req: Request, res: Response): Promise<any> => {
+  const userId = String((req as any).user?.sub || '').trim()
+  if (!userId) return res.status(401).json({ error: 'Session invalid' })
+
+  const user = await findUserById(userId)
+  if (!user) return res.status(401).json({ error: 'User not found' })
+
+  const role = user.role ?? 'customer'
+  const accessToken = signAccessToken(user.id, role)
+  const { token: refreshToken } = signRefreshToken(user.id, role)
+
+  // Persisting only the replacement token invalidates refresh sessions on other devices.
+  await saveRefreshToken(user.id, refreshToken, ONE_WEEK_MS)
+
+  return res.json({
+    message: 'Other devices logged out',
+    accessToken,
+    refreshToken,
+  })
+}
+
 // -------------------
 // Request OTP (Email-based)
 // -------------------

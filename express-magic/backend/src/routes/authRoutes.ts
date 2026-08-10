@@ -4,6 +4,7 @@ import {
   adminLoginController,
   googleOAuthLogin,
   logoutController,
+  logoutOtherDevicesController,
   //   loginController,
   //   logoutController,
   refreshTokenController,
@@ -35,5 +36,7 @@ router.post('/signin-with-google', googleOAuthLogin)
 // router.post("/login", loginController);
 router.post('/refresh-token', refreshTokenController) // ✅ No auth needed - uses refresh token
 router.post('/logout', logoutController) // ✅ Logout should work even if access token expired
+
+router.post('/logout-other-devices', requireAuth, logoutOtherDevicesController)
 
 export default router

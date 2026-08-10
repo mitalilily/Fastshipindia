@@ -80,6 +80,15 @@ export const logoutApi = async () => {
   );
 };
 
+export const logoutOtherDevicesApi = async () => {
+  const { data } = await axiosInstance.post<{
+    message: string;
+    accessToken: string;
+    refreshToken: string;
+  }>("/auth/logout-other-devices");
+  return data;
+};
+
 /** Payload accepted by the backend */
 export interface ChangePasswordPayload {
   newPassword: string;
