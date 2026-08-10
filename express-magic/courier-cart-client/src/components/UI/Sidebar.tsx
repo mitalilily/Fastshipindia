@@ -40,7 +40,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 
 import type { JSX } from '@emotion/react/jsx-runtime'
 import BrandLogo from '../brand/BrandLogo'
-import { brand, brandIdentity } from '../../theme/brand'
+import { brand } from '../../theme/brand'
 import { isActive } from '../../utils/functions'
 import { useAuth } from '../../context/auth/AuthContext'
 
@@ -463,37 +463,34 @@ export default function Sidebar({
           px: isSidebarExpanded ? (temporary ? 2.25 : 1.75) : 1,
           display: 'flex',
           alignItems: 'center',
-          gap: 1.5,
+          justifyContent: isSidebarExpanded ? 'flex-start' : 'center',
           flexShrink: 0,
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
         <BrandLogo
-          compact
+          compact={!isSidebarExpanded}
           sx={{
-            width: isSidebarExpanded ? (temporary ? 72 : 64) : 52,
+            width: isSidebarExpanded
+              ? temporary
+                ? 'clamp(138px, 18vh, 156px)'
+                : 'clamp(124px, 17vh, 144px)'
+              : 52,
             height: isSidebarExpanded
               ? temporary
-                ? 'clamp(22px, 3vh, 26px)'
-                : 'clamp(19px, 2.6vh, 23px)'
-              : 20,
-            backgroundSize: '100% auto',
+                ? 'clamp(46px, 6.2vh, 52px)'
+                : 'clamp(42px, 5.8vh, 48px)'
+              : 18,
+            aspectRatio: 'auto',
+            backgroundSize: isSidebarExpanded
+              ? temporary
+                ? '143% auto'
+                : '140% auto'
+              : '118% auto',
+            backgroundPosition: 'center',
             flexShrink: 0,
           }}
         />
-        {isSidebarExpanded ? (
-          <Typography
-            sx={{
-              color: WHITE,
-              fontSize: temporary ? '1.28rem' : '1.08rem',
-              fontWeight: 700,
-              letterSpacing: '-0.05em',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {brandIdentity.name}
-          </Typography>
-        ) : null}
       </Box>
 
       <Box
