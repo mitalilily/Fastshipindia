@@ -4,9 +4,10 @@
   --scene-sky: #7dd3fc;
   --scene-orange: #f47a0b;
   position: relative;
-  width: min(100%, 430px);
+  width: min(100%, 510px);
   aspect-ratio: 1.48;
-  margin: 4px 0 0 12px;
+  margin: -6px clamp(0px, 3vw, 36px) 0 auto;
+  align-self: flex-end;
   isolation: isolate;
   perspective: 1000px;
   transform-style: preserve-3d;
@@ -420,6 +421,7 @@
   .scene {
     width: min(86vw, 330px);
     margin: 0 auto;
+    align-self: center;
   }
 
   .truckTrack { width: 50%; }
