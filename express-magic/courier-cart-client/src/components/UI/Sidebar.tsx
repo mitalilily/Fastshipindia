@@ -12,7 +12,7 @@ import {
   TbTruckDelivery,
   TbWallet,
   TbReportAnalytics,
-  TbLayoutSidebar,
+  TbPhoneCall,
 } from 'react-icons/tb'
 import { NavLink, useLocation } from 'react-router-dom'
 
@@ -300,45 +300,75 @@ export default function Sidebar({ role = 'customer', pinned = false, fixed = fal
         })}
       </List>
 
-      <Stack alignItems="center" spacing={1} sx={{ pb: 3 }}>
-        <Box
-          sx={{
-            minWidth: isExpanded ? 134 : 84,
-            height: 32,
-            display: 'grid',
-            placeItems: 'center',
-            borderRadius: '6px',
-            bgcolor: '#f2f5f8',
-            color: ink,
-            fontSize: 14,
-          }}
-        >
-          Ctrl+ B
-        </Box>
-        <Box
-          sx={{
-            width: isExpanded ? '100%' : 112,
-            minHeight: 92,
-            display: 'grid',
-            placeItems: 'center',
-            bgcolor: '#fffef0',
-          }}
-        >
-          <Box
-            sx={{
-              width: 50,
-              height: 50,
-              borderRadius: '50%',
-              display: 'grid',
-              placeItems: 'center',
-              bgcolor: '#49b655',
-              color: '#fff',
-              fontSize: 29,
-            }}
-          >
-            <TbLayoutSidebar />
-          </Box>
-        </Box>
+      <Stack alignItems="center" spacing={1} sx={{ pb: isExpanded ? 0 : 2 }}>
+        {isExpanded ? (
+          <>
+            <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ width: '100%', px: 2, color: muted }}>
+              <Box sx={{ fontSize: 14, whiteSpace: 'nowrap' }}>Quick Search:</Box>
+              <Box
+                sx={{
+                  minWidth: 82,
+                  height: 34,
+                  display: 'grid',
+                  placeItems: 'center',
+                  borderRadius: '6px',
+                  bgcolor: '#f2f5f8',
+                  color: ink,
+                  fontSize: 14,
+                }}
+              >
+                Ctrl+ B
+              </Box>
+            </Stack>
+
+            <Stack
+              alignItems="center"
+              justifyContent="center"
+              sx={{
+                width: '100%',
+                minHeight: 116,
+                px: 1.5,
+                py: 1.25,
+                bgcolor: '#fffef0',
+                color: ink,
+                textAlign: 'center',
+              }}
+            >
+              <Box sx={{ fontSize: 15, fontWeight: 800 }}>Seller Support</Box>
+              <Box
+                component="a"
+                href="tel:+917375000072"
+                sx={{ mt: 0.25, color: '#071cba', fontSize: 18, fontWeight: 900, textDecoration: 'none' }}
+              >
+                +917375000072
+              </Box>
+              <Box sx={{ mt: 0.25, color: muted, fontSize: 11.5 }}>Business Hours</Box>
+              <Box sx={{ color: muted, fontSize: 10.5, whiteSpace: 'nowrap' }}>09:00 AM to 06:30 PM (Mon to Sat)</Box>
+            </Stack>
+          </>
+        ) : (
+          <Tooltip title="Call Seller Support: +917375000072" placement="right">
+            <Box
+              component="a"
+              href="tel:+917375000072"
+              aria-label="Call Seller Support"
+              sx={{
+                width: 50,
+                height: 50,
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: teal,
+                color: '#fff',
+                fontSize: 27,
+                textDecoration: 'none',
+                '&:hover': { bgcolor: '#066f8d' },
+              }}
+            >
+              <TbPhoneCall />
+            </Box>
+          </Tooltip>
+        )}
       </Stack>
     </Box>
   )
