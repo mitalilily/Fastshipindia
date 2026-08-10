@@ -9,6 +9,7 @@ import {
   Truck, Warehouse, X, Zap,
 } from 'lucide-react'
 import { Link, NavLink, Route as RouterRoute, Routes, useLocation } from 'react-router-dom'
+import { brandIdentity } from '../../theme/brand'
 import './FastShipLanding.css'
 
 const navItems = [
@@ -48,7 +49,7 @@ function RouteEffects() {
 }
 
 function Logo() {
-  return <img className="brand-logo brand-logo-image" src="/assets/fastshipindia-logo-green-navy.jpg" alt="Fastship India" decoding="async" />
+  return <img className="brand-logo brand-logo-image" src={brandIdentity.logoSrc} alt={brandIdentity.name} decoding="async" />
 }
 
 function Header() {
