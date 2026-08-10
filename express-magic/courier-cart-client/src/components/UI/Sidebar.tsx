@@ -455,9 +455,9 @@ export default function Sidebar({
         <BrandLogo
           compact
           sx={{
-            width: temporary ? 44 : 38,
-            height: temporary ? 44 : 38,
-            objectFit: 'contain',
+            width: isSidebarExpanded ? (temporary ? 72 : 64) : 52,
+            height: isSidebarExpanded ? (temporary ? 26 : 23) : 20,
+            backgroundSize: '100% auto',
             flexShrink: 0,
           }}
         />

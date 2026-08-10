@@ -4,6 +4,7 @@ import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter, FaYoutube } from 'r
 import { FiMail, FiMapPin, FiPhone } from 'react-icons/fi'
 import { Link as RouterLink } from 'react-router-dom'
 import { brandIdentity } from '../../theme/brand'
+import BrandLogo from '../brand/BrandLogo'
 
 const productLinks = [
   { label: 'Platform', to: '/platform' },
@@ -66,7 +67,7 @@ export default function PublicFooter() {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.45fr repeat(3, 1fr)' }, gap: { xs: 5, md: 6 } }}>
           <Stack spacing={2.2}>
             <Box component={RouterLink} to="/" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.2, color: '#fff', textDecoration: 'none', fontWeight: 800 }}>
-              <Box component="img" src={brandIdentity.logoSrc} alt={brandIdentity.name} sx={{ width: 38, height: 38, borderRadius: '50%' }} />
+              <BrandLogo compact sx={{ width: 62, height: 23 }} />
               {brandIdentity.name}
             </Box>
             <Typography sx={{ color: alpha('#fff', 0.58), lineHeight: 1.7, maxWidth: 360, fontSize: '0.95rem' }}>

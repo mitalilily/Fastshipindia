@@ -30,7 +30,8 @@ export const brandIdentity = {
   supportEmail: 'support@fastship.in',
   supportPhone: '+91 84878 81121',
   supportAddress: 'Ahmedabad, Gujarat, India',
-  logoSrc: '/fastship-logo.png',
+  logoSrc: '/brand/shipment-email-logo.png',
+  markSrc: '/brand/shipment-email-mark.png',
 }
 
 export const brandGradients = {
