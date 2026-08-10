@@ -34,7 +34,6 @@ import { NavLink, useLocation } from 'react-router-dom'
 import type { JSX } from '@emotion/react/jsx-runtime'
 import BrandLogo from '../brand/BrandLogo'
 import { brandIdentity } from '../../theme/brand'
-import { DRAWER_WIDTH } from '../../utils/constants'
 import { isActive } from '../../utils/functions'
 import { useAuth } from '../../context/auth/AuthContext'
 
@@ -70,6 +69,7 @@ interface SidebarProps {
 }
 
 export const COLLAPSED_WIDTH = 72
+export const DESKTOP_SIDEBAR_WIDTH = 260
 
 const STANDARD_ICON_SIZE = 21
 const ACTIVE = '#7657ff'
@@ -265,9 +265,9 @@ export default function Sidebar({
   }
 
   const navItemSx = {
-    minHeight: 43,
+    minHeight: temporary ? 43 : 38,
     borderRadius: 0,
-    px: isSidebarExpanded ? 3.6 : 0,
+    px: isSidebarExpanded ? (temporary ? 3.6 : 2.75) : 0,
     py: 0,
     color: TEXT,
     position: 'relative',
@@ -329,7 +329,7 @@ export default function Sidebar({
           <ListItemText
             primary={item.text}
             primaryTypographyProps={{
-              fontSize: '1rem',
+              fontSize: temporary ? '1rem' : '0.9rem',
               fontWeight: active ? 800 : 650,
               letterSpacing: '-0.01em',
             }}
@@ -417,7 +417,7 @@ export default function Sidebar({
   return (
     <Box
       sx={{
-        width: temporary ? '100%' : isSidebarExpanded ? DRAWER_WIDTH : COLLAPSED_WIDTH,
+        width: temporary ? '100%' : isSidebarExpanded ? DESKTOP_SIDEBAR_WIDTH : COLLAPSED_WIDTH,
         height: temporary ? '100%' : '100dvh',
         maxHeight: temporary ? '100%' : '100dvh',
         background: DARK_BG,
@@ -443,8 +443,8 @@ export default function Sidebar({
     >
       <Box
         sx={{
-          height: 72,
-          px: isSidebarExpanded ? 2.25 : 1,
+          height: temporary ? 72 : 64,
+          px: isSidebarExpanded ? (temporary ? 2.25 : 1.75) : 1,
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
@@ -452,12 +452,20 @@ export default function Sidebar({
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <BrandLogo compact sx={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
+        <BrandLogo
+          compact
+          sx={{
+            width: temporary ? 44 : 38,
+            height: temporary ? 44 : 38,
+            objectFit: 'contain',
+            flexShrink: 0,
+          }}
+        />
         {isSidebarExpanded ? (
           <Typography
             sx={{
               color: WHITE,
-              fontSize: '1.28rem',
+              fontSize: temporary ? '1.28rem' : '1.08rem',
               fontWeight: 900,
               letterSpacing: '-0.05em',
               whiteSpace: 'nowrap',
@@ -477,7 +485,7 @@ export default function Sidebar({
           overscrollBehavior: 'contain',
           scrollbarGutter: 'stable',
           WebkitOverflowScrolling: 'touch',
-          py: 1.5,
+          py: temporary ? 1.5 : 1,
           bgcolor: DARK_BG,
           '&::-webkit-scrollbar': { width: 6 },
           '&::-webkit-scrollbar-track': { background: DARK_BG },
@@ -486,14 +494,14 @@ export default function Sidebar({
       >
         {visibleSections.map((section) =>
           section.items.length ? (
-            <Box key={section.title} sx={{ mb: 2.2 }}>
+            <Box key={section.title} sx={{ mb: temporary ? 2.2 : 1.45 }}>
               {isSidebarExpanded ? (
                 <Typography
                   sx={{
-                    px: 3.6,
-                    mb: 0.8,
+                    px: temporary ? 3.6 : 2.75,
+                    mb: temporary ? 0.8 : 0.5,
                     color: MUTED,
-                    fontSize: '0.82rem',
+                    fontSize: temporary ? '0.82rem' : '0.72rem',
                     fontWeight: 850,
                     textTransform: 'uppercase',
                     letterSpacing: 0,
@@ -513,8 +521,8 @@ export default function Sidebar({
         {isSidebarExpanded ? (
           <Box
             sx={{
-              px: 3.6,
-              py: 1.85,
+              px: temporary ? 3.6 : 2.75,
+              py: temporary ? 1.85 : 1.25,
               borderTop: `1px solid ${BORDER}`,
               display: 'flex',
               alignItems: 'center',
@@ -540,10 +548,16 @@ export default function Sidebar({
               {initials}
             </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ color: WHITE, fontWeight: 850, fontSize: '0.98rem' }} noWrap>
+              <Typography
+                sx={{ color: WHITE, fontWeight: 850, fontSize: temporary ? '0.98rem' : '0.88rem' }}
+                noWrap
+              >
                 {displayName}
               </Typography>
-              <Typography sx={{ color: TEXT, fontWeight: 600, fontSize: '0.85rem' }} noWrap>
+              <Typography
+                sx={{ color: TEXT, fontWeight: 600, fontSize: temporary ? '0.85rem' : '0.76rem' }}
+                noWrap
+              >
                 {displayEmail}
               </Typography>
             </Box>

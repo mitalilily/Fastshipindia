@@ -96,15 +96,15 @@ export default function Home() {
 
   return (
     <Box sx={{ bgcolor: pageBg, color: text, minHeight: '100%', pb: 5 }}>
-      <Stack spacing={3}>
+      <Stack spacing={{ xs: 3, md: 2 }}>
         {showKycBanner ? (
           <Box
             sx={{
               ...cardSx,
-              minHeight: 92,
-              px: { xs: 2, md: 3.2 },
-              py: 2,
-              pr: { xs: 5, md: 3.2 },
+              minHeight: { xs: 92, md: 76 },
+              px: { xs: 2, md: 2.25 },
+              py: { xs: 2, md: 1.25 },
+              pr: { xs: 5, md: 2.25 },
               borderColor: strongBorder,
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr auto' },
@@ -171,10 +171,10 @@ export default function Home() {
         ) : null}
 
         <Box>
-          <Typography sx={{ color: text, fontSize: '1.55rem', fontWeight: 900 }}>
+          <Typography sx={{ color: text, fontSize: { xs: '1.55rem', md: '1.35rem' }, fontWeight: 900 }}>
             {greeting}, {displayName}!
           </Typography>
-          <Typography sx={{ color: muted, mt: 0.4, fontSize: '1rem' }}>
+          <Typography sx={{ color: muted, mt: 0.3, fontSize: { xs: '1rem', md: '0.9rem' } }}>
             Here's your daily overview.
           </Typography>
         </Box>
@@ -183,7 +183,7 @@ export default function Home() {
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(5, 1fr)' },
-            gap: 2,
+            gap: { xs: 2, md: 1.5 },
           }}
         >
           {statCards.map((item) => (
@@ -191,8 +191,8 @@ export default function Home() {
               key={item.label}
               sx={{
                 ...cardSx,
-                minHeight: 112,
-                p: 2,
+                minHeight: { xs: 112, md: 94 },
+                p: { xs: 2, md: 1.5 },
                 position: 'relative',
                 overflow: 'hidden',
                 borderColor: item.label === 'Wallet' ? strongBorder : border,
@@ -210,7 +210,9 @@ export default function Home() {
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                 <Box>
                   <Typography sx={{ color: dim, fontWeight: 700 }}>{item.label}</Typography>
-                  <Typography sx={{ color: text, fontSize: '1.75rem', lineHeight: 1.1, fontWeight: 900 }}>
+                  <Typography
+                    sx={{ color: text, fontSize: { xs: '1.75rem', md: '1.5rem' }, lineHeight: 1.1, fontWeight: 900 }}
+                  >
                     {item.value}
                   </Typography>
                   {item.action ? (
@@ -225,8 +227,8 @@ export default function Home() {
           ))}
         </Box>
 
-        <Box sx={{ ...cardSx, borderColor: strongBorder, p: { xs: 2, md: 3 } }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.2}>
+        <Box sx={{ ...cardSx, borderColor: strongBorder, p: { xs: 2, md: 2 } }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={{ xs: 2.2, md: 1.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <TbShieldCheck color={PURPLE} />
               <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.1rem' }}>
@@ -242,7 +244,7 @@ export default function Home() {
               height: 7,
               borderRadius: 999,
               bgcolor: progressTrack,
-              mb: 2.4,
+              mb: { xs: 2.4, md: 1.7 },
               '& .MuiLinearProgress-bar': {
                 borderRadius: 999,
                 background: `linear-gradient(90deg, ${PURPLE}, ${ORANGE})`,
@@ -260,8 +262,8 @@ export default function Home() {
               <Box
                 key={step.title}
                 sx={{
-                  minHeight: 66,
-                  p: 1.6,
+                  minHeight: { xs: 66, md: 58 },
+                  p: { xs: 1.6, md: 1.2 },
                   borderRadius: 2,
                   border: `1px solid ${step.done ? strongBorder : border}`,
                   bgcolor: cardBg,
@@ -306,7 +308,7 @@ export default function Home() {
         </Box>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '0.9fr 1.85fr' }, gap: 2.2 }}>
-          <Box sx={{ ...cardSx, minHeight: 258, p: 3 }}>
+          <Box sx={{ ...cardSx, minHeight: { xs: 258, md: 225 }, p: { xs: 3, md: 2 } }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" spacing={1.4} alignItems="center">
                 <TbChartBar color={PURPLE} />
@@ -316,13 +318,13 @@ export default function Home() {
               </Stack>
               <Typography sx={{ color: muted }}>0 total</Typography>
             </Stack>
-            <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 178 }}>
+            <Stack alignItems="center" justifyContent="center" sx={{ minHeight: { xs: 178, md: 155 } }}>
               <TbPackage size={32} color={muted} />
               <Typography sx={{ color: muted, mt: 1.3 }}>No orders yet</Typography>
             </Stack>
           </Box>
 
-          <Box sx={{ ...cardSx, p: 3 }}>
+          <Box sx={{ ...cardSx, p: { xs: 3, md: 2 } }}>
             <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem', mb: 2 }}>
               Quick Actions
             </Typography>
@@ -332,8 +334,8 @@ export default function Home() {
                   key={item.title}
                   onClick={() => navigate(item.path)}
                   sx={{
-                    minHeight: 76,
-                    p: 1.7,
+                    minHeight: { xs: 76, md: 66 },
+                    p: { xs: 1.7, md: 1.3 },
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1.5,
@@ -347,8 +349,8 @@ export default function Home() {
                 >
                   <Box
                     sx={{
-                      width: 40,
-                      height: 40,
+                      width: { xs: 40, md: 34 },
+                      height: { xs: 40, md: 34 },
                       borderRadius: 2,
                       display: 'grid',
                       placeItems: 'center',
@@ -374,7 +376,7 @@ export default function Home() {
           </Box>
         </Box>
 
-        <Box sx={{ ...cardSx, minHeight: 386, p: 3 }}>
+        <Box sx={{ ...cardSx, minHeight: { xs: 386, md: 330 }, p: { xs: 3, md: 2 } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem' }}>
               Recent Orders
@@ -383,7 +385,7 @@ export default function Home() {
               View all {'\u2192'}
             </Typography>
           </Stack>
-          <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 300 }}>
+          <Stack alignItems="center" justifyContent="center" sx={{ minHeight: { xs: 300, md: 246 } }}>
             <TbCube size={32} color={PURPLE} />
             <Typography sx={{ color: text, mt: 2, fontWeight: 900, fontSize: '1.05rem' }}>
               No orders yet

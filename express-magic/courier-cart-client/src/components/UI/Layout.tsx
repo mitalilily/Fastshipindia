@@ -5,7 +5,7 @@ import { DRAWER_WIDTH } from '../../utils/constants'
 import Navbar from '../Navbar/Navbar'
 import KeyboardShortcuts from './keyboard/KeyboardShortcuts'
 import FullScreenLoader from './loader/FullScreenLoader'
-import Sidebar, { COLLAPSED_WIDTH } from './Sidebar'
+import Sidebar, { COLLAPSED_WIDTH, DESKTOP_SIDEBAR_WIDTH } from './Sidebar'
 
 export default function Layout() {
   const theme = useTheme()
@@ -88,8 +88,8 @@ export default function Layout() {
       ) : (
         <Box
           sx={{
-            width: pinned ? DRAWER_WIDTH : COLLAPSED_WIDTH,
-            minWidth: pinned ? DRAWER_WIDTH : COLLAPSED_WIDTH,
+            width: pinned ? DESKTOP_SIDEBAR_WIDTH : COLLAPSED_WIDTH,
+            minWidth: pinned ? DESKTOP_SIDEBAR_WIDTH : COLLAPSED_WIDTH,
             flexShrink: 0,
             transition: 'width 240ms ease',
             willChange: 'width',
@@ -136,8 +136,8 @@ export default function Layout() {
               bgcolor: shellBg,
               position: 'relative',
               zIndex: 0,
-              px: { xs: 1.5, md: 3 },
-              pb: { xs: 1.5, md: 3 },
+              px: { xs: 1.5, md: 2 },
+              pb: { xs: 1.5, md: 2 },
               height: '100%',
               minHeight: 0,
               overscrollBehavior: 'auto',
@@ -149,7 +149,7 @@ export default function Layout() {
               maxWidth="xl"
               sx={{
                 bgcolor: 'transparent',
-                pt: { xs: 2, md: 3 },
+                pt: { xs: 2, md: 2 },
                 px: { xs: 0, md: 0 },
                 overflowX: 'visible',
               }}
