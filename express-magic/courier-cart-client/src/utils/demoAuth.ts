@@ -1,4 +1,5 @@
 export const DEMO_OTP = '246810'
+export const DEMO_PASSWORD_STORAGE_KEY = 'fastship_demo_password'
 
 const DEMO_HOSTS = new Set([
   'localhost',

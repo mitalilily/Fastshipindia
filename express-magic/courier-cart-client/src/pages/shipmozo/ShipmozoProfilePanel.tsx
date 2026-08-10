@@ -249,6 +249,11 @@ export default function ShipmozoProfilePanel() {
     const preview = URL.createObjectURL(file)
     setProfilePicture(preview)
 
+    if (isDemoLoginEnabled()) {
+      toast.open({ message: 'Profile photo updated for this demo session.', severity: 'success' })
+      return
+    }
+
     try {
       const uploaded = await uploadFileToStorage(file, `profile/${user.id || 'demo'}/avatar`)
       await updateProfile({ companyInfo: { ...company, profilePicture: uploaded.url } } as Partial<IUserProfileDB>)
@@ -274,6 +279,20 @@ export default function ShipmozoProfilePanel() {
     if (!file || !uploadingDocument) return
     if (file.size > 5 * 1024 * 1024) {
       toast.open({ message: 'Document must be under 5 MB.', severity: 'error' })
+      return
+    }
+
+    if (isDemoLoginEnabled()) {
+      setDocuments((current) => ({
+        ...current,
+        [uploadingDocument]: {
+          fileName: file.name,
+          url: URL.createObjectURL(file),
+          mimeType: file.type,
+        },
+      }))
+      toast.open({ message: `${file.name} added to this demo session.`, severity: 'success' })
+      setUploadingDocument(null)
       return
     }
 

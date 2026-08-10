@@ -22,6 +22,8 @@ import CustomCheckbox from '../UI/inputs/CustomCheckbox'
 import { toast } from '../UI/Toast'
 import EmailVerificationForm from './EmailVerificationForm'
 import PasswordResetDialog from './PasswordResetDialog'
+import { emptyUserProfile } from '../../utils/utility'
+import { DEMO_PASSWORD_STORAGE_KEY, isDemoLoginEnabled } from '../../utils/demoAuth'
 
 const { teal, tealDark, orange, ink, muted, paper, tealSoft } = BRAND.colors
 
@@ -144,6 +146,31 @@ export default function PasswordLoginForm({ setStep, step, setOpenTerms }: IPass
 
     if (!emailError && !passwordError) {
       sessionStorage.setItem('preferredMethod', 'password')
+
+      const demoPassword = localStorage.getItem(DEMO_PASSWORD_STORAGE_KEY)
+      if (isDemoLoginEnabled() && demoPassword && emailForm.password === demoPassword) {
+        const demoUser = {
+          ...emptyUserProfile,
+          id: 'local-demo-user',
+          userId: 'local-demo-user',
+          role: 'customer',
+          onboardingComplete: true,
+          profileComplete: true,
+          approved: true,
+          companyInfo: {
+            ...emptyUserProfile.companyInfo,
+            businessName: 'FastShip Demo Merchant',
+            contactPerson: 'Demo Merchant',
+            contactEmail: emailForm.email.toLowerCase().trim(),
+            companyEmail: emailForm.email.toLowerCase().trim(),
+          },
+        }
+
+        setUserId(demoUser.id)
+        setTokens('local-demo-access-token', 'local-demo-refresh-token', demoUser)
+        toast.open({ message: 'Demo password login successful.', severity: 'success' })
+        return
+      }
 
       requestPasswordLogin(
         { email: emailForm.email, password: emailForm.password },
