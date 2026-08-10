@@ -3,7 +3,8 @@ import axios from 'axios'
 import { clearAuthTokens, getAuthTokens, setAuthTokens } from './tokenVault'
 
 const RAW_API_BASE_URL = import.meta.env.VITE_API_URL
-const DEFAULT_API_BASE_URL = 'https://aggregator-backend-7gmk.onrender.com/api'
+const DEFAULT_API_BASE_URL = 'https://fastshipindia.onrender.com/api'
+const LEGACY_AGGREGATOR_API_HOST = 'aggregator-backend-7gmk.onrender.com'
 const LEGACY_RAILWAY_API_HOST = ['choice', 'me-backend-production.up.railway.app'].join('')
 const PLACEHOLDER_API_HOST = 'your-backend-url.onrender.com'
 
@@ -15,6 +16,7 @@ const getApiBaseUrl = () => {
 
     const candidate = new URL(RAW_API_BASE_URL, window.location.origin)
     const currentHost = window.location.hostname
+    const pointsToLegacyAggregatorApi = candidate.hostname === LEGACY_AGGREGATOR_API_HOST
     const pointsToLegacyRailwayApi = candidate.hostname === LEGACY_RAILWAY_API_HOST
     const pointsToPlaceholderApi = candidate.hostname === PLACEHOLDER_API_HOST
     const isHostedFrontend =
@@ -33,9 +35,8 @@ const getApiBaseUrl = () => {
       return fallback
     }
 
-    // The old Railway backend host can lag behind the live API and has caused
-    // courier calculator requests to fail with unsupported-media responses.
-    if (pointsToLegacyRailwayApi || pointsToPlaceholderApi) {
+    // Retired backend hosts can lag behind the live API or reject newer routes.
+    if (pointsToLegacyAggregatorApi || pointsToLegacyRailwayApi || pointsToPlaceholderApi) {
       return fallback
     }
 
@@ -47,7 +48,7 @@ const getApiBaseUrl = () => {
   }
 }
 
-const API_BASE_URL = getApiBaseUrl()
+export const API_BASE_URL = getApiBaseUrl()
 
 const api = axios.create({
   baseURL: API_BASE_URL,
