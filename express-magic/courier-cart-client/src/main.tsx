@@ -11,23 +11,30 @@ import { AuthProvider } from "./context/auth/AuthContext.tsx";
 import ErrorBoundary from "./components/UI/ErrorBoundary.tsx";
 
 const CHUNK_RELOAD_KEY = "__chunk_reload_attempted__";
-const HASH_ROUTE_PATHS = new Set([
-  "/dashboard",
-  "/orders/new",
-  "/orders/add",
-  "/orders/list",
-  "/orders/create",
-  "/orders/b2c/list",
-  "/orders/b2b/list",
-  "/ops/ndr",
-  "/ops/rto",
-]);
 
-if (!window.location.hash && HASH_ROUTE_PATHS.has(window.location.pathname)) {
-  const nextUrl = `${window.location.origin}${window.location.pathname.replace(
-    window.location.pathname,
-    "/",
-  )}#${window.location.pathname}${window.location.search}`;
+const getAppBasePath = () => {
+  const basePath = String(import.meta.env.BASE_URL || "/").replace(/\/+$/, "");
+  return basePath === "/" ? "" : basePath;
+};
+
+const getRoutePathFromLocation = () => {
+  const appBasePath = getAppBasePath();
+  const { pathname } = window.location;
+
+  if (appBasePath) {
+    if (pathname === appBasePath) return "/";
+    if (!pathname.startsWith(`${appBasePath}/`)) return "";
+    return pathname.slice(appBasePath.length) || "/";
+  }
+
+  return pathname;
+};
+
+const routePath = getRoutePathFromLocation();
+
+if (!window.location.hash && routePath && routePath !== "/" && !routePath.includes(".")) {
+  const appBasePath = getAppBasePath();
+  const nextUrl = `${window.location.origin}${appBasePath}/#${routePath}${window.location.search}`;
   window.history.replaceState(null, "", nextUrl);
 }
 

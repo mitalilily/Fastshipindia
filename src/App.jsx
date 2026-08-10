@@ -47,7 +47,10 @@ function Logo({ light = false }) {
 
 function Header() {
   const [open, setOpen] = useState(false)
-  const loginHref = import.meta.env.VITE_PLATFORM_LOGIN_URL || 'http://127.0.0.1:5173/#/login'
+  const loginHref =
+    import.meta.env.VITE_AUTH_APP_URL ||
+    import.meta.env.VITE_PLATFORM_LOGIN_URL ||
+    'https://fastship-piwy.onrender.com/app/#/login'
   return <header className="site-header">
     <div className="nav-shell">
       <Link to="/" className="brand" onClick={() => setOpen(false)}><Logo /></Link>
