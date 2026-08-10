@@ -17,7 +17,8 @@ const navItems = [
   ['Weight calculator', '/weight-calculator'],
 ]
 
-const loginPath = '/login?entry=login'
+const loginPath = '/login'
+const loginEntryState = { explicitLoginEntry: true }
 
 function RouteEffects() {
   const { pathname } = useLocation()
@@ -58,9 +59,9 @@ function Header() {
       <nav className={`main-nav ${open ? 'is-open' : ''}`}>
         {navItems.map(([label, to]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}>{label}</NavLink>)}
         <NavLink className="nav-track" to="/tracking" onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</NavLink>
-        <Link className="nav-login-mobile" to={loginPath} onClick={() => setOpen(false)}>Log in</Link>
+        <Link className="nav-login-mobile" to={loginPath} state={loginEntryState} onClick={() => setOpen(false)}>Log in</Link>
       </nav>
-      <div className="nav-actions"><Link className="text-link login-link" to={loginPath}>Log in</Link><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>
+      <div className="nav-actions"><Link className="text-link login-link" to={loginPath} state={loginEntryState}>Log in</Link><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>
       <button className="menu-button" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
     </div>
   </header>
