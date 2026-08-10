@@ -127,6 +127,12 @@ export default function Navbar({ handleDrawerToggle, pinned = false, onPinChange
           alignItems="center"
           minWidth={0}
           flex="1 1 auto"
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            bgcolor: '#fff',
+            backgroundImage: 'none',
+          }}
         >
           {isMobile && (
             <IconButton
