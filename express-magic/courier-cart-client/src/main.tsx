@@ -80,11 +80,3 @@ createRoot(document.getElementById("root")!).render(
     </ErrorBoundary>
   </StrictMode>
 );
-
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  const prepareRepeatLoads = () => {
-    void import('./registerAssetCache').then(({ registerAssetCache }) => registerAssetCache())
-  }
-
-  window.setTimeout(prepareRepeatLoads, 1500)
-}
