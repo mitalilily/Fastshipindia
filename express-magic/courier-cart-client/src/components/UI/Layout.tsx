@@ -18,7 +18,7 @@ function RouteContentLoader() {
       }}
     >
       <Stack alignItems="center" spacing={1.2}>
-        <CircularProgress size={30} thickness={4} sx={{ color: '#ff7a17' }} />
+        <CircularProgress size={30} thickness={4} sx={{ color: '#E31B23' }} />
         <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', fontWeight: 500 }}>
           Loading workspace…
         </Typography>

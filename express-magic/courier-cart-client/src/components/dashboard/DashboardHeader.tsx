@@ -40,7 +40,7 @@ export default function DashboardHeader({
           left: 0,
           right: 0,
           height: 4,
-          background: `linear-gradient(90deg, ${dashboardPalette.orange} 0%, #FFB15A 100%)`,
+          background: `linear-gradient(90deg, ${dashboardPalette.blue} 0%, ${dashboardPalette.orange} 100%)`,
         },
       }}
     >
@@ -142,7 +142,7 @@ export default function DashboardHeader({
             sx={{
               ...dashboardButtonSx,
               flex: { xs: 1, sm: '0 0 auto' },
-              background: `linear-gradient(135deg, ${dashboardPalette.orange} 0%, #FFB15A 100%)`,
+              background: `linear-gradient(135deg, ${dashboardPalette.blue} 0%, ${dashboardPalette.orange} 100%)`,
               color: '#FFFFFF',
               '&:hover': {
                 background: `linear-gradient(135deg, ${dashboardPalette.orangeDark} 0%, ${dashboardPalette.orange} 100%)`,

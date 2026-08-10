@@ -22,11 +22,12 @@ import { useMerchantDashboardStats } from '../../hooks/useDashboard'
 import { useLabelPreferences } from '../../hooks/useLabelPreferences'
 import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
 
-const PURPLE = '#6d5dfb'
-const ORANGE = '#ff7a17'
-const BLUE = '#2f7cf6'
-const RED = '#ef4d5e'
-const GREEN = '#22b987'
+const NAVY = '#0B3A78'
+const RED = '#E31B23'
+const PURPLE = NAVY
+const ORANGE = RED
+const BLUE = NAVY
+const GREEN = NAVY
 
 const toLocalDateInput = (date = new Date()) => {
   const year = date.getFullYear()
@@ -252,7 +253,7 @@ export default function Home() {
                 py: 1.1,
                 fontWeight: 700,
                 textTransform: 'none',
-                '&:hover': { bgcolor: '#6547ea' },
+                '&:hover': { bgcolor: '#072B5B' },
               }}
             >
               Start KYC

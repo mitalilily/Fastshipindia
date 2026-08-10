@@ -68,7 +68,7 @@ export default function QuickActions() {
   const surface = isDark ? '#151b23' : '#ffffff'
   const itemSurface = isDark ? '#101720' : '#fbfcfe'
   const border = isDark ? '#2a313a' : alpha('#172033', 0.1)
-  const accent = '#ff7a17'
+  const accent = '#E31B23'
 
   const handleOpen = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)

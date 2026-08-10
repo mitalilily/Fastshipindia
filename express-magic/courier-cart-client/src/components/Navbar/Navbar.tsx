@@ -32,8 +32,8 @@ interface NavbarProps {
   name?: string
 }
 
-const ACTIVE = '#7657ff'
-const ORANGE = '#ff7a17'
+const ACTIVE = '#0B3A78'
+const ORANGE = '#E31B23'
 
 const getSectionLabel = (pathname: string) =>
   (

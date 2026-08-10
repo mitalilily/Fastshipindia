@@ -11,29 +11,36 @@ import {
   useTheme,
 } from '@mui/material'
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
-import { BiListPlus } from 'react-icons/bi'
-import { CgTrack } from 'react-icons/cg'
-import { FaClipboardList as FaFileAlt, FaToolbox } from 'react-icons/fa6'
 import {
-  MdAccountBalanceWallet,
-  MdApps,
-  MdDashboard,
-  MdExpandMore,
-  MdHome,
-  MdKeyboardReturn,
-  MdLocalShipping,
-  MdOutlineAddBusiness,
-  MdShoppingCart,
-  MdSupportAgent,
-  MdSyncProblem,
-} from 'react-icons/md'
-import { RiScales3Line, RiSettings2Fill } from 'react-icons/ri'
-import { TbInvoice, TbReportAnalytics, TbTransactionRupee } from 'react-icons/tb'
+  TbAlertTriangle,
+  TbApps,
+  TbArrowBackUp,
+  TbBuildingWarehouse,
+  TbCalculator,
+  TbChevronDown,
+  TbCurrencyRupee,
+  TbFileAnalytics,
+  TbHeadset,
+  TbHome,
+  TbLayoutDashboard,
+  TbListDetails,
+  TbPackage,
+  TbPackageExport,
+  TbPlugConnected,
+  TbReceipt,
+  TbRoute,
+  TbScale,
+  TbSettings,
+  TbShoppingCart,
+  TbTool,
+  TbTruckDelivery,
+  TbWallet,
+} from 'react-icons/tb'
 import { NavLink, useLocation } from 'react-router-dom'
 
 import type { JSX } from '@emotion/react/jsx-runtime'
 import BrandLogo from '../brand/BrandLogo'
-import { brandIdentity } from '../../theme/brand'
+import { brand, brandIdentity } from '../../theme/brand'
 import { isActive } from '../../utils/functions'
 import { useAuth } from '../../context/auth/AuthContext'
 
@@ -72,7 +79,8 @@ export const COLLAPSED_WIDTH = 72
 export const DESKTOP_SIDEBAR_WIDTH = 260
 
 const STANDARD_ICON_SIZE = 21
-const ACTIVE = '#7657ff'
+const ACTIVE = brand.navy
+const ACCENT = brand.red
 
 const navSections: NavSection[] = [
   {
@@ -80,26 +88,26 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Home',
-        icon: <MdHome size={STANDARD_ICON_SIZE} />,
+        icon: <TbHome size={STANDARD_ICON_SIZE} />,
         path: '/home',
         roles: ['customer', 'admin'],
       },
       {
         text: 'Dashboard',
-        icon: <MdDashboard size={STANDARD_ICON_SIZE} />,
+        icon: <TbLayoutDashboard size={STANDARD_ICON_SIZE} />,
         path: '/dashboard',
         roles: ['customer', 'admin'],
       },
       {
         text: 'Orders',
-        icon: <MdShoppingCart size={STANDARD_ICON_SIZE} />,
+        icon: <TbShoppingCart size={STANDARD_ICON_SIZE} />,
         path: '/orders',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'All Orders', path: '/orders/list', icon: <FaFileAlt size={STANDARD_ICON_SIZE} /> },
-          { text: 'Create Order', path: '/orders/create', icon: <BiListPlus size={STANDARD_ICON_SIZE} /> },
-          { text: 'B2C Orders', path: '/orders/b2c/list', icon: <MdOutlineAddBusiness size={STANDARD_ICON_SIZE} /> },
-          { text: 'B2B Orders', path: '/orders/b2b/list', icon: <MdOutlineAddBusiness size={STANDARD_ICON_SIZE} /> },
+          { text: 'All Orders', path: '/orders/list', icon: <TbListDetails size={STANDARD_ICON_SIZE} /> },
+          { text: 'Create Order', path: '/orders/create', icon: <TbPackageExport size={STANDARD_ICON_SIZE} /> },
+          { text: 'B2C Orders', path: '/orders/b2c/list', icon: <TbPackage size={STANDARD_ICON_SIZE} /> },
+          { text: 'B2B Orders', path: '/orders/b2b/list', icon: <TbBuildingWarehouse size={STANDARD_ICON_SIZE} /> },
         ],
       },
     ],
@@ -109,7 +117,7 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Reports',
-        icon: <TbReportAnalytics size={STANDARD_ICON_SIZE} />,
+        icon: <TbFileAnalytics size={STANDARD_ICON_SIZE} />,
         path: '/reports',
         roles: ['customer', 'admin'],
       },
@@ -120,19 +128,19 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Wallet',
-        icon: <MdAccountBalanceWallet size={STANDARD_ICON_SIZE} />,
+        icon: <TbWallet size={STANDARD_ICON_SIZE} />,
         path: '/billing/wallet_transactions',
         roles: ['customer', 'admin'],
       },
       {
         text: 'COD Remittance',
-        icon: <TbTransactionRupee size={STANDARD_ICON_SIZE} />,
+        icon: <TbCurrencyRupee size={STANDARD_ICON_SIZE} />,
         path: '/cod-remittance',
         roles: ['customer', 'admin'],
       },
       {
         text: 'Billings',
-        icon: <TbInvoice size={STANDARD_ICON_SIZE} />,
+        icon: <TbReceipt size={STANDARD_ICON_SIZE} />,
         path: '/billing/invoice_management',
         roles: ['customer', 'admin'],
       },
@@ -143,17 +151,17 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Operations',
-        icon: <MdSyncProblem size={STANDARD_ICON_SIZE} />,
+        icon: <TbAlertTriangle size={STANDARD_ICON_SIZE} />,
         path: '/ops',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'NDR', path: '/ops/ndr', icon: <MdSyncProblem size={STANDARD_ICON_SIZE} /> },
-          { text: 'RTO', path: '/ops/rto', icon: <MdKeyboardReturn size={STANDARD_ICON_SIZE} /> },
+          { text: 'NDR', path: '/ops/ndr', icon: <TbAlertTriangle size={STANDARD_ICON_SIZE} /> },
+          { text: 'RTO', path: '/ops/rto', icon: <TbArrowBackUp size={STANDARD_ICON_SIZE} /> },
         ],
       },
       {
         text: 'Reconciliation',
-        icon: <RiScales3Line size={STANDARD_ICON_SIZE} />,
+        icon: <TbScale size={STANDARD_ICON_SIZE} />,
         path: '/reconciliation/weight',
         roles: ['customer', 'admin'],
       },
@@ -164,12 +172,12 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Integrations',
-        icon: <MdApps size={STANDARD_ICON_SIZE} />,
+        icon: <TbPlugConnected size={STANDARD_ICON_SIZE} />,
         path: '/channels',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'Couriers', path: '/couriers/partners', icon: <MdLocalShipping size={STANDARD_ICON_SIZE} /> },
-          { text: 'Channels', path: '/channels/connected', icon: <MdApps size={STANDARD_ICON_SIZE} /> },
+          { text: 'Couriers', path: '/couriers/partners', icon: <TbTruckDelivery size={STANDARD_ICON_SIZE} /> },
+          { text: 'Channels', path: '/channels/connected', icon: <TbApps size={STANDARD_ICON_SIZE} /> },
         ],
       },
     ],
@@ -179,12 +187,12 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Tools',
-        icon: <FaToolbox size={STANDARD_ICON_SIZE} />,
+        icon: <TbTool size={STANDARD_ICON_SIZE} />,
         path: '/tools',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'Rate Calculator', path: '/tools/rate_calculator', icon: <TbReportAnalytics size={STANDARD_ICON_SIZE} /> },
-          { text: 'Order Tracking', path: '/tools/order_tracking', icon: <CgTrack size={STANDARD_ICON_SIZE} /> },
+          { text: 'Rate Calculator', path: '/tools/rate_calculator', icon: <TbCalculator size={STANDARD_ICON_SIZE} /> },
+          { text: 'Order Tracking', path: '/tools/order_tracking', icon: <TbRoute size={STANDARD_ICON_SIZE} /> },
         ],
       },
     ],
@@ -194,7 +202,7 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Support',
-        icon: <MdSupportAgent size={STANDARD_ICON_SIZE} />,
+        icon: <TbHeadset size={STANDARD_ICON_SIZE} />,
         path: '/support/tickets',
         roles: ['customer', 'admin'],
       },
@@ -204,7 +212,7 @@ const navSections: NavSection[] = [
 
 const settingsItem: NavItem = {
   text: 'Settings',
-  icon: <RiSettings2Fill size={STANDARD_ICON_SIZE} />,
+  icon: <TbSettings size={STANDARD_ICON_SIZE} />,
   path: '/settings',
   roles: ['customer', 'admin'],
 }
@@ -232,14 +240,14 @@ export default function Sidebar({
   const MUTED = isDark ? '#8798ad' : '#8492aa'
   const WHITE = isDark ? '#f8fafc' : '#11182d'
   const itemHoverBg = isDark ? alpha('#ffffff', 0.035) : alpha('#11182d', 0.045)
-  const childHoverBg = isDark ? alpha('#ffffff', 0.045) : alpha(ACTIVE, 0.08)
-  const activeBg = isDark ? alpha(ACTIVE, 0.16) : alpha(ACTIVE, 0.1)
-  const childActiveBg = isDark ? alpha(ACTIVE, 0.14) : alpha(ACTIVE, 0.12)
-  const iconMuted = isDark ? '#8190a5' : '#76849a'
+  const childHoverBg = isDark ? alpha('#ffffff', 0.045) : alpha(ACTIVE, 0.07)
+  const activeBg = isDark ? alpha(ACTIVE, 0.28) : alpha(ACTIVE, 0.08)
+  const childActiveBg = isDark ? alpha(ACTIVE, 0.24) : alpha(ACTIVE, 0.1)
+  const iconMuted = isDark ? '#91a7c3' : alpha(ACTIVE, 0.58)
   const scrollbarThumb = isDark ? '#3a4350' : '#cbd5e1'
-  const activeText = isDark ? '#bdb5ff' : ACTIVE
-  const initialsBg = isDark ? '#2b2760' : alpha(ACTIVE, 0.1)
-  const initialsBorder = isDark ? alpha('#ffffff', 0.1) : alpha(ACTIVE, 0.16)
+  const activeText = isDark ? '#d9e7fa' : ACTIVE
+  const initialsBg = isDark ? alpha(ACTIVE, 0.34) : alpha(ACTIVE, 0.09)
+  const initialsBorder = isDark ? alpha('#ffffff', 0.1) : alpha(ACCENT, 0.28)
   const initialsColor = isDark ? '#f8fafc' : ACTIVE
 
   useEffect(() => {
@@ -275,14 +283,14 @@ export default function Sidebar({
     '&:hover': {
       bgcolor: itemHoverBg,
       color: WHITE,
-      '& .MuiListItemIcon-root': { color: WHITE },
+      '& .MuiListItemIcon-root': { color: ACTIVE },
     },
   }
 
   const activeItemSx = {
     bgcolor: activeBg,
     color: activeText,
-    '& .MuiListItemIcon-root': { color: activeText },
+    '& .MuiListItemIcon-root': { color: ACCENT },
     '& .MuiListItemText-primary': { fontWeight: 600 },
     '&::before': {
       content: '""',
@@ -292,7 +300,7 @@ export default function Sidebar({
       bottom: 11,
       width: 4,
       borderRadius: '0 8px 8px 0',
-      bgcolor: activeText,
+      bgcolor: ACCENT,
     },
   }
 
@@ -319,7 +327,7 @@ export default function Sidebar({
           sx={{
             minWidth: isSidebarExpanded ? 38 : 0,
             justifyContent: 'center',
-            color: active ? activeText : iconMuted,
+            color: active ? ACCENT : iconMuted,
             transition: 'color 160ms ease',
           }}
         >
@@ -336,7 +344,7 @@ export default function Sidebar({
           />
         ) : null}
         {hasChildren && isSidebarExpanded ? (
-          <MdExpandMore
+          <TbChevronDown
             size={20}
             style={{
               transform: showExpanded ? 'rotate(180deg)' : 'rotate(-90deg)',
@@ -561,7 +569,7 @@ export default function Sidebar({
                 {displayEmail}
               </Typography>
             </Box>
-            <MdExpandMore size={19} color={TEXT} />
+            <TbChevronDown size={19} color={TEXT} />
           </Box>
         ) : null}
       </Box>
