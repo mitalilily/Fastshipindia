@@ -13,6 +13,7 @@ import { clearAuthTokens, getAuthTokens, setAuthTokens } from '../../api/tokenVa
 import { useUserProfile } from '../../hooks/User/useUserProfile'
 import type { IUserProfileDB } from '../../types/user.types'
 import { emptyUserProfile } from '../../utils/utility'
+import { DEMO_SESSION_EMAIL_KEY } from '../../utils/demoAuth'
 
 /* ---------- context shape ---------- */
 interface AuthCtx {
@@ -22,6 +23,7 @@ interface AuthCtx {
   loading: boolean
   isAuthenticated: boolean
   setTokens: (access: string, refresh: string, keepSignedIn?: boolean) => void
+  startDemoSession: (email: string) => void
   clearTokens: () => void
   logout: () => Promise<void>
   refetchUser: () => void
@@ -37,8 +39,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const { accessToken, refreshToken } = getAuthTokens()
   const hasTokens = !!accessToken && !!refreshToken
+  const [demoEmail, setDemoEmail] = useState(() =>
+    typeof window === 'undefined' ? '' : sessionStorage.getItem(DEMO_SESSION_EMAIL_KEY) || '',
+  )
+  const hasDemoSession = Boolean(demoEmail)
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(hasTokens)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(hasTokens || hasDemoSession)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [userId, setUserId] = useState('')
 
@@ -46,7 +52,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     data: user,
     isFetching: userFetching,
     refetch: refetchUser,
-  } = useUserProfile(isAuthenticated)
+  } = useUserProfile(isAuthenticated && !hasDemoSession)
+
+  const demoUser: IUserProfileDB | null = hasDemoSession
+    ? {
+        ...emptyUserProfile,
+        id: 'fastship-demo-user',
+        userId: 'fastship-demo-user',
+        name: 'FastShip Merchant',
+        email: demoEmail,
+        onboardingStep: -1,
+        onboardingComplete: true,
+        profileComplete: true,
+        approved: true,
+        companyInfo: {
+          ...emptyUserProfile.companyInfo,
+          businessName: 'FastShip Demo',
+          brandName: 'FastShip',
+          contactPerson: 'Merchant',
+          contactEmail: demoEmail,
+          companyEmail: demoEmail,
+          POCEmailVerified: true,
+        },
+      }
+    : null
 
   useEffect(() => {
     // If we successfully fetched a user, ensure auth is marked as true.
@@ -59,6 +88,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user])
 
   const setTokens = (access: string, refresh: string, keepSignedIn?: boolean) => {
+    sessionStorage.removeItem(DEMO_SESSION_EMAIL_KEY)
+    setDemoEmail('')
     setAuthTokens(access, refresh, keepSignedIn)
     setIsAuthenticated(true)
     refetchUser()
@@ -66,15 +97,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const clearTokens = () => {
     clearAuthTokens()
+    sessionStorage.removeItem(DEMO_SESSION_EMAIL_KEY)
+    setDemoEmail('')
     setIsAuthenticated(false)
     queryClient.removeQueries({ queryKey: ['userInfo'] })
     queryClient.removeQueries({ queryKey: ['userProfile'] })
     queryClient.removeQueries({ queryKey: ['walletBalance'] })
   }
 
+  const startDemoSession = (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase()
+    clearAuthTokens()
+    sessionStorage.setItem(DEMO_SESSION_EMAIL_KEY, normalizedEmail)
+    sessionStorage.setItem('activeEmail', normalizedEmail)
+    setDemoEmail(normalizedEmail)
+    setUserId('fastship-demo-user')
+    setIsAuthenticated(true)
+    queryClient.removeQueries({ queryKey: ['userInfo'] })
+    queryClient.removeQueries({ queryKey: ['userProfile'] })
+  }
+
   const logout = async () => {
     try {
-      await logoutApi()
+      if (!hasDemoSession) await logoutApi()
     } catch (e) {
       console.error('Logout error ignored:', e)
     }
@@ -83,11 +128,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const value: AuthCtx = {
-    user: user ?? { ...emptyUserProfile },
-    loading: userFetching,
+    user: demoUser ?? user ?? { ...emptyUserProfile },
+    loading: hasDemoSession ? false : userFetching,
     isAuthenticated,
     setUserId,
     setTokens,
+    startDemoSession,
     clearTokens,
     userId,
     logout,
