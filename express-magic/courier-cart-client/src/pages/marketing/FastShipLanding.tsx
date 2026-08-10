@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRef } from 'react'
 import {
-  ArrowRight, BarChart3, Box, Check, ChevronDown, CircleCheck, Clock3, Code2,
+  ArrowLeft, ArrowRight, BarChart3, Box, Check, ChevronDown, CircleCheck, Clock3, Code2,
   Globe2, Headphones, Instagram, Linkedin, Mail, MapPin, Menu, PackageCheck,
   PackageSearch, Phone, Plane, Route, Scale, Search, ShieldCheck, Sparkles,
   Truck, Warehouse, X, Zap,
@@ -218,12 +218,56 @@ function InteractiveWorkbench() {
 }
 
 function Testimonials() {
-  const quotes = [
-    ['\u201cWe stopped losing mornings to courier portals. The team can see what matters and act on it.\u201d', 'Rhea Mehta', 'Operations lead, Rooted Earth'],
-    ['\u201cThe rate view makes a complicated choice feel very human. We can move faster without guessing.\u201d', 'Arjun Shah', 'Founder, Northstar Goods'],
-    ['\u201cOur customers feel the difference because every update arrives with the right context.\u201d', 'Maya Iyer', 'CX manager, Common Thread'],
+  const carouselRef = useRef(null)
+  const [controls, setControls] = useState({ canGoBack: false, canGoForward: true })
+  const stories = [
+    ['COURIER MATCHING', '\u201cThe rate view turns a complicated courier choice into one clear decision. We move faster without guessing on cost or speed.\u201d', 'Arjun Shah', 'Founder, Northstar Goods', Route, 'mint'],
+    ['TRACKING VISIBILITY', '\u201cEvery shipment milestone now arrives with useful context, so customers stay informed and our support queue stays calm.\u201d', 'Maya Iyer', 'CX manager, Common Thread', PackageSearch, 'navy'],
+    ['FULFILMENT RHYTHM', '\u201cWe stopped losing mornings across courier portals. The team sees the next action and keeps every pickup moving.\u201d', 'Rhea Mehta', 'Operations lead, Rooted Earth', Warehouse, 'sky'],
+    ['CROSS-BORDER CLARITY', '\u201cInternational shipping finally feels planned. Service choices, delivery windows and handoffs stay visible from India to the customer.\u201d', 'Kabir Sethi', 'Commerce lead, Field Notes', Globe2, 'orange'],
+    ['EXCEPTION CONTROL', '\u201cDelayed scans surface early enough for us to act before a small courier exception becomes a customer problem.\u201d', 'Naina Rao', 'Customer experience, Sunday Studio', ShieldCheck, 'ink'],
   ]
-  return <section className="testimonials home-stack-card"><div className="shell"><div className="section-head compact"><div><Eyebrow icon={CircleCheck}>PEOPLE IN MOTION</Eyebrow><h2>Good journeys<br /><em>sound like this.</em></h2></div></div><div className="testimonial-grid">{quotes.map(([quote, name, role], index) => <article className="testimonial reveal-on-view" key={name}><div className="testimonial-stars">{'\u2726 \u2726 \u2726 \u2726 \u2726'}</div><blockquote>{quote}</blockquote><div className="testimonial-person"><span>{name.slice(0, 1)}</span><div><strong>{name}</strong><small>{role}</small></div></div><i className="testimonial-line" style={{ '--delay': `${index * 0.8}s` }} /></article>)}</div></div></section>
+
+  const syncControls = () => {
+    const viewport = carouselRef.current
+    if (!viewport) return
+    const maxScroll = viewport.scrollWidth - viewport.clientWidth
+    setControls({
+      canGoBack: viewport.scrollLeft > 4,
+      canGoForward: viewport.scrollLeft < maxScroll - 4,
+    })
+  }
+
+  useEffect(() => {
+    const viewport = carouselRef.current
+    if (!viewport) return undefined
+
+    const frame = window.requestAnimationFrame(syncControls)
+    const resizeObserver = 'ResizeObserver' in window ? new ResizeObserver(syncControls) : null
+    resizeObserver?.observe(viewport)
+    window.addEventListener('resize', syncControls)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', syncControls)
+    }
+  }, [])
+
+  const moveStories = (direction) => {
+    const viewport = carouselRef.current
+    const card = viewport?.querySelector('.shipping-story-card')
+    if (!viewport || !card) return
+
+    const track = card.parentElement
+    const gap = Number.parseFloat(window.getComputedStyle(track).columnGap) || 16
+    viewport.scrollBy({
+      left: direction * (card.getBoundingClientRect().width + gap),
+      behavior: 'smooth',
+    })
+  }
+
+  return <section className="shipping-stories home-stack-card" aria-labelledby="shipping-stories-title"><div className="shell shipping-stories-layout"><div className="shipping-stories-copy"><Eyebrow icon={CircleCheck}>STORIES IN MOTION</Eyebrow><h2 id="shipping-stories-title">Excellent at<br /><em>every mile.</em></h2><p>See how clearer courier choices, live tracking and organised fulfilment make each delivery feel easier.</p><div className="shipping-story-controls"><button type="button" onClick={() => moveStories(-1)} disabled={!controls.canGoBack} aria-label="Previous shipping story"><ArrowLeft size={28} /></button><button type="button" onClick={() => moveStories(1)} disabled={!controls.canGoForward} aria-label="Next shipping story"><ArrowRight size={28} /></button></div></div><div className="shipping-stories-viewport" ref={carouselRef} onScroll={syncControls} tabIndex={0} role="region" aria-roledescription="carousel" aria-label="FastShip customer stories"><div className="shipping-stories-track">{stories.map(([label, quote, name, role, StoryIcon, tone], index) => <article className={`shipping-story-card story-tone-${tone}`} role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${stories.length}`} key={label}><div className="shipping-story-top"><span><StoryIcon size={25} /></span><small>{label}</small></div><blockquote>{quote}</blockquote><div className="shipping-story-person"><span>{name.slice(0, 1)}</span><div><strong>{name}</strong><small>{role}</small></div></div><i>0{index + 1}</i></article>)}</div></div></div></section>
 }
 
 function FeatureCard({ index, icon: Icon, title, copy, tone }) { return <article className={`feature-card tone-${tone} reveal-on-view`}><div className="card-top"><span>{index}</span><Icon size={22} /></div><h3>{title}</h3><p>{copy}</p><Link to="/integrations">Learn more <ArrowRight size={16} /></Link></article> }
