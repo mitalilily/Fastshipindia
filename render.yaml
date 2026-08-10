@@ -2,15 +2,14 @@ services:
   - type: web
     runtime: static
     name: fastship-piwy
-    rootDir: express-magic
     buildCommand: npm run build
-    staticPublishPath: ./combined-dist
+    staticPublishPath: ./dist
     autoDeployTrigger: commit
     envVars:
       - key: VITE_CLIENT_APP_URL
-        value: https://fastship-piwy.onrender.com/app
+        value: https://fastshipindia-1.onrender.com
       - key: VITE_AUTH_APP_URL
-        value: https://fastship-piwy.onrender.com/app/#/login
+        value: https://fastshipindia-1.onrender.com/#/login
       - key: VITE_ADMIN_APP_URL
         value: https://fastshipadmin.onrender.com
       - key: VITE_ADMIN_AUTH_URL
@@ -25,11 +24,26 @@ services:
         sync: false
     routes:
       - type: rewrite
-        source: /app/*
-        destination: /app/index.html
-      - type: rewrite
-        source: /admin/*
-        destination: /admin/index.html
+        source: /*
+        destination: /index.html
+
+  - type: web
+    runtime: static
+    name: fastshipindia-1
+    rootDir: express-magic/courier-cart-client
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeployTrigger: commit
+    envVars:
+      - key: VITE_API_URL
+        value: https://fastshipindia.onrender.com/api
+      - key: VITE_APP_SOCKET_URL
+        value: https://fastshipindia.onrender.com
+      - key: VITE_GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: VITE_PUBLIC_GEOAPIFY_KEY
+        sync: false
+    routes:
       - type: rewrite
         source: /*
         destination: /index.html
@@ -64,9 +78,9 @@ services:
       - key: API_URL
         value: https://fastshipindia.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        value: https://fastship-piwy.onrender.com,https://fastshipadmin.onrender.com
+        value: https://fastship-piwy.onrender.com,https://fastshipindia-1.onrender.com,https://fastshipadmin.onrender.com
       - key: FRONTEND_URL
-        value: https://fastship-piwy.onrender.com/app
+        value: https://fastshipindia-1.onrender.com
       - key: AUTH_OTP_DELIVERY
         value: screen
       - key: AUTO_MIGRATE_ON_START

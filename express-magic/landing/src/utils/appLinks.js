@@ -19,7 +19,7 @@ const normalizeAdminAuthUrl = (url) => {
     : normalized;
 };
 
-const UNIFIED_RENDER_CLIENT_URL = "https://fastship-piwy.onrender.com/app";
+const UNIFIED_RENDER_CLIENT_URL = "https://fastshipindia-1.onrender.com";
 const UNIFIED_RENDER_ADMIN_URL = "https://fastshipadmin.onrender.com";
 
 const normalizeClientAppUrl = (url) => {
@@ -33,6 +33,9 @@ const normalizeClientAppUrl = (url) => {
   if (/^https:\/\/fastship-piwy\.onrender\.com$/i.test(normalized)) {
     return UNIFIED_RENDER_CLIENT_URL;
   }
+  if (/^https:\/\/fastship-piwy\.onrender\.com\/app(?:\/.*)?$/i.test(normalized)) {
+    return UNIFIED_RENDER_CLIENT_URL;
+  }
   return normalized;
 };
 
@@ -43,7 +46,8 @@ const normalizeClientAuthUrl = (url) => {
     /^https:\/\/fastship\.onrender\.com\/login$/i.test(normalized) ||
     normalized.toLowerCase() === UNIFIED_RENDER_CLIENT_URL.toLowerCase() ||
     /^https:\/\/fastship\.onrender\.com\/app\/login$/i.test(normalized) ||
-    /^https:\/\/fastship\.onrender\.com\/app\/#(?:\/login)?$/i.test(normalized)
+    /^https:\/\/fastship\.onrender\.com\/app\/#(?:\/login)?$/i.test(normalized) ||
+    /^https:\/\/fastship-piwy\.onrender\.com\/app(?:\/#(?:\/login)?)?$/i.test(normalized)
   ) {
     return `${UNIFIED_RENDER_CLIENT_URL}/#/login`;
   }

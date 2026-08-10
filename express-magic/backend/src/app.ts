@@ -157,6 +157,7 @@ const allowedOrigins = new Set([
   'https://fastship.onrender.com',
   'https://fastship-admin.onrender.com',
   'https://fastship-piwy.onrender.com',
+  'https://fastshipindia-1.onrender.com',
   'https://fastshipadmin.onrender.com',
   ...configuredAllowedOrigins,
 ])

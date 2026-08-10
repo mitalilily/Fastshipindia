@@ -14,6 +14,16 @@ const navItems = [
   ['Weight calculator', '/weight-calculator'],
 ]
 
+const RENDER_CLIENT_LOGIN_URL = 'https://fastshipindia-1.onrender.com/#/login'
+
+const resolveLoginHref = (configuredUrl) => {
+  const value = String(configuredUrl || '').trim()
+  if (!value || /fastship-piwy\.onrender\.com\/app/i.test(value)) {
+    return RENDER_CLIENT_LOGIN_URL
+  }
+  return value
+}
+
 function RouteEffects() {
   const { pathname } = useLocation()
   useEffect(() => {
@@ -47,10 +57,11 @@ function Logo({ light = false }) {
 
 function Header() {
   const [open, setOpen] = useState(false)
-  const loginHref =
+  const loginHref = resolveLoginHref(
     import.meta.env.VITE_AUTH_APP_URL ||
     import.meta.env.VITE_PLATFORM_LOGIN_URL ||
-    'https://fastship-piwy.onrender.com/app/#/login'
+    RENDER_CLIENT_LOGIN_URL,
+  )
   return <header className="site-header">
     <div className="nav-shell">
       <Link to="/" className="brand" onClick={() => setOpen(false)}><Logo /></Link>
