@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "build": "tsc",
-    "start": "node dist/scripts/bootstrapDatabase.js && node dist/index.js",
+    "start": "node dist/index.js",
     "check:rate-apis": "node -r ts-node/register src/scripts/checkRateCalculatorApis.ts",
     "check:amazon-shipping-apis": "node -r ts-node/register src/scripts/checkAmazonShippingApis.ts",
     "check:delhivery-b2b-apis": "node -r ts-node/register src/scripts/checkDelhiveryB2BApis.ts",

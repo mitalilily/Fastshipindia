@@ -27,6 +27,9 @@ const usersTableExists = async () => {
   const pool = new Pool({
     connectionString: databaseUrl,
     ssl: env === 'production' ? { rejectUnauthorized: false } : false,
+    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 10000),
+    query_timeout: Number(process.env.PG_QUERY_TIMEOUT_MS || 15000),
+    statement_timeout: Number(process.env.PG_STATEMENT_TIMEOUT_MS || 15000),
   })
 
   try {
