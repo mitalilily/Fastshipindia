@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import AuthShell from '../../components/auth/AuthShell'
 import CredentialAuthForm from '../../components/auth/CredentialAuthForm'
+import LoginLogisticsScene from '../../components/auth/LoginLogisticsScene'
 import OtpLoginPanel from '../../components/auth/OtpLoginPanel'
 import FullScreenLoader from '../../components/UI/loader/FullScreenLoader'
 import { useAuth } from '../../context/auth/AuthContext'
@@ -34,6 +35,7 @@ export default function Login() {
       helperText="Sign in to open your courier command center."
       showChrome
       showNavbar={false}
+      visual={<LoginLogisticsScene />}
     >
       <Stack spacing={{ xs: 1.25, md: 1.35 }}>
         <Box

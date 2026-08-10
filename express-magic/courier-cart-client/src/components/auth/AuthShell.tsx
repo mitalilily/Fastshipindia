@@ -13,6 +13,7 @@ interface AuthShellProps {
   showChrome?: boolean
   showNavbar?: boolean
   showFooter?: boolean
+  visual?: React.ReactNode
   children: React.ReactNode
 }
 
@@ -35,6 +36,7 @@ export default function AuthShell({
   helperTitle,
   helperText,
   variant = 'default',
+  visual,
   children,
 }: AuthShellProps) {
   const isCompact = variant === 'compact'
@@ -218,22 +220,24 @@ export default function AuthShell({
                   </Typography>
                 </Stack>
 
-                <Box
-                  component="img"
-                  src={deliveryArtwork}
-                  alt="Delivery van with courier team"
-                  sx={{
-                    width: { xs: '66%', sm: '58%', lg: '68%' },
-                    maxWidth: { xs: 220, sm: 330, lg: 380 },
-                    mt: { xs: 0.8, lg: 0.6 },
-                    ml: { lg: 2.4 },
-                    alignSelf: { xs: 'center', lg: 'flex-start' },
-                    objectFit: 'contain',
-                    mixBlendMode: 'multiply',
-                    userSelect: 'none',
-                    pointerEvents: 'none',
-                  }}
-                />
+                {visual ?? (
+                  <Box
+                    component="img"
+                    src={deliveryArtwork}
+                    alt="Delivery van with courier team"
+                    sx={{
+                      width: { xs: '66%', sm: '58%', lg: '68%' },
+                      maxWidth: { xs: 220, sm: 330, lg: 380 },
+                      mt: { xs: 0.8, lg: 0.6 },
+                      ml: { lg: 2.4 },
+                      alignSelf: { xs: 'center', lg: 'flex-start' },
+                      objectFit: 'contain',
+                      mixBlendMode: 'multiply',
+                      userSelect: 'none',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                )}
               </Stack>
             </Grid>
           )}

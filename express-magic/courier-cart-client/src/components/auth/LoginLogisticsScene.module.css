@@ -1,0 +1,465 @@
+.scene {
+  --scene-navy: #0d1b4d;
+  --scene-blue: #2267c9;
+  --scene-sky: #7dd3fc;
+  --scene-orange: #f47a0b;
+  position: relative;
+  width: min(100%, 430px);
+  aspect-ratio: 1.48;
+  margin: 4px 0 0 12px;
+  isolation: isolate;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  user-select: none;
+  pointer-events: none;
+}
+
+.scene::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  inset: 25% 3% 2%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(34, 103, 201, 0.2), rgba(125, 211, 252, 0.05) 58%, transparent 74%);
+  filter: blur(8px);
+  transform: rotateX(64deg) translateZ(-30px);
+}
+
+.ambientGlow {
+  position: absolute;
+  z-index: -1;
+  width: 42%;
+  aspect-ratio: 1;
+  top: 18%;
+  left: 38%;
+  border-radius: 50%;
+  background: rgba(125, 211, 252, 0.36);
+  filter: blur(38px);
+  animation: glowBreathe 5s ease-in-out infinite;
+}
+
+.networkPlane {
+  position: absolute;
+  inset: 27% 2% 1% 1%;
+  overflow: hidden;
+  border: 1px solid rgba(34, 103, 201, 0.16);
+  border-radius: 38% 44% 34% 40%;
+  background-color: rgba(255, 255, 255, 0.7);
+  background-image:
+    linear-gradient(rgba(34, 103, 201, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 103, 201, 0.075) 1px, transparent 1px),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(210, 238, 255, 0.68));
+  background-size: 30px 30px, 30px 30px, 100% 100%;
+  box-shadow: 0 30px 42px rgba(13, 27, 77, 0.12), inset 0 0 40px rgba(255, 255, 255, 0.92);
+  transform: rotateX(57deg) rotateZ(-7deg) translateZ(-24px);
+  transform-style: preserve-3d;
+}
+
+.routes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: var(--scene-blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 8 11;
+  filter: drop-shadow(0 2px 3px rgba(34, 103, 201, 0.2));
+  animation: routeFlow 8s linear infinite;
+}
+
+.routes path:last-child {
+  stroke: var(--scene-orange);
+  stroke-width: 2.5;
+  animation-delay: -2s;
+}
+
+.hub {
+  position: absolute;
+  z-index: 2;
+  width: 12px;
+  height: 12px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--scene-orange);
+  box-shadow: 0 0 0 5px rgba(244, 122, 11, 0.16), 0 6px 12px rgba(13, 27, 77, 0.2);
+  animation: hubPulse 2.4s ease-out infinite;
+}
+
+.hubOne { left: 12%; top: 61%; }
+.hubTwo { left: 53%; top: 43%; animation-delay: -0.8s; }
+.hubThree { right: 10%; top: 30%; animation-delay: -1.6s; }
+
+.globe {
+  position: absolute;
+  z-index: 4;
+  top: 16%;
+  right: 10%;
+  width: 31%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 31% 26%, rgba(255, 255, 255, 0.95) 0 5%, transparent 6%),
+    radial-gradient(circle at 34% 31%, #9ee6ff 0%, #3d8de3 35%, #174da0 70%, #0d1b4d 100%);
+  box-shadow:
+    -16px 24px 36px rgba(13, 27, 77, 0.22),
+    inset -15px -12px 20px rgba(5, 20, 65, 0.36),
+    inset 10px 8px 20px rgba(255, 255, 255, 0.25);
+  animation: globeFloat 5.2s ease-in-out infinite;
+}
+
+.globe::before,
+.globe::after,
+.globeLatitude,
+.globeLongitude {
+  content: '';
+  position: absolute;
+  inset: 14% 4%;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 50%;
+}
+
+.globe::after { inset: 34% 2%; }
+.globeLatitude { inset: 15% 25%; }
+.globeLongitude { inset: 8% 39%; }
+
+.globePulse {
+  position: absolute;
+  right: 23%;
+  top: 27%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--scene-orange);
+  box-shadow: 0 0 0 0 rgba(244, 122, 11, 0.65);
+  animation: globeSignal 2s ease-out infinite;
+}
+
+.globePin {
+  position: absolute;
+  left: 23%;
+  bottom: 22%;
+  color: #fff;
+  filter: drop-shadow(0 3px 5px rgba(13, 27, 77, 0.35));
+}
+
+.parcelStage {
+  --parcel-scale: 1;
+  position: absolute;
+  z-index: 6;
+  left: 19%;
+  top: 27%;
+  width: 124px;
+  height: 128px;
+  transform-style: preserve-3d;
+  animation: parcelFloat 4.4s ease-in-out infinite;
+}
+
+.parcelCube {
+  position: absolute;
+  left: 8px;
+  top: 7px;
+  width: 92px;
+  height: 86px;
+  transform: rotateX(-17deg) rotateY(32deg) rotateZ(-2deg);
+  transform-style: preserve-3d;
+}
+
+.cubeFace {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+}
+
+.cubeFront {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  background: linear-gradient(145deg, #ff9a32, #ed6500 65%, #c84e00);
+  box-shadow: inset 8px 9px 14px rgba(255, 255, 255, 0.16);
+  transform: translateZ(46px);
+}
+
+.cubeFront span {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.cubeFront small {
+  opacity: 0.82;
+  font-size: 0.42rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.cubeSide {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 7px;
+  background: linear-gradient(145deg, #d75a00, #a83b00);
+  transform: rotateY(90deg) translateZ(46px);
+}
+
+.cubeSide span {
+  width: 38%;
+  height: 100%;
+  margin: auto;
+  background: rgba(13, 27, 77, 0.18);
+}
+
+.cubeTop {
+  height: 92px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffbd70, #f58a20);
+  transform: rotateX(90deg) translateZ(46px);
+}
+
+.cubeTop i {
+  width: 24%;
+  height: 100%;
+  margin: auto;
+  background: rgba(255, 244, 218, 0.74);
+}
+
+.parcelShadow {
+  position: absolute;
+  left: 1px;
+  bottom: 3px;
+  width: 108px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(13, 27, 77, 0.2);
+  filter: blur(9px);
+  transform: rotate(-6deg);
+}
+
+.truckTrack {
+  position: absolute;
+  z-index: 8;
+  right: 3%;
+  bottom: 10%;
+  width: 47%;
+  height: 36px;
+  transform: rotate(-7deg);
+}
+
+.truckTrail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18px;
+  border-top: 2px dashed rgba(34, 103, 201, 0.24);
+}
+
+.truckBadge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 45px;
+  height: 34px;
+  place-items: center;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #1f65c4, var(--scene-navy));
+  box-shadow: 0 10px 18px rgba(13, 27, 77, 0.24);
+  animation: truckDrive 6.2s ease-in-out infinite;
+}
+
+.infoCard,
+.metricCard {
+  position: absolute;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  color: var(--scene-navy);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 14px 28px rgba(13, 27, 77, 0.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.infoCard {
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 14px;
+}
+
+.infoCard small,
+.infoCard strong {
+  display: block;
+  line-height: 1.05;
+}
+
+.infoCard small {
+  margin-bottom: 4px;
+  color: #6d7894;
+  font-size: 0.49rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.infoCard strong {
+  font-size: 0.72rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.liveCard {
+  top: 4%;
+  left: 3%;
+  animation: cardFloat 4.7s ease-in-out infinite;
+}
+
+.deliveryCard {
+  right: 0;
+  top: 56%;
+  animation: cardFloat 5.4s ease-in-out -1.5s infinite;
+}
+
+.liveDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #25aa68;
+  box-shadow: 0 0 0 5px rgba(37, 170, 104, 0.14);
+}
+
+.checkIcon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  color: #fff;
+  border-radius: 8px;
+  background: #25aa68;
+}
+
+.metricCard {
+  left: 5%;
+  bottom: 5%;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 13px;
+  border-radius: 14px;
+  animation: cardFloat 5s ease-in-out -2.5s infinite;
+}
+
+.metricCard strong {
+  color: var(--scene-orange);
+  font-size: 1.02rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.metricCard span {
+  margin-top: 4px;
+  color: #66708b;
+  font-size: 0.58rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+@keyframes routeFlow {
+  to { stroke-dashoffset: -76; }
+}
+
+@keyframes globeFloat {
+  0%, 100% { transform: translate3d(0, 0, 28px) rotate(-2deg); }
+  50% { transform: translate3d(0, -9px, 42px) rotate(2deg); }
+}
+
+@keyframes globeSignal {
+  0% { box-shadow: 0 0 0 0 rgba(244, 122, 11, 0.68); }
+  75%, 100% { box-shadow: 0 0 0 16px rgba(244, 122, 11, 0); }
+}
+
+@keyframes parcelFloat {
+  0%, 100% { transform: translate3d(0, 0, 62px) rotate(-1deg) scale(var(--parcel-scale)); }
+  50% { transform: translate3d(0, -10px, 78px) rotate(1.5deg) scale(var(--parcel-scale)); }
+}
+
+@keyframes truckDrive {
+  0%, 12% { transform: translateX(0) rotate(1deg); }
+  48%, 60% { transform: translateX(145px) rotate(1deg); }
+  70% { transform: translateX(145px) scaleX(-1); }
+  94% { transform: translateX(0) scaleX(-1); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+
+@keyframes cardFloat {
+  0%, 100% { transform: translate3d(0, 0, 48px); }
+  50% { transform: translate3d(0, -7px, 58px); }
+}
+
+@keyframes hubPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(244, 122, 11, 0.16), 0 6px 12px rgba(13, 27, 77, 0.2); }
+  50% { box-shadow: 0 0 0 10px rgba(244, 122, 11, 0), 0 6px 12px rgba(13, 27, 77, 0.2); }
+}
+
+@keyframes glowBreathe {
+  0%, 100% { opacity: 0.65; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@media (max-width: 1199px) {
+  .scene {
+    width: min(86vw, 330px);
+    margin: 0 auto;
+  }
+
+  .truckTrack { width: 50%; }
+
+  @keyframes truckDrive {
+    0%, 12% { transform: translateX(0) rotate(1deg); }
+    48%, 60% { transform: translateX(105px) rotate(1deg); }
+    70% { transform: translateX(105px) scaleX(-1); }
+    94% { transform: translateX(0) scaleX(-1); }
+    100% { transform: translateX(0) scaleX(1); }
+  }
+}
+
+@media (max-width: 599px) {
+  .scene {
+    width: min(82vw, 285px);
+    margin-top: -2px;
+  }
+
+  .parcelStage {
+    --parcel-scale: 0.82;
+    left: 17%;
+    top: 24%;
+    transform-origin: top left;
+  }
+
+  .infoCard { padding: 7px 9px; }
+  .infoCard strong { font-size: 0.62rem; }
+  .infoCard small { font-size: 0.42rem; }
+  .metricCard { padding: 8px 10px; }
+  .metricCard strong { font-size: 0.86rem; }
+  .metricCard span { font-size: 0.49rem; }
+  .globe { right: 8%; width: 29%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene *,
+  .scene *::before,
+  .scene *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
