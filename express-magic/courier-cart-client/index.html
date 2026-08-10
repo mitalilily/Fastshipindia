@@ -40,10 +40,180 @@
     />
 
     <title>FastShip</title>
+    <style>
+      #fastship-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        background: #f6f8fc;
+        color: #0b3a78;
+        font-family: Barlow, Arial, sans-serif;
+      }
+      .fastship-boot-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        text-align: center;
+      }
+      .fastship-boot-spinner {
+        width: 34px;
+        height: 34px;
+        border: 3px solid rgba(11, 58, 120, 0.16);
+        border-top-color: #e31b23;
+        border-radius: 50%;
+        animation: fastship-boot-spin 0.72s linear infinite;
+      }
+      .fastship-boot-title {
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .fastship-boot-copy {
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .fastship-boot-retry {
+        display: none;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 18px;
+        background: #0b3a78;
+        color: #fff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      @keyframes fastship-boot-spin {
+        to { transform: rotate(360deg); }
+      }
+      @media (prefers-color-scheme: dark) {
+        #fastship-boot { background: #0f141b; color: #f8fafc; }
+        .fastship-boot-copy { color: #9badc3; }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="fastship-boot" role="status" aria-live="polite">
+        <div class="fastship-boot-content">
+          <div class="fastship-boot-spinner" aria-hidden="true"></div>
+          <div class="fastship-boot-title">Loading FastShip</div>
+          <div class="fastship-boot-copy">Preparing your workspace&hellip;</div>
+          <button class="fastship-boot-retry" type="button">Retry now</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const recoveryKey = 'fastship-boot-recovery:v2'
+        const retryWindowMs = 60_000
+        const root = document.getElementById('root')
+        const boot = document.getElementById('fastship-boot')
+        const retryButton = boot?.querySelector('.fastship-boot-retry')
+        const bootCopy = boot?.querySelector('.fastship-boot-copy')
+        let recovering = false
+
+        const readRecoveryState = () => {
+          try {
+            const state = JSON.parse(sessionStorage.getItem(recoveryKey) || 'null')
+            return state && Date.now() - state.startedAt < retryWindowMs
+              ? state
+              : { attempts: 0, startedAt: Date.now() }
+          } catch {
+            return { attempts: 0, startedAt: Date.now() }
+          }
+        }
+
+        const clearClientCaches = async () => {
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations()
+            await Promise.all(registrations.map((registration) => registration.unregister()))
+          }
+          if ('caches' in window) {
+            const cacheNames = await caches.keys()
+            await Promise.all(
+              cacheNames
+                .filter((cacheName) => cacheName.startsWith('fastship-assets-'))
+                .map((cacheName) => caches.delete(cacheName)),
+            )
+          }
+        }
+
+        const showManualRetry = () => {
+          recovering = false
+          if (bootCopy) bootCopy.textContent = 'A fresh version is ready. Please retry once.'
+          if (retryButton) retryButton.style.display = 'inline-flex'
+        }
+
+        const recoverStartup = async () => {
+          if (recovering || !document.getElementById('fastship-boot')) return
+          recovering = true
+
+          const state = readRecoveryState()
+          if (state.attempts >= 2) {
+            showManualRetry()
+            return
+          }
+
+          sessionStorage.setItem(
+            recoveryKey,
+            JSON.stringify({ attempts: state.attempts + 1, startedAt: state.startedAt }),
+          )
+          if (bootCopy) bootCopy.textContent = 'Refreshing the latest workspace...'
+
+          try {
+            await clearClientCaches()
+          } finally {
+            window.setTimeout(() => {
+              const freshUrl = new URL(window.location.href)
+              freshUrl.searchParams.set('__fastship_fresh', Date.now().toString())
+              window.location.replace(freshUrl.toString())
+            }, 650)
+          }
+        }
+
+        retryButton?.addEventListener('click', () => {
+          sessionStorage.removeItem(recoveryKey)
+          void recoverStartup()
+        })
+
+        window.addEventListener(
+          'error',
+          (event) => {
+            const target = event.target
+            const assetUrl = target?.src || target?.href || ''
+            if (assetUrl.includes('/assets/')) void recoverStartup()
+          },
+          true,
+        )
+
+        window.addEventListener('unhandledrejection', (event) => {
+          const message = event.reason instanceof Error ? event.reason.message : String(event.reason || '')
+          if (/dynamically imported module|module script|chunkloaderror|loading chunk/i.test(message)) {
+            void recoverStartup()
+          }
+        })
+
+        const startupTimer = window.setTimeout(() => void recoverStartup(), 8_000)
+        const observer = new MutationObserver(() => {
+          if (document.getElementById('fastship-boot')) return
+
+          window.clearTimeout(startupTimer)
+          sessionStorage.removeItem(recoveryKey)
+          const currentUrl = new URL(window.location.href)
+          if (currentUrl.searchParams.delete('__fastship_fresh')) {
+            window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`)
+          }
+          observer.disconnect()
+        })
+        observer.observe(root, { childList: true })
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

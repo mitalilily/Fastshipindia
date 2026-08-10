@@ -1,4 +1,4 @@
-const ASSET_CACHE = 'fastship-assets-v1'
+const ASSET_CACHE = 'fastship-assets-v2'
 const CACHE_PREFIX = 'fastship-assets-'
 const MAX_CACHED_ASSETS = 160
 
@@ -7,6 +7,11 @@ const isCacheableAsset = (request) => {
 
   const url = new URL(request.url)
   return url.origin === self.location.origin && url.pathname.startsWith('/assets/')
+}
+
+const isValidAssetResponse = (response) => {
+  const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+  return response.ok && !contentType.includes('text/html')
 }
 
 const trimAssetCache = async (cache) => {
@@ -42,10 +47,11 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.open(ASSET_CACHE).then(async (cache) => {
       const cached = await cache.match(event.request)
-      if (cached) return cached
+      if (cached && isValidAssetResponse(cached)) return cached
+      if (cached) await cache.delete(event.request)
 
       const response = await fetch(event.request)
-      if (response.ok) {
+      if (isValidAssetResponse(response)) {
         await cache.put(event.request, response.clone())
         void trimAssetCache(cache)
       }
@@ -66,7 +72,7 @@ self.addEventListener('message', (event) => {
           if (await cache.match(url.href)) return
 
           const response = await fetch(url.href, { credentials: 'same-origin' })
-          if (response.ok) await cache.put(url.href, response)
+          if (isValidAssetResponse(response)) await cache.put(url.href, response)
         }),
       )
       await trimAssetCache(cache)
