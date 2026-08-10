@@ -18,9 +18,15 @@ export const useEmployeeSocket = () => {
       if (cancelled) return
 
       disconnect = socketModule.disconnectSocket
-      const employee = await getEmployeeByUserId(user.userId)
-      if (!cancelled && employee?.employee?.isActive) {
-        socketModule.registerUserSocket({ id: user.userId, role: 'employee' })
+      socketModule.registerUserSocket({ id: user.userId, role: 'customer' })
+
+      try {
+        const employee = await getEmployeeByUserId(user.userId)
+        if (!cancelled && employee?.employee?.isActive) {
+          socketModule.registerUserSocket({ id: user.userId, role: 'employee' })
+        }
+      } catch {
+        // Most merchant accounts are not employees; their notification socket remains active.
       }
     }
 

@@ -42,22 +42,31 @@ const getSocket = () => {
 }
 
 let pingInterval: number | null = null
+const NEW_NOTIFICATION_EVENT = 'fastship:new-notification'
+
+const forwardNotificationToClient = (message: unknown) => {
+  window.dispatchEvent(new CustomEvent(NEW_NOTIFICATION_EVENT, { detail: message }))
+}
 
 export const registerUserSocket = (user: { id: string; role: string }) => {
-  if (user.role !== 'employee') return
-
   const socketClient = getSocket()
 
   socketClient.emit('register', user.id)
 
-  // Ping every 10 seconds to maintain online status
-  pingInterval = window.setInterval(() => {
-    socketClient.emit('employee_ping', user.id)
-  }, 10000)
+  if (pingInterval) {
+    window.clearInterval(pingInterval)
+    pingInterval = null
+  }
 
-  socketClient.on('new_notification', (msg) => {
-    console.log('Received notification:', msg)
-  })
+  if (user.role === 'employee') {
+    // Ping every 10 seconds to maintain employee online status.
+    pingInterval = window.setInterval(() => {
+      socketClient.emit('employee_ping', user.id)
+    }, 10000)
+  }
+
+  socketClient.off('new_notification', forwardNotificationToClient)
+  socketClient.on('new_notification', forwardNotificationToClient)
 }
 
 export const disconnectSocket = () => {
