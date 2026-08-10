@@ -34,7 +34,7 @@ export default function FinancialHealthCard({
               <TbCurrencyRupee size={20} />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+              <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
                 Financial Health
               </Typography>
               <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
@@ -48,7 +48,7 @@ export default function FinancialHealthCard({
             sx={{
               height: 26,
               borderRadius: '8px',
-              fontWeight: 800,
+              fontWeight: 600,
               color: statusColor,
               bgcolor: alpha(statusColor, 0.1),
             }}
@@ -57,10 +57,10 @@ export default function FinancialHealthCard({
 
         <Box sx={{ mb: 2.2 }}>
           <Stack direction="row" justifyContent="space-between" mb={0.8}>
-            <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: dashboardPalette.muted }}>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 500, color: dashboardPalette.muted }}>
               Health Score
             </Typography>
-            <Typography sx={{ fontSize: '0.82rem', fontWeight: 900, color: statusColor }}>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: statusColor }}>
               {healthScore}/100
             </Typography>
           </Stack>
@@ -94,11 +94,11 @@ export default function FinancialHealthCard({
               <Box sx={{ minWidth: 0 }}>
                 <Stack direction="row" spacing={1} alignItems="center" mb={0.7}>
                   <MdAccountBalanceWallet size={17} color={dashboardPalette.blue} />
-                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 800, color: dashboardPalette.muted }}>
+                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, color: dashboardPalette.muted }}>
                     Wallet Balance
                   </Typography>
                 </Stack>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 900, color: isLowBalance ? dashboardPalette.red : dashboardPalette.ink }}>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: isLowBalance ? dashboardPalette.red : dashboardPalette.ink }}>
                   {formatCurrency(financial.walletBalance || 0)}
                 </Typography>
               </Box>
@@ -118,10 +118,10 @@ export default function FinancialHealthCard({
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 800, color: dashboardPalette.muted, mb: 0.7 }}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, color: dashboardPalette.muted, mb: 0.7 }}>
                   COD Remittance Due
                 </Typography>
-                <Typography sx={{ fontSize: '1.1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+                <Typography sx={{ fontSize: '1.1rem', fontWeight: 700, color: dashboardPalette.ink }}>
                   {formatCurrency(financial.codRemittanceDue || 0)}
                 </Typography>
                 {financial.codRemittanceCredited > 0 && (

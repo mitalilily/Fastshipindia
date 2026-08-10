@@ -199,7 +199,7 @@ function RoutedApp() {
       <RouteAssetRecovery />
       <RouteErrorBoundary resetKey={routeKey}>
         <Suspense fallback={<FullScreenLoader />}>
-          <Routes location={location} key={routeKey}>
+          <Routes location={location}>
           {/* public */}
           <Route path="/" element={<RootRoute />} />
           <Route path="/landing" element={<Navigate to="/" replace />} />

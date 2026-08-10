@@ -44,7 +44,7 @@ export default function OrderStatusChart({ chartData, ChartComponent }: OrderSta
             value: {
               show: true,
               fontSize: '24px',
-              fontWeight: 900,
+              fontWeight: 700,
               color: dashboardPalette.ink,
               formatter: () => total.toLocaleString(),
             },
@@ -93,7 +93,7 @@ export default function OrderStatusChart({ chartData, ChartComponent }: OrderSta
             <MdPieChart size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Order Status
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>

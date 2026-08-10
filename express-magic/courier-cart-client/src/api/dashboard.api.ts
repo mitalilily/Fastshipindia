@@ -103,6 +103,7 @@ export const getCourierDistribution = async (
 
 // Merchant Dashboard Stats
 export interface MerchantDashboardStats {
+  asOfDate: string
   todayOperations: {
     orders: number
     pending: number
@@ -197,5 +198,8 @@ export const getMerchantDashboardStats = async (
   config?: AxiosRequestConfig,
 ): Promise<MerchantDashboardStats> => {
   const { data } = await axiosInstance.get('/dashboard/stats', config)
-  return data.success ? data.data : ({} as MerchantDashboardStats)
+  if (!data.success || !data.data) {
+    throw new Error(data.message || 'Failed to fetch dashboard analytics')
+  }
+  return data.data
 }

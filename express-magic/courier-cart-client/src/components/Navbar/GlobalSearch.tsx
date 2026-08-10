@@ -259,7 +259,7 @@ const GlobalSearch = () => {
                     <Typography
                       variant="caption"
                       sx={{
-                        fontWeight: 800,
+                        fontWeight: 600,
                         color: alpha(INK, 0.5),
                         textTransform: 'uppercase',
                         letterSpacing: 1,
@@ -301,7 +301,7 @@ const GlobalSearch = () => {
                                     py: 0.2,
                                     borderRadius: 0.5,
                                     fontSize: '10px',
-                                    fontWeight: 800,
+                                    fontWeight: 600,
                                     bgcolor: alpha(getTypeColor(result.type), 0.1),
                                     color: getTypeColor(result.type),
                                     textTransform: 'uppercase',
@@ -309,7 +309,7 @@ const GlobalSearch = () => {
                                 >
                                   {getTypeLabel(result.type)}
                                 </Box>
-                                <Typography variant="body2" fontWeight={700}>
+                                <Typography variant="body2" fontWeight={500}>
                                   {result.title}
                                 </Typography>
                               </Stack>

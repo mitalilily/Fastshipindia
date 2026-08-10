@@ -1,11 +1,31 @@
-import { Box, Container, Drawer, Stack, useMediaQuery, useTheme } from '@mui/material'
+import { Box, CircularProgress, Container, Drawer, Stack, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
 import { DRAWER_WIDTH } from '../../utils/constants'
 import Navbar from '../Navbar/Navbar'
 import KeyboardShortcuts from './keyboard/KeyboardShortcuts'
-import FullScreenLoader from './loader/FullScreenLoader'
 import Sidebar, { COLLAPSED_WIDTH, DESKTOP_SIDEBAR_WIDTH } from './Sidebar'
+
+function RouteContentLoader() {
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      sx={{
+        minHeight: { xs: 240, md: 320 },
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      <Stack alignItems="center" spacing={1.2}>
+        <CircularProgress size={30} thickness={4} sx={{ color: '#E31B23' }} />
+        <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', fontWeight: 500 }}>
+          Loading workspace…
+        </Typography>
+      </Stack>
+    </Box>
+  )
+}
 
 export default function Layout() {
   const theme = useTheme()
@@ -13,6 +33,7 @@ export default function Layout() {
   const outlet = useOutlet()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const mainScrollRef = useRef<HTMLDivElement | null>(null)
+  const scrollProgressRef = useRef<HTMLDivElement | null>(null)
   const [pinned, setPinned] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
@@ -37,9 +58,20 @@ export default function Layout() {
 
   useEffect(() => {
     mainScrollRef.current?.scrollTo({ top: 0, left: 0 })
+    if (scrollProgressRef.current) scrollProgressRef.current.style.transform = 'scaleX(0)'
     document.body.style.removeProperty('overflow')
     document.body.style.removeProperty('padding-right')
   }, [routeContentKey])
+
+  const handleMainScroll = () => {
+    const scrollArea = mainScrollRef.current
+    const progressBar = scrollProgressRef.current
+    if (!scrollArea || !progressBar) return
+
+    const scrollableDistance = scrollArea.scrollHeight - scrollArea.clientHeight
+    const progress = scrollableDistance > 0 ? scrollArea.scrollTop / scrollableDistance : 0
+    progressBar.style.transform = `scaleX(${Math.min(1, Math.max(0, progress))})`
+  }
 
   return (
     <Box
@@ -125,14 +157,43 @@ export default function Layout() {
             }}
           >
             <Navbar handleDrawerToggle={handleDrawerToggle} pinned={pinned} />
+            <Box
+              aria-hidden="true"
+              sx={{
+                position: 'absolute',
+                right: 0,
+                bottom: 0,
+                left: 0,
+                height: 2,
+                overflow: 'hidden',
+                pointerEvents: 'none',
+                bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(11,58,120,0.06)',
+              }}
+            >
+              <Box
+                ref={scrollProgressRef}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  transform: 'scaleX(0)',
+                  transformOrigin: 'left center',
+                  background: 'linear-gradient(90deg, #0B3A78 0%, #E31B23 100%)',
+                  boxShadow: '0 0 8px rgba(227, 27, 35, 0.26)',
+                  transition: 'transform 80ms linear',
+                  willChange: 'transform',
+                }}
+              />
+            </Box>
           </Box>
 
           <Box
             component="main"
             ref={mainScrollRef}
+            onScroll={handleMainScroll}
             sx={{
               flexGrow: 1,
-              overflow: 'auto',
+              overflowY: 'auto',
+              overflowX: 'hidden',
               bgcolor: shellBg,
               position: 'relative',
               zIndex: 0,
@@ -140,7 +201,7 @@ export default function Layout() {
               pb: { xs: 1.5, md: 2 },
               height: '100%',
               minHeight: 0,
-              overscrollBehavior: 'auto',
+              overscrollBehavior: 'contain',
               scrollbarGutter: 'stable',
               WebkitOverflowScrolling: 'touch',
             }}
@@ -151,13 +212,13 @@ export default function Layout() {
                 bgcolor: 'transparent',
                 pt: { xs: 2, md: 2 },
                 px: { xs: 0, md: 0 },
-                overflowX: 'visible',
+                width: '100%',
+                minWidth: 0,
+                overflowX: 'hidden',
               }}
             >
-              <Suspense fallback={<FullScreenLoader />}>
-                <Box key={routeContentKey} sx={{ display: 'contents' }}>
-                  {outlet}
-                </Box>
+              <Suspense fallback={<RouteContentLoader />}>
+                <Box sx={{ display: 'contents' }}>{outlet}</Box>
               </Suspense>
             </Container>
           </Box>

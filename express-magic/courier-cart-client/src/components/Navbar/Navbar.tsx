@@ -32,8 +32,8 @@ interface NavbarProps {
   name?: string
 }
 
-const ACTIVE = '#7657ff'
-const ORANGE = '#ff7a17'
+const ACTIVE = '#0B3A78'
+const ORANGE = '#E31B23'
 
 const getSectionLabel = (pathname: string) =>
   (
@@ -152,7 +152,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
           sx={{
             color: textColor,
             fontSize: { xs: '1rem', sm: '1.05rem', md: '1rem' },
-            fontWeight: 850,
+            fontWeight: 650,
             letterSpacing: '-0.02em',
           }}
           noWrap
@@ -198,7 +198,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
             color: textColor,
             bgcolor: panelBg,
             fontSize: '0.84rem',
-            fontWeight: 850,
+            fontWeight: 600,
             '& svg': { color: ACTIVE },
             '&:hover': { borderColor: alpha(ACTIVE, 0.5) },
           }}
@@ -262,7 +262,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
               '& .MuiBadge-badge': {
                 bgcolor: ORANGE,
                 color: '#fff',
-                fontWeight: 900,
+                fontWeight: 700,
                 minWidth: 18,
                 height: 18,
                 fontSize: '0.68rem',
@@ -296,7 +296,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.7, py: 1.35 }}>
             <Box>
-              <Typography sx={{ color: textColor, fontWeight: 900, fontSize: '0.98rem' }}>
+              <Typography sx={{ color: textColor, fontWeight: 700, fontSize: '0.98rem' }}>
                 Notifications
               </Typography>
               <Typography sx={{ color: mutedColor, fontWeight: 650, fontSize: '0.78rem', mt: 0.2 }}>
@@ -307,7 +307,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
               size="small"
               disabled={!unreadCount || markingAllRead}
               onClick={() => markAllRead()}
-              sx={{ color: ORANGE, fontWeight: 850 }}
+              sx={{ color: ORANGE, fontWeight: 600 }}
             >
               Mark all read
             </Button>
@@ -355,7 +355,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
                             {notification.message}
                           </Typography>
                           {notification.createdAt ? (
-                            <Typography component="span" sx={{ display: 'block', color: alpha(mutedColor, 0.82), fontSize: '0.72rem', mt: 0.6, fontWeight: 700 }}>
+                            <Typography component="span" sx={{ display: 'block', color: alpha(mutedColor, 0.82), fontSize: '0.72rem', mt: 0.6, fontWeight: 500 }}>
                               {new Date(notification.createdAt).toLocaleString('en-IN', {
                                 day: '2-digit',
                                 month: 'short',
@@ -368,7 +368,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
                       }
                       primaryTypographyProps={{
                         color: textColor,
-                        fontWeight: unread ? 900 : 750,
+                        fontWeight: unread ? 700 : 500,
                         fontSize: '0.9rem',
                         lineHeight: 1.35,
                       }}
@@ -380,7 +380,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
           ) : (
             <Stack alignItems="center" textAlign="center" sx={{ px: 3, py: 5 }}>
               <MdNotifications size={30} color={mutedColor} />
-              <Typography sx={{ mt: 1, color: textColor, fontWeight: 850 }}>No notifications yet</Typography>
+              <Typography sx={{ mt: 1, color: textColor, fontWeight: 600 }}>No notifications yet</Typography>
               <Typography sx={{ mt: 0.5, color: mutedColor, fontSize: '0.82rem' }}>
                 New order and shipment updates will appear here.
               </Typography>

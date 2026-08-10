@@ -30,7 +30,7 @@ export default function PerformanceMetricsCard({
             <MdAssessment size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Performance
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
@@ -43,10 +43,10 @@ export default function PerformanceMetricsCard({
           {rows.map((row) => (
             <Box key={row.label}>
               <Stack direction="row" justifyContent="space-between" mb={0.8}>
-                <Typography sx={{ fontSize: '0.82rem', color: dashboardPalette.muted, fontWeight: 700 }}>
+                <Typography sx={{ fontSize: '0.82rem', color: dashboardPalette.muted, fontWeight: 500 }}>
                   {row.label}
                 </Typography>
-                <Typography sx={{ fontSize: '0.82rem', fontWeight: 900, color: row.color }}>
+                <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: row.color }}>
                   {formatPercentage(row.value)}
                 </Typography>
               </Stack>
@@ -67,10 +67,10 @@ export default function PerformanceMetricsCard({
           ))}
 
           <Box sx={{ pt: 0.4 }}>
-            <Typography sx={{ fontSize: '0.82rem', color: dashboardPalette.muted, fontWeight: 700 }}>
+            <Typography sx={{ fontSize: '0.82rem', color: dashboardPalette.muted, fontWeight: 500 }}>
               Average Delivery Time
             </Typography>
-            <Typography sx={{ mt: 0.4, fontSize: '1.45rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ mt: 0.4, fontSize: '1.45rem', fontWeight: 700, color: dashboardPalette.ink }}>
               {operational.avgDeliveryTime || 0} days
             </Typography>
           </Box>

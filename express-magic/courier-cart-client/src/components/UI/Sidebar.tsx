@@ -11,29 +11,36 @@ import {
   useTheme,
 } from '@mui/material'
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
-import { BiListPlus } from 'react-icons/bi'
-import { CgTrack } from 'react-icons/cg'
-import { FaClipboardList as FaFileAlt, FaToolbox } from 'react-icons/fa6'
 import {
-  MdAccountBalanceWallet,
-  MdApps,
-  MdDashboard,
-  MdExpandMore,
-  MdHome,
-  MdKeyboardReturn,
-  MdLocalShipping,
-  MdOutlineAddBusiness,
-  MdShoppingCart,
-  MdSupportAgent,
-  MdSyncProblem,
-} from 'react-icons/md'
-import { RiScales3Line, RiSettings2Fill } from 'react-icons/ri'
-import { TbInvoice, TbReportAnalytics, TbTransactionRupee } from 'react-icons/tb'
+  TbAlertTriangle,
+  TbApps,
+  TbArrowBackUp,
+  TbBuildingWarehouse,
+  TbCalculator,
+  TbChevronDown,
+  TbCurrencyRupee,
+  TbFileAnalytics,
+  TbHeadset,
+  TbHome,
+  TbLayoutDashboard,
+  TbListDetails,
+  TbPackage,
+  TbPackageExport,
+  TbPlugConnected,
+  TbReceipt,
+  TbRoute,
+  TbScale,
+  TbSettings,
+  TbShoppingCart,
+  TbTool,
+  TbTruckDelivery,
+  TbWallet,
+} from 'react-icons/tb'
 import { NavLink, useLocation } from 'react-router-dom'
 
 import type { JSX } from '@emotion/react/jsx-runtime'
 import BrandLogo from '../brand/BrandLogo'
-import { brandIdentity } from '../../theme/brand'
+import { brand } from '../../theme/brand'
 import { isActive } from '../../utils/functions'
 import { useAuth } from '../../context/auth/AuthContext'
 
@@ -72,7 +79,8 @@ export const COLLAPSED_WIDTH = 72
 export const DESKTOP_SIDEBAR_WIDTH = 260
 
 const STANDARD_ICON_SIZE = 21
-const ACTIVE = '#7657ff'
+const ACTIVE = brand.navy
+const ACCENT = brand.red
 
 const navSections: NavSection[] = [
   {
@@ -80,26 +88,26 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Home',
-        icon: <MdHome size={STANDARD_ICON_SIZE} />,
+        icon: <TbHome size={STANDARD_ICON_SIZE} />,
         path: '/home',
         roles: ['customer', 'admin'],
       },
       {
         text: 'Dashboard',
-        icon: <MdDashboard size={STANDARD_ICON_SIZE} />,
+        icon: <TbLayoutDashboard size={STANDARD_ICON_SIZE} />,
         path: '/dashboard',
         roles: ['customer', 'admin'],
       },
       {
         text: 'Orders',
-        icon: <MdShoppingCart size={STANDARD_ICON_SIZE} />,
+        icon: <TbShoppingCart size={STANDARD_ICON_SIZE} />,
         path: '/orders',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'All Orders', path: '/orders/list', icon: <FaFileAlt size={STANDARD_ICON_SIZE} /> },
-          { text: 'Create Order', path: '/orders/create', icon: <BiListPlus size={STANDARD_ICON_SIZE} /> },
-          { text: 'B2C Orders', path: '/orders/b2c/list', icon: <MdOutlineAddBusiness size={STANDARD_ICON_SIZE} /> },
-          { text: 'B2B Orders', path: '/orders/b2b/list', icon: <MdOutlineAddBusiness size={STANDARD_ICON_SIZE} /> },
+          { text: 'All Orders', path: '/orders/list', icon: <TbListDetails size={STANDARD_ICON_SIZE} /> },
+          { text: 'Create Order', path: '/orders/create', icon: <TbPackageExport size={STANDARD_ICON_SIZE} /> },
+          { text: 'B2C Orders', path: '/orders/b2c/list', icon: <TbPackage size={STANDARD_ICON_SIZE} /> },
+          { text: 'B2B Orders', path: '/orders/b2b/list', icon: <TbBuildingWarehouse size={STANDARD_ICON_SIZE} /> },
         ],
       },
     ],
@@ -109,7 +117,7 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Reports',
-        icon: <TbReportAnalytics size={STANDARD_ICON_SIZE} />,
+        icon: <TbFileAnalytics size={STANDARD_ICON_SIZE} />,
         path: '/reports',
         roles: ['customer', 'admin'],
       },
@@ -120,19 +128,19 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Wallet',
-        icon: <MdAccountBalanceWallet size={STANDARD_ICON_SIZE} />,
+        icon: <TbWallet size={STANDARD_ICON_SIZE} />,
         path: '/billing/wallet_transactions',
         roles: ['customer', 'admin'],
       },
       {
         text: 'COD Remittance',
-        icon: <TbTransactionRupee size={STANDARD_ICON_SIZE} />,
+        icon: <TbCurrencyRupee size={STANDARD_ICON_SIZE} />,
         path: '/cod-remittance',
         roles: ['customer', 'admin'],
       },
       {
         text: 'Billings',
-        icon: <TbInvoice size={STANDARD_ICON_SIZE} />,
+        icon: <TbReceipt size={STANDARD_ICON_SIZE} />,
         path: '/billing/invoice_management',
         roles: ['customer', 'admin'],
       },
@@ -143,17 +151,17 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Operations',
-        icon: <MdSyncProblem size={STANDARD_ICON_SIZE} />,
+        icon: <TbAlertTriangle size={STANDARD_ICON_SIZE} />,
         path: '/ops',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'NDR', path: '/ops/ndr', icon: <MdSyncProblem size={STANDARD_ICON_SIZE} /> },
-          { text: 'RTO', path: '/ops/rto', icon: <MdKeyboardReturn size={STANDARD_ICON_SIZE} /> },
+          { text: 'NDR', path: '/ops/ndr', icon: <TbAlertTriangle size={STANDARD_ICON_SIZE} /> },
+          { text: 'RTO', path: '/ops/rto', icon: <TbArrowBackUp size={STANDARD_ICON_SIZE} /> },
         ],
       },
       {
         text: 'Reconciliation',
-        icon: <RiScales3Line size={STANDARD_ICON_SIZE} />,
+        icon: <TbScale size={STANDARD_ICON_SIZE} />,
         path: '/reconciliation/weight',
         roles: ['customer', 'admin'],
       },
@@ -164,12 +172,12 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Integrations',
-        icon: <MdApps size={STANDARD_ICON_SIZE} />,
+        icon: <TbPlugConnected size={STANDARD_ICON_SIZE} />,
         path: '/channels',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'Couriers', path: '/couriers/partners', icon: <MdLocalShipping size={STANDARD_ICON_SIZE} /> },
-          { text: 'Channels', path: '/channels/connected', icon: <MdApps size={STANDARD_ICON_SIZE} /> },
+          { text: 'Couriers', path: '/couriers/partners', icon: <TbTruckDelivery size={STANDARD_ICON_SIZE} /> },
+          { text: 'Channels', path: '/channels/connected', icon: <TbApps size={STANDARD_ICON_SIZE} /> },
         ],
       },
     ],
@@ -179,12 +187,12 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Tools',
-        icon: <FaToolbox size={STANDARD_ICON_SIZE} />,
+        icon: <TbTool size={STANDARD_ICON_SIZE} />,
         path: '/tools',
         roles: ['customer', 'admin'],
         children: [
-          { text: 'Rate Calculator', path: '/tools/rate_calculator', icon: <TbReportAnalytics size={STANDARD_ICON_SIZE} /> },
-          { text: 'Order Tracking', path: '/tools/order_tracking', icon: <CgTrack size={STANDARD_ICON_SIZE} /> },
+          { text: 'Rate Calculator', path: '/tools/rate_calculator', icon: <TbCalculator size={STANDARD_ICON_SIZE} /> },
+          { text: 'Order Tracking', path: '/tools/order_tracking', icon: <TbRoute size={STANDARD_ICON_SIZE} /> },
         ],
       },
     ],
@@ -194,7 +202,7 @@ const navSections: NavSection[] = [
     items: [
       {
         text: 'Support',
-        icon: <MdSupportAgent size={STANDARD_ICON_SIZE} />,
+        icon: <TbHeadset size={STANDARD_ICON_SIZE} />,
         path: '/support/tickets',
         roles: ['customer', 'admin'],
       },
@@ -204,7 +212,7 @@ const navSections: NavSection[] = [
 
 const settingsItem: NavItem = {
   text: 'Settings',
-  icon: <RiSettings2Fill size={STANDARD_ICON_SIZE} />,
+  icon: <TbSettings size={STANDARD_ICON_SIZE} />,
   path: '/settings',
   roles: ['customer', 'admin'],
 }
@@ -232,14 +240,13 @@ export default function Sidebar({
   const MUTED = isDark ? '#8798ad' : '#8492aa'
   const WHITE = isDark ? '#f8fafc' : '#11182d'
   const itemHoverBg = isDark ? alpha('#ffffff', 0.035) : alpha('#11182d', 0.045)
-  const childHoverBg = isDark ? alpha('#ffffff', 0.045) : alpha(ACTIVE, 0.08)
-  const activeBg = isDark ? alpha(ACTIVE, 0.16) : alpha(ACTIVE, 0.1)
-  const childActiveBg = isDark ? alpha(ACTIVE, 0.14) : alpha(ACTIVE, 0.12)
-  const iconMuted = isDark ? '#8190a5' : '#76849a'
-  const scrollbarThumb = isDark ? '#3a4350' : '#cbd5e1'
-  const activeText = isDark ? '#bdb5ff' : ACTIVE
-  const initialsBg = isDark ? '#2b2760' : alpha(ACTIVE, 0.1)
-  const initialsBorder = isDark ? alpha('#ffffff', 0.1) : alpha(ACTIVE, 0.16)
+  const childHoverBg = isDark ? alpha('#ffffff', 0.045) : alpha(ACTIVE, 0.07)
+  const activeBg = isDark ? alpha(ACTIVE, 0.28) : alpha(ACTIVE, 0.08)
+  const childActiveBg = isDark ? alpha(ACTIVE, 0.24) : alpha(ACTIVE, 0.1)
+  const iconMuted = isDark ? '#91a7c3' : alpha(ACTIVE, 0.58)
+  const activeText = isDark ? '#d9e7fa' : ACTIVE
+  const initialsBg = isDark ? alpha(ACTIVE, 0.34) : alpha(ACTIVE, 0.09)
+  const initialsBorder = isDark ? alpha('#ffffff', 0.1) : alpha(ACCENT, 0.28)
   const initialsColor = isDark ? '#f8fafc' : ACTIVE
 
   useEffect(() => {
@@ -265,7 +272,7 @@ export default function Sidebar({
   }
 
   const navItemSx = {
-    minHeight: temporary ? 43 : 38,
+    minHeight: temporary ? 'clamp(34px, 5.2vh, 43px)' : 'clamp(29px, 4.25vh, 38px)',
     borderRadius: 0,
     px: isSidebarExpanded ? (temporary ? 3.6 : 2.75) : 0,
     py: 0,
@@ -275,15 +282,18 @@ export default function Sidebar({
     '&:hover': {
       bgcolor: itemHoverBg,
       color: WHITE,
-      '& .MuiListItemIcon-root': { color: WHITE },
+      '& .MuiListItemIcon-root': { color: ACTIVE },
+    },
+    '@media (max-height: 760px)': {
+      '& .MuiListItemIcon-root svg': { width: 19, height: 19 },
     },
   }
 
   const activeItemSx = {
     bgcolor: activeBg,
     color: activeText,
-    '& .MuiListItemIcon-root': { color: activeText },
-    '& .MuiListItemText-primary': { fontWeight: 800 },
+    '& .MuiListItemIcon-root': { color: ACCENT },
+    '& .MuiListItemText-primary': { fontWeight: 600 },
     '&::before': {
       content: '""',
       position: 'absolute',
@@ -292,7 +302,11 @@ export default function Sidebar({
       bottom: 11,
       width: 4,
       borderRadius: '0 8px 8px 0',
-      bgcolor: activeText,
+      bgcolor: ACCENT,
+      '@media (max-height: 760px)': {
+        top: 7,
+        bottom: 7,
+      },
     },
   }
 
@@ -319,7 +333,7 @@ export default function Sidebar({
           sx={{
             minWidth: isSidebarExpanded ? 38 : 0,
             justifyContent: 'center',
-            color: active ? activeText : iconMuted,
+            color: active ? ACCENT : iconMuted,
             transition: 'color 160ms ease',
           }}
         >
@@ -329,14 +343,16 @@ export default function Sidebar({
           <ListItemText
             primary={item.text}
             primaryTypographyProps={{
-              fontSize: temporary ? '1rem' : '0.9rem',
-              fontWeight: active ? 800 : 650,
+              fontSize: temporary
+                ? 'clamp(0.86rem, 2vh, 1rem)'
+                : 'clamp(0.78rem, 2vh, 0.9rem)',
+              fontWeight: active ? 650 : 500,
               letterSpacing: '-0.01em',
             }}
           />
         ) : null}
         {hasChildren && isSidebarExpanded ? (
-          <MdExpandMore
+          <TbChevronDown
             size={20}
             style={{
               transform: showExpanded ? 'rotate(180deg)' : 'rotate(-90deg)',
@@ -370,7 +386,7 @@ export default function Sidebar({
                     to={sub.path}
                     onClick={handleRouteNavigate}
                     sx={{
-                      minHeight: 32,
+                      minHeight: 'clamp(28px, 3.8vh, 32px)',
                       px: 1.2,
                       py: 0.45,
                       borderRadius: 1,
@@ -386,8 +402,8 @@ export default function Sidebar({
                     <ListItemText
                       primary={sub.text}
                       primaryTypographyProps={{
-                        fontSize: '0.88rem',
-                        fontWeight: subActive ? 800 : 650,
+                        fontSize: 'clamp(0.76rem, 1.9vh, 0.88rem)',
+                        fontWeight: subActive ? 650 : 500,
                       }}
                     />
                   </ListItemButton>
@@ -443,37 +459,38 @@ export default function Sidebar({
     >
       <Box
         sx={{
-          height: temporary ? 72 : 64,
+          height: temporary ? 'clamp(58px, 8vh, 72px)' : 'clamp(48px, 7.2vh, 64px)',
           px: isSidebarExpanded ? (temporary ? 2.25 : 1.75) : 1,
           display: 'flex',
           alignItems: 'center',
-          gap: 1.5,
+          justifyContent: isSidebarExpanded ? 'flex-start' : 'center',
           flexShrink: 0,
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
         <BrandLogo
-          compact
+          compact={!isSidebarExpanded}
           sx={{
-            width: temporary ? 44 : 38,
-            height: temporary ? 44 : 38,
-            objectFit: 'contain',
+            width: isSidebarExpanded
+              ? temporary
+                ? 'clamp(138px, 18vh, 156px)'
+                : 'clamp(124px, 17vh, 144px)'
+              : 52,
+            height: isSidebarExpanded
+              ? temporary
+                ? 'clamp(46px, 6.2vh, 52px)'
+                : 'clamp(42px, 5.8vh, 48px)'
+              : 18,
+            aspectRatio: 'auto',
+            backgroundSize: isSidebarExpanded
+              ? temporary
+                ? '143% auto'
+                : '140% auto'
+              : '118% auto',
+            backgroundPosition: 'center',
             flexShrink: 0,
           }}
         />
-        {isSidebarExpanded ? (
-          <Typography
-            sx={{
-              color: WHITE,
-              fontSize: temporary ? '1.28rem' : '1.08rem',
-              fontWeight: 900,
-              letterSpacing: '-0.05em',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {brandIdentity.name}
-          </Typography>
-        ) : null}
       </Box>
 
       <Box
@@ -483,26 +500,38 @@ export default function Sidebar({
           overflowY: 'auto',
           overflowX: 'hidden',
           overscrollBehavior: 'contain',
-          scrollbarGutter: 'stable',
+          scrollbarGutter: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
-          py: temporary ? 1.5 : 1,
+          py: temporary ? 'clamp(6px, 1.4vh, 12px)' : 'clamp(4px, 1vh, 8px)',
           bgcolor: DARK_BG,
-          '&::-webkit-scrollbar': { width: 6 },
-          '&::-webkit-scrollbar-track': { background: DARK_BG },
-          '&::-webkit-scrollbar-thumb': { background: scrollbarThumb, borderRadius: 8 },
+          '&::-webkit-scrollbar': { width: 0, height: 0, display: 'none' },
         }}
       >
         {visibleSections.map((section) =>
           section.items.length ? (
-            <Box key={section.title} sx={{ mb: temporary ? 2.2 : 1.45 }}>
+            <Box
+              key={section.title}
+              sx={{
+                mb: temporary
+                  ? 'clamp(6px, 1.8vh, 18px)'
+                  : 'clamp(3px, 1.1vh, 12px)',
+              }}
+            >
               {isSidebarExpanded ? (
                 <Typography
                   sx={{
                     px: temporary ? 3.6 : 2.75,
-                    mb: temporary ? 0.8 : 0.5,
+                    mb: temporary
+                      ? 'clamp(2px, 0.7vh, 6px)'
+                      : 'clamp(1px, 0.45vh, 4px)',
                     color: MUTED,
-                    fontSize: temporary ? '0.82rem' : '0.72rem',
-                    fontWeight: 850,
+                    fontSize: temporary
+                      ? 'clamp(0.7rem, 1.7vh, 0.82rem)'
+                      : 'clamp(0.6rem, 1.5vh, 0.72rem)',
+                    lineHeight: 1.15,
+                    fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: 0,
                   }}
@@ -522,7 +551,9 @@ export default function Sidebar({
           <Box
             sx={{
               px: temporary ? 3.6 : 2.75,
-              py: temporary ? 1.85 : 1.25,
+              py: temporary
+                ? 'clamp(8px, 1.8vh, 15px)'
+                : 'clamp(6px, 1.35vh, 10px)',
               borderTop: `1px solid ${BORDER}`,
               display: 'flex',
               alignItems: 'center',
@@ -541,7 +572,7 @@ export default function Sidebar({
                 bgcolor: initialsBg,
                 border: `1px solid ${initialsBorder}`,
                 fontSize: '0.9rem',
-                fontWeight: 900,
+                fontWeight: 700,
                 flexShrink: 0,
               }}
             >
@@ -549,7 +580,7 @@ export default function Sidebar({
             </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography
-                sx={{ color: WHITE, fontWeight: 850, fontSize: temporary ? '0.98rem' : '0.88rem' }}
+                sx={{ color: WHITE, fontWeight: 600, fontSize: temporary ? '0.98rem' : '0.88rem' }}
                 noWrap
               >
                 {displayName}
@@ -561,7 +592,7 @@ export default function Sidebar({
                 {displayEmail}
               </Typography>
             </Box>
-            <MdExpandMore size={19} color={TEXT} />
+            <TbChevronDown size={19} color={TEXT} />
           </Box>
         ) : null}
       </Box>

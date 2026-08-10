@@ -5,8 +5,8 @@ import { useAuth } from '../../context/auth/AuthContext'
 import { useWalletBalance } from '../../hooks/useWalletBalance'
 import AddMoneyDialog from '../AddMoneyDialog'
 
-const INK = '#182235'
-const ACCENT = '#D66F3D'
+const INK = '#0B3A78'
+const ACCENT = '#E31B23'
 
 interface WalletMenuProps {
   compactLabel?: string
@@ -45,7 +45,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
           boxShadow: compactLabel ? 'none' : `0 8px 18px ${alpha(INK, 0.05)}`,
           transition: 'all 0.2s ease',
           '&:hover': {
-            borderColor: compactLabel ? alpha('#7657ff', 0.5) : alpha(ACCENT, 0.24),
+            borderColor: compactLabel ? alpha(INK, 0.5) : alpha(ACCENT, 0.24),
             transform: 'translateY(-1px)',
           },
         }}
@@ -59,7 +59,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
             alignItems: 'center',
             justifyContent: 'center',
             bgcolor: compactLabel ? 'transparent' : alpha(ACCENT, 0.12),
-            color: compactLabel ? '#ff7a17' : ACCENT,
+            color: ACCENT,
             border: compactLabel ? 0 : `1px solid ${alpha(ACCENT, 0.14)}`,
             flexShrink: 0,
           }}
@@ -72,7 +72,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
             <Typography
               sx={{
                 fontSize: '0.64rem',
-                fontWeight: 800,
+                fontWeight: 600,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 color: alpha(INK, 0.46),
@@ -87,7 +87,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
             <Typography
               sx={{
                 fontSize: compactLabel ? '0.94rem' : '0.86rem',
-                fontWeight: 900,
+                fontWeight: 700,
                 color: compactLabel ? '#f8fafc' : INK,
                 letterSpacing: '-0.02em',
               }}

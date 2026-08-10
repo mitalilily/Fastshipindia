@@ -68,7 +68,7 @@ export default function QuickActions() {
   const surface = isDark ? '#151b23' : '#ffffff'
   const itemSurface = isDark ? '#101720' : '#fbfcfe'
   const border = isDark ? '#2a313a' : alpha('#172033', 0.1)
-  const accent = '#ff7a17'
+  const accent = '#E31B23'
 
   const handleOpen = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -124,7 +124,7 @@ export default function QuickActions() {
               ml: 0.75,
               color: 'inherit',
               fontSize: '0.86rem',
-              fontWeight: 850,
+              fontWeight: 600,
               whiteSpace: 'nowrap',
             }}
           >
@@ -165,7 +165,7 @@ export default function QuickActions() {
             borderBottom: `1px solid ${border}`,
           }}
         >
-          <Typography sx={{ color: ink, fontWeight: 900, fontSize: '0.95rem' }}>
+          <Typography sx={{ color: ink, fontWeight: 700, fontSize: '0.95rem' }}>
             Quick Actions
           </Typography>
         </Box>
@@ -230,7 +230,7 @@ export default function QuickActions() {
                   color: ink,
                   fontSize: '0.83rem',
                   lineHeight: 1.2,
-                  fontWeight: 850,
+                  fontWeight: 600,
                   textAlign: 'center',
                   whiteSpace: 'normal',
                 }}

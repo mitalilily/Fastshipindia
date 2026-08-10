@@ -70,12 +70,47 @@ export const useCourierDistribution = () => {
   })
 }
 
-export const useMerchantDashboardStats = () => {
+const DASHBOARD_CACHE_PREFIX = 'fastship-dashboard-cache:'
+
+const getDashboardCacheKey = (selectedDate?: string) =>
+  `${DASHBOARD_CACHE_PREFIX}${selectedDate || 'today'}`
+
+const readDashboardCache = (selectedDate?: string): MerchantDashboardStats | undefined => {
+  if (typeof window === 'undefined') return undefined
+
+  try {
+    const cached = window.sessionStorage.getItem(getDashboardCacheKey(selectedDate))
+    return cached ? (JSON.parse(cached) as MerchantDashboardStats) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export const useMerchantDashboardStats = (selectedDate?: string) => {
   return useQuery<MerchantDashboardStats, Error>({
-    queryKey: ['merchantDashboardStats'],
-    queryFn: getMerchantDashboardStats,
+    queryKey: ['merchantDashboardStats', selectedDate || 'today'],
+    queryFn: async () => {
+      const data = await getMerchantDashboardStats({
+        params: selectedDate ? { date: selectedDate } : undefined,
+      })
+
+      if (typeof window !== 'undefined') {
+        try {
+          window.sessionStorage.setItem(getDashboardCacheKey(selectedDate), JSON.stringify(data))
+        } catch {
+          // Storage can be unavailable in private browsing; React Query still caches in memory.
+        }
+      }
+
+      return data
+    },
+    initialData: () => readDashboardCache(selectedDate),
+    initialDataUpdatedAt: () => (readDashboardCache(selectedDate) ? Date.now() - 60_000 : undefined),
+    placeholderData: (previousData) => previousData,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    refetchOnWindowFocus: true,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   })
 }

@@ -64,7 +64,7 @@ export default function ActionItemsCard({ actions, formatCurrency }: ActionItems
             <MdNotificationsActive size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Action Required
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
@@ -93,7 +93,7 @@ export default function ActionItemsCard({ actions, formatCurrency }: ActionItems
             >
               <Stack direction="row" spacing={1.2} alignItems="center" justifyContent="space-between">
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontSize: '0.84rem', color: dashboardPalette.ink, fontWeight: 800 }}>
+                  <Typography sx={{ fontSize: '0.84rem', color: dashboardPalette.ink, fontWeight: 600 }}>
                     {item.title}
                   </Typography>
                   <Typography sx={{ fontSize: '0.75rem', color: dashboardPalette.muted, fontWeight: 500, mt: 0.2 }}>

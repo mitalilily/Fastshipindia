@@ -54,9 +54,27 @@ const widgetComponents: Record<string, React.ComponentType<any>> = {
   topDestinations: TopDestinationsCard,
 }
 
+const toLocalDateInput = (date = new Date()) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const escapeCsvCell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`
+
 export default function Dashboard() {
   const theme = useTheme()
-  const { data: stats, isLoading, error, refetch, isRefetching } = useMerchantDashboardStats()
+  const maxDate = toLocalDateInput()
+  const [selectedDate, setSelectedDate] = useState(maxDate)
+  const {
+    data: stats,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+    isPlaceholderData,
+  } = useMerchantDashboardStats(selectedDate)
   const { data: preferences } = useDashboardPreferences()
   const [ChartComponent, setChartComponent] = useState<
     typeof import('react-apexcharts').default | null
@@ -80,6 +98,50 @@ export default function Dashboard() {
   }
 
   const formatPercentage = (value: number) => `${value}%`
+
+  const exportAnalytics = () => {
+    if (!stats) return
+
+    const summaryRows = [
+      ['Analytics date', stats.asOfDate || selectedDate],
+      ['Total orders', stats.operational?.totalOrders || 0],
+      ['Delivered orders', stats.operational?.deliveredOrders || 0],
+      ['Delivery success rate', `${stats.operational?.deliverySuccessRate || 0}%`],
+      ['NDR rate', `${stats.operational?.ndrRate || 0}%`],
+      ['RTO rate', `${stats.operational?.rtoRate || 0}%`],
+      ['Average delivery time (days)', stats.operational?.avgDeliveryTime || 0],
+      ['Total revenue', stats.financial?.totalRevenue || 0],
+      ['COD remittance due', stats.financial?.codRemittanceDue || 0],
+      ['Average order value', stats.metrics?.avgOrderValue || 0],
+    ]
+
+    const revenueByDate = new Map(
+      (stats.charts?.revenueByDate30 || []).map((point) => [point.date, point.revenue]),
+    )
+    const trendRows = (stats.charts?.ordersByDate30 || []).map((point) => [
+      point.date,
+      point.orders,
+      revenueByDate.get(point.date) || 0,
+    ])
+    const csv = [
+      ['Metric', 'Value'],
+      ...summaryRows,
+      [],
+      ['Date', 'Orders', 'Revenue'],
+      ...trendRows,
+    ]
+      .map((row) => row.map(escapeCsvCell).join(','))
+      .join('\r\n')
+
+    const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `fastship-analytics-${stats.asOfDate || selectedDate}.csv`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
 
   if (isLoading) {
     return (
@@ -117,7 +179,7 @@ export default function Dashboard() {
         }}
       >
         <Box textAlign="center" sx={{ p: 4 }}>
-          <Typography variant="h5" fontWeight={800} color={brand.danger} gutterBottom>
+          <Typography variant="h5" fontWeight={600} color={brand.danger} gutterBottom>
             Connectivity Issue
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 3 }}>
@@ -199,7 +261,10 @@ export default function Dashboard() {
     actionItems: { actions, formatCurrency },
     performanceMetrics: { operational, formatPercentage },
     ordersTrend: {
-      chartData: charts.ordersByDate || [],
+      sevenDayOrders: charts.ordersByDate || [],
+      thirtyDayOrders: charts.ordersByDate30 || [],
+      sevenDayRevenue: charts.revenueByDate || [],
+      thirtyDayRevenue: charts.revenueByDate30 || [],
       ChartComponent,
     },
     financialHealth: {
@@ -336,9 +401,13 @@ export default function Dashboard() {
       >
         {/* Header with Refresh Button */}
         <DashboardHeader
-          isRefetching={isRefetching}
+          isRefetching={isRefetching || isPlaceholderData}
           onRefresh={() => refetch()}
           onCustomize={() => setCustomizeOpen(true)}
+          selectedDate={selectedDate}
+          maxDate={maxDate}
+          onDateChange={(value) => value && setSelectedDate(value)}
+          onExport={exportAnalytics}
         />
 
         {/* Render widgets based on preferences */}

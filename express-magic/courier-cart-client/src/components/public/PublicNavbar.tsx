@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { brandIdentity } from '../../theme/brand'
+import BrandLogo from '../brand/BrandLogo'
 
 type NavItem = {
   label: string
@@ -187,15 +188,11 @@ export default function PublicNavbar({
             textDecoration: 'none',
           }}
         >
-          <Box
-            component="img"
-            src={brandIdentity.logoSrc}
-            alt=""
+          <BrandLogo
+            compact
             sx={{
-              width: { xs: 38, lg: 48 },
-              height: { xs: 38, lg: 48 },
-              borderRadius: '50%',
-              objectFit: 'cover',
+              width: { xs: 58, lg: 68 },
+              height: { xs: 21, lg: 25 },
             }}
           />
           {brandIdentity.name}

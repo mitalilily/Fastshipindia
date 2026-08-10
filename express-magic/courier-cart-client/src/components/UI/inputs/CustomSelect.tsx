@@ -40,7 +40,7 @@ interface DropdownMenuProps {
 }
 
 const NAVY = '#0C3B80'
-const ORANGE = '#F57C00'
+const ORANGE = '#E31B23'
 export default function CustomSelect({
   label,
   items = [],

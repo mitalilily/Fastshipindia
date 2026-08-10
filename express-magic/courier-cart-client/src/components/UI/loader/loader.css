@@ -29,7 +29,7 @@
   inset: 0;
   width: 42%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #ff8a28 0%, #8fd4ff 100%);
+  background: linear-gradient(90deg, #0b3a78 0%, #e31b23 100%);
   animation: navigation-progress-slide 0.8s ease-in-out infinite;
 }
 

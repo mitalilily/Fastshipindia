@@ -53,8 +53,8 @@ const UserMenu = ({ compact = false }: UserMenuProps) => {
   const borderColor = isDark ? alpha('#f8fafc', 0.1) : alpha(INK, 0.08)
   const textColor = isDark ? '#f8fafc' : TEXT
   const mutedColor = isDark ? '#93a4ba' : TEXT_SECONDARY
-  const avatarBg = compact ? (isDark ? '#2b2760' : alpha('#7657ff', 0.1)) : INK
-  const avatarColor = compact ? (isDark ? '#f8fafc' : '#7657ff') : '#ffffff'
+  const avatarBg = compact ? (isDark ? alpha(INK, 0.42) : alpha(INK, 0.1)) : INK
+  const avatarColor = compact ? (isDark ? '#f8fafc' : INK) : '#ffffff'
 
   const { data: avatarUrl } = usePresignedDownloadUrls({
     keys: user?.companyInfo?.profilePicture,
@@ -132,7 +132,7 @@ const UserMenu = ({ compact = false }: UserMenuProps) => {
           color: avatarColor,
           boxShadow: compact ? 'none' : `0 8px 18px ${alpha(INK, 0.05)}`,
           '&:hover': {
-            bgcolor: compact ? (isDark ? alpha('#ffffff', 0.08) : alpha('#7657ff', 0.08)) : alpha(INK, 0.04),
+            bgcolor: compact ? (isDark ? alpha('#ffffff', 0.08) : alpha(INK, 0.08)) : alpha(INK, 0.04),
           },
         }}
       >
@@ -144,7 +144,7 @@ const UserMenu = ({ compact = false }: UserMenuProps) => {
             bgcolor: avatarBg,
             color: avatarColor,
             fontSize: compact ? '0.94rem' : '0.82rem',
-            fontWeight: 900,
+            fontWeight: 700,
             borderRadius: compact ? 1.5 : 2,
           }}
         >
@@ -179,7 +179,7 @@ const UserMenu = ({ compact = false }: UserMenuProps) => {
             bgcolor: panelMutedBg,
           }}
         >
-          <Typography sx={{ fontSize: '0.92rem', fontWeight: 900, color: textColor }} noWrap>
+          <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, color: textColor }} noWrap>
             {user?.companyInfo?.contactPerson || user?.name || 'FastShip User'}
           </Typography>
           <Typography sx={{ mt: 0.3, fontSize: '0.76rem', fontWeight: 600, color: mutedColor }} noWrap>
@@ -225,7 +225,7 @@ const UserMenu = ({ compact = false }: UserMenuProps) => {
                   primary={item.label}
                   primaryTypographyProps={{
                     fontSize: '0.84rem',
-                    fontWeight: 800,
+                    fontWeight: 600,
                     color: textColor,
                   }}
                 />
