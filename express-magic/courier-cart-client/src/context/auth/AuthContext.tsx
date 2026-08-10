@@ -21,6 +21,7 @@ import { useUserProfile } from '../../hooks/User/useUserProfile'
 import type { IUserProfileDB } from '../../types/user.types'
 import { getAppHashHref } from '../../utils/appNavigation'
 import { getCurrentAuthScope } from '../../utils/authQueryKeys'
+import { applyApprovedMerchantAccess } from '../../utils/approvedMerchant'
 import { emptyUserProfile } from '../../utils/utility'
 
 type SessionUser = Partial<IUserProfileDB>
@@ -165,7 +166,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     window.location.href = getAppHashHref('/login')
   }
 
-  const activeUser = (user ?? sessionUser ?? { ...emptyUserProfile }) as IUserProfileDB
+  const activeEmail = typeof window === 'undefined' ? null : sessionStorage.getItem('activeEmail')
+  const activeUser = applyApprovedMerchantAccess(
+    (user ?? sessionUser ?? { ...emptyUserProfile }) as Partial<IUserProfileDB>,
+    activeEmail,
+  )
   const hasResolvedUser = Boolean(user?.id || sessionUser?.id)
   const value: AuthCtx = {
     user: activeUser,

@@ -5,6 +5,7 @@ import { BRAND } from '../../config/brand'
 import { useAuth } from '../../context/auth/AuthContext'
 import { useRequestOtp, useVerifyOtp } from '../../hooks/useOTP'
 import { extractScreenOtp, type OtpResponseLike } from '../../utils/authOtp'
+import { applyApprovedMerchantAccess } from '../../utils/approvedMerchant'
 import { DEMO_OTP, isDemoLoginEnabled } from '../../utils/demoAuth'
 import { emptyUserProfile } from '../../utils/utility'
 import CustomIconLoadingButton from '../UI/button/CustomLoadingButton'
@@ -40,6 +41,17 @@ type Props = {
   onDebugOtpChange?: (otp: string) => void
   onEditEmail: () => void
 }
+
+type OtpApiError = {
+  response?: {
+    data?: {
+      error?: string
+    }
+  }
+}
+
+const getOtpError = (error: unknown, fallback: string) =>
+  (error as OtpApiError)?.response?.data?.error || fallback
 
 export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail }: Props) {
   const { setTokens, setUserId } = useAuth()
@@ -121,21 +133,24 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
     setError('')
 
     if (isDemoLogin && debugOtp && otp === debugOtp) {
-      const demoUser = {
-        ...emptyUserProfile,
-        id: 'local-demo-user',
-        userId: 'local-demo-user',
-        onboardingComplete: true,
-        profileComplete: true,
-        companyInfo: {
-          ...emptyUserProfile.companyInfo,
-          businessName: 'FastShip Demo',
-          brandName: 'FastShip',
-          contactPerson: 'Merchant',
-          contactEmail: email,
-          companyEmail: email,
+      const demoUser = applyApprovedMerchantAccess(
+        {
+          ...emptyUserProfile,
+          id: 'local-demo-user',
+          userId: 'local-demo-user',
+          onboardingComplete: true,
+          profileComplete: true,
+          companyInfo: {
+            ...emptyUserProfile.companyInfo,
+            businessName: 'FastShip Demo',
+            brandName: 'FastShip',
+            contactPerson: 'Merchant',
+            contactEmail: email,
+            companyEmail: email,
+          },
         },
-      }
+        email,
+      )
 
       sessionStorage.setItem('activeEmail', email)
       setUserId(demoUser.id)
@@ -148,11 +163,12 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
       {
         onSuccess: ({ token, refreshToken, user }) => {
           sessionStorage.setItem('activeEmail', email)
-          setUserId(user?.id)
-          setTokens(token, refreshToken, user)
+          const approvedUser = applyApprovedMerchantAccess(user, email)
+          setUserId(approvedUser.id)
+          setTokens(token, refreshToken, approvedUser)
         },
-        onError: (err: any) => {
-          const msg = err?.response?.data?.error || 'OTP verification failed'
+        onError: (error: unknown) => {
+          const msg = getOtpError(error, 'OTP verification failed')
           setError(msg)
 
           if (msg.toLowerCase().includes('otp expired')) {
@@ -199,7 +215,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
 
         toast.open({ message: 'Verification code generated again.', severity: 'success' })
       },
-      onError: (err: any) => {
+      onError: (error: unknown) => {
         if (isDemoLogin) {
           onDebugOtpChange?.(DEMO_OTP)
           setOtpDigits(DEMO_OTP.split(''))
@@ -208,10 +224,10 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
           return
         }
 
-        setError(err?.response?.data?.error || 'Failed to resend OTP')
+        setError(getOtpError(error, 'Failed to resend OTP'))
       },
     })
-  }, [email, resendOtp, resendEnabled, resending])
+  }, [email, onDebugOtpChange, resendOtp, resendEnabled, resending])
 
   return (
     <Stack component="form" onSubmit={handleSubmit} width="100%" mt={0} gap={1.25}>

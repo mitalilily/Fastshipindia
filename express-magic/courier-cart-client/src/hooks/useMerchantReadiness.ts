@@ -3,6 +3,7 @@ import { usePickupAddresses } from './Pickup/usePickupAddresses'
 import { useWalletBalance } from './useWalletBalance'
 import { usePaymentOptions } from './usePaymentOptions'
 import { useAuth } from '../context/auth/AuthContext'
+import { isApprovedMerchant } from '../utils/approvedMerchant'
 
 type CompanyInfoLike = {
   businessName?: string
@@ -40,11 +41,14 @@ const hasRequiredCompanyInfo = (companyInfo: CompanyInfoLike | null | undefined)
 export const useMerchantReadiness = () => {
   const { user, loading: authLoading } = useAuth()
   const isEmployee = user?.role === 'employee'
+  const hasApprovedMerchantAccess = isApprovedMerchant(user)
   const { data: pickupData, isLoading: pickupLoading } = usePickupAddresses(
     { page: 1, limit: 1 },
-    !isEmployee,
+    !isEmployee && !hasApprovedMerchantAccess,
   )
-  const { data: walletData, isLoading: walletLoading } = useWalletBalance(!isEmployee)
+  const { data: walletData, isLoading: walletLoading } = useWalletBalance(
+    !isEmployee && !hasApprovedMerchantAccess,
+  )
   const { data: paymentOptions, isLoading: paymentOptionsLoading } = usePaymentOptions()
 
   const walletBalance = Number(walletData?.data?.balance || 0)
@@ -57,7 +61,7 @@ export const useMerchantReadiness = () => {
 
   const checklist = useMemo(
     () =>
-      isEmployee
+      isEmployee || hasApprovedMerchantAccess
         ? []
         : [
             {
@@ -109,13 +113,21 @@ export const useMerchantReadiness = () => {
               actionLabel: 'Add Wallet Balance',
             },
           ],
-    [hasCompanyInfo, hasPickupAddress, isEmployee, requiredWalletBalance, user, walletBalance],
+    [
+      hasApprovedMerchantAccess,
+      hasCompanyInfo,
+      hasPickupAddress,
+      isEmployee,
+      requiredWalletBalance,
+      user,
+      walletBalance,
+    ],
   )
 
   const completedCount = checklist.filter((item) => item.done).length
   const totalCount = checklist.length
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100
-  const isReady = isEmployee || completedCount === totalCount
+  const isReady = isEmployee || hasApprovedMerchantAccess || completedCount === totalCount
   const firstIncompleteStep = checklist.find((item) => !item.done) || null
 
   return {
@@ -131,6 +143,8 @@ export const useMerchantReadiness = () => {
     assignedPlanId,
     isLoading:
       authLoading ||
-      (!isEmployee && (pickupLoading || walletLoading || paymentOptionsLoading)),
+      (!isEmployee &&
+        !hasApprovedMerchantAccess &&
+        (pickupLoading || walletLoading || paymentOptionsLoading)),
   }
 }
