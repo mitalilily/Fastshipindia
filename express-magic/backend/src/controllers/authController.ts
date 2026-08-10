@@ -3,6 +3,7 @@ import { Request, Response } from 'express'
 import { OAuth2Client } from 'google-auth-library'
 import path from 'path'
 import twilio from 'twilio'
+import * as bcrypt from 'bcryptjs'
 import {
   clearUserEmailToken,
   clearUserOtpByEmail,
@@ -10,6 +11,7 @@ import {
   createUserWithWallet,
   findUserByEmail,
   findUserById,
+  findUserByPhone,
   handleEmailVerificationRequest,
   markEmailVerified,
   saveRefreshToken,
@@ -74,11 +76,17 @@ const createOtpLoginUser = async (params: {
   email: string
   otp: string
   otpExpiresAt: Date
+  phone?: string
+  name?: string
+  passwordHash?: string
+  userType?: 'individual' | 'business'
 }) => {
   const [user] = await db
     .insert(users)
     .values({
       email: params.email,
+      phone: params.phone,
+      passwordHash: params.passwordHash,
       otp: params.otp,
       otpExpiresAt: params.otpExpiresAt,
       emailVerified: false,
@@ -108,18 +116,18 @@ const createOtpLoginUser = async (params: {
       monthlyOrderCount: '0-100',
       salesChannels: {},
       companyInfo: {
-        businessName: '',
-        brandName: '',
+        businessName: params.name ?? '',
+        brandName: params.userType === 'business' ? params.name ?? '' : '',
         city: '',
-        companyContactNumber: '',
+        companyContactNumber: params.phone ?? '',
         pincode: '',
         state: '',
         profilePicture: '',
         POCEmailVerified: false,
         POCPhoneVerified: false,
         companyAddress: '',
-        contactPerson: '',
-        contactNumber: '',
+        contactPerson: params.name ?? '',
+        contactNumber: params.phone ?? '',
         contactEmail: params.email,
         companyEmail: params.email,
         companyLogoUrl: '',
@@ -280,6 +288,84 @@ export const logoutOtherDevicesController = async (req: Request, res: Response):
     accessToken,
     refreshToken,
   })
+}
+
+// -------------------
+// Register merchant
+// -------------------
+export const registerMerchant = async (req: Request, res: Response): Promise<any> => {
+  const name = String(req.body?.name ?? '').trim()
+  const email = String(req.body?.email ?? '').trim().toLowerCase()
+  const phoneDigits = String(req.body?.phone ?? '').replace(/\D/g, '')
+  const localPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91')
+    ? phoneDigits.slice(2)
+    : phoneDigits
+  const phone = `+91${localPhone}`
+  const password = String(req.body?.password ?? '')
+  const userType = String(req.body?.userType ?? '').trim().toLowerCase()
+
+  if (!['individual', 'business'].includes(userType)) {
+    return res.status(400).json({ error: 'Select a valid user type.' })
+  }
+  if (name.length < 2 || name.length > 100) {
+    return res.status(400).json({ error: 'Enter your full name.' })
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address.' })
+  }
+  if (!/^\d{10}$/.test(localPhone)) {
+    return res.status(400).json({ error: 'Enter a valid 10-digit Indian phone number.' })
+  }
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)) {
+    return res.status(400).json({
+      error: 'Password must contain 8 characters, uppercase, lowercase, number and special character.',
+    })
+  }
+
+  try {
+    const [emailUser, phoneUser] = await Promise.all([
+      findUserByEmail(email),
+      findUserByPhone(phone),
+    ])
+
+    if (emailUser) {
+      return res.status(409).json({ error: 'An account with this email already exists. Please sign in.' })
+    }
+    if (phoneUser) {
+      return res.status(409).json({ error: 'An account with this phone number already exists.' })
+    }
+
+    const otp = generateOtp()
+    const otpExpiresAt = new Date(Date.now() + OTP_EXPIRY)
+    await createOtpLoginUser({
+      email,
+      phone,
+      name,
+      userType: userType as 'individual' | 'business',
+      passwordHash: await bcrypt.hash(password, 10),
+      otp,
+      otpExpiresAt,
+    })
+
+    const otpDeliveryMode = getAuthOtpDeliveryMode()
+    if (otpDeliveryMode === 'email' || otpDeliveryMode === 'both') {
+      try {
+        await sendVerificationEmail(email, otp)
+      } catch (emailError) {
+        if (otpDeliveryMode === 'email') throw emailError
+        console.warn('Registration email failed, continuing with on-screen OTP:', emailError)
+      }
+    }
+
+    return res.status(201).json({
+      message: 'Account created. Verify the code to continue.',
+      otp,
+      devOtp: otp,
+    })
+  } catch (error) {
+    console.error('Error registering merchant:', error)
+    return res.status(500).json({ error: 'Unable to create your account right now.' })
+  }
 }
 
 // -------------------

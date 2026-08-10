@@ -8,6 +8,7 @@ import {
   //   loginController,
   //   logoutController,
   refreshTokenController,
+  registerMerchant,
   requestEmailVerification,
   requestPasswordReset,
   requestOtp,
@@ -25,6 +26,7 @@ router.post('/admin/change-password', requireAuth, isAdminMiddleware, adminChang
 
 router.post('/request-otp', requestOtp)
 router.post('/verify-otp', verifyOtp)
+router.post('/register', registerMerchant)
 
 router.post('/request-password-login', requestEmailVerification)
 router.post('/request-password-reset', requestPasswordReset)

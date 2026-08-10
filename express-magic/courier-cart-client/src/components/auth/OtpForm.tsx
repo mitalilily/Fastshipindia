@@ -6,7 +6,7 @@ import { useAuth } from '../../context/auth/AuthContext'
 import { useRequestOtp, useVerifyOtp } from '../../hooks/useOTP'
 import { extractScreenOtp, type OtpResponseLike } from '../../utils/authOtp'
 import { applyApprovedMerchantAccess } from '../../utils/approvedMerchant'
-import { DEMO_OTP, isDemoLoginEnabled } from '../../utils/demoAuth'
+import { DEMO_OTP, getRegistrationDraft, isDemoLoginEnabled } from '../../utils/demoAuth'
 import { emptyUserProfile } from '../../utils/utility'
 import CustomIconLoadingButton from '../UI/button/CustomLoadingButton'
 import { toast } from '../UI/Toast'
@@ -133,6 +133,7 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
     setError('')
 
     if (isDemoLogin && debugOtp && otp === debugOtp) {
+      const registrationDraft = getRegistrationDraft()
       const demoUser = applyApprovedMerchantAccess(
         {
           ...emptyUserProfile,
@@ -142,9 +143,11 @@ export default function OtpForm({ email, debugOtp, onDebugOtpChange, onEditEmail
           profileComplete: true,
           companyInfo: {
             ...emptyUserProfile.companyInfo,
-            businessName: 'FastShip Demo',
-            brandName: 'FastShip',
-            contactPerson: 'Merchant',
+            businessName: registrationDraft?.name || 'FastShip Demo',
+            brandName: registrationDraft?.userType === 'business' ? registrationDraft.name : 'FastShip',
+            contactPerson: registrationDraft?.name || 'Merchant',
+            companyContactNumber: registrationDraft?.phone || '',
+            contactNumber: registrationDraft?.phone || '',
             contactEmail: email,
             companyEmail: email,
           },

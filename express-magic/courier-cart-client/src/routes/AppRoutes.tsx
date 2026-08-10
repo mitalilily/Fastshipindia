@@ -14,6 +14,7 @@ import GlobalRedirectHandler from './WalletRedirectHandler'
 const Layout = lazy(() => import('../components/UI/Layout'))
 const CreateOrderWrapper = lazy(() => import('../components/orders/CreateOrderWrapper'))
 const Login = lazy(() => import('../pages/auth/Login'))
+const Register = lazy(() => import('../pages/auth/Register'))
 const FastShipLanding = lazy(() => import('../pages/marketing/FastShipLanding'))
 
 // Onboarding & Dashboard
@@ -201,6 +202,9 @@ export default function AppRoutes() {
           {/* public */}
           <Route path="/" element={<FastShipLanding />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/tracking" element={<PublicTrackingRoute />} />
           <Route path="/tracking/:awb" element={<PublicTrackingRoute />} />
           <Route path="/weight-calculator" element={<WeightCalculator />} />

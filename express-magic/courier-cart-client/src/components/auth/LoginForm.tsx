@@ -1,5 +1,6 @@
-import { alpha, Box, Stack, Typography } from '@mui/material'
+import { alpha, Box, Link, Stack, Typography } from '@mui/material'
 import { FiBarChart2, FiCheckCircle, FiMapPin, FiShield, FiTruck } from 'react-icons/fi'
+import { Link as RouterLink } from 'react-router-dom'
 import { BRAND } from '../../config/brand'
 import PhoneForm from './PhoneForm'
 
@@ -300,6 +301,13 @@ export default function LoginForm() {
             </Box>
 
             <PhoneForm />
+
+            <Typography sx={{ mt: 1, color: muted, fontSize: 13.5, textAlign: 'center' }}>
+              New to FastShip?{' '}
+              <Link component={RouterLink} to="/register" sx={{ color: teal, fontWeight: 900 }}>
+                Create account
+              </Link>
+            </Typography>
 
             <Box
               sx={{

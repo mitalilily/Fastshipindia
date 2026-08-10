@@ -7,6 +7,21 @@ export type RequestOtpResponse = {
   otp?: string
 }
 
+export type RegisterMerchantPayload = {
+  userType: 'individual' | 'business'
+  name: string
+  email: string
+  phone: string
+  password: string
+}
+
+export const registerMerchantApi = async (
+  payload: RegisterMerchantPayload,
+): Promise<RequestOtpResponse> => {
+  const { data } = await axiosInstance.post('/auth/register', payload)
+  return data
+}
+
 export const requestOtpApi = async (email: string): Promise<RequestOtpResponse> => {
   const { data } = await axiosInstance.post("/auth/request-otp", { email });
   return data;
