@@ -69,7 +69,7 @@ export default function RevenueByTypeChart({
             <MdMonetizationOn size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Revenue by Type
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>

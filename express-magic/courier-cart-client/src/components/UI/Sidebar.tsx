@@ -283,7 +283,7 @@ export default function Sidebar({
     bgcolor: activeBg,
     color: activeText,
     '& .MuiListItemIcon-root': { color: activeText },
-    '& .MuiListItemText-primary': { fontWeight: 800 },
+    '& .MuiListItemText-primary': { fontWeight: 600 },
     '&::before': {
       content: '""',
       position: 'absolute',
@@ -330,7 +330,7 @@ export default function Sidebar({
             primary={item.text}
             primaryTypographyProps={{
               fontSize: temporary ? '1rem' : '0.9rem',
-              fontWeight: active ? 800 : 650,
+              fontWeight: active ? 650 : 500,
               letterSpacing: '-0.01em',
             }}
           />
@@ -387,7 +387,7 @@ export default function Sidebar({
                       primary={sub.text}
                       primaryTypographyProps={{
                         fontSize: '0.88rem',
-                        fontWeight: subActive ? 800 : 650,
+                        fontWeight: subActive ? 650 : 500,
                       }}
                     />
                   </ListItemButton>
@@ -466,7 +466,7 @@ export default function Sidebar({
             sx={{
               color: WHITE,
               fontSize: temporary ? '1.28rem' : '1.08rem',
-              fontWeight: 900,
+              fontWeight: 700,
               letterSpacing: '-0.05em',
               whiteSpace: 'nowrap',
             }}
@@ -502,7 +502,7 @@ export default function Sidebar({
                     mb: temporary ? 0.8 : 0.5,
                     color: MUTED,
                     fontSize: temporary ? '0.82rem' : '0.72rem',
-                    fontWeight: 850,
+                    fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: 0,
                   }}
@@ -541,7 +541,7 @@ export default function Sidebar({
                 bgcolor: initialsBg,
                 border: `1px solid ${initialsBorder}`,
                 fontSize: '0.9rem',
-                fontWeight: 900,
+                fontWeight: 700,
                 flexShrink: 0,
               }}
             >
@@ -549,7 +549,7 @@ export default function Sidebar({
             </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography
-                sx={{ color: WHITE, fontWeight: 850, fontSize: temporary ? '0.98rem' : '0.88rem' }}
+                sx={{ color: WHITE, fontWeight: 600, fontSize: temporary ? '0.98rem' : '0.88rem' }}
                 noWrap
               >
                 {displayName}

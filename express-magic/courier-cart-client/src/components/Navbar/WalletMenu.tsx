@@ -72,7 +72,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
             <Typography
               sx={{
                 fontSize: '0.64rem',
-                fontWeight: 800,
+                fontWeight: 600,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 color: alpha(INK, 0.46),
@@ -87,7 +87,7 @@ const WalletMenu = ({ compactLabel }: WalletMenuProps) => {
             <Typography
               sx={{
                 fontSize: compactLabel ? '0.94rem' : '0.86rem',
-                fontWeight: 900,
+                fontWeight: 700,
                 color: compactLabel ? '#f8fafc' : INK,
                 letterSpacing: '-0.02em',
               }}

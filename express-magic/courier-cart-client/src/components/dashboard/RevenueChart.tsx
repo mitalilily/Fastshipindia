@@ -71,7 +71,7 @@ export default function RevenueChart({ chartData, ChartComponent, formatCurrency
             <MdTrendingUp size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Revenue Trend
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>

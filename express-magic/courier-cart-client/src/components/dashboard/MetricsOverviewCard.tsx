@@ -42,7 +42,7 @@ export default function MetricsOverviewCard({ metrics, formatCurrency }: Metrics
             <MdAnalytics size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Key Metrics
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
@@ -78,11 +78,11 @@ export default function MetricsOverviewCard({ metrics, formatCurrency }: Metrics
                   >
                     {metric.icon}
                   </Box>
-                  <Typography sx={{ fontSize: '0.74rem', fontWeight: 800, color: dashboardPalette.muted, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontSize: '0.74rem', fontWeight: 500, color: dashboardPalette.muted, lineHeight: 1.2 }}>
                     {metric.title}
                   </Typography>
                 </Stack>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 900, color: dashboardPalette.ink, overflowWrap: 'anywhere' }}>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: dashboardPalette.ink, overflowWrap: 'anywhere' }}>
                   {metric.value}
                 </Typography>
               </Box>

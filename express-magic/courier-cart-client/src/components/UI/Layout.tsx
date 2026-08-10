@@ -1,11 +1,31 @@
-import { Box, Container, Drawer, Stack, useMediaQuery, useTheme } from '@mui/material'
+import { Box, CircularProgress, Container, Drawer, Stack, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
 import { DRAWER_WIDTH } from '../../utils/constants'
 import Navbar from '../Navbar/Navbar'
 import KeyboardShortcuts from './keyboard/KeyboardShortcuts'
-import FullScreenLoader from './loader/FullScreenLoader'
 import Sidebar, { COLLAPSED_WIDTH, DESKTOP_SIDEBAR_WIDTH } from './Sidebar'
+
+function RouteContentLoader() {
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      sx={{
+        minHeight: { xs: 240, md: 320 },
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      <Stack alignItems="center" spacing={1.2}>
+        <CircularProgress size={30} thickness={4} sx={{ color: '#ff7a17' }} />
+        <Typography sx={{ color: 'text.secondary', fontSize: '0.82rem', fontWeight: 500 }}>
+          Loading workspace…
+        </Typography>
+      </Stack>
+    </Box>
+  )
+}
 
 export default function Layout() {
   const theme = useTheme()
@@ -140,7 +160,7 @@ export default function Layout() {
               pb: { xs: 1.5, md: 2 },
               height: '100%',
               minHeight: 0,
-              overscrollBehavior: 'auto',
+              overscrollBehavior: 'contain',
               scrollbarGutter: 'stable',
               WebkitOverflowScrolling: 'touch',
             }}
@@ -154,10 +174,8 @@ export default function Layout() {
                 overflowX: 'visible',
               }}
             >
-              <Suspense fallback={<FullScreenLoader />}>
-                <Box key={routeContentKey} sx={{ display: 'contents' }}>
-                  {outlet}
-                </Box>
+              <Suspense fallback={<RouteContentLoader />}>
+                <Box sx={{ display: 'contents' }}>{outlet}</Box>
               </Suspense>
             </Container>
           </Box>

@@ -118,7 +118,7 @@ export default function Home() {
                 <TbShieldCheck size={22} />
               </Box>
               <Box>
-                <Typography sx={{ color: ORANGE, fontWeight: 900, fontSize: '1.05rem' }}>
+                <Typography sx={{ color: ORANGE, fontWeight: 700, fontSize: '1.05rem' }}>
                   Complete Your KYC
                 </Typography>
                 <Typography sx={{ color: dim, fontWeight: 600 }}>
@@ -137,7 +137,7 @@ export default function Home() {
                 borderRadius: 2,
                 px: 2.6,
                 py: 1.1,
-                fontWeight: 900,
+                fontWeight: 700,
                 textTransform: 'none',
                 '&:hover': { bgcolor: '#6547ea' },
               }}
@@ -171,7 +171,7 @@ export default function Home() {
         ) : null}
 
         <Box>
-          <Typography sx={{ color: text, fontSize: { xs: '1.55rem', md: '1.35rem' }, fontWeight: 900 }}>
+          <Typography sx={{ color: text, fontSize: { xs: '1.55rem', md: '1.35rem' }, fontWeight: 700 }}>
             {greeting}, {displayName}!
           </Typography>
           <Typography sx={{ color: muted, mt: 0.3, fontSize: { xs: '1rem', md: '0.9rem' } }}>
@@ -209,14 +209,14 @@ export default function Home() {
             >
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                 <Box>
-                  <Typography sx={{ color: dim, fontWeight: 700 }}>{item.label}</Typography>
+                  <Typography sx={{ color: dim, fontWeight: 500 }}>{item.label}</Typography>
                   <Typography
-                    sx={{ color: text, fontSize: { xs: '1.75rem', md: '1.5rem' }, lineHeight: 1.1, fontWeight: 900 }}
+                    sx={{ color: text, fontSize: { xs: '1.75rem', md: '1.5rem' }, lineHeight: 1.1, fontWeight: 700 }}
                   >
                     {item.value}
                   </Typography>
                   {item.action ? (
-                    <Typography sx={{ color: PURPLE, mt: 0.8, fontWeight: 800, fontSize: '0.86rem' }}>
+                    <Typography sx={{ color: PURPLE, mt: 0.8, fontWeight: 600, fontSize: '0.86rem' }}>
                       {item.action}
                     </Typography>
                   ) : null}
@@ -231,11 +231,11 @@ export default function Home() {
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={{ xs: 2.2, md: 1.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <TbShieldCheck color={PURPLE} />
-              <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.1rem' }}>
+              <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.1rem' }}>
                 Complete Your Profile
               </Typography>
             </Stack>
-            <Typography sx={{ color: PURPLE, fontWeight: 900 }}>{progress || 20}%</Typography>
+            <Typography sx={{ color: PURPLE, fontWeight: 700 }}>{progress || 20}%</Typography>
           </Stack>
           <LinearProgress
             variant="determinate"
@@ -291,7 +291,7 @@ export default function Home() {
                   <Typography
                     sx={{
                       color: step.done ? alpha(text, 0.6) : text,
-                      fontWeight: 850,
+                      fontWeight: 600,
                       textDecoration: step.done ? 'line-through' : 'none',
                     }}
                     noWrap
@@ -312,7 +312,7 @@ export default function Home() {
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" spacing={1.4} alignItems="center">
                 <TbChartBar color={PURPLE} />
-                <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem' }}>
+                <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.08rem' }}>
                   Orders by Status
                 </Typography>
               </Stack>
@@ -325,7 +325,7 @@ export default function Home() {
           </Box>
 
           <Box sx={{ ...cardSx, p: { xs: 3, md: 2 } }}>
-            <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem', mb: 2 }}>
+            <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.08rem', mb: 2 }}>
               Quick Actions
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.2 }}>
@@ -363,7 +363,7 @@ export default function Home() {
                     {item.icon}
                   </Box>
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.02rem' }} noWrap>
+                    <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.02rem' }} noWrap>
                       {item.title}
                     </Typography>
                     <Typography sx={{ color: muted, fontSize: '0.84rem' }} noWrap>
@@ -378,16 +378,16 @@ export default function Home() {
 
         <Box sx={{ ...cardSx, minHeight: { xs: 386, md: 330 }, p: { xs: 3, md: 2 } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography sx={{ color: text, fontWeight: 900, fontSize: '1.08rem' }}>
+            <Typography sx={{ color: text, fontWeight: 700, fontSize: '1.08rem' }}>
               Recent Orders
             </Typography>
-            <Typography onClick={() => navigate('/orders/list')} sx={{ color: PURPLE, fontWeight: 800, cursor: 'pointer' }}>
+            <Typography onClick={() => navigate('/orders/list')} sx={{ color: PURPLE, fontWeight: 600, cursor: 'pointer' }}>
               View all {'\u2192'}
             </Typography>
           </Stack>
           <Stack alignItems="center" justifyContent="center" sx={{ minHeight: { xs: 300, md: 246 } }}>
             <TbCube size={32} color={PURPLE} />
-            <Typography sx={{ color: text, mt: 2, fontWeight: 900, fontSize: '1.05rem' }}>
+            <Typography sx={{ color: text, mt: 2, fontWeight: 700, fontSize: '1.05rem' }}>
               No orders yet
             </Typography>
             <Typography sx={{ color: muted, mt: 0.7 }}>Create your first order to start shipping.</Typography>
@@ -401,7 +401,7 @@ export default function Home() {
                 color: '#ffffff',
                 borderRadius: 2,
                 textTransform: 'none',
-                fontWeight: 900,
+                fontWeight: 700,
                 px: 2.6,
                 '&:hover': { bgcolor: '#6547ea' },
               }}

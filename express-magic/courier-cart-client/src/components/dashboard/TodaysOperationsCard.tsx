@@ -27,7 +27,7 @@ export default function TodaysOperationsCard({ todayOps }: TodaysOperationsCardP
             <TbTruckDelivery size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Today's Operations
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
@@ -48,10 +48,10 @@ export default function TodaysOperationsCard({ todayOps }: TodaysOperationsCardP
                   minHeight: 92,
                 }}
               >
-                <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted, fontWeight: 800 }}>
+                <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted, fontWeight: 500 }}>
                   {op.label}
                 </Typography>
-                <Typography sx={{ mt: 0.8, fontSize: '1.45rem', fontWeight: 900, color: dashboardPalette.ink }}>
+                <Typography sx={{ mt: 0.8, fontSize: '1.45rem', fontWeight: 700, color: dashboardPalette.ink }}>
                   {op.value}
                 </Typography>
               </Box>

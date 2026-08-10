@@ -124,7 +124,7 @@ export default function QuickActions() {
               ml: 0.75,
               color: 'inherit',
               fontSize: '0.86rem',
-              fontWeight: 850,
+              fontWeight: 600,
               whiteSpace: 'nowrap',
             }}
           >
@@ -165,7 +165,7 @@ export default function QuickActions() {
             borderBottom: `1px solid ${border}`,
           }}
         >
-          <Typography sx={{ color: ink, fontWeight: 900, fontSize: '0.95rem' }}>
+          <Typography sx={{ color: ink, fontWeight: 700, fontSize: '0.95rem' }}>
             Quick Actions
           </Typography>
         </Box>
@@ -230,7 +230,7 @@ export default function QuickActions() {
                   color: ink,
                   fontSize: '0.83rem',
                   lineHeight: 1.2,
-                  fontWeight: 850,
+                  fontWeight: 600,
                   textAlign: 'center',
                   whiteSpace: 'normal',
                 }}

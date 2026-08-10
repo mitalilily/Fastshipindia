@@ -34,7 +34,7 @@ export default function QuickActionsCard() {
             <MdLocalShipping size={20} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: dashboardPalette.ink }}>
+            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Quick Actions
             </Typography>
             <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
@@ -86,7 +86,7 @@ export default function QuickActionsCard() {
                     <Typography
                       sx={{
                         fontSize: '0.78rem',
-                        fontWeight: 800,
+                        fontWeight: 600,
                         color,
                         lineHeight: 1.2,
                         overflowWrap: 'anywhere',

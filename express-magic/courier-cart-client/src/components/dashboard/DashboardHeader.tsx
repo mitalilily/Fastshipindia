@@ -1,18 +1,26 @@
-import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material'
 import { alpha } from '@mui/material/styles'
-import { MdDashboardCustomize, MdRefresh } from 'react-icons/md'
+import { MdDashboardCustomize, MdDownload, MdRefresh } from 'react-icons/md'
 import { dashboardButtonSx, dashboardIconSx, dashboardPalette } from './dashboardStyles'
 
 interface DashboardHeaderProps {
   isRefetching: boolean
   onRefresh: () => void
   onCustomize?: () => void
+  selectedDate: string
+  maxDate: string
+  onDateChange: (value: string) => void
+  onExport: () => void
 }
 
 export default function DashboardHeader({
   isRefetching,
   onRefresh,
   onCustomize,
+  selectedDate,
+  maxDate,
+  onDateChange,
+  onExport,
 }: DashboardHeaderProps) {
   return (
     <Box
@@ -50,7 +58,7 @@ export default function DashboardHeader({
             <Typography
               sx={{
                 fontSize: { xs: '1.35rem', md: '1.8rem' },
-                fontWeight: 900,
+                fontWeight: 700,
                 background: `linear-gradient(90deg, ${dashboardPalette.ink} 0%, ${dashboardPalette.orange} 100%)`,
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
@@ -65,7 +73,40 @@ export default function DashboardHeader({
           </Box>
         </Stack>
 
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={1}
+          flexWrap="wrap"
+          useFlexGap
+          sx={{ width: { xs: '100%', md: 'auto' }, alignItems: 'center' }}
+        >
+          <TextField
+            type="date"
+            size="small"
+            value={selectedDate}
+            onChange={(event) => onDateChange(event.target.value)}
+            inputProps={{ max: maxDate, 'aria-label': 'Analytics date' }}
+            sx={{
+              width: { xs: '100%', sm: 158 },
+              '& .MuiInputBase-root': { minHeight: 38, bgcolor: dashboardPalette.tile },
+              '& input': { py: 0.8, fontSize: '0.82rem', fontWeight: 500 },
+            }}
+          />
+
+          <Button
+            onClick={onExport}
+            variant="outlined"
+            startIcon={<MdDownload size={18} />}
+            sx={{
+              ...dashboardButtonSx,
+              flex: { xs: 1, sm: '0 0 auto' },
+              borderColor: alpha(dashboardPalette.blue, 0.28),
+              color: dashboardPalette.blue,
+              backgroundColor: dashboardPalette.tile,
+            }}
+          >
+            Export CSV
+          </Button>
           {onCustomize && (
             <Button
               onClick={onCustomize}
@@ -73,6 +114,7 @@ export default function DashboardHeader({
               startIcon={<MdDashboardCustomize size={18} />}
               sx={{
                 ...dashboardButtonSx,
+                flex: { xs: 1, sm: '0 0 auto' },
                 borderColor: alpha(dashboardPalette.orange, 0.32),
                 color: dashboardPalette.orangeDark,
                 backgroundColor: dashboardPalette.tile,
@@ -99,6 +141,7 @@ export default function DashboardHeader({
             }
             sx={{
               ...dashboardButtonSx,
+              flex: { xs: 1, sm: '0 0 auto' },
               background: `linear-gradient(135deg, ${dashboardPalette.orange} 0%, #FFB15A 100%)`,
               color: '#FFFFFF',
               '&:hover': {

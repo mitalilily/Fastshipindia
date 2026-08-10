@@ -86,7 +86,7 @@ export default function QuickStatsCards({
             <CardContent sx={{ p: 2.2 }}>
               <Stack spacing={1.6}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                  <Typography sx={{ fontSize: '0.84rem', fontWeight: 800, color: dashboardPalette.ink }}>
+                  <Typography sx={{ fontSize: '0.84rem', fontWeight: 600, color: dashboardPalette.ink }}>
                     {stat.title}
                   </Typography>
                   <Box sx={dashboardIconSx(stat.color)}>{stat.icon}</Box>
@@ -96,7 +96,7 @@ export default function QuickStatsCards({
                   <Typography
                     sx={{
                       fontSize: { xs: '1.45rem', md: '1.65rem' },
-                      fontWeight: 900,
+                      fontWeight: 700,
                       color: dashboardPalette.ink,
                       lineHeight: 1.05,
                     }}
@@ -109,7 +109,7 @@ export default function QuickStatsCards({
                         stat.subtitle.includes('Recharge') || stat.subtitle.includes('pending')
                           ? dashboardPalette.red
                           : dashboardPalette.green,
-                      fontWeight: 700,
+                      fontWeight: 500,
                       fontSize: '0.76rem',
                       mt: 0.6,
                     }}

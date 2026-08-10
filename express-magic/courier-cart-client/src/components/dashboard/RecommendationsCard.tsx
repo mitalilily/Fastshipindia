@@ -43,7 +43,7 @@ export default function RecommendationsCard({ recommendations }: Recommendations
           >
             <MdSpeed size={20} />
           </Box>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: '#172B4D', letterSpacing: -0.2 }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: '#172B4D', letterSpacing: -0.2 }}>
             Optimization Tips
           </Typography>
         </Stack>
@@ -72,7 +72,7 @@ export default function RecommendationsCard({ recommendations }: Recommendations
                   borderRadius: 1,
                   textTransform: 'none',
                   fontSize: '0.75rem',
-                  fontWeight: 800,
+                  fontWeight: 600,
                   bgcolor: DE_BLUE,
                   color: '#fff',
                   boxShadow: `0 4px 12px ${alpha(DE_BLUE, 0.2)}`,

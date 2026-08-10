@@ -67,7 +67,7 @@ export const dashboardButtonSx = {
   px: 1.8,
   boxShadow: 'none',
   textTransform: 'none',
-  fontWeight: 600,
+  fontWeight: 500,
   '&:hover': {
     boxShadow: `0 12px 26px ${alpha(dashboardPalette.orange, 0.16)}`,
   },
