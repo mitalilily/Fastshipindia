@@ -2,30 +2,22 @@ import {
   Box,
   Button,
   Flex,
-  Grid,
   HStack,
   Icon,
-  Text,
+  Input,
+  InputGroup,
+  InputLeftElement,
   Select,
+  Stack,
+  Text,
+  useColorModeValue,
   useToast,
 } from '@chakra-ui/react'
-import MetricTile from 'components/Admin/MetricTile'
-import PageHeader from 'components/Admin/PageHeader'
 import Card from 'components/Card/Card'
-import CardBody from 'components/Card/CardBody'
 import OrdersTable from 'components/Tables/OrdersTable'
-import TableFilters from 'components/Tables/TableFilters'
 import { useOrders } from 'hooks/useOrders'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  FiAlertTriangle,
-  FiCheckCircle,
-  FiDownload,
-  FiPackage,
-  FiRefreshCw,
-  FiTruck,
-  FiXCircle,
-} from 'react-icons/fi'
+import { FiChevronDown, FiDownload, FiPackage, FiPlus, FiSearch } from 'react-icons/fi'
 import { useLocation } from 'react-router-dom'
 import { exportOrdersToCSV } from 'services/order.service'
 
@@ -44,59 +36,39 @@ const Orders = () => {
   })
   const [isExporting, setIsExporting] = useState(false)
 
-  const { data: ordersData, isLoading, isFetching, refetch } = useOrders(page, limit, filters)
+  const { data: ordersData, isLoading, isFetching } = useOrders(page, limit, filters)
   const toast = useToast()
 
   useEffect(() => {
     const nextSearch = new URLSearchParams(location.search).get('search') || ''
-    setFilters((prev) => {
-      if (prev.search === nextSearch) return prev
-      return {
-        ...prev,
-        search: nextSearch,
-      }
-    })
+    setFilters((prev) => (prev.search === nextSearch ? prev : { ...prev, search: nextSearch }))
     setPage(1)
   }, [location.search])
 
-  // Calculate statistics
+  const panelBg = useColorModeValue('#FFFFFF', '#161B22')
+  const borderColor = useColorModeValue('#E2E8F0', '#30363D')
+  const textColor = useColorModeValue('#0F172A', '#E6EDF3')
+  const mutedColor = useColorModeValue('#64748B', '#8B949E')
+  const inputBg = useColorModeValue('#FFFFFF', '#161B22')
+  const totalCount = ordersData?.totalCount || 0
+
   const stats = useMemo(() => {
     const orders = ordersData?.orders || []
     return {
-      total: ordersData?.totalCount || 0,
-      pending: orders.filter((o) => o.order_status === 'pending').length,
-      shipped: orders.filter(
-        (o) => o.order_status === 'shipment_created' || o.order_status === 'in_transit',
-      ).length,
-      ndr: orders.filter((o) => ['ndr', 'undelivered'].includes(o.order_status)).length,
+      total: totalCount,
+      inTransit: orders.filter((o) => ['shipment_created', 'in_transit', 'pickup_initiated'].includes(o.order_status)).length,
       delivered: orders.filter((o) => o.order_status === 'delivered').length,
       cancelled: orders.filter((o) => o.order_status === 'cancelled').length,
-      cancellationRequested: orders.filter((o) => o.order_status === 'cancellation_requested')
-        .length,
+      rto: orders.filter((o) => String(o.order_status || '').includes('rto')).length,
+      revenue: orders.reduce((sum, order) => sum + Number(order.order_amount || 0), 0),
     }
-  }, [ordersData])
-
-  const handleStatusFilter = (statusValue = '') => {
-    setFilters((prev) => ({
-      ...prev,
-      status: statusValue,
-    }))
-    setPage(1)
-  }
-
-  const isStatusActive = (statusValue = '') => filters.status === statusValue
+  }, [ordersData, totalCount])
 
   const handleExport = async () => {
     try {
       setIsExporting(true)
       await exportOrdersToCSV(filters)
-      toast({
-        title: 'Export successful',
-        description: 'Orders have been exported to CSV',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      })
+      toast({ title: 'Orders exported', status: 'success', duration: 2500, isClosable: true })
     } catch (error) {
       toast({
         title: 'Export failed',
@@ -110,211 +82,122 @@ const Orders = () => {
     }
   }
 
-  const filterOptions = [
-    {
-      key: 'search',
-      label: 'Search',
-      type: 'search',
-      placeholder: 'Search by Order ID, AWB, or Customer...',
-    },
-    {
-      key: 'status',
-      label: 'Order Status',
-      type: 'select',
-      placeholder: 'All Statuses',
-      options: [
-        { value: 'pending', label: 'Pending' },
-        { value: 'shipment_created', label: 'Shipment Created' },
-        { value: 'in_transit', label: 'In Transit' },
-        { value: 'out_for_delivery', label: 'Out for Delivery' },
-        { value: 'ndr', label: 'NDR' },
-        { value: 'undelivered', label: 'Undelivered' },
-        { value: 'delivered', label: 'Delivered' },
-        { value: 'cancellation_requested', label: 'Cancellation Requested' },
-        { value: 'cancelled', label: 'Cancelled' },
-        { value: 'rto', label: 'RTO' },
-        { value: 'rto_in_transit', label: 'RTO In Transit' },
-        { value: 'rto_delivered', label: 'RTO Delivered' },
-      ],
-    },
-    {
-      key: 'fromDate',
-      label: 'From Date',
-      type: 'date',
-      placeholder: 'Start Date',
-    },
-    {
-      key: 'toDate',
-      label: 'To Date',
-      type: 'date',
-      placeholder: 'End Date',
-    },
-  ]
+  const updateFilter = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+    setPage(1)
+  }
 
   return (
-    <Box pt={{ base: '120px', md: '75px' }}>
-      <Box mb={6}>
-        <PageHeader
-          eyebrow="Orders"
-          title="Shipment desk for every live order"
-          description="Review order flow, surface risky shipments early and move from investigation to action without leaving the queue."
-          meta={[
-            { label: 'Total orders', value: stats.total.toLocaleString() },
-            { label: 'Pending', value: stats.pending.toLocaleString() },
-            { label: 'Delivered', value: stats.delivered.toLocaleString() },
-          ]}
-          actions={
-            <HStack spacing={3} flexWrap="wrap">
-              <Button
-                leftIcon={<FiRefreshCw />}
-                onClick={() => refetch()}
-                isLoading={isFetching}
-                variant="outline"
-                size="sm"
-                borderRadius="14px"
-              >
-                Refresh
-              </Button>
-              <Button
-                leftIcon={<FiDownload />}
-                onClick={handleExport}
-                isLoading={isExporting}
-                loadingText="Exporting..."
-                bg="brand.500"
-                color="white"
-                size="sm"
-                borderRadius="14px"
-                _hover={{ bg: 'brand.600' }}
-              >
-                Export CSV
-              </Button>
-            </HStack>
-          }
-        />
-      </Box>
+    <Box pt={{ base: '100px', md: '92px' }}>
+      <Card bg={panelBg} borderColor={borderColor} borderWidth="1px" borderRadius="20px" p="26px" mb="20px" boxShadow="none">
+        <Flex justify="space-between" align={{ base: 'flex-start', xl: 'center' }} gap={5} wrap="wrap">
+          <HStack spacing={4}>
+            <Flex w="46px" h="46px" borderRadius="14px" bg="rgba(108, 92, 231, 0.16)" align="center" justify="center">
+              <Icon as={FiPackage} color="#6C5CE7" boxSize={5} />
+            </Flex>
+            <Box>
+              <Text color={textColor} fontSize="22px" fontWeight="800">
+                Orders
+              </Text>
+              <Text color={mutedColor} fontSize="15px">
+                View and manage all orders across users
+              </Text>
+            </Box>
+          </HStack>
 
-      <Grid
-        templateColumns={{
-          base: '1fr',
-          md: 'repeat(2, 1fr)',
-          xl: 'repeat(6, 1fr)',
-        }}
-        gap={4}
-        mb={5}
-      >
-        <MetricTile
-          label="Total"
-          value={stats.total}
-          muted="All orders in current result set"
-          icon={<Icon as={FiPackage} w={5} h={5} />}
-          onClick={() => handleStatusFilter('')}
-          active={isStatusActive('')}
-        />
-        <MetricTile
-          label="Pending"
-          value={stats.pending}
-          muted="Awaiting dispatch action"
-          icon={<Icon as={FiRefreshCw} w={5} h={5} />}
-          accent="orange.500"
-          onClick={() => handleStatusFilter('pending')}
-          active={isStatusActive('pending')}
-        />
-        <MetricTile
-          label="Shipped"
-          value={stats.shipped}
-          muted="Created or in transit"
-          icon={<Icon as={FiTruck} w={5} h={5} />}
-          accent="brand.500"
-          onClick={() => handleStatusFilter('in_transit')}
-          active={filters.status === 'shipment_created' || filters.status === 'in_transit'}
-        />
-        <MetricTile
-          label="NDR"
-          value={stats.ndr}
-          muted="Need intervention"
-          icon={<Icon as={FiAlertTriangle} w={5} h={5} />}
-          accent="secondary.500"
-          onClick={() => handleStatusFilter('ndr')}
-          active={filters.status === 'ndr' || filters.status === 'undelivered'}
-        />
-        <MetricTile
-          label="Delivered"
-          value={stats.delivered}
-          muted="Closed successfully"
-          icon={<Icon as={FiCheckCircle} w={5} h={5} />}
-          accent="green.500"
-          onClick={() => handleStatusFilter('delivered')}
-          active={isStatusActive('delivered')}
-        />
-        <MetricTile
-          label="Cancelled"
-          value={stats.cancelled}
-          muted={`${stats.cancellationRequested} cancellation requests open`}
-          icon={<Icon as={FiXCircle} w={5} h={5} />}
-          accent="red.500"
-          onClick={() => handleStatusFilter('cancelled')}
-          active={isStatusActive('cancelled')}
-        />
-      </Grid>
+          <HStack spacing={4} wrap="wrap" color={mutedColor}>
+            <StatDot color="#6C5CE7" value={stats.total} label="total" />
+            <StatDot color="#3B82F6" value={stats.inTransit} label="in transit" />
+            <StatDot color="#10B981" value={stats.delivered} label="delivered" />
+            <StatDot color="#F87171" value={stats.cancelled} label="cancelled" />
+            <StatDot color="#F97316" value={stats.rto} label="RTO" />
+            <Text color={textColor} fontWeight="800">
+              ₹ {stats.revenue.toLocaleString('en-IN')}
+              <Text as="span" color={mutedColor} fontWeight="400" ml={2}>
+                revenue
+              </Text>
+            </Text>
+          </HStack>
+        </Flex>
 
-      <Flex justify="space-between" align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={3} mb={4}>
-        <Text fontSize="sm" color="gray.500">
-          Use the status tiles for quick triage, then narrow the queue with filters below.
-        </Text>
-        <HStack spacing={3} align="center">
-          <Text fontSize="sm" color="gray.500">
-            Sort by Created At
-          </Text>
-          <Select
-            size="sm"
-            w="180px"
-            borderRadius="14px"
-            value={filters.sortOrder}
-            onChange={(e) => {
-              setFilters((prev) => ({
-                ...prev,
-                sortBy: 'created_at',
-                sortOrder: e.target.value,
-              }))
-              setPage(1)
-            }}
-          >
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
-          </Select>
-        </HStack>
-      </Flex>
+        <Box h="1px" bg={borderColor} my="20px" />
 
-      <Card mb={4} boxShadow="sm" borderRadius="24px">
-        <CardBody p={{ base: 4, md: 5 }}>
-          <TableFilters
-            filters={filterOptions}
-            values={filters}
-            onApply={(appliedFilters) => {
-              setFilters((prev) => ({
-                ...appliedFilters,
-                sortBy: prev.sortBy || 'created_at',
-                sortOrder: prev.sortOrder || 'desc',
-              }))
-              setPage(1)
-            }}
-            actions={[]}
-            showActiveFiltersCount={true}
-            cardStyle={false}
-          />
-        </CardBody>
+        <Flex justify="space-between" align={{ base: 'stretch', lg: 'flex-end' }} gap={4} wrap="wrap">
+          <Stack direction={{ base: 'column', md: 'row' }} spacing={4} flex="1">
+            <Box minW={{ base: '100%', md: '300px' }}>
+              <Text color={mutedColor} fontSize="14px" mb="8px">
+                Search
+              </Text>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <Icon as={FiSearch} color={mutedColor} />
+                </InputLeftElement>
+                <Input
+                  value={filters.search}
+                  onChange={(event) => updateFilter('search', event.target.value)}
+                  placeholder="Order ID, AWB, name, city..."
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  _placeholder={{ color: '#6E7681' }}
+                />
+              </InputGroup>
+            </Box>
+            <Box minW={{ base: '100%', md: '200px' }}>
+              <Text color={mutedColor} fontSize="14px" mb="8px">
+                Status
+              </Text>
+              <Select value={filters.status} onChange={(event) => updateFilter('status', event.target.value)} bg={inputBg} borderColor={borderColor} color={textColor}>
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="shipment_created">Shipment Created</option>
+                <option value="in_transit">In Transit</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="rto_delivered">RTO Delivered</option>
+              </Select>
+            </Box>
+            <Button variant="link" color="#6C5CE7" rightIcon={<FiChevronDown />} alignSelf={{ base: 'flex-start', md: 'flex-end' }}>
+              More filters
+            </Button>
+          </Stack>
+
+          <HStack spacing={4} justify="flex-end">
+            <Text color={mutedColor} whiteSpace="nowrap">
+              {totalCount} orders
+            </Text>
+            <Button leftIcon={<FiDownload />} variant="outline" borderColor={borderColor} color={textColor} isLoading={isExporting} onClick={handleExport}>
+              Export CSV
+            </Button>
+            <Button leftIcon={<FiPlus />} bg="#6C5CE7" color="white" _hover={{ bg: '#5A4BD1' }}>
+              Create Manual Order
+            </Button>
+          </HStack>
+        </Flex>
       </Card>
+
       <OrdersTable
         orders={ordersData?.orders}
-        totalCount={ordersData?.totalCount}
+        totalCount={totalCount}
         page={page}
         setPage={setPage}
         perPage={limit}
         setPerPage={setLimit}
         loading={isLoading || isFetching}
-        onRefresh={refetch}
       />
     </Box>
+  )
+}
+
+function StatDot({ color, value, label }) {
+  return (
+    <HStack spacing={1.5}>
+      <Box w="14px" h="14px" borderRadius="4px" border="2px solid" borderColor={color} />
+      <Text color="#E6EDF3" fontWeight="800">
+        {value}
+      </Text>
+      <Text color="#8B949E">{label}</Text>
+    </HStack>
   )
 }
 

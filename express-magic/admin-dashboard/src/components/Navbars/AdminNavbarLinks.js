@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Flex,
+  IconButton,
   Input,
   InputGroup,
   InputLeftElement,
@@ -21,22 +22,25 @@ import PropTypes from 'prop-types'
 import { useRef } from 'react'
 import routes from 'routes.js'
 import { useAuthStore } from 'store/useAuthStore'
+import { brand, brandIdentity } from 'theme/brand'
 import NotificationMenu from './NotificationMenu'
-import { BRAND } from '../../constants/brand'
 
 export default function HeaderLinks({ variant, children, fixed, secondary, onOpen, ...rest }) {
   const settingsRef = useRef()
-  const logout = useAuthStore((state) => state.logout)
-  const inputBg = useColorModeValue('white', 'rgba(4, 26, 56, 0.92)')
-  const inputBorder = useColorModeValue('rgba(17, 17, 19, 0.12)', 'rgba(255, 255, 255, 0.1)')
-  const hoverBg = useColorModeValue('rgba(6, 42, 91, 0.06)', 'rgba(255, 255, 255, 0.08)')
+  const { isLoggedIn, logout } = useAuthStore()
+  const inputBg = useColorModeValue('rgba(255, 255, 255, 0.84)', 'rgba(20, 34, 56, 0.72)')
+  const inputBorder = useColorModeValue('rgba(13,27,77,0.14)', 'rgba(44,143,255,0.22)')
+  const hoverBg = useColorModeValue('rgba(255,138,40,0.1)', 'rgba(255, 255, 255, 0.08)')
   const mainTextColor = useColorModeValue('gray.700', 'gray.100')
   const navbarIconColor = useColorModeValue('gray.600', 'gray.200')
-  const searchIconColor = useColorModeValue('gray.500', 'gray.400')
+  const searchIconColor = useColorModeValue('brand.500', 'blue.200')
   const placeholder = useColorModeValue('gray.400', 'gray.500')
 
   const styles = {
-    accent: BRAND.colors.teal,
+    accent: brand.ink,
+    accentSecondary: brand.accent,
+    accentSky: '#4778BD',
+    accentSuccess: brand.success,
     inputBg,
     inputBorder,
     hoverBg,
@@ -47,30 +51,31 @@ export default function HeaderLinks({ variant, children, fixed, secondary, onOpe
   }
 
   return (
-    <Flex pe={{ sm: '0px', md: '4px' }} w={{ sm: '100%', md: 'auto' }} align="center" gap="2">
+    <Flex pe={{ sm: '0px', md: '4px' }} w={{ sm: 'auto', md: 'auto' }} align="center" gap="1.5">
       <InputGroup
+        display={{ base: 'none', '2xl': 'flex' }}
         bg={styles.inputBg}
-        borderRadius="10px"
-        w={{ sm: '150px', md: '230px', '2xl': '280px' }}
-        me={{ sm: 'auto', md: '8px' }}
+        borderRadius="12px"
+        w="220px"
+        me={{ sm: 'auto', md: '6px' }}
         borderWidth="1px"
         borderColor={styles.inputBorder}
         transition="all 0.2s ease"
         _focusWithin={{
           borderColor: styles.accent,
-          boxShadow: '0 0 0 3px rgba(6, 42, 91, 0.12)',
+          boxShadow: '0 0 0 3px rgba(255,138,40,0.16)',
         }}
       >
         <InputLeftElement pointerEvents="none" pl="14px">
-          <SearchIcon color={styles.searchIcon} w="16px" h="16px" />
+          <SearchIcon color={styles.searchIcon} w="14px" h="14px" />
         </InputLeftElement>
         <Input
-          fontSize="sm"
-          py="10px"
+          fontSize="13px"
+          py="8px"
           pl="42px"
           pr="14px"
           color={styles.mainText}
-          placeholder="Search orders, users, AWB"
+          placeholder="Search shipments, sellers, AWB"
           borderRadius="inherit"
           _placeholder={{ color: styles.placeholder }}
           border="none"
@@ -79,17 +84,18 @@ export default function HeaderLinks({ variant, children, fixed, secondary, onOpe
         />
       </InputGroup>
 
-      <Popover placement="bottom-end" closeOnBlur>
-        {({ onClose }) => (
-          <>
+      {isLoggedIn ? (
+        <Popover placement="bottom-end" closeOnBlur>
+          {({ onClose }) => (
+            <>
               <PopoverTrigger>
                 <Button
-                  px="14px"
-                  py="10px"
-                  me={{ sm: '2px', md: '8px' }}
-                  color={styles.navbarIcon}
+                  px="12px"
+                  minH="36px"
+                  me={{ sm: '2px', md: '6px' }}
+                  color={styles.accentSecondary}
                   variant="ghost"
-                  leftIcon={<IconLogout size={16} />}
+                  leftIcon={<IconLogout size={16} color={styles.accentSecondary} />}
                   borderRadius="10px"
                   borderWidth="1px"
                   borderColor="transparent"
@@ -97,18 +103,18 @@ export default function HeaderLinks({ variant, children, fixed, secondary, onOpe
                   fontSize="sm"
                   _hover={{
                     bg: styles.hoverBg,
-                    color: styles.accent,
-                    borderColor: 'rgba(6, 42, 91, 0.16)',
+                    color: styles.accentSecondary,
+                    borderColor: 'rgba(245,124,0,0.18)',
                   }}
                 >
-                  <Text display={{ sm: 'none', md: 'flex' }}>Logout</Text>
+                  <Text display={{ base: 'none', '2xl': 'flex' }}>Logout</Text>
                 </Button>
               </PopoverTrigger>
               <PopoverContent
                 w="300px"
                 p="0"
-                borderRadius="12px"
-                boxShadow="0 20px 36px rgba(17, 17, 19, 0.12)"
+                borderRadius="14px"
+                boxShadow="0 20px 36px rgba(15, 46, 102, 0.2)"
                 borderWidth="1px"
                 borderColor={styles.inputBorder}
                 overflow="hidden"
@@ -121,7 +127,7 @@ export default function HeaderLinks({ variant, children, fixed, secondary, onOpe
                       Confirm Logout
                     </Text>
                     <Text fontSize="sm" color={styles.searchIcon}>
-                      You will be signed out from this admin session.
+                      You will leave the {brandIdentity.name} admin workspace.
                     </Text>
                   </Box>
                   <Flex justify="flex-end" gap="8px">
@@ -145,36 +151,33 @@ export default function HeaderLinks({ variant, children, fixed, secondary, onOpe
                   </Flex>
                 </PopoverBody>
               </PopoverContent>
-          </>
-        )}
-      </Popover>
+            </>
+          )}
+        </Popover>
+      ) : null}
 
-      <SidebarResponsive logoText={rest.logoText || BRAND.name} secondary={secondary} routes={routes} {...rest} />
+      <SidebarResponsive logoText={rest.logoText || brandIdentity.name} secondary={secondary} routes={routes} {...rest} />
 
-      <Button
-        aria-label="Open settings"
-        leftIcon={<SettingsIcon w="18px" h="18px" />}
+      <IconButton
+        aria-label="Settings"
+        icon={<SettingsIcon w="18px" h="18px" color={styles.accentSky} />}
         variant="ghost"
         ms={{ base: '6px', xl: '0px' }}
-        px={{ base: 2, md: 3 }}
         me="2px"
         ref={settingsRef}
         onClick={onOpen}
         color={styles.navbarIcon}
         borderRadius="10px"
-        h="38px"
-        fontSize="sm"
-        fontWeight="700"
+        w="34px"
+        h="34px"
         borderWidth="1px"
         borderColor="transparent"
         _hover={{
           bg: styles.hoverBg,
-          color: styles.accent,
-          borderColor: 'rgba(6, 42, 91, 0.16)',
+          color: styles.accentSky,
+          borderColor: 'rgba(44,143,255,0.18)',
         }}
-      >
-        <Text display={{ base: 'none', lg: 'block' }}>Settings</Text>
-      </Button>
+      />
 
       <NotificationMenu themeStyles={styles} />
     </Flex>

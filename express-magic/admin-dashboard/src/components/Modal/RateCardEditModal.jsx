@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react'
 import { useUpdateShippingRate } from 'hooks/useCouriers'
 import { useEffect, useState } from 'react'
+import { getCourierDisplayName, getProviderDisplayName } from 'utils/courierDisplay'
 import CustomModal from './CustomModal'
 
 const normalizeProvider = (value) => String(value || '').trim().toLowerCase()
@@ -24,45 +25,89 @@ const normalizeMode = (value) => {
   if (['surface', 's', 'ground'].includes(raw)) return 'surface'
   return raw
 }
-const makeCourierKey = (courierId, serviceProvider) =>
-  `${courierId || ''}__${normalizeProvider(serviceProvider)}`
-const B2C_RATE_TYPES = ['forward', 'rto', 'reverse_pickup']
-const B2C_RATE_TYPE_LABELS = {
-  forward: 'Forward',
-  rto: 'RTO',
-  reverse_pickup: 'Reverse Pickup',
-}
-
-const inferLegacyExtraWeightUnit = (slab = {}) => {
-  const weightTo = Number(slab.weight_to)
-  if (Number.isFinite(weightTo) && weightTo > 0) return String(weightTo)
-
-  const weightFrom = Number(slab.weight_from)
-  if (Number.isFinite(weightFrom) && weightFrom > 0) return String(weightFrom)
-
+const getDeliveryOneModeByCourierId = (courierId) => {
+  const id = Number(courierId)
+  if (id === 99) return 'surface'
+  if (id === 100) return 'air'
   return ''
 }
+const getCourierDefaultMode = (courier) =>
+  normalizeMode(courier?.mode || courier?.shipping_mode || courier?.service_type) ||
+  getDeliveryOneModeByCourierId(courier?.id ?? courier?.courier_id)
+const makeCourierKey = (courierId, serviceProvider) =>
+  `${courierId || ''}__${normalizeProvider(serviceProvider)}`
 
-const normalizeEditableSlab = (slab = {}) => {
-  const hasExtraRate =
-    slab.extra_rate !== undefined && slab.extra_rate !== null && String(slab.extra_rate).trim() !== ''
-  const hasExtraWeightUnit =
-    slab.extra_weight_unit !== undefined &&
-    slab.extra_weight_unit !== null &&
-    String(slab.extra_weight_unit).trim() !== ''
-
-  if (!hasExtraRate || hasExtraWeightUnit) return slab
-  return {
-    ...slab,
-    extra_weight_unit: inferLegacyExtraWeightUnit(slab),
+const providerNameMatchesCourierName = (serviceProvider, courierName) => {
+  const provider = normalizeProvider(serviceProvider)
+  const name = String(courierName || '').trim().toLowerCase()
+  const compactName = name.replace(/[\s_-]+/g, '')
+  if (!provider || !name) return false
+  if (provider === 'deliveryone' || provider === 'delhivery') {
+    return (
+      compactName.includes('deliveryone') ||
+      compactName.includes('delhiveryone') ||
+      compactName.includes('delhivery') ||
+      compactName.includes('dehlivery') ||
+      compactName.includes('delhiverysurface') ||
+      compactName.includes('delhiveryexpress')
+    )
   }
+  return name.includes(provider)
 }
 
-const normalizeEditableZoneSlabs = (zoneSlabs = {}) =>
-  B2C_RATE_TYPES.reduce((acc, type) => {
-    acc[type] = (zoneSlabs?.[type] || []).map(normalizeEditableSlab)
-    return acc
-  }, {})
+const findCourierOption = (couriers, { courierId, serviceProvider, courierName, courierKey }) => {
+  const normalizedId = String(courierId || '')
+  const normalizedProvider = normalizeProvider(serviceProvider)
+  const normalizedName = String(courierName || '').trim().toLowerCase()
+
+  if (courierKey) {
+    const byKey = couriers.find(
+      (c) => makeCourierKey(c?.id?.toString(), c?.serviceProvider || c?.service_provider || '') === courierKey,
+    )
+    if (byKey) return byKey
+  }
+
+  const sameId = couriers.filter((c) => String(c?.id || '') === normalizedId)
+  if (!sameId.length) return null
+
+  if (normalizedProvider) {
+    const byProvider = sameId.find(
+      (c) => normalizeProvider(c?.serviceProvider || c?.service_provider || '') === normalizedProvider,
+    )
+    if (byProvider) return byProvider
+  }
+
+  return (
+    sameId.find((c) => String(c?.name || '').trim().toLowerCase() === normalizedName) ||
+    sameId.find((c) =>
+      providerNameMatchesCourierName(c?.serviceProvider || c?.service_provider, courierName),
+    ) ||
+    (sameId.length === 1 ? sameId[0] : null)
+  )
+}
+
+const getZoneKey = (zone) => String(zone?.id || zone?.code || zone?.name || '')
+const getZoneLookupKeys = (zone) =>
+  [
+    zone?.id,
+    zone?.code,
+    zone?.name,
+    zone?.code && zone?.name ? `${zone.code} - ${zone.name}` : '',
+    zone?.code && zone?.name ? `${zone.name} (${zone.code})` : '',
+  ].filter(Boolean)
+
+const getZoneEntry = (collection, zone) => {
+  if (!collection) return undefined
+  for (const key of getZoneLookupKeys(zone)) {
+    if (collection[key] !== undefined) return collection[key]
+  }
+  return undefined
+}
+
+const DEFAULT_COD_SLABS = [
+  { amount_from: 0, amount_to: 2000, charge_type: 'flat', charge_value: 40 },
+  { amount_from: 2000, amount_to: '', charge_type: 'percent', charge_value: 2 },
+]
 
 export const RateCardEditModal = ({
   isOpen,
@@ -75,22 +120,29 @@ export const RateCardEditModal = ({
   couriers = [], // 👈 pass from parent
   existingRates = [],
 }) => {
-  const { mutate: updateRate, isLoading } = useUpdateShippingRate()
+  const { mutate: updateRate, isPending } = useUpdateShippingRate()
   const [form, setForm] = useState({})
-  const isB2C = businessType?.toLowerCase() === 'b2c'
-  const hasValue = (value) => value !== undefined && value !== null && String(value).trim() !== ''
+  const resolvedBusinessType = String(
+    businessType || data?.business_type || data?.businessType || '',
+  )
+    .trim()
+    .toLowerCase()
+  const isB2C = resolvedBusinessType === 'b2c'
 
-  const buildLegacySlabs = (zoneName, type, minWeight, ratesObj) => {
-    const rate = ratesObj?.[zoneName]?.[type]
+  const buildLegacySlabs = (rate, minWeight) => {
     if (rate === undefined || rate === null || rate === '') return []
     const parsedMinWeight = Number(minWeight)
-    return [
-      {
-        weight_from: 0,
-        weight_to: Number.isFinite(parsedMinWeight) && parsedMinWeight > 0 ? parsedMinWeight : '',
-        rate,
-      },
-    ]
+    const legacyWeight = Number.isFinite(parsedMinWeight) && parsedMinWeight > 0 ? parsedMinWeight : ''
+    const slab = {
+      weight_from: 0,
+      weight_to: legacyWeight,
+      rate,
+    }
+    if (legacyWeight) {
+      slab.extra_rate = rate
+      slab.extra_weight_unit = legacyWeight
+    }
+    return [slab]
   }
 
   // Initialize form (new vs edit)
@@ -105,38 +157,39 @@ export const RateCardEditModal = ({
       min_weight: data?.min_weight ?? '',
       cod_charges: data?.cod_charges ?? '',
       cod_percent: data?.cod_percent ?? '',
+      cod_slabs:
+        data?.cod_slabs?.length > 0
+          ? data.cod_slabs
+          : isB2C
+            ? DEFAULT_COD_SLABS
+            : [],
       other_charges: data?.other_charges ?? '',
       mode: data?.mode ?? '',
       zone_slabs: {},
     }
 
     zones.forEach((zone) => {
-      initialForm[zone.name] = {
-        forward: data?.rates?.[zone.name]?.forward ?? '',
-        rto: data?.rates?.[zone.name]?.rto ?? '',
-        reverse_pickup: data?.rates?.[zone.name]?.reverse_pickup ?? '',
+      const zoneKey = getZoneKey(zone)
+      const zoneRates = getZoneEntry(data?.rates, zone) || {}
+      const zoneSlabs = getZoneEntry(data?.zone_slabs, zone) || {}
+      initialForm[zoneKey] = {
+        forward: zoneRates.forward ?? '',
+        rto: zoneRates.rto ?? '',
       }
-      const normalizedExistingZoneSlabs = normalizeEditableZoneSlabs(data?.zone_slabs?.[zone.name])
-      const hasExistingZoneSlabs = B2C_RATE_TYPES.some(
-        (type) => (normalizedExistingZoneSlabs?.[type] || []).length > 0,
-      )
-
-      initialForm.zone_slabs[zone.name] = hasExistingZoneSlabs
-        ? normalizedExistingZoneSlabs
-        : {
-            forward: buildLegacySlabs(zone.name, 'forward', data?.min_weight, data?.rates),
-            rto: buildLegacySlabs(zone.name, 'rto', data?.min_weight, data?.rates),
-            reverse_pickup: buildLegacySlabs(
-              zone.name,
-              'reverse_pickup',
-              data?.min_weight,
-              data?.rates,
-            ),
-          }
+      initialForm.zone_slabs[zoneKey] = {
+        forward:
+          zoneSlabs.forward?.length > 0
+            ? zoneSlabs.forward
+            : buildLegacySlabs(zoneRates.forward, data?.min_weight),
+        rto:
+          zoneSlabs.rto?.length > 0
+            ? zoneSlabs.rto
+            : buildLegacySlabs(zoneRates.rto, data?.min_weight),
+      }
     })
 
     setForm(initialForm)
-  }, [data, zones])
+  }, [data, zones, isB2C])
 
   const handleChange = (field, value, type = null) => {
     if (type && form[field]) {
@@ -189,48 +242,72 @@ export const RateCardEditModal = ({
     })
   }
 
-  const handleSave = () => {
-    const hasZoneRate = zones.some((zone) => {
-      if (isB2C) {
-        return B2C_RATE_TYPES.some((type) =>
-          (form.zone_slabs?.[zone.name]?.[type] || []).some((slab) => hasValue(slab.rate)),
-        )
-      }
-
-      return hasValue(form[zone.name]?.forward) || hasValue(form[zone.name]?.rto)
+  const handleCodSlabChange = (index, field, value) => {
+    setForm((prev) => {
+      const codSlabs = [...(prev.cod_slabs || [])]
+      codSlabs[index] = { ...(codSlabs[index] || {}), [field]: value }
+      return { ...prev, cod_slabs: codSlabs }
     })
+  }
 
-    if (!hasZoneRate) {
-      alert('Add at least one zone rate or B2C slab before saving a rate card.')
+  const addCodSlab = () => {
+    setForm((prev) => ({
+      ...prev,
+      cod_slabs: [
+        ...(prev.cod_slabs || []),
+        { amount_from: '', amount_to: '', charge_type: 'flat', charge_value: '' },
+      ],
+    }))
+  }
+
+  const removeCodSlab = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      cod_slabs: (prev.cod_slabs || []).filter((_, slabIndex) => slabIndex !== index),
+    }))
+  }
+
+  const handleSave = () => {
+    const resolvedCourierId = form.courier_id || data?.courier_id
+    const resolvedMode = String(form.mode || data?.mode || '').trim()
+
+    if (!['b2b', 'b2c'].includes(resolvedBusinessType)) {
+      alert('Business type is missing. Please open this rate from the B2B or B2C rate card.')
+      return
+    }
+
+    if (!resolvedCourierId) {
+      alert('Please select a courier before saving rates.')
+      return
+    }
+
+    if (!resolvedMode) {
+      alert('Please select a shipping mode before saving rates.')
       return
     }
 
     // Build rates per zone
     const rates = {}
     zones.forEach((zone) => {
+      const zoneKey = getZoneKey(zone)
       if (isB2C) {
-        const forwardSlabs = form.zone_slabs?.[zone.name]?.forward || []
-        const rtoSlabs = form.zone_slabs?.[zone.name]?.rto || []
-        const reversePickupSlabs = form.zone_slabs?.[zone.name]?.reverse_pickup || []
-        rates[zone.name] = {
+        const forwardSlabs = form.zone_slabs?.[zoneKey]?.forward || []
+        const rtoSlabs = form.zone_slabs?.[zoneKey]?.rto || []
+        rates[zoneKey] = {
           forward: forwardSlabs[0]?.rate ?? '',
           rto: rtoSlabs[0]?.rate ?? '',
-          reverse_pickup: reversePickupSlabs[0]?.rate ?? '',
         }
       } else {
-        rates[zone.name] = { ...form[zone.name] }
+        rates[zoneKey] = { ...form[zoneKey] }
       }
     })
 
-    const selectedCourier = availableCouriers.find(
-      (c) =>
-        makeCourierKey(c?.id?.toString(), c?.serviceProvider || c?.service_provider || '') ===
-        (form.courier_key ||
-          makeCourierKey(
-            form.courier_id || data?.courier_id,
-            data?.service_provider || data?.serviceProvider || '',
-          )),
-    )
+    const selectedCourier = findCourierOption(availableCouriers, {
+      courierId: form.courier_id || data?.courier_id,
+      serviceProvider: data?.service_provider || data?.serviceProvider,
+      courierName: form.courier_name || data?.courier_name,
+      courierKey: form.courier_key,
+    })
 
     // Always get service_provider from selectedCourier if available, otherwise from data
     const serviceProviderValue =
@@ -240,27 +317,24 @@ export const RateCardEditModal = ({
       data?.serviceProvider ||
       ''
 
-    const normalizedZoneSlabs = Object.fromEntries(
-      zones.map((zone) => [zone.name, normalizeEditableZoneSlabs(form.zone_slabs?.[zone.name])]),
-    )
-
     const payload = {
       min_weight: isB2C ? undefined : form.min_weight,
       cod_charges: form.cod_charges,
       cod_percent: form.cod_percent,
       other_charges: form.other_charges,
-      mode: form.mode,
+      mode: resolvedMode,
       previous_mode: data?.mode,
-      courier_id: form.courier_id || data?.courier_id, // from form (create) or existing (edit)
-      courier_name: form.courier_name || data?.courier_name,
+      courier_id: resolvedCourierId, // from form (create) or existing (edit)
+      courier_name: selectedCourier
+        ? getCourierDisplayName(selectedCourier)
+        : form.courier_name || data?.courier_name,
       service_provider: serviceProviderValue, // Always send the service_provider
       previous_service_provider: data?.service_provider || data?.serviceProvider,
       rates,
-      zone_slabs: isB2C ? normalizedZoneSlabs : undefined,
-      businessType,
+      zone_slabs: isB2C ? form.zone_slabs : undefined,
+      cod_slabs: isB2C ? form.cod_slabs || [] : undefined,
+      businessType: resolvedBusinessType,
     }
-
-    if (onSave) onSave(payload)
 
     // Validate planId before making the request
     // Ensure planId is a valid string or number, not a boolean or empty string
@@ -322,6 +396,8 @@ export const RateCardEditModal = ({
       return
     }
 
+    if (onSave) onSave(payload)
+
     updateRate(
       {
         id: (data?.courier_id ?? payload?.courier_id) || undefined, // pass id only in edit mode
@@ -361,16 +437,15 @@ export const RateCardEditModal = ({
       })
 
   // Get selected courier info for display
-  const selectedCourier = availableCouriers.find(
-    (c) =>
-      makeCourierKey(c?.id?.toString(), c?.serviceProvider || c?.service_provider || '') ===
-      (form.courier_key ||
-        makeCourierKey(
-          form.courier_id || data?.courier_id,
-          data?.service_provider || data?.serviceProvider || '',
-        )),
-  )
-  const displayCourierName = form.courier_name || data?.courier_name || ''
+  const selectedCourier = findCourierOption(availableCouriers, {
+    courierId: form.courier_id || data?.courier_id,
+    serviceProvider: data?.service_provider || data?.serviceProvider,
+    courierName: form.courier_name || data?.courier_name,
+    courierKey: form.courier_key,
+  })
+  const displayCourierName = selectedCourier
+    ? getCourierDisplayName(selectedCourier)
+    : form.courier_name || data?.courier_name || ''
   const displayServiceProvider =
     selectedCourier?.serviceProvider ||
     selectedCourier?.service_provider ||
@@ -389,7 +464,7 @@ export const RateCardEditModal = ({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button colorScheme="green" variant="solid" onClick={handleSave} isLoading={isLoading}>
+          <Button colorScheme="green" variant="solid" onClick={handleSave} isLoading={isPending}>
             {isEdit ? 'Save' : 'Add'}
           </Button>
         </Stack>
@@ -414,7 +489,10 @@ export const RateCardEditModal = ({
                 Courier Name:
               </Text>
               <Badge colorScheme="blue" fontSize="sm" px={2} py={1}>
-                {displayCourierName || 'Not selected'}
+                {getCourierDisplayName({
+                  courier_name: displayCourierName,
+                  service_provider: displayServiceProvider,
+                })}
               </Badge>
             </Flex>
             <Flex align="center" gap={2}>
@@ -422,7 +500,7 @@ export const RateCardEditModal = ({
                 Service Provider:
               </Text>
               <Badge colorScheme="green" fontSize="sm" px={2} py={1}>
-                {displayServiceProvider || 'Not selected'}
+                {getProviderDisplayName(displayServiceProvider)}
               </Badge>
             </Flex>
           </Stack>
@@ -445,21 +523,26 @@ export const RateCardEditModal = ({
                     courierKey,
                 )
                 const courierId = selectedCourier?.id?.toString() || ''
-                const courierName = selectedCourier?.name || ''
+                const courierName = selectedCourier ? getCourierDisplayName(selectedCourier) : ''
+                const courierMode = getCourierDefaultMode(selectedCourier)
                 handleChange('courier_key', courierKey)
                 handleChange('courier_id', courierId)
                 handleChange('courier_name', courierName)
+                handleChange('mode', courierMode)
                 // service_provider will be set from selectedCourier in handleSave
               }}
             >
-              {availableCouriers.map((c) => (
-                <option
-                  key={makeCourierKey(c.id, c.serviceProvider || c.service_provider || '')}
-                  value={makeCourierKey(c.id, c.serviceProvider || c.service_provider || '')}
-                >
-                  {c.name} {c.serviceProvider ? `(${c.serviceProvider})` : ''}
-                </option>
-              ))}
+              {availableCouriers.map((c) => {
+                return (
+                  <option
+                    key={makeCourierKey(c.id, c.serviceProvider || c.service_provider || '')}
+                    value={makeCourierKey(c.id, c.serviceProvider || c.service_provider || '')}
+                  >
+                    {getCourierDisplayName(c)}{' '}
+                    {c.serviceProvider ? `(${getProviderDisplayName(c.serviceProvider)})` : ''}
+                  </option>
+                )
+              })}
             </Select>
             <Text fontSize="xs" color="gray.500" mt={1}>
               Select the courier for which you want to add rates. Service provider will be
@@ -475,9 +558,16 @@ export const RateCardEditModal = ({
           Courier Info
         </Text>
         <SimpleGrid columns={2} spacing={4}>
-          <FormControl>
+          <FormControl isRequired>
             <FormLabel>Mode</FormLabel>
-            <Input value={form.mode} onChange={(e) => handleChange('mode', e.target.value)} />
+            <Select
+              placeholder="Select mode..."
+              value={form.mode}
+              onChange={(e) => handleChange('mode', e.target.value)}
+            >
+              <option value="air">Air</option>
+              <option value="surface">Surface</option>
+            </Select>
           </FormControl>
           {!isB2C && (
             <FormControl>
@@ -522,6 +612,89 @@ export const RateCardEditModal = ({
         <Box
           mb={5}
           p={4}
+          bg="blue.50"
+          borderRadius="md"
+          border="1px solid"
+          borderColor="blue.200"
+        >
+          <Flex align="center" justify="space-between" mb={3}>
+            <Box>
+              <Text fontWeight="bold" color="blue.800">
+                COD Price Slabs
+              </Text>
+              <Text fontSize="sm" color="blue.900">
+                Applied to all B2C zone rows for this courier, mode, provider, and plan.
+              </Text>
+            </Box>
+            <Button size="xs" colorScheme="blue" onClick={addCodSlab}>
+              Add COD Slab
+            </Button>
+          </Flex>
+          <Stack spacing={3}>
+            {(form.cod_slabs || []).map((slab, index) => (
+              <SimpleGrid
+                key={`cod-slab-${index}`}
+                columns={{ base: 1, md: 2, xl: 5 }}
+                spacing={3}
+              >
+                <FormControl>
+                  <FormLabel>Order Value From</FormLabel>
+                  <Input
+                    type="number"
+                    value={slab.amount_from ?? ''}
+                    onChange={(e) => handleCodSlabChange(index, 'amount_from', e.target.value)}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Order Value To</FormLabel>
+                  <Input
+                    type="number"
+                    value={slab.amount_to ?? ''}
+                    placeholder="Open ended"
+                    onChange={(e) => handleCodSlabChange(index, 'amount_to', e.target.value)}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Charge Type</FormLabel>
+                  <Select
+                    value={slab.charge_type || 'flat'}
+                    onChange={(e) => handleCodSlabChange(index, 'charge_type', e.target.value)}
+                  >
+                    <option value="flat">Flat Amount</option>
+                    <option value="percent">Percent</option>
+                  </Select>
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Charge Value</FormLabel>
+                  <Input
+                    type="number"
+                    value={slab.charge_value ?? ''}
+                    onChange={(e) => handleCodSlabChange(index, 'charge_value', e.target.value)}
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>&nbsp;</FormLabel>
+                  <Button colorScheme="red" variant="outline" onClick={() => removeCodSlab(index)}>
+                    Remove
+                  </Button>
+                </FormControl>
+              </SimpleGrid>
+            ))}
+            {(!form.cod_slabs || form.cod_slabs.length === 0) && (
+              <Text fontSize="sm" color="gray.500">
+                No COD slabs added. Legacy COD Charges and COD Percent will be used as fallback.
+              </Text>
+            )}
+          </Stack>
+        </Box>
+      )}
+
+      <Divider mb={4} />
+
+      {isB2C && (
+        <Box
+          mb={5}
+          p={4}
           bg="orange.50"
           borderRadius="md"
           border="1px solid"
@@ -545,30 +718,32 @@ export const RateCardEditModal = ({
 
       {/* Zone-wise grouped inputs */}
       <Stack spacing={4}>
-        {zones.map((zone) => (
-          <Box key={zone.code} p={3} border="1px solid" borderColor="gray.200" borderRadius="md">
+        {zones.map((zone) => {
+          const zoneKey = getZoneKey(zone)
+          return (
+          <Box key={zoneKey} p={3} border="1px solid" borderColor="gray.200" borderRadius="md">
             <Text fontWeight="bold" mb={2}>
               {zone.name}
             </Text>
             {isB2C ? (
               <Stack spacing={4}>
-                {B2C_RATE_TYPES.map((type) => (
+                {['forward', 'rto'].map((type) => (
                   <Box key={type} p={3} bg="gray.50" borderRadius="md">
                     <Flex align="center" justify="space-between" mb={3}>
                       <Box>
                         <Text fontWeight="semibold" textTransform="uppercase">
-                          {B2C_RATE_TYPE_LABELS[type]}
+                          {type}
                         </Text>
                         <Text fontSize="xs" color="gray.500">
                           Example: `0-0.5`, `0.5-2`, `5-10`
                         </Text>
                       </Box>
-                      <Button size="xs" onClick={() => addSlab(zone.name, type)}>
+                      <Button size="xs" onClick={() => addSlab(zoneKey, type)}>
                         Add Slab
                       </Button>
                     </Flex>
                     <Stack spacing={3}>
-                      {(form.zone_slabs?.[zone.name]?.[type] || []).map((slab, index, slabList) => {
+                      {(form.zone_slabs?.[zoneKey]?.[type] || []).map((slab, index, slabList) => {
                         const isLastSlab = index === slabList.length - 1
                         return (
                         <SimpleGrid
@@ -582,7 +757,7 @@ export const RateCardEditModal = ({
                               type="number"
                               value={slab.weight_from ?? ''}
                               onChange={(e) =>
-                                handleSlabChange(zone.name, type, index, 'weight_from', e.target.value)
+                                handleSlabChange(zoneKey, type, index, 'weight_from', e.target.value)
                               }
                             />
                           </FormControl>
@@ -592,7 +767,7 @@ export const RateCardEditModal = ({
                               type="number"
                               value={slab.weight_to ?? ''}
                               onChange={(e) =>
-                                handleSlabChange(zone.name, type, index, 'weight_to', e.target.value)
+                                handleSlabChange(zoneKey, type, index, 'weight_to', e.target.value)
                               }
                             />
                           </FormControl>
@@ -602,7 +777,7 @@ export const RateCardEditModal = ({
                               type="number"
                               value={slab.rate ?? ''}
                               onChange={(e) =>
-                                handleSlabChange(zone.name, type, index, 'rate', e.target.value)
+                                handleSlabChange(zoneKey, type, index, 'rate', e.target.value)
                               }
                             />
                           </FormControl>
@@ -613,7 +788,7 @@ export const RateCardEditModal = ({
                               value={slab.extra_rate ?? ''}
                               isDisabled={!isLastSlab}
                               onChange={(e) =>
-                                handleSlabChange(zone.name, type, index, 'extra_rate', e.target.value)
+                                handleSlabChange(zoneKey, type, index, 'extra_rate', e.target.value)
                               }
                             />
                             <Text fontSize="xs" color="gray.500" mt={1}>
@@ -630,7 +805,7 @@ export const RateCardEditModal = ({
                               isDisabled={!isLastSlab}
                               onChange={(e) =>
                                 handleSlabChange(
-                                  zone.name,
+                                  zoneKey,
                                   type,
                                   index,
                                   'extra_weight_unit',
@@ -649,15 +824,15 @@ export const RateCardEditModal = ({
                             <Button
                               colorScheme="red"
                               variant="outline"
-                              onClick={() => removeSlab(zone.name, type, index)}
+                              onClick={() => removeSlab(zoneKey, type, index)}
                             >
                               Remove
                             </Button>
                           </FormControl>
                         </SimpleGrid>
                       )})}
-                      {(!form.zone_slabs?.[zone.name]?.[type] ||
-                        form.zone_slabs?.[zone.name]?.[type]?.length === 0) && (
+                      {(!form.zone_slabs?.[zoneKey]?.[type] ||
+                        form.zone_slabs?.[zoneKey]?.[type]?.length === 0) && (
                         <Text fontSize="sm" color="gray.500">
                           No slabs added.
                         </Text>
@@ -672,22 +847,22 @@ export const RateCardEditModal = ({
                   <FormLabel>Forward</FormLabel>
                   <Input
                     type="number"
-                    value={form[zone.name]?.forward ?? ''}
-                    onChange={(e) => handleChange(zone.name, e.target.value, 'forward')}
+                    value={form[zoneKey]?.forward ?? ''}
+                    onChange={(e) => handleChange(zoneKey, e.target.value, 'forward')}
                   />
                 </FormControl>
                 <FormControl>
                   <FormLabel>RTO</FormLabel>
                   <Input
                     type="number"
-                    value={form[zone.name]?.rto ?? ''}
-                    onChange={(e) => handleChange(zone.name, e.target.value, 'rto')}
+                    value={form[zoneKey]?.rto ?? ''}
+                    onChange={(e) => handleChange(zoneKey, e.target.value, 'rto')}
                   />
                 </FormControl>
               </SimpleGrid>
             )}
           </Box>
-        ))}
+        )})}
       </Stack>
     </CustomModal>
   )

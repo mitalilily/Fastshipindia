@@ -10,14 +10,7 @@ import {
   fetchAvailableCouriers,
   fetchServiceProviders,
   fetchShippingRates,
-  testDelhiveryB2BCredentials,
-  testXpressbeesCredentials,
-  updateDelhiveryCredentials,
-  updateDelhiveryB2BCredentials,
-  updateEkartCredentials,
-  updateShadowfaxCredentials,
-  updateXpressbeesAwbRange,
-  updateXpressbeesCredentials,
+  updateDeliveryOneCredentials,
   updateCourierStatus,
   updateServiceProviderStatus,
   updateShippingRate,
@@ -49,6 +42,11 @@ export const useAvailableCouriersMutation = () => {
     mutationFn: (params) => {
       const parsedOrderAmount = Number(params.orderAmount ?? 0)
       const normalizedOrderAmount = parsedOrderAmount > 0 ? parsedOrderAmount : undefined
+      const parsedCodChargeBasis = Number(params.codChargeBasis ?? params.cod_charge_basis ?? params.orderAmount ?? 0)
+      const normalizedCodChargeBasis =
+        parsedCodChargeBasis >= 0 && Number.isFinite(parsedCodChargeBasis)
+          ? parsedCodChargeBasis
+          : normalizedOrderAmount
 
       return fetchAvailableCouriers({
         origin: params.pickupPincode,
@@ -56,6 +54,7 @@ export const useAvailableCouriersMutation = () => {
         pickupId: params.pickupId,
         payment_type: params.paymentType ?? (params.cod && params.cod > 0 ? 'cod' : 'prepaid'),
         order_amount: normalizedOrderAmount,
+        cod_charge_basis: normalizedCodChargeBasis,
         weight: params.weight,
         length: params.length,
         breadth: params.breadth,
@@ -120,78 +119,11 @@ export const useCourierCredentials = () => {
   })
 }
 
-export const useUpdateDelhiveryCredentials = () => {
+export const useUpdateDeliveryOneCredentials = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: updateDelhiveryCredentials,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['courierCredentials'])
-    },
-  })
-}
-
-export const useUpdateDelhiveryB2BCredentials = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: updateDelhiveryB2BCredentials,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['courierCredentials'])
-    },
-  })
-}
-
-export const useTestDelhiveryB2BCredentials = () => {
-  return useMutation({
-    mutationFn: testDelhiveryB2BCredentials,
-  })
-}
-
-export const useUpdateEkartCredentials = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: updateEkartCredentials,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['courierCredentials'])
-    },
-  })
-}
-
-export const useUpdateXpressbeesCredentials = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: updateXpressbeesCredentials,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['courierCredentials'])
-    },
-  })
-}
-
-export const useTestXpressbeesCredentials = () => {
-  return useMutation({
-    mutationFn: testXpressbeesCredentials,
-  })
-}
-
-export const useUpdateXpressbeesAwbRange = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: updateXpressbeesAwbRange,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['courierCredentials'])
-    },
-  })
-}
-
-export const useUpdateShadowfaxCredentials = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: updateShadowfaxCredentials,
+    mutationFn: updateDeliveryOneCredentials,
     onSuccess: () => {
       queryClient.invalidateQueries(['courierCredentials'])
     },
@@ -202,7 +134,10 @@ export const useShippingRates = (filters = {}) => {
   return useQuery({
     queryKey: ['shippingRates', filters],
     queryFn: () => fetchShippingRates(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchInterval: 15000,
   })
 }
 
@@ -260,7 +195,7 @@ export const useDeleteB2CZone = (planId) => {
         mode,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['shippingRates'])
+      queryClient.invalidateQueries({ queryKey: ['shippingRates'] })
       toast({ title: 'B2C zone rate deleted', status: 'success' })
     },
     onError: () => toast({ title: 'Failed to delete B2C zone rate', status: 'error' }),
@@ -276,7 +211,7 @@ export const useDeleteB2BZone = (planId) => {
     mutationFn: ({ courierId, zoneId }) =>
       deleteShippingRateAPI({ courierId, planId, businessType: 'b2b', zoneId }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['shippingRates'])
+      queryClient.invalidateQueries({ queryKey: ['shippingRates'] })
       toast({ title: 'B2B zone rate deleted', status: 'success' })
     },
     onError: () => toast({ title: 'Failed to delete B2B zone rate', status: 'error' }),
@@ -291,7 +226,7 @@ export const useDeleteB2BCourier = (planId) => {
   return useMutation({
     mutationFn: (courierId) => deleteShippingRateAPI({ courierId, planId, businessType: 'b2b' }), // no zoneId = delete whole courier
     onSuccess: () => {
-      queryClient.invalidateQueries(['shippingRates'])
+      queryClient.invalidateQueries({ queryKey: ['shippingRates'] })
       toast({ title: 'B2B courier deleted', status: 'success' })
     },
     onError: () => toast({ title: 'Failed to delete B2B courier', status: 'error' }),

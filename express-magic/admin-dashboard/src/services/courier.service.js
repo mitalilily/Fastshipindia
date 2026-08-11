@@ -1,14 +1,5 @@
 import api from './axios' // your pre-configured axios instance
 
-const normalizeArrayPayload = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.couriers)) return payload.couriers
-  if (Array.isArray(payload?.rates)) return payload.rates
-  if (Array.isArray(payload?.items)) return payload.items
-  return []
-}
-
 export const fetchShippingRates = async (filters = {}) => {
   const params = {}
   if (filters.courier_name) params.courier_name = filters.courier_name
@@ -18,8 +9,9 @@ export const fetchShippingRates = async (filters = {}) => {
   }
   if (filters.businessType) params.businessType = filters.businessType
   if (filters.planId) params.planId = filters.planId
+  if (filters.zone?.length) params.zone = filters.zone
   const response = await api.get('/admin/couriers/shipping-rates', { params })
-  return normalizeArrayPayload(response.data)
+  return response.data.data
 }
 
 export const fetchAvailableCouriers = async (params) => {
@@ -43,7 +35,7 @@ export const fetchAvailableCouriers = async (params) => {
 export const fetchAllCouriers = async () => {
   const res = await api.get(`/admin/couriers/list`)
   if (!res.data?.success) throw new Error('Failed to fetch couriers')
-  return normalizeArrayPayload(res.data) // returns an array of courier names
+  return res.data.data // returns an array of courier names
 }
 
 export const fetchAllCouriersList = async (filters = {}) => {
@@ -54,7 +46,7 @@ export const fetchAllCouriersList = async (filters = {}) => {
 
   const res = await api.get(`/couriers/full-list`, { params })
   if (!res.data?.success) throw new Error('Failed to fetch couriers')
-  return normalizeArrayPayload(res.data) // returns an array of courier objects
+  return res.data.data // returns an array of courier objects
 }
 
 export const createCourier = async (payload) => {
@@ -95,57 +87,21 @@ export const updateShippingRate = async (id, updates, planId) => {
   return data
 }
 
-export const uploadShippingRates = async ({ file, planId, businessType, targetCourier }) => {
+export const uploadShippingRates = async ({ file, planId, businessType }) => {
   if (!file) throw new Error('No file provided for import')
 
   const formData = new FormData()
   formData.append('file', file?.file) // must be File or Blob
-  const params = new URLSearchParams()
-  if (planId) {
-    params.set('planId', planId)
-    params.set('plan_id', planId)
-  }
-  if (businessType) {
-    const normalizedBusinessType = businessType.toLowerCase()
-    params.set('businessType', normalizedBusinessType)
-    params.set('business_type', normalizedBusinessType)
-  }
-  if (targetCourier?.courierId) {
-    params.set('targetCourierId', String(targetCourier.courierId))
-    params.set('target_courier_id', String(targetCourier.courierId))
-  }
-  if (targetCourier?.courierName) {
-    params.set('targetCourierName', String(targetCourier.courierName))
-    params.set('target_courier_name', String(targetCourier.courierName))
-  }
-  if (targetCourier?.serviceProvider) {
-    params.set('targetServiceProvider', String(targetCourier.serviceProvider))
-    params.set('target_service_provider', String(targetCourier.serviceProvider))
-  }
-  if (targetCourier?.mode) {
-    params.set('targetMode', String(targetCourier.mode))
-    params.set('target_mode', String(targetCourier.mode))
-  }
 
-  try {
-    const { data } = await api.post(
-      `/admin/couriers/shipping-rates/import?${params.toString()}`,
-      formData,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      },
-    )
+  const { data } = await api.post(
+    `/admin/couriers/shipping-rates/import?planId=${planId}&businessType=${businessType.toLowerCase()}`,
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    },
+  )
 
-    return data
-  } catch (error) {
-    const serverMessage =
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
-      error?.message ||
-      'Failed to upload shipping rates'
-
-    throw new Error(serverMessage)
-  }
+  return data
 }
 // Unified delete function: B2C zone, B2B zone, B2B courier
 export const deleteShippingRateAPI = async ({
@@ -178,50 +134,8 @@ export const fetchCourierCredentials = async () => {
   return data.data
 }
 
-export const updateDelhiveryCredentials = async (payload) => {
-  const { data } = await api.put('/admin/couriers/credentials/delhivery', payload)
+export const updateDeliveryOneCredentials = async (payload) => {
+  const { data } = await api.put('/admin/couriers/credentials/delivery-one', payload)
   if (!data?.success) throw new Error('Failed to update Delhivery credentials')
-  return data.data
-}
-
-export const updateDelhiveryB2BCredentials = async (payload) => {
-  const { data } = await api.put('/admin/couriers/credentials/delhivery-b2b', payload)
-  if (!data?.success) throw new Error('Failed to update Delhivery B2B credentials')
-  return data.data
-}
-
-export const testDelhiveryB2BCredentials = async () => {
-  const { data } = await api.post('/admin/couriers/credentials/delhivery-b2b/test')
-  if (!data?.success) throw new Error(data?.message || 'Failed to test Delhivery B2B credentials')
-  return data.data
-}
-
-export const updateEkartCredentials = async (payload) => {
-  const { data } = await api.put('/admin/couriers/credentials/ekart', payload)
-  if (!data?.success) throw new Error('Failed to update Ekart credentials')
-  return data.data
-}
-
-export const updateXpressbeesCredentials = async (payload) => {
-  const { data } = await api.put('/admin/couriers/credentials/xpressbees', payload)
-  if (!data?.success) throw new Error('Failed to update Xpressbees credentials')
-  return data.data
-}
-
-export const testXpressbeesCredentials = async (payload) => {
-  const { data } = await api.post('/admin/couriers/credentials/xpressbees/test', payload)
-  if (!data?.success) throw new Error(data?.message || 'Failed to test Xpressbees credentials')
-  return data.data
-}
-
-export const updateXpressbeesAwbRange = async (payload) => {
-  const { data } = await api.put('/admin/couriers/credentials/xpressbees/awb-range', payload)
-  if (!data?.success) throw new Error(data?.message || 'Failed to update Xpressbees AWB range')
-  return data.data
-}
-
-export const updateShadowfaxCredentials = async (payload) => {
-  const { data } = await api.put('/admin/couriers/credentials/shadowfax', payload)
-  if (!data?.success) throw new Error('Failed to update Shadowfax credentials')
   return data.data
 }

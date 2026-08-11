@@ -5,16 +5,11 @@ import {
   Code,
   Divider,
   Flex,
-  FormControl,
-  FormLabel,
   Grid,
   Heading,
   HStack,
   Icon,
-  Input,
-  Select,
   Text,
-  Textarea,
   Tooltip,
   useColorModeValue,
   useDisclosure,
@@ -24,10 +19,8 @@ import {
 import Card from 'components/Card/Card'
 import TableFilters from 'components/Tables/TableFilters'
 import {
-  useDeveloperLiveLogs,
   useDeveloperLogs,
   useRetryDeveloperManifest,
-  useTriggerShadowfaxWebhookTest,
   useUpdateDeveloperIssue,
 } from 'hooks/useDeveloperLogs'
 import { useMemo, useState } from 'react'
@@ -41,8 +34,6 @@ import {
   FiCopy,
   FiEye,
   FiExternalLink,
-  FiPauseCircle,
-  FiPlayCircle,
   FiRefreshCw,
   FiSend,
   FiTool,
@@ -125,7 +116,6 @@ export default function DeveloperLogs() {
   const currentAdminId = useAuthStore((state) => state.userId)
   const detailsDisclosure = useDisclosure()
   const [selectedIssue, setSelectedIssue] = useState(null)
-  const [liveLogsEnabled, setLiveLogsEnabled] = useState(false)
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(20)
   const [filters, setFilters] = useState({
@@ -144,10 +134,8 @@ export default function DeveloperLogs() {
   })
 
   const { data, isLoading, isFetching, refetch } = useDeveloperLogs(page, perPage, filters)
-  const liveLogsQuery = useDeveloperLiveLogs(liveLogsEnabled, 1000)
   const updateIssueMutation = useUpdateDeveloperIssue()
   const retryManifestMutation = useRetryDeveloperManifest()
-  const triggerShadowfaxWebhookMutation = useTriggerShadowfaxWebhookTest()
   const logs = data?.logs || []
   const summary = data?.summary || {}
   const alerts = data?.alerts || []
@@ -160,33 +148,6 @@ export default function DeveloperLogs() {
   const alertBorder = useColorModeValue('red.100', 'red.900')
   const alertItemBg = useColorModeValue('white', 'rgba(15,23,42,0.4)')
   const alertItemBorder = useColorModeValue('red.100', 'rgba(248,113,113,0.3)')
-  const logSurfaceBg = useColorModeValue('gray.900', 'gray.950')
-  const logSurfaceColor = useColorModeValue('green.100', 'green.200')
-  const [shadowfaxTestForm, setShadowfaxTestForm] = useState({
-    template: 'forward_in_transit',
-    awb: '',
-    orderRef: '',
-    remarks: '',
-    location: '',
-    chargedWeight: '',
-    actualWeight: '',
-    volumetricWeight: '',
-    rawPayload: '',
-  })
-
-  const liveLogData = liveLogsQuery.data?.data
-  const liveLogText = useMemo(() => {
-    const stdout = liveLogData?.sources?.stdout?.lines || []
-    const stderr = liveLogData?.sources?.stderr?.lines || []
-
-    return [
-      `# stdout (${stdout.length} lines)`,
-      ...stdout,
-      '',
-      `# stderr (${stderr.length} lines)`,
-      ...stderr,
-    ].join('\n')
-  }, [liveLogData])
 
   const rootCauseOptions = useMemo(
     () => (filterMeta.rootCauses || []).map((option) => ({ value: option.value, label: option.label })),
@@ -208,7 +169,6 @@ export default function DeveloperLogs() {
       options: [
         { value: 'manifest_failure', label: 'Manifest Failure' },
         { value: 'pickup_failure', label: 'Pickup Failure' },
-        { value: 'warehouse_registration_failure', label: 'Warehouse Registration Failure' },
         { value: 'pending_webhook', label: 'Pending Webhook' },
         { value: 'webhook_delivery_failed', label: 'Outbound Webhook Failure' },
       ],
@@ -364,43 +324,6 @@ export default function DeveloperLogs() {
     }
   }
 
-  const handleShadowfaxTestChange = (field, value) => {
-    setShadowfaxTestForm((current) => ({
-      ...current,
-      [field]: value,
-    }))
-  }
-
-  const handleTriggerShadowfaxWebhook = async () => {
-    try {
-      const requestPayload = shadowfaxTestForm.rawPayload.trim()
-        ? { payload: shadowfaxTestForm.rawPayload }
-        : {
-            template: shadowfaxTestForm.template,
-            awb: shadowfaxTestForm.awb || undefined,
-            orderRef: shadowfaxTestForm.orderRef || undefined,
-            remarks: shadowfaxTestForm.remarks || undefined,
-            location: shadowfaxTestForm.location || undefined,
-            chargedWeight:
-              shadowfaxTestForm.chargedWeight !== '' ? Number(shadowfaxTestForm.chargedWeight) : undefined,
-            actualWeight:
-              shadowfaxTestForm.actualWeight !== '' ? Number(shadowfaxTestForm.actualWeight) : undefined,
-            volumetricWeight:
-              shadowfaxTestForm.volumetricWeight !== ''
-                ? Number(shadowfaxTestForm.volumetricWeight)
-                : undefined,
-          }
-
-      const response = await triggerShadowfaxWebhookMutation.mutateAsync(requestPayload)
-      notifySuccess(
-        'Shadowfax test triggered',
-        `Result: ${response?.data?.result?.success ? 'processed' : response?.data?.result?.reason || 'handled'}`,
-      )
-    } catch (error) {
-      notifyError('Shadowfax test failed', error)
-    }
-  }
-
   const getRetryOrder = (row) => row.related_orders?.find((order) => order.can_retry_manifest)
 
   const handleRetryManifest = async (row, overrideOrderId = null) => {
@@ -409,15 +332,15 @@ export default function DeveloperLogs() {
       : getRetryOrder(row)
 
     if (!retryOrder?.id) {
-      notifyError('Retry unavailable', new Error('No retryable next-step order found for this issue.'))
+      notifyError('Retry unavailable', new Error('No retryable manifest order found for this issue.'))
       return
     }
 
     try {
       await retryManifestMutation.mutateAsync({ orderId: retryOrder.id, issueKey: row.issue_key })
       notifySuccess(
-        'Retry started',
-        `Retried the next provider step for order ${retryOrder.order_number || retryOrder.id}.`,
+        'Manifest retry started',
+        `Retried manifest for order ${retryOrder.order_number || retryOrder.id}.`,
       )
     } catch (error) {
       notifyError('Retry failed', error)
@@ -612,7 +535,7 @@ export default function DeveloperLogs() {
             onClick={() => handleRetryManifest(row)}
             isLoading={retryManifestMutation.isPending}
           >
-            Retry Next Step
+            Retry Manifest
           </Button>
         ) : null}
 
@@ -741,196 +664,8 @@ export default function DeveloperLogs() {
         <StatCard label="Open > 1 Hour" value={summary.slaOpenOver1Hour} icon={FiClipboard} tone="orange" />
         <StatCard label="Open > 1 Day" value={summary.slaOpenOver1Day} icon={FiAlertCircle} tone="red" />
         <StatCard label="Manifest" value={summary.manifest} icon={FiTruck} tone="orange" />
-        <StatCard label="Warehouse Sync" value={summary.warehouseRegistration} icon={FiTool} tone="purple" />
         <StatCard label="Webhook Fails" value={summary.failedWebhookDelivery} icon={FiSend} tone="blue" />
       </Grid>
-
-      <Card mb={4} p={4}>
-        <Flex justify="space-between" align={{ base: 'start', md: 'center' }} gap={4} wrap="wrap" mb={4}>
-          <Box>
-            <Heading size="sm" mb={1}>
-              Live Backend Logs
-            </Heading>
-            <Text fontSize="sm" color={mutedColor}>
-              Fetches the latest 1000 backend lines and refreshes every 3 seconds until you stop it.
-            </Text>
-            <Text fontSize="xs" color="gray.500" mt={1}>
-              {liveLogData?.fetchedAt
-                ? `Last updated ${formatDateTime(liveLogData.fetchedAt)}`
-                : 'Start the stream to begin polling.'}
-            </Text>
-          </Box>
-          <HStack spacing={2} wrap="wrap">
-            <Badge colorScheme={liveLogsEnabled ? 'green' : 'gray'} borderRadius="md" px={2} py={1}>
-              {liveLogsEnabled ? 'LIVE' : 'STOPPED'}
-            </Badge>
-            <Button
-              colorScheme={liveLogsEnabled ? 'orange' : 'green'}
-              leftIcon={liveLogsEnabled ? <FiPauseCircle /> : <FiPlayCircle />}
-              onClick={() => setLiveLogsEnabled((current) => !current)}
-            >
-              {liveLogsEnabled ? 'Stop' : 'Start'}
-            </Button>
-            <Button
-              variant="outline"
-              leftIcon={<FiRefreshCw />}
-              onClick={() => liveLogsQuery.refetch()}
-              isLoading={liveLogsQuery.isFetching}
-            >
-              Refresh now
-            </Button>
-            <Button
-              variant="outline"
-              leftIcon={<FiCopy />}
-              onClick={() => handleCopy('Live logs', liveLogText)}
-              isDisabled={!liveLogText.trim()}
-            >
-              Copy logs
-            </Button>
-          </HStack>
-        </Flex>
-
-        <HStack spacing={3} mb={3} wrap="wrap">
-          <Badge colorScheme="blue" borderRadius="md" px={2}>
-            stdout: {liveLogData?.sources?.stdout?.lineCount || 0}
-          </Badge>
-          <Badge colorScheme="red" borderRadius="md" px={2}>
-            stderr: {liveLogData?.sources?.stderr?.lineCount || 0}
-          </Badge>
-        </HStack>
-
-        <Box
-          as="pre"
-          p={4}
-          borderRadius="xl"
-          bg={logSurfaceBg}
-          color={logSurfaceColor}
-          fontSize="xs"
-          lineHeight="1.55"
-          overflow="auto"
-          maxH="520px"
-          whiteSpace="pre-wrap"
-        >
-          {liveLogsQuery.isError
-            ? liveLogsQuery.error?.response?.data?.message ||
-              liveLogsQuery.error?.message ||
-              'Failed to load live logs.'
-            : liveLogText || 'No log lines fetched yet.'}
-        </Box>
-      </Card>
-
-      <Card mb={4} p={4}>
-        <Flex justify="space-between" align={{ base: 'start', md: 'center' }} gap={4} wrap="wrap" mb={4}>
-          <Box>
-            <Heading size="sm" mb={1}>
-              Shadowfax Webhook Tester
-            </Heading>
-            <Text fontSize="sm" color={mutedColor}>
-              Trigger sample forward, reverse, NDR, RTO, or weight discrepancy webhook payloads directly from the developer tab.
-            </Text>
-          </Box>
-          <Button
-            colorScheme="blue"
-            leftIcon={<FiSend />}
-            onClick={handleTriggerShadowfaxWebhook}
-            isLoading={triggerShadowfaxWebhookMutation.isPending}
-          >
-            Trigger Test
-          </Button>
-        </Flex>
-
-        <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-          <FormControl>
-            <FormLabel>Template</FormLabel>
-            <Select
-              value={shadowfaxTestForm.template}
-              onChange={(e) => handleShadowfaxTestChange('template', e.target.value)}
-            >
-              <option value="forward_in_transit">Forward In Transit</option>
-              <option value="forward_delivered">Forward Delivered</option>
-              <option value="forward_ndr">Forward NDR</option>
-              <option value="forward_rto">Forward RTO</option>
-              <option value="reverse_pickup">Reverse Pickup</option>
-              <option value="weight_discrepancy">Weight Discrepancy</option>
-            </Select>
-          </FormControl>
-          <FormControl>
-            <FormLabel>AWB / Request ID</FormLabel>
-            <Input
-              placeholder="Use a real Shadowfax AWB or request ID"
-              value={shadowfaxTestForm.awb}
-              onChange={(e) => handleShadowfaxTestChange('awb', e.target.value)}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Order Ref</FormLabel>
-            <Input
-              placeholder="Order number or client order id"
-              value={shadowfaxTestForm.orderRef}
-              onChange={(e) => handleShadowfaxTestChange('orderRef', e.target.value)}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Location</FormLabel>
-            <Input
-              placeholder="Hub or event location"
-              value={shadowfaxTestForm.location}
-              onChange={(e) => handleShadowfaxTestChange('location', e.target.value)}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Remarks</FormLabel>
-            <Input
-              placeholder="Optional remarks"
-              value={shadowfaxTestForm.remarks}
-              onChange={(e) => handleShadowfaxTestChange('remarks', e.target.value)}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Charged Weight</FormLabel>
-            <Input
-              type="number"
-              step="0.001"
-              placeholder="2.5"
-              value={shadowfaxTestForm.chargedWeight}
-              onChange={(e) => handleShadowfaxTestChange('chargedWeight', e.target.value)}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Actual Weight</FormLabel>
-            <Input
-              type="number"
-              step="0.001"
-              placeholder="2.2"
-              value={shadowfaxTestForm.actualWeight}
-              onChange={(e) => handleShadowfaxTestChange('actualWeight', e.target.value)}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel>Volumetric Weight</FormLabel>
-            <Input
-              type="number"
-              step="0.001"
-              placeholder="2.4"
-              value={shadowfaxTestForm.volumetricWeight}
-              onChange={(e) => handleShadowfaxTestChange('volumetricWeight', e.target.value)}
-            />
-          </FormControl>
-        </Grid>
-
-        <FormControl mt={4}>
-          <FormLabel>Raw Payload JSON Override</FormLabel>
-          <Textarea
-            rows={8}
-            placeholder='{"awb_number":"SFX123","status":"nc"}'
-            value={shadowfaxTestForm.rawPayload}
-            onChange={(e) => handleShadowfaxTestChange('rawPayload', e.target.value)}
-          />
-          <Text fontSize="xs" color="gray.500" mt={2}>
-            If raw JSON is provided, it overrides the template fields above.
-          </Text>
-        </FormControl>
-      </Card>
 
       <Card mb={4} p={4}>
         <TableFilters
@@ -1099,7 +834,7 @@ function DrawerPlacement({
                 ) : null}
                 {issue.can_retry_manifest ? (
                   <Button size="sm" colorScheme="blue" onClick={() => onRetryManifest(issue)} isLoading={isRetrying}>
-                    Retry Next Step
+                    Retry Manifest
                   </Button>
                 ) : null}
                 {issue.status_label === 'resolved' ? (
@@ -1174,7 +909,7 @@ function DrawerPlacement({
                             onClick={() => onRetryManifest(issue, order.id)}
                             isLoading={isRetrying}
                           >
-                            Retry Next Step
+                            Retry Manifest
                           </Button>
                         ) : null}
                       </HStack>

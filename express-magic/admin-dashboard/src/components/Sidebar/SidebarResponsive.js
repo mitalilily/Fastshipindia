@@ -1,4 +1,3 @@
-/*eslint-disable*/
 import { HamburgerIcon } from '@chakra-ui/icons'
 import {
   Box,
@@ -17,8 +16,7 @@ import {
 import IconBox from 'components/Icons/IconBox'
 import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { BRAND } from '../../constants/brand'
-import BrandMark from '../Brand/BrandMark'
+import { brand, brandIdentity } from 'theme/brand'
 
 function SidebarResponsive(props) {
   const location = useLocation()
@@ -26,16 +24,18 @@ function SidebarResponsive(props) {
 
   const activeRoute = (routeName) => (location.pathname === routeName ? 'active' : '')
 
-  const drawerBg = useColorModeValue(
-    `linear-gradient(180deg, ${BRAND.colors.paper} 0%, ${BRAND.colors.surface} 100%)`,
-    `linear-gradient(180deg, ${BRAND.colors.tealDark} 0%, #020D1F 100%)`,
-  )
-  const activeBg = `linear-gradient(135deg, ${BRAND.colors.teal} 0%, ${BRAND.colors.tealDark} 100%)`
-  const hoverBg = useColorModeValue('rgba(6,42,91,0.06)', 'rgba(148, 163, 184, 0.14)')
-  const textColor = useColorModeValue(BRAND.colors.text, 'gray.100')
-  const iconColor = useColorModeValue(BRAND.colors.muted, 'gray.300')
-  const activeTextColor = '#FFFFFF'
-  const dividerColor = useColorModeValue(BRAND.colors.border, 'rgba(148, 163, 184, 0.24)')
+  const drawerBg = useColorModeValue('rgba(255,255,255,0.98)', 'rgba(13, 27, 77, 0.98)')
+  const activeBg = useColorModeValue('rgba(255, 138, 40, 0.14)', 'rgba(143, 212, 255, 0.16)')
+  const hoverBg = useColorModeValue('rgba(13, 27, 77, 0.06)', 'rgba(255, 255, 255, 0.08)')
+  const textColor = useColorModeValue('gray.700', 'gray.100')
+  const iconColor = useColorModeValue('gray.500', 'gray.300')
+  const activeTextColor = brand.ink
+  const dividerColor = useColorModeValue('rgba(13, 27, 77, 0.1)', 'rgba(143, 212, 255, 0.18)')
+  const hamburgerSurface = useColorModeValue('rgba(255,255,255,0.72)', 'rgba(16, 24, 40, 0.82)')
+  const hamburgerBorder = useColorModeValue('rgba(12,59,128,0.12)', 'rgba(255,255,255,0.12)')
+  const defaultHamburgerColor = useColorModeValue('gray.700', 'gray.200')
+  const hamburgerColor = props.secondary ? 'white' : defaultHamburgerColor
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
   const createLinks = (routes) => {
     return routes
@@ -46,7 +46,7 @@ function SidebarResponsive(props) {
         if (prop.category) {
           return (
             <Box key={prop.name}>
-              <Text color={textColor} fontWeight="700" mb="10px" ps="12px" pt="6px">
+              <Text color={textColor} fontWeight="800" mb="12px" ps="14px" pt="8px" fontSize="11px" textTransform="uppercase" letterSpacing="0.14em">
                 {document.documentElement.dir === 'rtl' ? prop.rtlName : prop.name}
               </Text>
               {createLinks(prop.views)}
@@ -57,32 +57,32 @@ function SidebarResponsive(props) {
         const isActive = activeRoute(prop.layout + prop.path) === 'active'
 
         return (
-          <NavLink to={prop.layout + prop.path} key={prop.name}>
+          <NavLink to={prop.layout + prop.path} key={prop.name} onClick={onClose}>
             <Button
               boxSize="initial"
               justifyContent="flex-start"
               alignItems="center"
               bg={isActive ? activeBg : 'transparent'}
-              mb="8px"
-              px="12px"
-              py="11px"
+              mb="10px"
+              px="14px"
+              py="13px"
               borderRadius="10px"
               w="100%"
               border="1px solid"
-              borderColor={isActive ? BRAND.colors.teal : 'transparent'}
-              _hover={{ bg: isActive ? activeBg : hoverBg, transform: 'translateX(2px)' }}
+              borderColor={isActive ? 'rgba(255, 138, 40, 0.22)' : 'transparent'}
+              _hover={{ bg: hoverBg, transform: 'translateX(2px)' }}
               _active={{ bg: 'inherit', transform: 'none' }}
               _focus={{ boxShadow: 'none' }}
               transition="all 0.2s ease"
             >
               <Flex align="center">
                 <IconBox
-                  bg={isActive ? BRAND.colors.orange : 'rgba(6,42,91,0.08)'}
-                  color={isActive ? activeTextColor : iconColor}
-                  h="30px"
-                  w="30px"
+                  bg={isActive ? 'rgba(255, 138, 40, 0.16)' : 'rgba(13, 27, 77, 0.06)'}
+                  color={isActive ? brand.accent : iconColor}
+                  h="34px"
+                  w="34px"
                   me="12px"
-                  borderRadius="8px"
+                  borderRadius="10px"
                 >
                   {prop.icon}
                 </IconBox>
@@ -99,49 +99,58 @@ function SidebarResponsive(props) {
   const { logoText, routes } = props
   const links = <>{createLinks(routes)}</>
 
-  const brand = (
-    <Box pt="24px" mb="10px">
-      <Flex align="center" justify="center" gap="10px" mb="16px" fontWeight="bold">
-        <BrandMark markOnly size={32} />
-        <Text fontSize="sm" color={textColor} fontWeight="700">
-          {logoText}
+  const brandHeader = (
+    <Box pt="26px" mb="12px">
+      <Flex align="center" justify="center" gap="10px" mb="18px" fontWeight="bold" direction="column">
+        <Box as="img" src={brandIdentity.logoPath} alt={brandIdentity.name} h="56px" w="168px" objectFit="contain" />
+        <Text fontSize="xs" color={textColor} fontWeight="700" textTransform="uppercase" letterSpacing="0.16em">
+          {logoText || brandIdentity.name}
         </Text>
       </Flex>
-      <Box h="1px" bg={dividerColor} mx="4px" mb="12px" />
+      <Box h="1px" bg={dividerColor} mx="6px" mb="14px" />
     </Box>
   )
 
-  const { isOpen, onOpen, onClose } = useDisclosure()
   const btnRef = React.useRef()
-  const hamburgerColor = props.secondary ? 'white' : useColorModeValue('gray.600', 'gray.200')
+
+  React.useEffect(() => {
+    if (isOpen) onClose()
+  }, [location.pathname, location.search])
 
   return (
     <Flex display={{ sm: 'flex', xl: 'none' }} ref={mainPanel} alignItems="center">
-      <Button
+      <Box
         ref={btnRef}
+        cursor="pointer"
         onClick={onOpen}
-        variant="ghost"
-        leftIcon={<HamburgerIcon color={hamburgerColor} w="20px" h="20px" />}
-        color={hamburgerColor}
-        h="38px"
-        px={{ base: 2, md: 3 }}
+        p="9px"
         borderRadius="10px"
-        fontWeight="700"
+        bg={hamburgerSurface}
+        border="1px solid"
+        borderColor={hamburgerBorder}
+        boxShadow="0 12px 24px rgba(36,26,27,0.08)"
       >
-        <Text display={{ base: 'none', md: 'block' }}>Menu</Text>
-      </Button>
+        <HamburgerIcon color={hamburgerColor} w="20px" h="20px" />
+      </Box>
       <Drawer
         isOpen={isOpen}
         onClose={onClose}
         placement={document.documentElement.dir === 'rtl' ? 'right' : 'left'}
         finalFocusRef={btnRef}
       >
-        <DrawerOverlay bg="blackAlpha.500" backdropFilter="blur(5px)" />
-        <DrawerContent w="280px" maxW="280px" borderRadius="0 18px 18px 0" bg={drawerBg}>
+        <DrawerOverlay bg="blackAlpha.500" backdropFilter="blur(7px)" />
+        <DrawerContent
+          w="296px"
+          maxW="296px"
+          borderRadius="0 14px 14px 0"
+          bg={drawerBg}
+          borderRight="1px solid rgba(13,27,77,0.08)"
+          boxShadow="0 28px 56px rgba(68,92,138,0.16)"
+        >
           <DrawerCloseButton _focus={{ boxShadow: 'none' }} color={textColor} />
           <DrawerBody px="14px" pt="2">
             <Box maxW="100%" h="100vh">
-              {brand}
+              {brandHeader}
               <Stack direction="column" mb="40px">
                 <Box>{links}</Box>
               </Stack>

@@ -100,3 +100,8 @@ export async function getAdminNdrKpis() {
   const { data } = await api.get('/admin/ndr/kpis')
   return data
 }
+
+export async function attachAdminNdrArtifact(payload) {
+  const { data } = await api.post('/admin/ndr/attachment', payload)
+  return data
+}

@@ -1,15 +1,5 @@
 import api from './axios'
 
-const normalizeOptionalBooleanParam = (value) => {
-  if (value === '' || value === undefined || value === null) return undefined
-  if (typeof value === 'boolean') return value
-  if (typeof value === 'string') {
-    if (value === 'true') return true
-    if (value === 'false') return false
-  }
-  return undefined
-}
-
 // --- User Management ---
 export async function fetchUsersWithRoleUser({
   page = 1,
@@ -20,7 +10,6 @@ export async function fetchUsersWithRoleUser({
   sortBy = 'createdAt',
   sortOrder = 'desc',
   approved,
-  kycStatus,
 }) {
   const response = await api.get('/admin/users/users-management', {
     params: {
@@ -28,9 +17,14 @@ export async function fetchUsersWithRoleUser({
       perPage,
       search,
       businessTypes: businessTypes.length ? businessTypes : undefined,
-      onboardingComplete: normalizeOptionalBooleanParam(onboardingComplete),
-      approved: normalizeOptionalBooleanParam(approved),
-      kycStatus: kycStatus || undefined,
+      onboardingComplete:
+        typeof onboardingComplete === 'string' ? onboardingComplete === 'true' : undefined,
+      approved:
+        typeof approved === 'boolean'
+          ? approved
+          : typeof approved === 'string' && approved !== ''
+          ? approved === 'true'
+          : undefined,
       sortBy,
       sortOrder,
     },
@@ -56,10 +50,8 @@ export const approveUser = async (userId) => {
   return response.data
 }
 
-export const updateUserBusinessType = async (userId, businessType) => {
-  const response = await api.patch(`/admin/users/${userId}/business-type`, {
-    businessType,
-  })
+export const updateUserApproval = async (userId, approved) => {
+  const response = await api.patch(`/admin/users/${userId}/approve`, { approved })
   return response.data
 }
 

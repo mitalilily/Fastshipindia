@@ -1,216 +1,135 @@
-// Chakra imports
-import { Box, ChakraProvider, Flex, Portal, Spinner, Text, useColorModeValue, useDisclosure } from '@chakra-ui/react'
-import Configurator from 'components/Configurator/Configurator'
-import Footer from 'components/Footer/Footer.js'
-// Layout components
+import {
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerOverlay,
+  Portal,
+  useColorModeValue,
+  useDisclosure,
+} from '@chakra-ui/react'
 import AdminNavbar from 'components/Navbars/AdminNavbar.js'
+import { RouteAssetRecovery, RouteErrorBoundary } from 'components/RouteRecovery/RouteErrorBoundary'
 import Sidebar from 'components/Sidebar'
-import { Suspense, useEffect, useState } from 'react'
+import SidebarContent from 'components/Sidebar/SidebarContent'
+import { useState } from 'react'
 import { Redirect, Route, Switch, useLocation } from 'react-router-dom'
 import routes from 'routes.js'
-import { BRAND } from '../constants/brand'
-// Custom Chakra theme
-import theme from 'theme/theme.js'
-import FixedPlugin from '../components/FixedPlugin/FixedPlugin'
-// Custom components
 import MainPanel from '../components/Layout/MainPanel'
 import PanelContainer from '../components/Layout/PanelContainer'
 import PanelContent from '../components/Layout/PanelContent'
-
-const SIDEBAR_MIN_WIDTH = 248
-const SIDEBAR_MAX_WIDTH = 360
-const SIDEBAR_DEFAULT_WIDTH = 284
+import { brandIdentity } from '../theme/brand'
 
 export default function Dashboard(props) {
   const { ...rest } = props
   const location = useLocation()
-  // states and functions
-  const [sidebarVariant, setSidebarVariant] = useState('opaque')
-  const [fixed, setFixed] = useState(false)
+  const [sidebarVariant, setSidebarVariant] = useState('transparent')
+  const expandedSidebarWidth = 300
+  const [sidebarWidth, setSidebarWidth] = useState(expandedSidebarWidth)
+  const mainBg = useColorModeValue('#FAFBFE', '#0D1117')
+  const isSidebarCollapsed = sidebarWidth === 0
 
-  // 🆕 Sidebar resizing state
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const savedValue = window.localStorage.getItem('adminSidebarWidth')
-    const savedWidth = Number(savedValue)
-    return savedValue && Number.isFinite(savedWidth) && savedWidth >= SIDEBAR_MIN_WIDTH
-      ? Math.min(Math.max(savedWidth, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH)
-      : SIDEBAR_DEFAULT_WIDTH
-  })
-  const [isResizing, setIsResizing] = useState(false)
-
-  // Resizing logic
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (isResizing) {
-        const newWidth = Math.min(Math.max(e.clientX, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH)
-        setSidebarWidth(newWidth)
-      }
-    }
-    const handleMouseUp = () => setIsResizing(false)
-
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [isResizing])
-
-  useEffect(() => {
-    window.localStorage.setItem('adminSidebarWidth', String(sidebarWidth))
-  }, [sidebarWidth])
-
-  useEffect(() => {
-    document.title = `${BRAND.name} Admin`
-  }, [])
-
-  const getRoute = () => {
-    return location.pathname !== '/admin/full-screen-maps'
+  const toggleSidebar = () => {
+    setSidebarWidth((currentWidth) => (currentWidth === 0 ? expandedSidebarWidth : 0))
   }
-  const getActiveRoute = (routes) => {
+
+  const getRoute = () => window.location.pathname !== '/admin/full-screen-maps'
+
+  const getActiveRoute = (allRoutes) => {
     let activeRoute = 'Default Brand Text'
-    for (let i = 0; i < routes.length; i++) {
-      if (routes[i].collapse) {
-        let collapseActiveRoute = getActiveRoute(routes[i].views)
-        if (collapseActiveRoute !== activeRoute) {
-          return collapseActiveRoute
-        }
-      } else if (routes[i].category) {
-        let categoryActiveRoute = getActiveRoute(routes[i].views)
-        if (categoryActiveRoute !== activeRoute) {
-          return categoryActiveRoute
-        }
-      } else {
-        if (location.pathname.startsWith(routes[i].layout + routes[i].path.split('/:')[0])) {
-          return routes[i].name
-        }
+    for (let i = 0; i < allRoutes.length; i++) {
+      if (allRoutes[i].collapse || allRoutes[i].category) {
+        const nestedRoute = getActiveRoute(allRoutes[i].views)
+        if (nestedRoute !== activeRoute) return nestedRoute
+      } else if (window.location.href.indexOf(allRoutes[i].layout + allRoutes[i].path) !== -1) {
+        return allRoutes[i].name
       }
     }
     return activeRoute
   }
-  // This changes navbar state(fixed or not)
-  const getActiveNavbar = (routes) => {
+
+  const getActiveNavbar = (allRoutes) => {
     let activeNavbar = false
-    for (let i = 0; i < routes.length; i++) {
-      if (routes[i].category) {
-        let categoryActiveNavbar = getActiveNavbar(routes[i].views)
-        if (categoryActiveNavbar !== activeNavbar) {
-          return categoryActiveNavbar
-        }
-      } else {
-        if (location.pathname.startsWith(routes[i].layout + routes[i].path.split('/:')[0])) {
-          if (routes[i].secondaryNavbar) {
-            return routes[i].secondaryNavbar
-          }
-        }
+    for (let i = 0; i < allRoutes.length; i++) {
+      if (allRoutes[i].category) {
+        const categoryNavbar = getActiveNavbar(allRoutes[i].views)
+        if (categoryNavbar !== activeNavbar) return categoryNavbar
+      } else if (window.location.href.indexOf(allRoutes[i].layout + allRoutes[i].path) !== -1) {
+        if (allRoutes[i].secondaryNavbar) return allRoutes[i].secondaryNavbar
       }
     }
     return activeNavbar
   }
-  const getRoutes = (routes) => {
-    return routes.map((prop, key) => {
-      // If it's a collapsible or category, go deeper
-      if (prop.collapse || prop.category) {
-        return getRoutes(prop.views)
-      }
 
-      // If it's a regular admin route, render it
+  const getRoutes = (allRoutes) =>
+    allRoutes.map((prop, key) => {
+      if (prop.collapse || prop.category) return getRoutes(prop.views)
       if (prop.layout === '/admin') {
         return <Route path={prop.layout + prop.path} component={prop.component} key={key} />
       }
-
       return null
     })
-  }
 
   const { isOpen, onOpen, onClose } = useDisclosure()
   document.documentElement.dir = 'ltr'
 
   return (
-    <ChakraProvider theme={theme} resetCss={false}>
-      {/* Sidebar with dynamic width */}
+    <>
+      <RouteAssetRecovery />
       <Sidebar
         routes={routes}
-        logoText={BRAND.name}
+        logoText="Admin Panel"
         sidebarVariant={sidebarVariant}
         sidebarWidth={sidebarWidth}
         {...rest}
       />
+      <Drawer isOpen={isOpen} onClose={onClose} placement="left">
+        <DrawerOverlay bg="blackAlpha.500" />
+        <DrawerContent maxW={`${expandedSidebarWidth}px`} w={`${expandedSidebarWidth}px`}>
+          <DrawerBody p="0">
+            <SidebarContent
+              logoText="Admin Panel"
+              sidebarWidth={expandedSidebarWidth}
+              position="relative"
+              onNavigate={onClose}
+            />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
 
-      {/* Main Panel adjusts with sidebar width */}
       <MainPanel
-        minH="100vh"
-        bg={useColorModeValue(
-          'linear-gradient(180deg, #F5F8FC 0%, #FFFFFF 42%, #F7FAFD 100%)',
-          'linear-gradient(180deg, #020D1F 0%, #041A38 48%, #020D1F 100%)',
-        )}
         w={{
           base: '100%',
           xl: `calc(100% - ${sidebarWidth}px)`,
         }}
         ml={{ xl: `${sidebarWidth}px` }}
+        bg={mainBg}
+        minH="100vh"
       >
-        {/* Keep the global header mounted in normal page flow while lazy admin pages change. */}
-        <AdminNavbar
-          onOpen={onOpen}
-          logoText={BRAND.name}
-          brandText={getActiveRoute(routes)}
-          secondary={false}
-          fixed={false}
-          sidebarWidth={sidebarWidth}
-          {...rest}
-        />
-
+        <Portal>
+          <AdminNavbar
+            onOpen={onOpen}
+            onToggleSidebar={toggleSidebar}
+            isSidebarCollapsed={isSidebarCollapsed}
+            logoText={brandIdentity.name}
+            brandText={getActiveRoute(routes)}
+            secondary={getActiveNavbar(routes)}
+            sidebarWidth={sidebarWidth}
+            {...rest}
+          />
+        </Portal>
         {getRoute() ? (
           <PanelContent>
             <PanelContainer>
-              <Suspense
-                fallback={
-                  <Flex minH="65vh" align="center" justify="center" direction="column" gap={3}>
-                    <Spinner size="lg" color="brand.500" thickness="3px" />
-                    <Text color="gray.500" fontSize="sm" fontWeight="600">
-                      Loading admin workspace...
-                    </Text>
-                  </Flex>
-                }
-              >
+              <RouteErrorBoundary resetKey={`${location.pathname}${location.search}`}>
                 <Switch>
                   {getRoutes(routes)}
                   <Redirect from="/admin" to="/admin/dashboard" />
                 </Switch>
-              </Suspense>
+              </RouteErrorBoundary>
             </PanelContainer>
           </PanelContent>
         ) : null}
-        <Footer />
-        <Portal>
-          <FixedPlugin secondary={getActiveNavbar(routes)} fixed={fixed} onOpen={onOpen} />
-        </Portal>
-        <Configurator
-          secondary={getActiveNavbar(routes)}
-          isOpen={isOpen}
-          onClose={onClose}
-          isChecked={fixed}
-          onSwitch={(value) => setFixed(value)}
-          onOpaque={() => setSidebarVariant('opaque')}
-          onTransparent={() => setSidebarVariant('transparent')}
-        />
       </MainPanel>
-
-      {/* 🖱️ Resize Handle */}
-      <Box
-        display={{ base: 'none', xl: 'block' }}
-        position="fixed"
-        left={`${sidebarWidth - 3}px`}
-        top="0"
-        h="100dvh"
-        w="6px"
-        cursor="col-resize"
-        zIndex="1400"
-        _hover={{ bg: useColorModeValue('rgba(6, 42, 91, 0.14)', 'rgba(6, 42, 91, 0.24)') }}
-        onMouseDown={() => setIsResizing(true)}
-      />
-      </ChakraProvider>
+    </>
   )
 }

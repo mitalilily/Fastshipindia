@@ -24,7 +24,6 @@ export default function FixedPlugin(props) {
         onClick={props.onOpen}
         bg={bgButton}
         position="fixed"
-        display={{ base: "none", md: fixedDisplay }}
         variant="no-hover"
         left={document.documentElement.dir === "rtl" ? "35px" : ""}
         right={document.documentElement.dir === "rtl" ? "" : "35px"}

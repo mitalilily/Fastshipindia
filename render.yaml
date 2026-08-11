@@ -60,7 +60,7 @@ services:
     name: fastshipadmin
     rootDir: express-magic/admin-dashboard
     buildCommand: npm install --legacy-peer-deps && npm run build
-    staticPublishPath: ./dist
+    staticPublishPath: ./build
     autoDeployTrigger: commit
     envVars:
       - key: REACT_APP_API_BASE_URL

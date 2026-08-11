@@ -43,12 +43,18 @@ export const GenericTable = ({
   selectedRows = [],
   perPageOptions,
   actionsColumnWidth = '180px',
+  stickyRightColumnKeys = [],
+  stickyRightOffsets = {},
 }) => {
-  const textColor = useColorModeValue('gray.800', 'gray.100')
-  const headerBg = useColorModeValue('#F8F7FC', '#121B31')
-  const headerColor = useColorModeValue('gray.600', 'gray.300')
-  const borderColor = useColorModeValue('rgba(148, 163, 184, 0.24)', 'rgba(148, 163, 184, 0.18)')
-  const shellBg = useColorModeValue('rgba(255,255,255,0.9)', 'rgba(14, 23, 43, 0.88)')
+  const textColor = useColorModeValue('#0F172A', '#E6EDF3')
+  const headerBg = useColorModeValue('#F8FAFC', '#1a2234')
+  const headerColor = useColorModeValue('#64748B', '#8B949E')
+  const borderColor = useColorModeValue('#E2E8F0', '#30363D')
+  const stickyDivider = useColorModeValue('#E2E8F0', '#30363D')
+  const stickyShadow = useColorModeValue(
+    '-14px 0 18px -16px rgba(15, 23, 42, 0.18)',
+    '-14px 0 18px -16px rgba(1, 4, 9, 0.65)',
+  )
   const scrollRef = useRef(null)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -81,11 +87,11 @@ export const GenericTable = ({
   }
 
   return (
-    <Card overflow="visible" bg={shellBg} borderRadius="24px">
-      <CardHeader p="0 0 18px">
+    <Card overflow="visible" p="0">
+      <CardHeader p="20px 20px 16px">
         <Flex width="100%" alignItems="center" justifyContent="space-between" direction={{ base: 'column', md: 'row' }} gap={2}>
           <Stack direction="row" gap={4} align="center">
-            <Text fontSize={{ base: 'lg', md: 'xl' }} color={textColor} fontWeight="800" letterSpacing="-0.01em">
+            <Text fontSize={{ base: 'md', md: 'lg' }} color={textColor} fontWeight="800" letterSpacing="0">
               {title}
             </Text>
             {sortByComponent}
@@ -111,7 +117,7 @@ export const GenericTable = ({
           ref={scrollRef}
           borderWidth="1px"
           borderColor={borderColor}
-          borderRadius="20px"
+          borderRadius="12px"
           overflow="hidden"
           style={{ width: '100%', overflowX: 'auto', overflowY: 'visible' }}
         >
@@ -119,7 +125,7 @@ export const GenericTable = ({
             <Thead>
               <Tr>
                 {showCheckboxes && (
-                  <Th ps={8} bg={headerBg} position="sticky" top={0} zIndex={3} color={headerColor}>
+                  <Th ps={5} bg={headerBg} position="sticky" top={0} zIndex={3} color={headerColor}>
                     <Checkbox
                       isChecked={selectedRows.length === data.length && data.length > 0}
                       isIndeterminate={selectedRows.length > 0 && selectedRows.length < data.length}
@@ -130,18 +136,25 @@ export const GenericTable = ({
                 {columnKeys.map((key, idx) => (
                   <Th
                     key={key}
-                    ps={8}
+                    ps={5}
                     color={headerColor}
                     minW={columnWidths[key] || 'auto'}
                     maxW={columnWidths[key] || 'auto'}
                     position="sticky"
                     top={0}
-                    zIndex={2}
                     bg={headerBg}
                     fontWeight="700"
-                    fontSize="11px"
+                    fontSize="12px"
                     letterSpacing="0.08em"
                     textTransform="uppercase"
+                    position="sticky"
+                    right={stickyRightColumnKeys.includes(key) ? stickyRightOffsets[key] || 0 : undefined}
+                    zIndex={stickyRightColumnKeys.includes(key) ? 4 : 2}
+                    boxShadow={
+                      stickyRightColumnKeys.includes(key) && (stickyRightOffsets[key] || 0) === 0
+                        ? '-6px 0 10px rgba(1, 4, 9, 0.25)'
+                        : undefined
+                    }
                   >
                     {captions[idx]}
                   </Th>
@@ -150,7 +163,7 @@ export const GenericTable = ({
                   <Th
                     bg={headerBg}
                     color={headerColor}
-                    px={8}
+                    px={5}
                     minW={actionsColumnWidth}
                     w={actionsColumnWidth}
                     position="sticky"
@@ -158,7 +171,10 @@ export const GenericTable = ({
                     top={0}
                     zIndex={4}
                     whiteSpace="nowrap"
-                    fontSize="11px"
+                    borderLeft="1px solid"
+                    borderColor={stickyDivider}
+                    boxShadow={stickyShadow}
+                    fontSize="12px"
                     letterSpacing="0.08em"
                     textTransform="uppercase"
                   >
@@ -172,7 +188,7 @@ export const GenericTable = ({
               {loading ? (
                 <Tr>
                   <Td colSpan={columnKeys.length + (renderActions ? 1 : 0)}>
-                    <Center py={8}>
+                    <Center py={16}>
                       <Spinner size="md" color="brand.500" />
                     </Center>
                   </Td>
@@ -180,8 +196,8 @@ export const GenericTable = ({
               ) : data.length === 0 ? (
                 <Tr>
                   <Td colSpan={columnKeys.length + (renderActions ? 1 : 0)}>
-                    <Center py={8}>
-                      <Text color={headerColor} fontWeight="600">No records available</Text>
+                    <Center py={16}>
+                      <Text color={headerColor} fontWeight="500">No data</Text>
                     </Center>
                   </Td>
                 </Tr>
@@ -192,7 +208,7 @@ export const GenericTable = ({
                     row={row}
                     checkboxComponent={
                       showCheckboxes ? (
-                        <Td ps={8}>
+                        <Td ps={5}>
                           <Checkbox isChecked={selectedRows.includes(row.id)} onChange={() => toggleRow(row.id)} />
                         </Td>
                       ) : null
@@ -203,6 +219,10 @@ export const GenericTable = ({
                     columnWidths={columnWidths}
                     isScrolled={isScrolled}
                     actionsColumnWidth={actionsColumnWidth}
+                    stickyDivider={stickyDivider}
+                    stickyShadow={stickyShadow}
+                    stickyRightColumnKeys={stickyRightColumnKeys}
+                    stickyRightOffsets={stickyRightOffsets}
                   />
                 ))
               )}

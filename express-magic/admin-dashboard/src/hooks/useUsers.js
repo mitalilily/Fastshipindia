@@ -8,6 +8,7 @@ import {
   fetchUsersWithRoleUser,
   searchSellers,
   toggleUserTeamMemberStatus,
+  updateUserApproval,
 } from 'services/user.service'
 
 export function useUsersWithRoleUser({
@@ -16,7 +17,6 @@ export function useUsersWithRoleUser({
   search = '',
   businessTypes = [],
   onboardingComplete,
-  kycStatus = '',
   sortBy = 'createdAt',
   sortOrder = 'desc',
   approved = '',
@@ -29,7 +29,6 @@ export function useUsersWithRoleUser({
       search,
       businessTypes,
       onboardingComplete,
-      kycStatus,
       sortBy,
       sortOrder,
       approved,
@@ -41,7 +40,6 @@ export function useUsersWithRoleUser({
         search,
         businessTypes,
         onboardingComplete,
-        kycStatus,
         sortBy,
         sortOrder,
         approved,
@@ -58,6 +56,17 @@ export function useDeleteUser() {
     mutationFn: deleteUser,
     onSuccess: () => {
       // Invalidate users list to refetch
+      queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
+    },
+  })
+}
+
+export function useUpdateUserApproval() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ userId, approved }) => updateUserApproval(userId, approved),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
     },
   })

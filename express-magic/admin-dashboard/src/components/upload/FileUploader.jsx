@@ -21,7 +21,6 @@ const FileUploader = ({
   maxSizeMb = 5,
   uploadLoading = false,
   showUploadButton = true,
-  accept,
   getUrl = false, // new prop
   folderKey = 'default', // folder for presigned upload
 }) => {
@@ -165,7 +164,7 @@ const FileUploader = ({
         <Text fontSize="sm" color="gray.500">
           or click to select {multiple ? 'multiple files' : 'a file'}
         </Text>
-        <input type="file" multiple={multiple} accept={accept} hidden onChange={handleFiles} />
+        <input type="file" multiple={multiple} hidden onChange={handleFiles} />
       </Box>
 
       {/* Selected / Preview files list */}

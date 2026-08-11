@@ -1,44 +1,44 @@
 import {
   Box,
   Button,
+  Checkbox,
   Flex,
   FormControl,
   FormLabel,
-  Grid,
-  GridItem,
   Heading,
   Input,
   Link,
-  Stack,
+  SimpleGrid,
   Text,
+  VStack,
   useColorModeValue,
 } from '@chakra-ui/react'
 import React from 'react'
-import { NavLink } from 'react-router-dom'
-import { BRAND, brandGradient } from '../../constants/brand'
+import { brand as brandTokens, brandFonts, brandGradients, brandIdentity } from '../../theme/brand'
 
 function SignUp() {
-  const pageBg = useColorModeValue(BRAND.colors.surface, '#111113')
-  const shellBg = useColorModeValue('rgba(255,255,255,0.96)', 'rgba(24, 24, 27, 0.94)')
-  const shellBorder = useColorModeValue('rgba(215, 238, 241, 0.95)', 'rgba(148, 163, 184, 0.14)')
-  const panelBg = useColorModeValue(brandGradient, '#141417')
-  const titleColor = useColorModeValue(BRAND.colors.ink, 'white')
-  const textColor = useColorModeValue(BRAND.colors.muted, 'rgba(255,255,255,0.72)')
-  const inputBg = useColorModeValue('white', 'rgba(255,255,255,0.04)')
-  const inputBorder = useColorModeValue('rgba(6,42,91,0.12)', 'rgba(255,255,255,0.12)')
-
-  React.useEffect(() => {
-    document.title = `${BRAND.name} Admin | Create account`
-  }, [])
+  const pageBg = useColorModeValue(brandTokens.page, '#050B24')
+  const shellBg = useColorModeValue('rgba(255,255,255,0.92)', 'rgba(13, 27, 77, 0.9)')
+  const shellBorder = useColorModeValue('rgba(13,27,77,0.12)', 'rgba(26,166,247,0.18)')
+  const heroBg = useColorModeValue(
+    brandGradients.hero,
+    'linear-gradient(180deg, rgba(13,27,77,0.94) 0%, rgba(22,62,89,0.88) 100%)',
+  )
+  const textPrimary = useColorModeValue(brandTokens.ink, 'whiteAlpha.900')
+  const textSecondary = useColorModeValue(brandTokens.inkSoft, 'whiteAlpha.700')
+  const inputBg = useColorModeValue('rgba(255,255,255,0.92)', 'rgba(7, 23, 54, 0.74)')
+  const inputBorder = useColorModeValue('rgba(13,27,77,0.16)', 'rgba(26,166,247,0.2)')
+  const brand = useColorModeValue(brandTokens.ink, '#8FD4FF')
+  const accent = useColorModeValue(brandTokens.accent, '#FFB547')
 
   return (
     <Flex
       minH="100vh"
+      bg={pageBg}
       align="center"
       justify="center"
-      bg={pageBg}
       px={{ base: 4, md: 6 }}
-      py={{ base: 8, md: 10 }}
+      py={{ base: 6, md: 8 }}
       position="relative"
       overflow="hidden"
     >
@@ -46,136 +46,194 @@ function SignUp() {
         position="absolute"
         inset="0"
         bgImage={useColorModeValue(
-          'radial-gradient(circle at 12% 10%, rgba(6,42,91,0.08) 0%, transparent 36%), radial-gradient(circle at 90% 14%, rgba(237,28,36,0.08) 0%, transparent 30%)',
-          'radial-gradient(circle at 12% 10%, rgba(6,42,91,0.16) 0%, transparent 36%), radial-gradient(circle at 90% 14%, rgba(255,255,255,0.08) 0%, transparent 30%)',
+          brandGradients.page,
+          'radial-gradient(circle at 10% 8%, rgba(26,166,247,0.18) 0%, transparent 38%), radial-gradient(circle at 94% 2%, rgba(255,138,40,0.12) 0%, transparent 28%)',
         )}
       />
 
-      <Grid
-        templateColumns={{ base: '1fr', lg: '1.02fr 0.98fr' }}
-        maxW="1180px"
+      <Flex
         w="100%"
+        maxW="1120px"
         bg={shellBg}
-        borderWidth="1px"
+        border="1px solid"
         borderColor={shellBorder}
-        borderRadius="20px"
+        borderRadius={{ base: '14px', lg: '16px' }}
+        boxShadow={useColorModeValue(brandTokens.shadow, '0 28px 72px rgba(0,0,0,0.38)')}
         overflow="hidden"
-        boxShadow={useColorModeValue('0 26px 70px rgba(17,17,19,0.1)', '0 28px 64px rgba(2, 8, 23, 0.46)')}
-        position="relative"
+        direction={{ base: 'column', lg: 'row' }}
+        backdropFilter="blur(16px)"
         zIndex="1"
       >
-        <GridItem bg={panelBg} borderRightWidth={{ base: '0', lg: '1px' }} borderColor={shellBorder}>
-          <Flex h="100%" direction="column" p={{ base: 6, md: 8, lg: 10 }}>
-            <Flex align="center" gap={4} mb={8}>
+        <Flex
+          w={{ base: '100%', lg: '44%' }}
+          bg={heroBg}
+          color={textPrimary}
+          p={{ base: 6, md: 8 }}
+          direction="column"
+          justify="space-between"
+          minH={{ base: '240px', lg: 'unset' }}
+          position="relative"
+          overflow="hidden"
+          borderRight={{ base: 'none', lg: '1px solid rgba(13,27,77,0.08)' }}
+        >
+          <VStack align="flex-start" spacing={5} position="relative" zIndex="1">
+            <Box as="img" src={brandIdentity.logoPath} alt={brandIdentity.name} h="62px" w="224px" objectFit="contain" />
+            <Heading
+              fontFamily={brandFonts.display}
+              fontSize={{ base: '3xl', md: '5xl' }}
+              fontWeight="800"
+              lineHeight="0.98"
+              letterSpacing="-0.04em"
+            >
+              Launch dispatch
+              <Text as="span" display="block" color={brand}>
+                workflows with speed.
+              </Text>
+            </Heading>
+            <Text color={textSecondary} fontSize="sm" maxW="360px" lineHeight="1.8">
+              Create a Ship Aggregator workspace for teams that need cleaner shipment
+              control, billing visibility, and faster daily operations.
+            </Text>
+          </VStack>
+
+          <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3} pt={{ base: 5, lg: 0 }}>
+            {[
+              { value: 'B2C', label: 'shipments ready' },
+              { value: 'B2B', label: 'lanes supported' },
+              { value: 'Fast', label: 'branding system' },
+            ].map((item) => (
               <Box
-                as="img"
-                src={BRAND.logo}
-                alt={BRAND.name}
-                h="56px"
-                w="56px"
-                objectFit="contain"
+                key={item.label}
+                px={4}
+                py={3}
                 borderRadius="10px"
-                bg="white"
-                p="1"
-              />
-              <Box>
-                <Text fontSize="xs" fontWeight="800" letterSpacing="0.16em" textTransform="uppercase" color="brand.500">
-                  {BRAND.name}
+                bg={useColorModeValue('rgba(255,255,255,0.68)', 'rgba(255,255,255,0.06)')}
+                border={`1px solid ${useColorModeValue('rgba(13,27,77,0.14)', 'rgba(255,255,255,0.14)')}`}
+              >
+                <Text fontSize="lg" fontWeight="800" color={accent} lineHeight="1">
+                  {item.value}
                 </Text>
-                <Text fontSize="sm" fontWeight="700" color={titleColor}>
-                  Admin onboarding
+                <Text mt={1} fontSize="xs" color={textSecondary}>
+                  {item.label}
                 </Text>
               </Box>
-            </Flex>
+            ))}
+          </SimpleGrid>
+        </Flex>
 
-            <Stack spacing={5} maxW="520px">
-              <Heading fontSize={{ base: '3xl', md: '4xl' }} lineHeight="1.04" letterSpacing="-0.04em" color={titleColor}>
-                Create a controlled access point for your operations team.
-              </Heading>
-              <Text color={textColor} lineHeight="1.9">
-                Set up administrator access for pricing, support, shipping operations and internal
-                platform control inside {BRAND.name}.
-              </Text>
-            </Stack>
+        <Flex w={{ base: '100%', lg: '56%' }} align="center" justify="center" px={{ base: 5, md: 8 }} py={{ base: 7, md: 9 }}>
+          <Box w="100%" maxW="460px">
+            <VStack spacing={6} align="stretch">
+              <Box>
+                <Text fontSize="xs" fontWeight="800" letterSpacing="0.7px" color={brand} mb={2}>
+                  DELIVER FASTER
+                </Text>
+                <Heading
+                  fontFamily={brandFonts.display}
+                  fontSize={{ base: '2xl', md: '4xl' }}
+                  fontWeight="800"
+                  color={textPrimary}
+                  lineHeight="1.02"
+                  letterSpacing="-0.04em"
+                >
+                  Create your admin workspace
+                </Heading>
+                <Text mt={2} color={textSecondary} fontSize="sm" lineHeight="1.8">
+                  Use this setup form to onboard your Ship Aggregator operations team.
+                </Text>
+              </Box>
 
-            <Stack spacing={4} mt={10}>
-              {[
-                'Use dedicated administrator credentials for pricing, support and ops.',
-                'Keep access limited to internal operators and decision makers.',
-                'Continue to the admin workspace after approval.',
-              ].map((item) => (
-                <Box key={item} p={4} borderRadius="10px" bg="white" borderWidth="1px" borderColor={shellBorder}>
-                  <Text color={titleColor} fontWeight="600" lineHeight="1.8">
-                    {item}
-                  </Text>
-                </Box>
-              ))}
-            </Stack>
-          </Flex>
-        </GridItem>
-
-        <GridItem>
-          <Flex h="100%" align="center" justify="center" p={{ base: 6, md: 8 }}>
-            <Box w="100%" maxW="430px">
-              <Stack spacing={6}>
-                <Box>
-                  <Text fontSize="xs" fontWeight="800" letterSpacing="0.16em" textTransform="uppercase" color="secondary.500" mb={2}>
-                    Create account
-                  </Text>
-                  <Heading fontSize={{ base: '2xl', md: '3xl' }} color={titleColor} letterSpacing="-0.03em">
-                    Register a {BRAND.name} admin
-                  </Heading>
-                  <Text mt={2} fontSize="sm" color={textColor} lineHeight="1.8">
-                    The form is intentionally minimal and professional. Connect it to your live
-                    admin creation flow when ready.
-                  </Text>
-                </Box>
-
-                <FormControl>
-                  <FormLabel fontSize="sm" fontWeight="700" color={titleColor}>
-                    Full name
-                  </FormLabel>
-                  <Input placeholder="Operations administrator" h="50px" borderRadius="10px" bg={inputBg} borderColor={inputBorder} />
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel fontSize="sm" fontWeight="700" color={titleColor}>
-                    Work email
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                <FormControl isRequired>
+                  <FormLabel fontSize="sm" fontWeight="700" color={textPrimary}>
+                    Full Name
                   </FormLabel>
                   <Input
-                    placeholder={BRAND.adminEmail}
-                    type="email"
-                    h="50px"
+                    placeholder="Operations manager"
+                    h="52px"
                     borderRadius="10px"
                     bg={inputBg}
                     borderColor={inputBorder}
+                    _focus={{ borderColor: 'accent.500', boxShadow: '0 0 0 4px rgba(255,138,40,0.16)' }}
                   />
                 </FormControl>
-
-                <FormControl>
-                  <FormLabel fontSize="sm" fontWeight="700" color={titleColor}>
-                    Password
+                <FormControl isRequired>
+                  <FormLabel fontSize="sm" fontWeight="700" color={textPrimary}>
+                    Company
                   </FormLabel>
-                  <Input placeholder="Create a secure password" type="password" h="50px" borderRadius="10px" bg={inputBg} borderColor={inputBorder} />
+                  <Input
+                    placeholder="Ship Aggregator operations"
+                    h="52px"
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={inputBorder}
+                    _focus={{ borderColor: 'accent.500', boxShadow: '0 0 0 4px rgba(255,138,40,0.16)' }}
+                  />
                 </FormControl>
+              </SimpleGrid>
 
-                <Button h="50px" borderRadius="10px" bg="brand.500" color="white" _hover={{ bg: 'brand.600' }}>
-                  Create Admin Account
-                </Button>
+              <FormControl isRequired>
+                <FormLabel fontSize="sm" fontWeight="700" color={textPrimary}>
+                  Work Email
+                </FormLabel>
+                <Input
+                  type="email"
+                  placeholder="team@company.com"
+                  h="52px"
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={inputBorder}
+                  _focus={{ borderColor: 'accent.500', boxShadow: '0 0 0 4px rgba(255,138,40,0.16)' }}
+                />
+              </FormControl>
 
-                <Text fontSize="sm" color={textColor}>
-                  Already have access?{' '}
-                  <Link as={NavLink} to="/auth/signin" color="brand.500" fontWeight="700">
-                    Sign in
-                  </Link>
+              <FormControl isRequired>
+                <FormLabel fontSize="sm" fontWeight="700" color={textPrimary}>
+                  Password
+                </FormLabel>
+                <Input
+                  type="password"
+                  placeholder="Create a secure password"
+                  h="52px"
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={inputBorder}
+                  _focus={{ borderColor: 'accent.500', boxShadow: '0 0 0 4px rgba(255,138,40,0.16)' }}
+                />
+              </FormControl>
+
+              <Checkbox colorScheme="green" defaultChecked>
+                <Text fontSize="sm" color={textSecondary}>
+                  Keep me signed in on this device
                 </Text>
-              </Stack>
-            </Box>
-          </Flex>
-        </GridItem>
-      </Grid>
+              </Checkbox>
+
+              <Button
+                h="52px"
+                borderRadius="10px"
+                bg={brandGradients.button}
+                color="white"
+                fontWeight="700"
+                _hover={{ boxShadow: '0 20px 36px rgba(255, 122, 21, 0.28)', transform: 'translateY(-1px)' }}
+                _active={{ transform: 'translateY(0)' }}
+              >
+                Start with Ship Aggregator
+              </Button>
+
+              <Text color={textSecondary} fontWeight="medium" textAlign="center">
+                Already have access?
+                <Link color={brand} ms="5px" href={`${process.env.PUBLIC_URL}/#/auth/signin`} fontWeight="bold">
+                  Sign in
+                </Link>
+              </Text>
+            </VStack>
+          </Box>
+        </Flex>
+      </Flex>
     </Flex>
   )
 }
 
 export default SignUp
+
+

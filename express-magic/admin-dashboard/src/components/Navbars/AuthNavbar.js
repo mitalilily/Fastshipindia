@@ -1,98 +1,109 @@
 import { Box, Button, Flex, HStack, Link, Text, useColorModeValue } from '@chakra-ui/react'
-import { DocumentIcon, HomeIcon, PersonIcon, RocketIcon } from 'components/Icons/Icons'
-import { BRAND } from '../../constants/brand'
-import BrandMark from '../Brand/BrandMark'
 import SidebarResponsive from 'components/Sidebar/SidebarResponsive'
 import PropTypes from 'prop-types'
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import routes from 'routes.js'
+import { brand, brandIdentity } from 'theme/brand'
+
+const navLinks = [
+  { label: 'Dashboard', to: '/admin/dashboard' },
+  { label: 'Orders', to: '/admin/orders' },
+  { label: 'Support', to: '/admin/support' },
+]
 
 export default function AuthNavbar(props) {
   const { logoText, secondary, ...rest } = props
 
-  const navbarIcon = secondary ? 'white' : useColorModeValue('gray.700', 'gray.200')
-  const mainText = secondary ? 'white' : useColorModeValue('gray.800', 'gray.100')
-  const navbarBg = secondary
-    ? 'none'
-    : useColorModeValue(
-        'linear-gradient(110deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.88) 100%)',
-        'linear-gradient(110deg, rgba(16, 28, 52, 0.92) 0%, rgba(10, 18, 36, 0.9) 100%)',
-      )
-  const navbarBorder = secondary ? 'none' : useColorModeValue('1px solid rgba(148, 163, 184, 0.35)', '1px solid rgba(148, 163, 184, 0.25)')
-  const navbarShadow = secondary ? 'none' : useColorModeValue('0 12px 30px rgba(15, 46, 102, 0.12)', '0 14px 36px rgba(2, 8, 23, 0.5)')
-
-  const brand = (
-    <Link href={`${process.env.PUBLIC_URL}/#/`} display="flex" lineHeight="100%" fontWeight="700" justifyContent="center" alignItems="center" color={mainText}>
-      <Box me="10px">
-        <BrandMark markOnly size={34} />
-      </Box>
-      <Text fontSize="sm" mt="1px">
-        {logoText || BRAND.name}
-      </Text>
-    </Link>
-  )
-
-  const linksAuth = (
-    <HStack display={{ sm: 'none', lg: 'flex' }}>
-      <NavLink to="/admin/dashboard">
-        <Button fontSize="sm" px="0px" me={{ sm: '2px', md: '14px' }} color={navbarIcon} variant="transparent-with-icon" leftIcon={<HomeIcon color={navbarIcon} w="12px" h="12px" me="0px" />}>
-          <Text>Dashboard</Text>
-        </Button>
-      </NavLink>
-      <NavLink to="/admin/profile">
-        <Button fontSize="sm" px="0px" me={{ sm: '2px', md: '14px' }} color={navbarIcon} variant="transparent-with-icon" leftIcon={<PersonIcon color={navbarIcon} w="12px" h="12px" me="0px" />}>
-          <Text>Profile</Text>
-        </Button>
-      </NavLink>
-      <NavLink to="/auth/signup">
-        <Button fontSize="sm" px="0px" me={{ sm: '2px', md: '14px' }} color={navbarIcon} variant="transparent-with-icon" leftIcon={<RocketIcon color={navbarIcon} w="12px" h="12px" me="0px" />}>
-          <Text>Sign Up</Text>
-        </Button>
-      </NavLink>
-      <NavLink to="/auth/signin">
-        <Button fontSize="sm" px="0px" me={{ sm: '2px', md: '14px' }} color={navbarIcon} variant="transparent-with-icon" leftIcon={<DocumentIcon color={navbarIcon} w="12px" h="12px" me="0px" />}>
-          <Text>Sign In</Text>
-        </Button>
-      </NavLink>
-    </HStack>
-  )
+  const defaultMainText = useColorModeValue(brand.ink, 'gray.100')
+  const defaultMutedText = useColorModeValue(brand.inkSoft, 'gray.400')
+  const defaultNavbarBg = useColorModeValue(brand.surfaceGlass, 'rgba(13,27,77,0.94)')
+  const defaultNavbarBorder = useColorModeValue('1px solid rgba(13,27,77,0.08)', '1px solid rgba(255,255,255,0.12)')
+  const defaultNavbarShadow = useColorModeValue('0 18px 36px rgba(68, 92, 138, 0.1)', '0 18px 36px rgba(0, 0, 0, 0.42)')
+  const navShellBg = useColorModeValue('rgba(255,255,255,0.72)', 'rgba(255,255,255,0.06)')
+  const navShellBorder = useColorModeValue('rgba(13,27,77,0.08)', 'rgba(255,255,255,0.12)')
+  const navHoverBg = useColorModeValue('rgba(255,138,40,0.12)', 'rgba(255,255,255,0.08)')
+  const mainText = secondary ? 'white' : defaultMainText
+  const mutedText = secondary ? 'whiteAlpha.700' : defaultMutedText
+  const navbarBg = secondary ? 'none' : defaultNavbarBg
+  const navbarBorder = secondary ? 'none' : defaultNavbarBorder
+  const navbarShadow = secondary ? 'none' : defaultNavbarShadow
 
   return (
     <Flex
       position={secondary ? 'absolute' : 'fixed'}
-      top="16px"
+      top="12px"
       left="50%"
       transform="translate(-50%, 0px)"
       background={navbarBg}
       border={navbarBorder}
       boxShadow={navbarShadow}
-      backdropFilter={secondary ? 'none' : 'blur(12px)'}
-      borderRadius="16px"
-      px="16px"
-      py="16px"
+      backdropFilter={secondary ? 'none' : 'blur(14px)'}
+      borderRadius="14px"
+      px={{ base: '12px', md: '16px' }}
+      py="8px"
       mx="auto"
-      width="1100px"
-      maxW="92%"
+      width="1180px"
+      maxW="94%"
       alignItems="center"
+      minH="60px"
     >
-      <Flex w="100%" justifyContent={{ sm: 'start', lg: 'space-between' }}>
-        {brand}
+      <Flex w="100%" justifyContent={{ base: 'start', lg: 'space-between' }} align="center" gap={4}>
+        <Link href={`${process.env.PUBLIC_URL}/#/`} display="flex" alignItems="center" color={mainText}>
+          <Box as="img" src={brandIdentity.logoPath} alt={brandIdentity.name} h="42px" w="132px" objectFit="contain" me="10px" />
+          <Box display={{ base: 'none', md: 'block' }}>
+            <Text fontSize="xs" letterSpacing="0.16em" textTransform="uppercase" fontWeight="800" color="secondary.500">
+              Admin Portal
+            </Text>
+            <Text fontSize="sm" color={mutedText} fontWeight="700">
+              Operations workspace
+            </Text>
+          </Box>
+        </Link>
+
+        <HStack
+          display={{ base: 'none', lg: 'flex' }}
+          spacing={1}
+          px="6px"
+          py="4px"
+          borderRadius="12px"
+          border="1px solid"
+          borderColor={navShellBorder}
+          bg={navShellBg}
+        >
+          {navLinks.map((item) => (
+            <NavLink to={item.to} key={item.label}>
+              <Button
+                variant="ghost"
+                borderRadius="10px"
+                px="12px"
+                minH="34px"
+                fontSize="13px"
+                fontWeight="700"
+                color={mainText}
+                _hover={{ bg: navHoverBg }}
+              >
+                {item.label}
+              </Button>
+            </NavLink>
+          ))}
+        </HStack>
+
         <Box ms={{ base: 'auto', lg: '0px' }} display={{ base: 'flex', lg: 'none' }}>
-          <SidebarResponsive logoText={logoText || BRAND.name} secondary={secondary} routes={routes} {...rest} />
+          <SidebarResponsive logoText={logoText || brandIdentity.name} secondary={secondary} routes={routes} {...rest} />
         </Box>
-        {linksAuth}
-        <Link href="/#/auth/signin">
+
+        <Link href="/auth/signin" display={{ base: 'none', lg: 'block' }}>
           <Button
             bg="brand.500"
             color="white"
-            fontSize="xs"
+            fontSize="13px"
             borderRadius="10px"
-            px="18px"
-            display={{ sm: 'none', lg: 'flex' }}
+            px="16px"
+            minH="36px"
             _hover={{ bg: 'brand.600' }}
           >
-            Admin Login
+            Admin access
           </Button>
         </Link>
       </Flex>

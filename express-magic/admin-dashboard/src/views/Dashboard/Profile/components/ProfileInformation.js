@@ -1,6 +1,5 @@
 import { CopyIcon } from '@chakra-ui/icons'
 import {
-  Badge,
   Button,
   Flex,
   Icon,
@@ -17,8 +16,8 @@ import Card from 'components/Card/Card'
 import CardBody from 'components/Card/CardBody'
 import CardHeader from 'components/Card/CardHeader'
 import AssignPlanInline from 'components/UserDetails/AssignPlanInline'
-import { useApproveUser, useResetUserPassword, useUpdateUserBusinessType } from 'hooks/useUser'
-import { useEffect, useState } from 'react'
+import { useApproveUser, useResetUserPassword } from 'hooks/useUser'
+import { useState } from 'react'
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa'
 
 const StatusIcon = ({ status }) =>
@@ -89,14 +88,8 @@ const ProfileInformation = ({ user }) => {
 
   const approveUserMutation = useApproveUser()
   const resetPasswordMutation = useResetUserPassword()
-  const updateBusinessTypeMutation = useUpdateUserBusinessType()
   const [tempPassword, setTempPassword] = useState('')
-  const [selectedBusinessTypes, setSelectedBusinessTypes] = useState(user?.businessType || [])
   const { hasCopied, onCopy } = useClipboard(tempPassword || '')
-
-  useEffect(() => {
-    setSelectedBusinessTypes(Array.isArray(user?.businessType) ? user.businessType : [])
-  }, [user?.businessType])
 
   const handleApprove = () => approveUserMutation.mutate(user?.userId)
   const handleResetPassword = () => {
@@ -120,34 +113,6 @@ const ProfileInformation = ({ user }) => {
           isClosable: true,
         })
       },
-    })
-  }
-
-  const businessTypeOptions = ['b2b', 'b2c', 'd2c']
-  const hasBusinessTypeChanges =
-    JSON.stringify([...(selectedBusinessTypes || [])].sort()) !==
-    JSON.stringify([...(Array.isArray(user?.businessType) ? user.businessType : [])].sort())
-
-  const toggleBusinessType = (type) => {
-    setSelectedBusinessTypes((prev) =>
-      prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type],
-    )
-  }
-
-  const handleBusinessTypeSave = () => {
-    if (!selectedBusinessTypes.length) {
-      toast({
-        title: 'Select at least one business type',
-        status: 'warning',
-        duration: 3000,
-        isClosable: true,
-      })
-      return
-    }
-
-    updateBusinessTypeMutation.mutate({
-      userId: user?.userId,
-      businessType: selectedBusinessTypes,
     })
   }
 
@@ -299,62 +264,6 @@ const ProfileInformation = ({ user }) => {
           </CardBody>
         </Card>
       </SimpleGrid>
-
-      <Card>
-        <CardHeader p="12px 5px" mb="12px">
-          <Text fontSize="lg" color={textColor} fontWeight="bold">
-            Business Type
-          </Text>
-        </CardHeader>
-        <CardBody px="5px">
-          <Flex direction="column" gap={4}>
-            <Text fontSize="sm" color={labelColor}>
-              Reassign the user’s business type from admin.
-            </Text>
-            <Flex wrap="wrap" gap={3}>
-              {businessTypeOptions.map((type) => {
-                const isActive = selectedBusinessTypes.includes(type)
-                return (
-                  <Button
-                    key={type}
-                    size="sm"
-                    variant={isActive ? 'solid' : 'outline'}
-                    colorScheme={type === 'b2b' ? 'purple' : type === 'b2c' ? 'blue' : 'orange'}
-                    onClick={() => toggleBusinessType(type)}
-                  >
-                    {type.toUpperCase()}
-                  </Button>
-                )
-              })}
-            </Flex>
-            <Flex align="center" justify="space-between" wrap="wrap" gap={3}>
-              <Flex wrap="wrap" gap={2}>
-                {(selectedBusinessTypes || []).map((type) => (
-                  <Badge
-                    key={type}
-                    colorScheme={type === 'b2b' ? 'purple' : type === 'b2c' ? 'blue' : 'orange'}
-                    px={2}
-                    py={1}
-                    borderRadius="md"
-                  >
-                    {type.toUpperCase()}
-                  </Badge>
-                ))}
-                {!selectedBusinessTypes.length && <Text fontSize="sm">No business type selected</Text>}
-              </Flex>
-              <Button
-                colorScheme="green"
-                onClick={handleBusinessTypeSave}
-                isDisabled={!hasBusinessTypeChanges || !selectedBusinessTypes.length}
-                isLoading={updateBusinessTypeMutation.isPending}
-                loadingText="Saving"
-              >
-                Save Business Type
-              </Button>
-            </Flex>
-          </Flex>
-        </CardBody>
-      </Card>
 
       {/* Activity Section */}
       <Card>

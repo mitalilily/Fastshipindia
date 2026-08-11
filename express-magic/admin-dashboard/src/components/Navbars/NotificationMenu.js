@@ -33,11 +33,14 @@ export default function NotificationMenu({ themeStyles }) {
   const [isLoading, setIsLoading] = useState(false)
   const history = useHistory()
   const menuHoverBg = useColorModeValue('gray.100', 'gray.700')
-  const unreadBg = useColorModeValue('gray.100', 'gray.700')
+  const unreadBg = useColorModeValue('rgba(23,138,104,0.08)', 'rgba(23,138,104,0.16)')
   const borderColor = useColorModeValue('gray.200', 'gray.700')
+  const menuBg = useColorModeValue('#FFFFFF', '#161B22')
+  const menuText = useColorModeValue('#0F172A', '#E6EDF3')
+  const mutedText = useColorModeValue('gray.500', '#8B949E')
+  const badgeRing = useColorModeValue('#FFFFFF', '#161B22')
   useSocket()
 
-  // Initial fetch on mount
   useEffect(() => {
     setIsLoading(true)
     getNotifications()
@@ -69,27 +72,18 @@ export default function NotificationMenu({ themeStyles }) {
   return (
     <Menu>
       <MenuButton
-        as={Button}
         position="relative"
-        leftIcon={<BellIcon color={themeStyles.navbarIcon} w="18px" h="18px" />}
-        px={{ base: 2, md: 3 }}
-        h="38px"
-        color={themeStyles.navbarIcon}
-        variant="ghost"
-        borderRadius="10px"
-        borderWidth="1px"
-        borderColor="transparent"
-        fontSize="sm"
-        fontWeight="700"
+        p={2}
+        borderRadius="full"
         _hover={{ bg: menuHoverBg }}
       >
-        <Text display={{ base: 'none', lg: 'block' }}>Alerts</Text>
+        <BellIcon color={themeStyles.accentSuccess || '#178A68'} w="22px" h="22px" />
 
         {unreadCount > 0 && (
           <Flex
             position="absolute"
-            top="-5px"
-            right="-5px"
+            top="0px"
+            right="0px"
             bg="red.500"
             color="white"
             fontSize="xs"
@@ -99,18 +93,18 @@ export default function NotificationMenu({ themeStyles }) {
             borderRadius="full"
             align="center"
             justify="center"
-            boxShadow="0 0 0 2px white"
+            boxShadow={`0 0 0 2px ${badgeRing}`}
           >
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount}
           </Flex>
         )}
       </MenuButton>
 
-      <MenuList p="8px" minW="360px">
+      <MenuList p="8px" minW="360px" bg={menuBg} color={menuText} borderColor={borderColor}>
         <Flex align="center" px="8px" py="8px" borderBottomWidth="1px" borderColor={borderColor}>
           <Box>
             <Text fontWeight="700">Notifications</Text>
-            <Text fontSize="xs" color="gray.500">
+            <Text fontSize="xs" color={mutedText}>
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </Text>
           </Box>

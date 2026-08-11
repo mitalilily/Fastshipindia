@@ -17,19 +17,6 @@ export async function fetchDeveloperErrorLogs(page = 1, limit = 20, filters = {}
   }
 }
 
-export async function fetchDeveloperLiveLogs(limit = 1000) {
-  try {
-    const response = await api.get('/admin/developer/live-logs', {
-      params: { limit },
-    })
-
-    return response.data
-  } catch (error) {
-    console.error('Error fetching live developer logs:', error.response?.data || error.message)
-    throw error
-  }
-}
-
 export async function updateDeveloperIssue(issueKey, payload) {
   try {
     const response = await api.patch(
@@ -49,19 +36,6 @@ export async function retryDeveloperManifest({ orderId, issueKey }) {
     return response.data
   } catch (error) {
     console.error('Error retrying developer manifest:', error.response?.data || error.message)
-    throw error
-  }
-}
-
-export async function triggerShadowfaxWebhookTest(payload) {
-  try {
-    const response = await api.post('/admin/developer/trigger-shadowfax-webhook', payload)
-    return response.data
-  } catch (error) {
-    console.error(
-      'Error triggering Shadowfax webhook test:',
-      error.response?.data || error.message,
-    )
     throw error
   }
 }

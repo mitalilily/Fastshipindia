@@ -1,275 +1,425 @@
-import { ChevronDownIcon } from '@chakra-ui/icons'
-import { Box, Button, Collapse, Flex, Stack, Text, useColorModeValue } from '@chakra-ui/react'
-import React, { useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { BRAND } from '../../constants/brand'
-import BrandMark from '../Brand/BrandMark'
+import { ChevronRightIcon } from "@chakra-ui/icons";
+import {
+  Box,
+  Button,
+  Collapse,
+  Flex,
+  Stack,
+  Text,
+  useColorModeValue,
+} from "@chakra-ui/react";
+import {
+  IconArrowBackUp,
+  IconCalculator,
+  IconChartBar,
+  IconClipboardList,
+  IconDashboard,
+  IconDatabase,
+  IconFileInvoice,
+  IconHelpCircle,
+  IconHistory,
+  IconKey,
+  IconPackage,
+  IconPackageExport,
+  IconReceipt,
+  IconReportAnalytics,
+  IconScale,
+  IconSettings,
+  IconSpeakerphone,
+  IconStar,
+  IconTruck,
+  IconUserCircle,
+  IconUserCog,
+  IconUsers,
+  IconWallet,
+} from "@tabler/icons-react";
+import React from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { brandIdentity } from "theme/brand";
 
-const SidebarContent = ({ logoText, routes, sidebarWidth }) => {
-  const location = useLocation()
-  const [state, setState] = React.useState({})
+const sidebarItems = [
+  {
+    label: "Dashboard",
+    path: "/admin/dashboard",
+    icon: IconDashboard,
+  },
+  {
+    label: "Order Management",
+    icon: IconPackageExport,
+    children: [
+      { label: "Orders", path: "/admin/orders", icon: IconPackage },
+      {
+        label: "Failed Deliveries (NDR)",
+        path: "/admin/ops/ndr",
+        icon: IconHelpCircle,
+      },
+      { label: "Returns (RTO)", path: "/admin/ops/rto", icon: IconArrowBackUp },
+      {
+        label: "Order Tracking",
+        path: "/admin/order-tracking",
+        icon: IconTruck,
+      },
+    ],
+  },
+  {
+    label: "Sellers",
+    icon: IconUsers,
+    children: [
+      { label: "Sellers", path: "/admin/users-management", icon: IconUsers },
+      { label: "Plans", path: "/admin/plans", icon: IconStar },
+      { label: "Team Members", path: "/admin/team-members", icon: IconUserCog },
+    ],
+  },
+  {
+    label: "Support",
+    icon: IconHelpCircle,
+    path: "/admin/support",
+  },
+  {
+    label: "Finance",
+    icon: IconWallet,
+    children: [
+      {
+        label: "Invoices",
+        path: "/admin/billing-invoices",
+        icon: IconFileInvoice,
+      },
+      {
+        label: "Billing Preferences",
+        path: "/admin/billing-preferences",
+        icon: IconSettings,
+      },
+      {
+        label: "COD Remittance",
+        path: "/admin/cod-remittance",
+        icon: IconWallet,
+      },
+      { label: "Wallet", path: "/admin/wallet", icon: IconReceipt },
+    ],
+  },
+  {
+    label: "Insights",
+    icon: IconChartBar,
+    children: [
+      { label: "Reports", path: "/admin/reports", icon: IconReportAnalytics },
+      { label: "Activity Log", path: "/admin/activity-log", icon: IconHistory },
+    ],
+  },
+  {
+    label: "Reconciliation",
+    icon: IconScale,
+    children: [
+      {
+        label: "Weight Discrepancies",
+        path: "/admin/weight-reconciliation",
+        icon: IconScale,
+      },
+      {
+        label: "Dispute Management",
+        path: "/admin/dispute-management",
+        icon: IconClipboardList,
+      },
+    ],
+  },
+  {
+    label: "Tools",
+    icon: IconCalculator,
+    children: [
+      {
+        label: "Rate Calculator",
+        path: "/admin/rate-calculator",
+        icon: IconCalculator,
+      },
+      {
+        label: "Order Tracking",
+        path: "/admin/order-tracking",
+        icon: IconTruck,
+      },
+      {
+        label: "API Integration",
+        path: "/admin/api-integration",
+        icon: IconKey,
+      },
+    ],
+  },
+  {
+    label: "Configuration",
+    icon: IconSettings,
+    children: [
+      { label: "Couriers", path: "/admin/couriers" },
+      {
+        label: "Courier Credentials",
+        path: "/admin/courier-credentials",
+        icon: IconKey,
+      },
+      { label: "Service Providers", path: "/admin/service-providers" },
+      { label: "Serviceability", path: "/admin/serviceability" },
+      { label: "Manual Serviceability", path: "/admin/manual-serviceability" },
+      { label: "B2C Pricing", path: "/admin/pricing/b2c" },
+      { label: "B2B Pricing", path: "/admin/pricing/b2b" },
+    ],
+  },
+  {
+    label: "Marketing",
+    icon: IconSpeakerphone,
+    children: [
+      { label: "All Blogs", path: "/admin/blogs" },
+      { label: "Create Blog", path: "/admin/create-blog" },
+    ],
+  },
+  {
+    label: "Settings",
+    icon: IconUserCircle,
+    children: [
+      { label: "My Account", path: "/admin/account" },
+      { label: "Payment Options", path: "/admin/settings/payment-options" },
+      { label: "Change Password", path: "/admin/settings/change-password" },
+      { label: "Notifications", path: "/admin/notifications" },
+      { label: "Notification Settings", path: "/admin/notifications/settings" },
+      { label: "Developer", path: "/admin/developer", icon: IconDatabase },
+    ],
+  },
+];
 
-  const sidebarBg = useColorModeValue(
-    `linear-gradient(180deg, ${BRAND.colors.paper} 0%, ${BRAND.colors.surface} 100%)`,
-    `linear-gradient(180deg, ${BRAND.colors.tealDark} 0%, #020D1F 100%)`,
-  )
-  const sidebarBorder = useColorModeValue(BRAND.colors.border, 'rgba(134,168,211,0.14)')
-  const sidebarShadow = useColorModeValue('14px 0 32px rgba(6, 42, 91, 0.09)', '14px 0 34px rgba(2, 13, 31, 0.5)')
-  const activeBg = `linear-gradient(135deg, ${BRAND.colors.teal} 0%, ${BRAND.colors.tealDark} 100%)`
-  const hoverBg = useColorModeValue('rgba(6,42,91,0.05)', 'rgba(255,255,255,0.05)')
-  const activeBorder = useColorModeValue(BRAND.colors.teal, 'rgba(134,168,211,0.32)')
-  const hoverBorder = useColorModeValue('rgba(6,42,91,0.12)', 'rgba(255,255,255,0.08)')
-  const iconBg = useColorModeValue('rgba(6,42,91,0.08)', 'rgba(255,255,255,0.06)')
-  const iconActiveBg = BRAND.colors.orange
-  const textColor = useColorModeValue(BRAND.colors.text, 'rgba(255,255,255,0.8)')
-  const activeTextColor = 'white'
-  const iconColor = useColorModeValue(BRAND.colors.muted, 'rgba(255,255,255,0.56)')
-  const dividerColor = useColorModeValue(BRAND.colors.border, 'rgba(255,255,255,0.08)')
-  const thumbColor = useColorModeValue('rgba(6,42,91,0.22)', 'rgba(255,255,255,0.18)')
-  const brandCardBg = useColorModeValue('rgba(255,255,255,0.92)', 'rgba(255,255,255,0.04)')
-  const brandCardBorder = useColorModeValue(BRAND.colors.border, 'rgba(255,255,255,0.08)')
-  const brandText = useColorModeValue(BRAND.colors.ink, 'white')
-  const collapsedLogoBg = useColorModeValue('rgba(6,42,91,0.08)', 'rgba(255,255,255,0.08)')
+const isItemActive = (pathname, item) => {
+  if (item.path) return pathname.startsWith(item.path);
+  return item.children?.some((child) => pathname.startsWith(child.path));
+};
 
-  const activeRoute = (routeName) => location.pathname.startsWith(routeName)
+const SidebarContent = ({
+  logoText,
+  sidebarWidth,
+  position = "fixed",
+  onNavigate,
+}) => {
+  const location = useLocation();
+  const [openGroups, setOpenGroups] = React.useState({});
+  const sidebarBg = useColorModeValue("#ffffff", "#161B22");
+  const borderColor = useColorModeValue("#E8EDF5", "#30363D");
+  const logoColor = useColorModeValue("#0F172A", "#E6EDF3");
+  const itemColor = useColorModeValue("#586B8A", "#8B949E");
+  const itemHoverBg = useColorModeValue("#F9FAFB", "#21262D");
+  const itemHoverColor = useColorModeValue("#0F172A", "#E6EDF3");
+  const itemActiveBg = useColorModeValue("#EDE9FE", "#242349");
+  const itemActiveColor = useColorModeValue("#5A4BD1", "#B7AEFF");
+  const iconColor = useColorModeValue("#94A3B8", "#8B949E");
+  const childColor = useColorModeValue("#586B8A", "#8B949E");
+  const childActiveBg = useColorModeValue("#EDE9FE", "#242349");
+  const childActiveColor = useColorModeValue("#5A4BD1", "#B7AEFF");
+  const scrollbarThumb = useColorModeValue("#CBD5E1", "#6E7681");
 
-  const toggleCollapse = (key) => {
-    setState((prev) => ({ [key]: !prev[key] }))
-  }
-
-  useEffect(() => {
-    routes.forEach((route) => {
-      if (route.category && route.views) {
-        const isChildActive = route.views.some((view) =>
-          location.pathname.startsWith(view.layout + view.path.split('/:')[0]),
-        )
-        if (isChildActive) {
-          setState((prev) => ({ ...prev, [route.state]: true }))
-        }
+  React.useEffect(() => {
+    const nextOpen = {};
+    sidebarItems.forEach((item) => {
+      if (item.children && isItemActive(location.pathname, item)) {
+        nextOpen[item.label] = true;
       }
-    })
-  }, [location.pathname, routes])
+    });
+    setOpenGroups((prev) => ({ ...prev, ...nextOpen }));
+  }, [location.pathname]);
 
-  const collapsed = sidebarWidth < 220
-  const compact = sidebarWidth >= 220 && sidebarWidth < 270
-  const textSize = compact ? '13px' : 'sm'
-  const showText = !collapsed
+  const toggleGroup = (label) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
-  const renderLinkButton = (prop, isActive) => (
-    <Button
-      className="sidebar-nav-button"
-      aria-label={collapsed ? prop.name : undefined}
-      title={collapsed ? prop.name : undefined}
-      justifyContent={collapsed ? 'center' : 'flex-start'}
-      w="100%"
-      bg={isActive ? activeBg : 'transparent'}
-      borderRadius="10px"
-      mb={collapsed ? '1px' : '2px'}
-      px={collapsed ? '2' : '3'}
-      py={collapsed ? '5px' : '7px'}
-      h="auto"
-      minH={collapsed ? '44px' : '50px'}
-      border="1px solid"
-      borderColor={isActive ? activeBorder : 'transparent'}
-      _hover={{
-        bg: isActive ? activeBg : hoverBg,
-        transform: 'translateX(2px)',
-        borderColor: isActive ? activeBorder : hoverBorder,
-      }}
-      _active={{ transform: 'scale(0.98)' }}
-      transition="all 0.2s ease"
+  const renderIcon = (Icon, active) => (
+    <Box
+      color={active ? itemActiveColor : iconColor}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      flexShrink={0}
+      w="27px"
     >
-      <Flex align="center" justify={collapsed ? 'center' : 'flex-start'} gap={collapsed ? '0' : '10px'} w="100%">
-        {prop.icon && (
-          <Box
-            className="sidebar-nav-icon"
-            p={collapsed ? '4px' : '7px'}
-            borderRadius="8px"
-            bg={isActive ? iconActiveBg : iconBg}
-            color={isActive ? '#FFFFFF' : iconColor}
-            fontSize="18px"
-            minW={collapsed ? '30px' : '34px'}
-            minH={collapsed ? '30px' : '34px'}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            {prop.icon}
-          </Box>
-        )}
-        {showText && (
-          <Text color={isActive ? activeTextColor : textColor} fontWeight={isActive ? '700' : '600'} fontSize={textSize}>
-            {prop.name}
-          </Text>
-        )}
-      </Flex>
-    </Button>
-  )
-
-  const renderLinks = (items) =>
-    items
-      .filter((prop) => prop.show !== false)
-      .map((prop) => {
-        if (prop.redirect) return null
-
-        if (prop.category) {
-          const isChildActive = prop.views.some((view) =>
-            location.pathname.startsWith(view.layout + view.path.split('/:')[0]),
-          )
-
-          return (
-            <Box key={prop.name} mb={collapsed ? '1px' : '2px'}>
-              <Button
-                className="sidebar-nav-button"
-                aria-label={collapsed ? prop.name : undefined}
-                title={collapsed ? prop.name : undefined}
-                onClick={() => toggleCollapse(prop.state)}
-                justifyContent={collapsed ? 'center' : 'space-between'}
-                w="100%"
-                bg={isChildActive ? activeBg : 'transparent'}
-                borderRadius="10px"
-                mb={collapsed ? '1px' : '2px'}
-                px={collapsed ? '2' : '3'}
-                py={collapsed ? '5px' : '7px'}
-                h="auto"
-                minH={collapsed ? '44px' : '50px'}
-                border="1px solid"
-                borderColor={isChildActive ? activeBorder : 'transparent'}
-                _hover={{
-                  bg: isChildActive ? activeBg : hoverBg,
-                  transform: 'translateX(2px)',
-                  borderColor: isChildActive ? activeBorder : hoverBorder,
-                }}
-                transition="all 0.2s ease"
-              >
-                <Flex align="center" justify={collapsed ? 'center' : 'flex-start'} gap={collapsed ? '0' : '10px'} w="100%">
-                  <Box
-                    className="sidebar-nav-icon"
-                    p={collapsed ? '4px' : '7px'}
-                    borderRadius="8px"
-                    bg={isChildActive ? iconActiveBg : iconBg}
-                    color={isChildActive ? '#FFFFFF' : iconColor}
-                    fontSize="18px"
-                    minW={collapsed ? '30px' : '34px'}
-                    minH={collapsed ? '30px' : '34px'}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                  >
-                    {prop.icon}
-                  </Box>
-                  {showText && (
-                    <Text
-                      color={isChildActive ? activeTextColor : textColor}
-                      fontWeight={isChildActive ? '700' : '600'}
-                      fontSize={textSize}
-                      textAlign="left"
-                      flex="1"
-                    >
-                      {prop.name}
-                    </Text>
-                  )}
-                </Flex>
-                {showText && (
-                  <Box
-                    transition="transform 0.2s"
-                    transform={state[prop.state] ? 'rotate(180deg)' : 'rotate(0deg)'}
-                    color={isChildActive ? BRAND.colors.teal : iconColor}
-                  >
-                    <ChevronDownIcon />
-                  </Box>
-                )}
-              </Button>
-              <Collapse in={state[prop.state]} animateOpacity>
-                <Box pl={showText ? '12px' : '0'} pr={showText ? '8px' : '0'} mt="1">
-                  <Stack spacing="1">{renderLinks(prop.views)}</Stack>
-                </Box>
-              </Collapse>
-            </Box>
-          )
-        }
-
-        const isActive = activeRoute(prop.layout + prop.path)
-        return (
-          <NavLink to={prop.layout + prop.path} key={prop.name}>
-            {renderLinkButton(prop, isActive)}
-          </NavLink>
-        )
-      })
+      <Icon size={21} strokeWidth={1.65} />
+    </Box>
+  );
 
   return (
     <Box
-      pt={collapsed ? '8px' : '16px'}
-      pb={collapsed ? '8px' : '14px'}
-      h="100dvh"
-      maxH="100dvh"
+      h="100vh"
       w={`${sidebarWidth}px`}
       bg={sidebarBg}
       borderRight="1px solid"
-      borderColor={sidebarBorder}
-      boxShadow={sidebarShadow}
-      position="fixed"
-      left="0"
-      top="0"
-      zIndex="1200"
-      transition="width 0.25s ease"
+      borderColor={borderColor}
+      position={position}
+      left={position === "fixed" ? "0" : undefined}
+      top={position === "fixed" ? "0" : undefined}
       overflowY="auto"
       overflowX="hidden"
-      pr="2"
-      overscrollBehavior="contain"
       css={{
-        scrollbarWidth: 'thin',
-        '&::-webkit-scrollbar': { width: '5px' },
-        '&::-webkit-scrollbar-track': { background: 'transparent' },
-        '&::-webkit-scrollbar-thumb': {
-          background: thumbColor,
-          borderRadius: '4px',
-        },
-        '@media screen and (max-height: 760px)': {
-          '& .sidebar-nav-button': {
-            minHeight: '38px',
-            paddingTop: '3px',
-            paddingBottom: '3px',
-            marginBottom: '0px',
-          },
-          '& .sidebar-nav-icon': {
-            minWidth: '28px',
-            minHeight: '28px',
-            padding: '3px',
-            fontSize: '17px',
-          },
+        scrollbarWidth: "thin",
+        "&::-webkit-scrollbar": { width: "11px" },
+        "&::-webkit-scrollbar-track": { background: sidebarBg },
+        "&::-webkit-scrollbar-thumb": {
+          background: scrollbarThumb,
+          borderRadius: "999px",
+          border: `3px solid ${sidebarBg}`,
         },
       }}
     >
-      <Box mb={collapsed ? '7px' : '14px'} px={collapsed ? '8px' : '12px'} textAlign="center" transition="all 0.3s ease">
-        {showText ? (
-          <Flex
-            align="center"
-            justify="flex-start"
-            gap="10px"
-            px="12px"
-            py="12px"
-            borderRadius="14px"
-            bg={brandCardBg}
-            border="1px solid"
-            borderColor={brandCardBorder}
-          >
-            <BrandMark compact showTagline align="start" size={42} />
-          </Flex>
-        ) : (
-          <Box mx="auto" p="2px" borderRadius="10px" bg={collapsedLogoBg}>
-            <BrandMark markOnly size={30} />
-          </Box>
-        )}
-      </Box>
+      <Flex
+        h="70px"
+        px="28px"
+        align="center"
+        gap="14px"
+        borderBottom="1px solid"
+        borderColor={borderColor}
+      >
+        <Box
+          as="img"
+          src={brandIdentity.logoPath}
+          alt={brandIdentity.name}
+          w="42px"
+          h="42px"
+          borderRadius="50%"
+          objectFit="cover"
+        />
+        <Text
+          color={logoColor}
+          fontSize="22px"
+          fontWeight="800"
+          letterSpacing="0"
+        >
+          {logoText || "Admin Panel"}
+        </Text>
+      </Flex>
 
-      <Box h="1px" bg={dividerColor} mx={collapsed ? '8px' : '14px'} mb={collapsed ? '6px' : '10px'} />
+      <Stack spacing="7px" px="15px" py="22px">
+        {sidebarItems.map((item) => {
+          const active = isItemActive(location.pathname, item);
+          const Icon = item.icon || IconTruck;
 
-      <Stack direction="column" spacing="0" px={collapsed ? '6px' : '10px'}>
-        {renderLinks(routes)}
+          if (!item.children) {
+            return (
+              <NavLink key={item.label} to={item.path} onClick={onNavigate}>
+                <Flex
+                  h="44px"
+                  px="16px"
+                  align="center"
+                  gap="11px"
+                  borderRadius="8px"
+                  bg={active ? itemActiveBg : "transparent"}
+                  color={active ? itemActiveColor : itemColor}
+                  _hover={{
+                    bg: active ? itemActiveBg : itemHoverBg,
+                    color: itemHoverColor,
+                  }}
+                  transition="all 0.16s ease"
+                >
+                  {renderIcon(Icon, active)}
+                  <Text
+                    fontSize="18px"
+                    fontWeight={active ? "700" : "500"}
+                    lineHeight="1.15"
+                  >
+                    {item.label}
+                  </Text>
+                </Flex>
+              </NavLink>
+            );
+          }
+
+          const open = Boolean(openGroups[item.label]);
+
+          return (
+            <Box key={item.label}>
+              <Button
+                type="button"
+                onClick={() => toggleGroup(item.label)}
+                minH="44px"
+                w="100%"
+                px="16px"
+                py="0"
+                justifyContent="space-between"
+                borderRadius="8px"
+                bg={active ? itemActiveBg : "transparent"}
+                color={active ? itemActiveColor : itemColor}
+                fontWeight="500"
+                _hover={{
+                  bg: active ? itemActiveBg : itemHoverBg,
+                  color: itemHoverColor,
+                }}
+                _active={{ bg: itemActiveBg }}
+              >
+                <Flex align="center" gap="11px" minW={0}>
+                  {renderIcon(Icon, active)}
+                  <Text
+                    fontSize="18px"
+                    whiteSpace="normal"
+                    textAlign="left"
+                    lineHeight="1.25"
+                  >
+                    {item.label}
+                  </Text>
+                </Flex>
+                <Box
+                  transition="transform 0.16s ease"
+                  transform={open ? "rotate(90deg)" : "rotate(0deg)"}
+                >
+                  <ChevronRightIcon boxSize="18px" />
+                </Box>
+              </Button>
+              <Collapse in={open} animateOpacity>
+                <Stack
+                  spacing="5px"
+                  mt="8px"
+                  mb="9px"
+                  ml="26px"
+                  pl="20px"
+                  borderLeft="1px solid"
+                  borderColor={borderColor}
+                >
+                  {item.children.map((child) => {
+                    const childActive = location.pathname.startsWith(
+                      child.path
+                    );
+                    const ChildIcon = child.icon || IconClipboardList;
+                    return (
+                      <NavLink
+                        key={child.path}
+                        to={child.path}
+                        onClick={onNavigate}
+                      >
+                        <Flex
+                          align="center"
+                          gap="10px"
+                          minH="39px"
+                          px="15px"
+                          py="7px"
+                          borderRadius="7px"
+                          color={childActive ? childActiveColor : childColor}
+                          bg={childActive ? childActiveBg : "transparent"}
+                          _hover={{
+                            bg: childActiveBg,
+                            color: childActiveColor,
+                          }}
+                        >
+                          <Box
+                            flexShrink={0}
+                            color={childActive ? childActiveColor : iconColor}
+                          >
+                            <ChildIcon size={18} strokeWidth={1.65} />
+                          </Box>
+                          <Text
+                            fontSize="16px"
+                            fontWeight={childActive ? "700" : "500"}
+                            lineHeight="1.22"
+                          >
+                            {child.label}
+                          </Text>
+                        </Flex>
+                      </NavLink>
+                    );
+                  })}
+                </Stack>
+              </Collapse>
+            </Box>
+          );
+        })}
       </Stack>
     </Box>
-  )
-}
+  );
+};
 
-export default SidebarContent
+export default SidebarContent;

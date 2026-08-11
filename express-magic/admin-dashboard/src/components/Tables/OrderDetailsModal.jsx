@@ -14,16 +14,24 @@ import {
   Divider,
   Flex,
   Icon,
+  Input,
   Table,
   Tbody,
   Tr,
   Td,
+  Textarea,
+  Select,
   useColorModeValue,
   VStack,
   HStack,
   Heading,
+  useToast,
 } from '@chakra-ui/react'
 import { usePresignedDownloadUrls } from 'hooks/usePresignedUrls'
+import { useUpdateOrderStatusMutation } from 'hooks/useOrders'
+import { openDocumentInNewTab } from 'services/upload.service'
+import { useEffect, useState } from 'react'
+import { getCourierDisplayName } from 'utils/courierDisplay'
 import {
   FiPackage,
   FiUser,
@@ -35,19 +43,46 @@ import {
   FiExternalLink,
 } from 'react-icons/fi'
 
-const OrderDetailsModal = ({ isOpen, onClose, order }) => {
+const STATUS_OPTIONS = [
+  'pending',
+  'booked',
+  'pickup_initiated',
+  'shipment_created',
+  'in_transit',
+  'out_for_delivery',
+  'delivered',
+  'ndr',
+  'undelivered',
+  'rto',
+  'rto_in_transit',
+  'rto_delivered',
+  'cancelled',
+  'manifest_failed',
+  'cancellation_requested',
+]
+
+const OrderDetailsModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
   const bgColor = useColorModeValue('white', 'gray.800')
   const labelColor = useColorModeValue('gray.600', 'gray.400')
   const sectionBg = useColorModeValue('gray.50', 'gray.700')
   const safeOrder = order || {}
+  const toast = useToast()
+  const [selectedStatus, setSelectedStatus] = useState('')
+  const [statusNote, setStatusNote] = useState('')
+  const { mutateAsync: updateOrderStatus, isPending: isUpdatingStatus } = useUpdateOrderStatusMutation()
 
   const isHttpUrl = (value) => typeof value === 'string' && /^https?:\/\//i.test(value)
-  const labelSource = safeOrder.label_url || safeOrder.label || safeOrder.label_key || null
-  const invoiceSource =
-    safeOrder.invoice_url || safeOrder.invoice_link || safeOrder.invoice_key || null
+  const labelKey = safeOrder.label_key || (safeOrder.label && !isHttpUrl(safeOrder.label) ? safeOrder.label : null)
+  const invoiceKey =
+    safeOrder.invoice_key ||
+    (safeOrder.invoice_link && !isHttpUrl(safeOrder.invoice_link) ? safeOrder.invoice_link : null)
+  const labelUrl = safeOrder.label_url || (safeOrder.label && isHttpUrl(safeOrder.label) ? safeOrder.label : null)
+  const invoiceUrl =
+    safeOrder.invoice_url ||
+    (safeOrder.invoice_link && isHttpUrl(safeOrder.invoice_link) ? safeOrder.invoice_link : null)
   const presignKeys = [
-    ...(labelSource && !isHttpUrl(labelSource) ? [labelSource] : []),
-    ...(invoiceSource && !isHttpUrl(invoiceSource) ? [invoiceSource] : []),
+    ...(labelKey ? [labelKey] : []),
+    ...(invoiceKey ? [invoiceKey] : []),
   ]
   const { data: presignedUrls = [] } = usePresignedDownloadUrls({
     keys: presignKeys,
@@ -59,16 +94,17 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
     return acc
   }, {})
 
-  const resolvedLabelUrl = labelSource
-    ? isHttpUrl(labelSource)
-      ? labelSource
-      : presignedMap[labelSource]
-    : null
-  const resolvedInvoiceUrl = invoiceSource
-    ? isHttpUrl(invoiceSource)
-      ? invoiceSource
-      : presignedMap[invoiceSource]
-    : null
+  const resolvedLabelUrl = labelKey
+    ? presignedMap[labelKey]
+    : labelUrl
+  const resolvedInvoiceUrl = invoiceKey
+    ? presignedMap[invoiceKey]
+    : invoiceUrl
+
+  useEffect(() => {
+    setSelectedStatus(order?.order_status || '')
+    setStatusNote('')
+  }, [order, isOpen])
 
   if (!order) return null
 
@@ -78,8 +114,6 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
       shipment_created: 'blue',
       in_transit: 'purple',
       out_for_delivery: 'cyan',
-      ndr: 'orange',
-      undelivered: 'orange',
       delivered: 'green',
       cancelled: 'red',
       rto: 'pink',
@@ -91,6 +125,43 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
+  }
+
+  const handleStatusUpdate = async () => {
+    if (!order?.id || !selectedStatus) return
+
+    try {
+      await updateOrderStatus({
+        orderId: order.id,
+        status: selectedStatus,
+        note: statusNote.trim() || undefined,
+      })
+
+      toast({
+        title: 'Order status updated',
+        description: `Order moved to ${selectedStatus.replace(/_/g, ' ')}.`,
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      })
+
+      if (onOrderUpdated) {
+        onOrderUpdated({
+          ...order,
+          order_status: selectedStatus,
+        })
+      }
+    } catch (error) {
+      const message =
+        error?.response?.data?.message || error?.message || 'Failed to update order status.'
+      toast({
+        title: 'Status update failed',
+        description: message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    }
   }
 
   const InfoRow = ({ label, value, icon, copyable = false }) => (
@@ -180,9 +251,16 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
             {/* Shipment Information */}
             <Section title="Shipment Information" icon={FiTruck}>
               <InfoRow label="AWB Number" value={order.awb_number} copyable />
-              <InfoRow label="Courier Partner" value={order.courier_partner} />
+              <InfoRow
+                label="Courier Partner"
+                value={getCourierDisplayName({
+                  name: order.courier_partner,
+                  courier_id: order.courier_id,
+                  integration_type: order.integration_type,
+                })}
+              />
               <InfoRow label="Shipment ID" value={order.shipment_id} />
-              {labelSource && (
+              {(labelKey || labelUrl) && (
                 <Flex justify="space-between" align="center" py={2}>
                   <Text fontSize="sm" color={labelColor} fontWeight="medium">
                     Shipping Label
@@ -191,14 +269,29 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                     size="xs"
                     colorScheme="blue"
                     rightIcon={<FiExternalLink />}
-                    onClick={() => resolvedLabelUrl && window.open(resolvedLabelUrl, '_blank')}
+                    onClick={() =>
+                      resolvedLabelUrl &&
+                      void openDocumentInNewTab(resolvedLabelUrl, {
+                        downloadName: `label-${order.order_number || order.id}.pdf`,
+                        contentType: 'application/pdf',
+                      }).catch((error) => {
+                        console.error('Failed to open label document', error)
+                        toast({
+                          title: 'Label unavailable',
+                          description: 'We could not open the shipping label right now.',
+                          status: 'error',
+                          duration: 4000,
+                          isClosable: true,
+                        })
+                      })
+                    }
                     isDisabled={!resolvedLabelUrl}
                   >
                     View
                   </Button>
                 </Flex>
               )}
-              {invoiceSource && (
+              {(invoiceKey || invoiceUrl) && (
                 <Flex justify="space-between" align="center" py={2}>
                   <Text fontSize="sm" color={labelColor} fontWeight="medium">
                     Invoice
@@ -207,7 +300,22 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                     size="xs"
                     colorScheme="purple"
                     rightIcon={<FiExternalLink />}
-                    onClick={() => resolvedInvoiceUrl && window.open(resolvedInvoiceUrl, '_blank')}
+                    onClick={() =>
+                      resolvedInvoiceUrl &&
+                      void openDocumentInNewTab(resolvedInvoiceUrl, {
+                        downloadName: `invoice-${order.order_number || order.id}.pdf`,
+                        contentType: 'application/pdf',
+                      }).catch((error) => {
+                        console.error('Failed to open invoice document', error)
+                        toast({
+                          title: 'Invoice unavailable',
+                          description: 'We could not open the invoice right now.',
+                          status: 'error',
+                          duration: 4000,
+                          isClosable: true,
+                        })
+                      })
+                    }
                     isDisabled={!resolvedInvoiceUrl}
                   >
                     View
@@ -236,6 +344,48 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
               </VStack>
             </Section>
           </Grid>
+
+          {/* Financial Information */}
+          <Section title="Admin Controls" icon={FiCalendar}>
+            <VStack align="stretch" spacing={3}>
+              <Box>
+                <Text fontSize="sm" color={labelColor} fontWeight="medium" mb={1.5}>
+                  Update Order Status
+                </Text>
+                <Select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  size="sm"
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {status.replace(/_/g, ' ').toUpperCase()}
+                    </option>
+                  ))}
+                </Select>
+              </Box>
+              <Box>
+                <Text fontSize="sm" color={labelColor} fontWeight="medium" mb={1.5}>
+                  Admin Note
+                </Text>
+                <Textarea
+                  value={statusNote}
+                  onChange={(e) => setStatusNote(e.target.value)}
+                  placeholder="Optional note for this manual status change"
+                  size="sm"
+                />
+              </Box>
+              <Button
+                colorScheme="blue"
+                onClick={handleStatusUpdate}
+                isLoading={isUpdatingStatus}
+                isDisabled={!selectedStatus || selectedStatus === order.order_status}
+                alignSelf="flex-start"
+              >
+                Save Status
+              </Button>
+            </VStack>
+          </Section>
 
           {/* Financial Information */}
           <Section title="Financial Information" icon={FiDollarSign}>

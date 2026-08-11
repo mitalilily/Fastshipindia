@@ -8,10 +8,10 @@ const CourierDistributionChart = ({ data = {} }) => {
   const bgColor = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
 
-  // FastShip brand palette for courier comparison.
+  // Enhanced color palette with gradients
   const chartColors = useColorModeValue(
-    ['#062A5B', '#ED1C24', '#3E6AA8', '#B80F1A', '#86A8D3'],
-    ['#86A8D3', '#F36673', '#B5CAE8', '#F79AA4', '#3E6AA8']
+    ['#3182CE', '#319795', '#805AD5', '#D53F8C', '#DD6B20'],
+    ['#4FD1C7', '#63B3ED', '#9F7AEA', '#F687B3', '#FC8181']
   )
 
   // Process data to extract orders count for each aggregator
@@ -60,9 +60,7 @@ const CourierDistributionChart = ({ data = {} }) => {
         show: false,
       },
       animations: {
-        enabled: true,
-        easing: 'easeinout',
-        speed: 800,
+        enabled: false,
       },
     },
     plotOptions: {

@@ -1,6 +1,7 @@
 import { useToast } from '@chakra-ui/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  attachAdminNdrArtifact,
   ndrReattempt,
   ndrChangePhone,
   ndrChangeAddress,
@@ -95,4 +96,25 @@ export function useDelhiveryPickupReschedule() {
   })
 }
 
+export function useAttachAdminNdrArtifact() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  return useMutation({
+    mutationFn: attachAdminNdrArtifact,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-ndr'] })
+      toast({
+        title: 'Attachment saved',
+        description: 'The NDR recording or note is now available in the timeline.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      })
+    },
+    onError: (e) => {
+      const msg = e?.response?.data?.message || e?.message || 'Failed to save attachment'
+      toast({ title: 'Attachment failed', description: msg, status: 'error', duration: 4000, isClosable: true })
+    },
+  })
+}
 

@@ -10,7 +10,7 @@ export const buttonStyles = {
         'transparent-with-icon': {
           bg: 'transparent',
           fontWeight: '600',
-          borderRadius: '14px',
+          borderRadius: '8px',
           cursor: 'pointer',
           _active: {
             bg: 'transparent',
@@ -21,13 +21,14 @@ export const buttonStyles = {
             boxShadow: 'none',
           },
           _hover: {
-            bg: 'rgba(6, 42, 91, 0.08)',
+            bg: 'rgba(255, 138, 40, 0.1)',
           },
         },
       },
       baseStyle: {
-        borderRadius: '14px',
-        fontWeight: '600',
+        borderRadius: '8px',
+        fontWeight: '700',
+        letterSpacing: '0',
         _focus: {
           boxShadow: 'none',
         },

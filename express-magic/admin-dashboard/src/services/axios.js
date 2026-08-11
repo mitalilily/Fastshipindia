@@ -1,136 +1,135 @@
-import axios from 'axios'
+import axios from "axios";
 
-const RENDER_API_BASE_URL = 'https://fastshipindia.onrender.com/api'
+const DEFAULT_API_BASE_URL = "https://aggregator-backend-7gmk.onrender.com/api";
+const LEGACY_RAILWAY_API_HOST = ["choice", "me-backend-production.up.railway.app"].join("");
+const PLACEHOLDER_API_HOST = "your-backend-url.onrender.com";
 
-const getDefaultApiBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname.toLowerCase()
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-      return 'http://localhost:4000/api'
-    }
-  }
-
-  return RENDER_API_BASE_URL
-}
-
-const normalizeApiBaseUrl = (configuredUrl) => {
-  const fallback = getDefaultApiBaseUrl()
-  const value = String(configuredUrl || '').trim().replace(/\/+$/, '')
-
-  if (!value || /(^|\.)up\.railway\.app(?=\/|$)/i.test(value.replace(/^https?:\/\//i, ''))) {
-    return fallback
-  }
+const normalizeApiBaseUrl = (rawBaseUrl) => {
+  if (!rawBaseUrl) return DEFAULT_API_BASE_URL;
 
   try {
-    const url = new URL(value)
-    const hostname = url.hostname.toLowerCase()
-
+    const candidate = new URL(rawBaseUrl);
     if (
-      !['http:', 'https:'].includes(url.protocol) ||
-      hostname === 'fastship.onrender.com' ||
-      hostname === 'fastship-admin.onrender.com' ||
-      hostname === 'fastshipadmin.onrender.com' ||
-      hostname === 'fastship-piwy.onrender.com'
+      candidate.hostname === LEGACY_RAILWAY_API_HOST ||
+      candidate.hostname === PLACEHOLDER_API_HOST
     ) {
-      return fallback
+      return DEFAULT_API_BASE_URL;
     }
 
-    if (!url.pathname || url.pathname === '/') {
-      url.pathname = '/api'
-    }
-
-    return url.toString().replace(/\/+$/, '')
+    const normalized = candidate.href.replace(/\/+$/, "");
+    if (normalized.endsWith("/api") || normalized.includes("/api/"))
+      return normalized;
+    return `${normalized}/api`;
   } catch {
-    return fallback
+    return DEFAULT_API_BASE_URL;
   }
-}
+};
 
-const apiBaseURL = normalizeApiBaseUrl(process.env.REACT_APP_API_BASE_URL)
+const API_BASE_URL = normalizeApiBaseUrl(process.env.REACT_APP_API_BASE_URL);
 
 const api = axios.create({
-  baseURL: apiBaseURL,
-  withCredentials: true, // only if using cookies
-})
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+});
 
-let refreshPromise = null
+let refreshPromise = null;
 
-// Request interceptor: attach access token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`
+const redirectToSignIn = () => {
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
   }
-  return config
-})
+};
 
-// Response interceptor: auto-refresh token on 401
+const clearStoredAuth = () => {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("userId");
+  localStorage.removeItem("adminUser");
+};
+
+const updateAuthStore = async (accessToken, refreshToken) => {
+  const { useAuthStore } = await import("../store/useAuthStore");
+  const userId = localStorage.getItem("userId");
+  useAuthStore
+    .getState()
+    .login(accessToken, userId, refreshToken, useAuthStore.getState().user);
+};
+
+const refreshAuthTokens = (refreshToken) => {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post(
+        `${API_BASE_URL}/auth/refresh-token`,
+        { refreshToken },
+        {
+          headers: {
+            "x-refresh-token": refreshToken,
+          },
+        }
+      )
+      .then(async ({ data }) => {
+        if (!data?.accessToken || !data?.refreshToken) {
+          throw new Error("Invalid response from refresh token endpoint");
+        }
+
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
+        await updateAuthStore(data.accessToken, data.refreshToken);
+        return data;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+};
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || "";
 
-    // Prevent infinite loops
     if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      localStorage.getItem('refreshToken')
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retry ||
+      requestUrl.includes("/auth/")
     ) {
-      originalRequest._retry = true
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken')
-        if (!refreshPromise) {
-          refreshPromise = axios
-            .post(
-              `${apiBaseURL}/auth/refresh-token`,
-              { refreshToken },
-              {
-                headers: {
-                  'x-refresh-token': refreshToken, // ✅ Send in header for better security
-                },
-              },
-            )
-            .finally(() => {
-              refreshPromise = null
-            })
-        }
-        const res = await refreshPromise
-
-        const newAccessToken = res.data.accessToken
-        const newRefreshToken = res.data.refreshToken
-
-        // Save tokens
-        localStorage.setItem('accessToken', newAccessToken)
-        localStorage.setItem('refreshToken', newRefreshToken)
-
-        // Update Zustand store - import it dynamically to avoid circular dependencies
-        import('../store/useAuthStore').then(({ useAuthStore }) => {
-          const userId = localStorage.getItem('userId')
-          useAuthStore.getState().login(newAccessToken, userId, newRefreshToken)
-        })
-
-        // Retry original request with new access token
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
-        return api(originalRequest)
-      } catch (refreshErr) {
-        console.error('❌ Refresh token failed:', refreshErr)
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('userId')
-
-        // Update Zustand store
-        import('../store/useAuthStore').then(({ useAuthStore }) => {
-          useAuthStore.getState().logout()
-        })
-
-        window.location.href = '/#/auth/signin' // Force logout without relying on a host rewrite
-      }
+      return Promise.reject(error);
     }
 
-    // Reject if not handled
-    return Promise.reject(error)
-  },
-)
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) {
+      clearStoredAuth();
+      redirectToSignIn();
+      return Promise.reject(error);
+    }
 
-export { apiBaseURL, getDefaultApiBaseUrl, normalizeApiBaseUrl }
-export default api
+    originalRequest._retry = true;
+
+    try {
+      const data = await refreshAuthTokens(refreshToken);
+      originalRequest.headers = originalRequest.headers || {};
+      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+      return api(originalRequest);
+    } catch (refreshErr) {
+      clearStoredAuth();
+      const { useAuthStore } = await import("../store/useAuthStore");
+      useAuthStore.getState().logout();
+      redirectToSignIn();
+      return Promise.reject(refreshErr);
+    }
+  }
+);
+
+export default api;

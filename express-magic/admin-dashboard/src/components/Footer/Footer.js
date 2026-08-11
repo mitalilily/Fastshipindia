@@ -1,44 +1,46 @@
-/* eslint-disable */
-import { Flex, Link, Text, useColorModeValue } from '@chakra-ui/react'
-import { BRAND } from '../../constants/brand'
+import { Box, Flex, Link, Text, useColorModeValue } from '@chakra-ui/react'
 
 export default function Footer() {
-  const textColor = useColorModeValue('gray.500', 'gray.400')
-  const linkColor = useColorModeValue('brand.500', 'brand.300')
+  const textColor = useColorModeValue('rgba(96,115,151,0.94)', 'gray.400')
+  const linkColor = useColorModeValue('accent.600', 'accent.300')
+  const borderColor = useColorModeValue('rgba(13,27,77,0.08)', 'rgba(255,255,255,0.08)')
 
   return (
     <Flex
       flexDirection={{ base: 'column', xl: 'row' }}
-      alignItems={{ base: 'center', xl: 'start' }}
+      alignItems={{ base: 'center', xl: 'center' }}
       justifyContent="space-between"
       px="30px"
-      py="20px"
+      py="22px"
       w="100%"
+      mt="16px"
     >
-      <Text
-        color={textColor}
-        textAlign={{ base: 'center', xl: 'start' }}
-        mb={{ base: '20px', xl: '0px' }}
-        fontSize="sm"
+      <Box
+        px="18px"
+        py="14px"
+        borderRadius="20px"
+        border="1px solid"
+        borderColor={borderColor}
+        bg={useColorModeValue('rgba(255,255,255,0.74)', 'rgba(15,27,45,0.72)')}
       >
-        &copy; {new Date().getFullYear()}{' '}
-        <Text as="span">
-          {document.documentElement.dir === 'rtl' ? 'ÙƒÙ„ Ø§Ù„Ø­Ù‚ÙˆÙ‚ Ù…Ø­ÙÙˆØ¸Ø© Ù„Ù€' : 'All rights reserved – '}
+        <Text
+          color={textColor}
+          textAlign={{ base: 'center', xl: 'start' }}
+          fontSize="sm"
+        >
+          crafted by
+          <Link
+            color={linkColor}
+            href="https://searchcraftdigital.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            fontWeight="semibold"
+            ms="6px"
+          >
+            SearchCraft Digital
+          </Link>
         </Text>
-        <Link color={linkColor} href={`https://${BRAND.website}`} target="_blank" fontWeight="semibold">
-          {BRAND.name} Admin
-        </Link>
-      </Text>
-      <Link
-        color={textColor}
-        href="https://searchcraftdigital.com/"
-        target="_blank"
-        fontWeight="semibold"
-        fontSize="sm"
-        _hover={{ color: linkColor, textDecoration: 'none' }}
-      >
-        Crafted by SearchCraft Digital
-      </Link>
+      </Box>
     </Flex>
   )
 }

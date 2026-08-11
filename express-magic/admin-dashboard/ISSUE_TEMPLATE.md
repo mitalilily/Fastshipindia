@@ -1,13 +1,24 @@
-<!--
- IMPORTANT: Please use the following link to create a new issue:
+## Summary
 
-  https://www.creative-tim.com/new-issue/purity-ui-dashboard
+Describe the issue clearly and include the affected Ship Aggregator area.
 
-**If your issue was not created using the app above, it will be closed immediately.**
--->
+## Steps To Reproduce
 
-<!--
-Love Creative Tim? Do you need Angular, React, Vuejs or HTML? You can visit:
-👉  https://www.creative-tim.com/bundles
-👉  https://www.creative-tim.com
--->
+1.
+2.
+3.
+
+## Expected Result
+
+What should have happened?
+
+## Actual Result
+
+What happened instead?
+
+## Environment
+
+- App:
+- Browser:
+- URL:
+

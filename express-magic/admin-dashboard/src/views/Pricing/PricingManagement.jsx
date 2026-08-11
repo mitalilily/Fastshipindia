@@ -1,6 +1,7 @@
 import {
   Box,
   Flex,
+  Heading,
   HStack,
   Stack,
   Tab,
@@ -14,7 +15,6 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { IconCoinRupee, IconFileSpreadsheet } from '@tabler/icons-react'
-import PageHeader from 'components/Admin/PageHeader'
 import { useState } from 'react'
 import B2BAdditionalCharges from '../../components/B2B/B2BAdditionalCharges'
 import B2BQuoteCalculator from '../../components/B2B/B2BQuoteCalculator'
@@ -33,22 +33,24 @@ const PricingManagement = () => {
   return (
     <Box pt={{ base: '130px', md: '80px', xl: '80px' }} px={{ base: 4, md: 6 }}>
       <VStack spacing={6} align="stretch">
-        <PageHeader
-          eyebrow="Pricing"
-          title="Rate architecture for B2B and B2C shipping"
-          description="Control zone definitions, surface charges and pricing logic from one admin workspace built for operations teams."
-          meta={[
-            { label: 'Business views', value: 'B2B + B2C' },
-            { label: 'B2B section', value: b2bSubTabIndex === 0 ? 'Zones' : 'Pricing' },
-            { label: 'B2C section', value: b2cSubTabIndex === 0 ? 'Zones' : 'Pricing' },
-          ]}
-        />
+        {/* Header Section */}
+        <Flex justify="space-between" align="flex-start" flexWrap="wrap" gap={4}>
+          <Box>
+            <Heading size="lg" mb={2}>
+              Pricing & Zones Management
+            </Heading>
+            <Text color="gray.600" fontSize="sm">
+              Manage zones and pricing configurations for B2B and B2C business types
+            </Text>
+          </Box>
+        </Flex>
 
         {/* Main Tabs: B2B / B2C */}
-        <Box bg={bgColor} borderRadius="24px" borderWidth="1px" borderColor={borderColor} shadow="md">
+        <Box bg={bgColor} borderRadius="lg" borderWidth="1px" borderColor={borderColor} shadow="md">
           <Tabs
             index={businessTypeTab}
             onChange={setBusinessTypeTab}
+            colorScheme="blue"
             variant="unstyled"
           >
             <Box px={6} pt={4} borderBottomWidth="1px" borderColor={borderColor}>
@@ -57,16 +59,14 @@ const PricingManagement = () => {
                   flex={1}
                   px={6}
                   py={4}
-                  borderRadius="18px"
+                  borderRadius="lg"
                   alignItems="flex-start"
-                  borderWidth="1px"
-                  borderColor="transparent"
-                  _selected={{ bg: 'brand.50', shadow: 'sm', color: 'brand.500', borderColor: 'rgba(109, 40, 217, 0.18)', cursor: 'pointer' }}
+                  _selected={{ bg: 'blue.50', shadow: 'md', color: 'blue.600', cursor: 'pointer' }}
                   _focus={{ boxShadow: 'none' }}
                 >
                   <Stack spacing={1} align="flex-start" width="100%">
                     <HStack spacing={2}>
-                      <Tag bg="brand.50" color="brand.500" size="sm">
+                      <Tag colorScheme="blue" size="sm">
                         B2B
                       </Tag>
                       <Text fontWeight="semibold">Enterprise</Text>
@@ -80,22 +80,19 @@ const PricingManagement = () => {
                   flex={1}
                   px={6}
                   py={4}
-                  borderRadius="18px"
+                  borderRadius="lg"
                   alignItems="flex-start"
                   _selected={{
-                    bg: 'secondary.50',
-                    shadow: 'sm',
-                    color: 'secondary.500',
-                    borderColor: 'rgba(249, 115, 22, 0.2)',
+                    bg: 'purple.50',
+                    shadow: 'md',
+                    color: 'purple.600',
                     cursor: 'pointer',
                   }}
-                  borderWidth="1px"
-                  borderColor="transparent"
                   _focus={{ boxShadow: 'none' }}
                 >
                   <Stack spacing={1} align="flex-start" width="100%">
                     <HStack spacing={2}>
-                      <Tag bg="secondary.50" color="secondary.500" size="sm">
+                      <Tag colorScheme="purple" size="sm">
                         B2C
                       </Tag>
                       <Text fontWeight="semibold">Retail</Text>
@@ -115,30 +112,29 @@ const PricingManagement = () => {
                   <Tabs
                     index={b2bSubTabIndex}
                     onChange={setB2bSubTabIndex}
+                    colorScheme="blue"
                     variant="enclosed"
                   >
                     <Box px={6} pt={4} borderBottomWidth="1px" borderColor={borderColor}>
-                      <TabList gap={2}>
+                      <TabList>
                         <Tab
                           _selected={{
-                            color: 'brand.500',
-                            borderColor: 'brand.500',
+                            color: 'blue.600',
+                            borderColor: 'blue.500',
                             borderBottomColor: 'transparent',
                           }}
                           fontWeight="medium"
-                          borderTopRadius="14px"
                         >
                           <IconFileSpreadsheet size={18} style={{ marginRight: '8px' }} />
                           Zones
                         </Tab>
                         <Tab
                           _selected={{
-                            color: 'brand.500',
-                            borderColor: 'brand.500',
+                            color: 'blue.600',
+                            borderColor: 'blue.500',
                             borderBottomColor: 'transparent',
                           }}
                           fontWeight="medium"
-                          borderTopRadius="14px"
                         >
                           <IconCoinRupee size={18} style={{ marginRight: '8px' }} />
                           Pricing
@@ -167,30 +163,29 @@ const PricingManagement = () => {
                   <Tabs
                     index={b2cSubTabIndex}
                     onChange={setB2cSubTabIndex}
+                    colorScheme="purple"
                     variant="enclosed"
                   >
                     <Box px={6} pt={4} borderBottomWidth="1px" borderColor={borderColor}>
-                      <TabList gap={2}>
+                      <TabList>
                         <Tab
                           _selected={{
-                            color: 'secondary.500',
-                            borderColor: 'secondary.500',
+                            color: 'purple.600',
+                            borderColor: 'purple.500',
                             borderBottomColor: 'transparent',
                           }}
                           fontWeight="medium"
-                          borderTopRadius="14px"
                         >
                           <IconFileSpreadsheet size={18} style={{ marginRight: '8px' }} />
                           Zones
                         </Tab>
                         <Tab
                           _selected={{
-                            color: 'secondary.500',
-                            borderColor: 'secondary.500',
+                            color: 'purple.600',
+                            borderColor: 'purple.500',
                             borderBottomColor: 'transparent',
                           }}
                           fontWeight="medium"
-                          borderTopRadius="14px"
                         >
                           <IconCoinRupee size={18} style={{ marginRight: '8px' }} />
                           Pricing
@@ -228,50 +223,51 @@ const B2BPricingContent = () => {
 
   return (
     <Box>
-      <Tabs index={pricingTabIndex} onChange={setPricingTabIndex} variant="enclosed">
+      <Tabs
+        index={pricingTabIndex}
+        onChange={setPricingTabIndex}
+        colorScheme="blue"
+        variant="enclosed"
+      >
         <Box px={0} pt={0} borderBottomWidth="1px" borderColor={borderColor}>
-          <TabList gap={2}>
+          <TabList>
             <Tab
               _selected={{
-                color: 'brand.500',
-                borderColor: 'brand.500',
+                color: 'blue.600',
+                borderColor: 'blue.500',
                 borderBottomColor: 'transparent',
               }}
               fontWeight="medium"
-              borderTopRadius="14px"
             >
               Rate Matrix
             </Tab>
             <Tab
               _selected={{
-                color: 'brand.500',
-                borderColor: 'brand.500',
+                color: 'blue.600',
+                borderColor: 'blue.500',
                 borderBottomColor: 'transparent',
               }}
               fontWeight="medium"
-              borderTopRadius="14px"
             >
               Surcharges
             </Tab>
             <Tab
               _selected={{
-                color: 'brand.500',
-                borderColor: 'brand.500',
+                color: 'blue.600',
+                borderColor: 'blue.500',
                 borderBottomColor: 'transparent',
               }}
               fontWeight="medium"
-              borderTopRadius="14px"
             >
               Additional Charges
             </Tab>
             <Tab
               _selected={{
-                color: 'brand.500',
-                borderColor: 'brand.500',
+                color: 'blue.600',
+                borderColor: 'blue.500',
                 borderBottomColor: 'transparent',
               }}
               fontWeight="medium"
-              borderTopRadius="14px"
             >
               Quote Calculator
             </Tab>

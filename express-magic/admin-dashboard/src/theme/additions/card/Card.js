@@ -11,15 +11,22 @@ const Card = {
   },
   variants: {
     panel: (props) => ({
-      bg: props.colorMode === 'dark' ? '#101D36' : 'white',
+      bg:
+        props.colorMode === 'dark'
+          ? '#161B22'
+          : '#FFFFFF',
       width: '100%',
-      border: props.colorMode === 'dark' ? '1px solid rgba(134, 168, 211, 0.18)' : '1px solid rgba(6, 42, 91, 0.10)',
+      border:
+        props.colorMode === 'dark'
+          ? '1px solid #30363D'
+          : '1px solid #E2E8F0',
       boxShadow:
         props.colorMode === 'dark'
-          ? '0 18px 40px rgba(5, 4, 10, 0.35)'
-          : '0 16px 36px rgba(6, 42, 91, 0.07)',
-      borderRadius: '22px',
+          ? 'none'
+          : '0 8px 24px rgba(15, 23, 42, 0.04)',
+      borderRadius: '12px',
       overflow: 'hidden',
+      backdropFilter: 'none',
     }),
   },
   defaultProps: {

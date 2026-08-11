@@ -31,18 +31,13 @@ import { useImportShippingRates, useShippingRates } from 'hooks/useCouriers'
 import { useZones } from 'hooks/useZones'
 import { fetchAllCouriersList } from 'services/courier.service'
 import { PlansService } from 'services/plan.service'
+import { getCourierDisplayName } from 'utils/courierDisplay'
 
 const normalizeProvider = (value) => String(value || '').trim().toLowerCase()
-const normalizeCourierName = (value) => String(value || '').trim().toLowerCase()
-
-const B2C_ZONE_LABELS = {
-  METRO_TO_METRO: 'Metro to Metro',
-  ROI: 'Rest of India',
-  SPECIAL_ZONE: 'Special Zone',
-  WITHIN_CITY: 'Within City',
-  WITHIN_REGION: 'Within Region',
-  WITHIN_STATE: 'Within State',
-}
+const DELIVERY_ONE_COURIER_FILTER_OPTIONS = [
+  { label: 'Delhivery Surface', value: 'Delhivery Surface' },
+  { label: 'Delhivery Express', value: 'Delhivery Express' },
+]
 
 const normalizeMode = (value) => {
   const raw = String(value || '').trim().toLowerCase()
@@ -52,207 +47,156 @@ const normalizeMode = (value) => {
   return raw
 }
 
-const canonicalZoneCode = (value) => String(value || '').trim().toUpperCase().replace(/_B2C$/, '')
+const getZoneLookupKeys = (zone) =>
+  [
+    zone?.id,
+    zone?.code,
+    zone?.name,
+    zone?.code && zone?.name ? `${zone.code} - ${zone.name}` : '',
+    zone?.code && zone?.name ? `${zone.name} (${zone.code})` : '',
+  ].filter(Boolean)
 
-const getB2CZoneLabel = (zone = {}) =>
-  B2C_ZONE_LABELS[canonicalZoneCode(zone.code)] || zone.name || zone.region || zone.code || ''
-
-const dedupeB2CZones = (zones = []) => {
-  const seenLabels = new Set()
-
-  return zones.filter((zone) => {
-    const label = getB2CZoneLabel(zone)
-    if (!label || seenLabels.has(label)) return false
-    seenLabels.add(label)
-    return true
-  })
-}
-
-const getZoneLookupKeys = (zone = {}) =>
-  Array.from(new Set([getB2CZoneLabel(zone), zone.name, zone.region].filter(Boolean)))
-
-const getZoneSlabs = (existing = {}, zone = {}, type = 'forward') => {
+const getZoneEntry = (collection, zone) => {
+  if (!collection) return {}
   for (const key of getZoneLookupKeys(zone)) {
-    const slabs = existing.zone_slabs?.[key]?.[type]
-    if (Array.isArray(slabs) && slabs.length) return slabs
+    if (collection[key] !== undefined) return collection[key] || {}
   }
-
-  return []
+  return {}
 }
 
-const findMatchingRateRow = (existingRows = [], courier = {}, businessType = '', planId = '') => {
-  const matches = existingRows.filter(
-    (row) =>
-      row.business_type === businessType &&
-      (!planId || row.plan_id === planId) &&
-      Number(row.courier_id) === Number(courier.id) &&
-      normalizeProvider(row.service_provider || row.serviceProvider || '') ===
-        normalizeProvider(courier.serviceProvider || courier.service_provider || ''),
-  )
-
-  if (!matches.length) return null
-
-  const courierMode = normalizeMode(courier.mode || '')
-  if (courierMode) {
-    const modeMatch = matches.find((row) => normalizeMode(row.mode || '') === courierMode)
-    if (modeMatch) return modeMatch
-  }
-
-  const courierName = normalizeCourierName(courier.name || courier.courier_name || '')
-  if (courierName) {
-    const nameMatch = matches.find(
-      (row) => normalizeCourierName(row.courier_name || row.courierName || '') === courierName,
-    )
-    if (nameMatch) return nameMatch
-  }
-
-  return matches[0] || null
+const getZoneColumnLabel = (zone, suffix) => {
+  const code = String(zone?.code || '').trim()
+  const name = String(zone?.name || '').trim()
+  const base = code && name ? `${code} - ${name}` : name || code
+  return `${base} (${suffix})`
 }
 
-// Default slab weights used in the B2C sample template
-const DEFAULT_B2C_SLABS = [
-  { label: '250 GM', weight: 0.25 },
-  { label: '500 GM', weight: 0.5 },
-  { label: '1 KG', weight: 1.0 },
-  { label: '2 Kg', weight: 2.0 },
-  { label: '5 Kg', weight: 5.0 },
-  { label: '10 Kg', weight: 10.0 },
-]
-const DEFAULT_B2C_RTO_PERCENT = '100'
-const DEFAULT_B2C_REVERSE_PICKUP_PERCENT = '100'
-
-const weightLabel = (kg) => {
-  if (kg < 1) return `${Math.round(kg * 1000)} GM`
-  return `${kg} Kg`
-}
-
-const slugifyFilenamePart = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'courier'
-
-const getImportCourierKey = (courier = {}) =>
-  [courier.id, courier.serviceProvider || courier.service_provider || '', courier.mode || '']
-    .map((value) => String(value || '').trim())
-    .join('|')
-
-const getImportCourierLabel = (courier = {}) => {
-  const serviceProvider = courier.serviceProvider || courier.service_provider || 'provider'
-  const mode = courier.mode || 'surface'
-  return `${courier.name || 'Courier'} | ${serviceProvider} | ${mode}`
-}
-
-const triggerDownload = (csv, filename) => {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.setAttribute('download', filename)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-// CSV exporter — slab-per-row format for B2C, flat for B2B
-const downloadCSV = (
-  allCouriers = [],
-  allZones = [],
-  existingData = [],
-  filters = {},
-  targetCourier = null,
-) => {
+// CSV exporter
+const downloadCSV = (allCouriers = [], allZones = [], existingData = [], filters = {}) => {
   if (!allCouriers?.length || !allZones?.length) return
   const type = filters?.businessType?.toLowerCase()
-  const selectedCouriers = targetCourier ? [targetCourier] : allCouriers
-  const filenameSuffix = targetCourier ? `_${slugifyFilenamePart(targetCourier.name)}` : ''
+
+  let headers = []
+  let rows = []
+
+  // Common headers
+  const baseHeaders = [
+    'Courier ID',
+    'Courier Name',
+    'Service Provider',
+    'Mode',
+    'Business Type',
+  ]
 
   if (type === 'b2c') {
-    const b2cZones = dedupeB2CZones(allZones)
-    if (!b2cZones.length) return
-
-    const headers = [
-      'Slab', 'Courier ID', 'Courier', 'Service Provider', 'Mode', 'Weight (KG)', 'Slab Type',
-      ...b2cZones.map((zone) => getB2CZoneLabel(zone)),
-      'COD Rs', 'COD %', 'RTO %', 'Reverse Pickup %',
+    headers = [
+      ...baseHeaders,
+      ...allZones.flatMap((zone) => [
+        getZoneColumnLabel(zone, 'Forward'),
+        getZoneColumnLabel(zone, 'RTO'),
+        getZoneColumnLabel(zone, 'Forward Slabs'),
+        getZoneColumnLabel(zone, 'RTO Slabs'),
+      ]),
+      'COD Charges',
+      'COD Percent',
+      'COD Slabs',
+      'Other Charges',
     ]
 
-    const rows = []
+    rows = existingData
+      .filter((r) => r.business_type === type && String(r.plan_id) === String(filters.planId))
+      .map((row) => {
+        const courier =
+          allCouriers.find(
+            (c) =>
+              Number(c.id) === Number(row.courier_id) &&
+              normalizeProvider(c.serviceProvider || c.service_provider || '') ===
+                normalizeProvider(row.service_provider || row.serviceProvider || '') &&
+              normalizeMode(c.mode || row.mode || '') === normalizeMode(row.mode || ''),
+          ) || {}
 
-    for (const courier of selectedCouriers) {
-      const existing = findMatchingRateRow(existingData, courier, type, filters.planId) || {}
-      const mode = normalizeMode(courier.mode || existing.mode || '') || 'surface'
+        const zoneValues = allZones.flatMap((zone) => {
+          const zoneRates = getZoneEntry(row.rates, zone)
+          const zoneSlabs = getZoneEntry(row.zone_slabs, zone)
+          return [
+            zoneRates.forward ?? '',
+            zoneRates.rto ?? '',
+            zoneSlabs.forward?.length ? JSON.stringify(zoneSlabs.forward) : '',
+            zoneSlabs.rto?.length ? JSON.stringify(zoneSlabs.rto) : '',
+          ]
+        })
 
-      // Derive RTO% and reverse pickup % from first zone slab pair
-      let rtoPercent = ''
-      let reversePickupPercent = ''
-      const firstZone = b2cZones[0]
-      const exFwd = getZoneSlabs(existing, firstZone, 'forward')
-      const exRto = getZoneSlabs(existing, firstZone, 'rto')
-      const exReversePickup = getZoneSlabs(existing, firstZone, 'reverse_pickup')
-      if (exFwd.length && exRto.length) {
-        const fRate = Number(exFwd[0]?.rate || 0)
-        const rRate = Number(exRto[0]?.rate || 0)
-        if (fRate > 0) rtoPercent = String(Math.round((rRate / fRate) * 100))
-      }
-      if (exFwd.length && exReversePickup.length) {
-        const fRate = Number(exFwd[0]?.rate || 0)
-        const reversePickupRate = Number(exReversePickup[0]?.rate || 0)
-        if (fRate > 0) reversePickupPercent = String(Math.round((reversePickupRate / fRate) * 100))
-      }
-      if (!rtoPercent) rtoPercent = DEFAULT_B2C_RTO_PERCENT
-      if (!reversePickupPercent) {
-        reversePickupPercent = rtoPercent || DEFAULT_B2C_REVERSE_PICKUP_PERCENT
-      }
-
-      // Build slab list from existing forward slabs or defaults
-      const slabDefs = exFwd.length
-        ? exFwd.map((s) => ({ label: weightLabel(Number(s.weight_to || s.weight_from || 0)), weight: Number(s.weight_to || s.weight_from || 0) }))
-        : DEFAULT_B2C_SLABS
-
-      const codRs = existing.cod_charges ?? ''
-      const codPct = existing.cod_percent ?? ''
-
-      for (let i = 0; i < slabDefs.length; i++) {
-        const slab = slabDefs[i]
-        const firstZoneRates = b2cZones.map((zone) => getZoneSlabs(existing, zone, 'forward')[i]?.rate ?? '')
-        const addZoneRates = b2cZones.map(
-          (zone) => getZoneSlabs(existing, zone, 'forward')[i]?.extra_rate ?? '',
-        )
-
-        rows.push([slab.label, courier.id ?? '', courier.name ?? '', courier.serviceProvider || courier.service_provider || existing.service_provider || '', mode, slab.weight, 'First', ...firstZoneRates, codRs, codPct, rtoPercent, reversePickupPercent])
-        rows.push([slab.label, courier.id ?? '', courier.name ?? '', courier.serviceProvider || courier.service_provider || existing.service_provider || '', mode, slab.weight, 'Additional', ...addZoneRates, '', '', '', ''])
-      }
-    }
-
-    triggerDownload(
-      Papa.unparse({ fields: headers, data: rows }),
-      `shipping_rate_card_b2c${filenameSuffix}.csv`,
-    )
-    return
+        return [
+          row.courier_id ?? courier.id ?? '',
+          row.courier_name ?? courier.name ?? '',
+          row.service_provider || row.serviceProvider || courier.serviceProvider || '',
+          row.mode || '',
+          type,
+          ...zoneValues,
+          row.cod_charges ?? '',
+          row.cod_percent ?? '',
+          row.cod_slabs?.length ? JSON.stringify(row.cod_slabs) : '',
+          row.other_charges ?? '',
+        ]
+      })
   }
 
   if (type === 'b2b') {
-    const baseHeaders = ['Courier ID', 'Courier Name', 'Service Provider', 'Mode', 'Business Type']
-    const headers = [
-      ...baseHeaders, 'Min Weight',
-      ...allZones.flatMap((z) => [`${z.name} (Per Kg Forward)`, `${z.name} (Per Kg RTO)`]),
-      'COD Charges', 'COD Percent', 'Other Charges',
+    headers = [
+      ...baseHeaders,
+      'Min Weight',
+      ...allZones.flatMap((zone) => [
+        getZoneColumnLabel(zone, 'Per Kg Forward'),
+        getZoneColumnLabel(zone, 'Per Kg RTO'),
+      ]),
+      'COD Charges',
+      'COD Percent',
+      'Other Charges',
     ]
-    const rows = selectedCouriers.map((courier) => {
-      const row = findMatchingRateRow(existingData, courier, type, filters.planId) || {}
-      const zoneValues = allZones.flatMap((zone) => {
-        const zr = row.rates?.[zone.name] || {}
-        return [zr.forward_per_kg ?? '', zr.rto_per_kg ?? '']
+
+    rows = existingData
+      .filter((r) => r.business_type === type && String(r.plan_id) === String(filters.planId))
+      .map((row) => {
+        const courier =
+          allCouriers.find(
+            (c) =>
+              Number(c.id) === Number(row.courier_id) &&
+              normalizeProvider(c.serviceProvider || c.service_provider || '') ===
+                normalizeProvider(row.service_provider || row.serviceProvider || '') &&
+              normalizeMode(c.mode || row.mode || '') === normalizeMode(row.mode || ''),
+          ) || {}
+
+        const zoneValues = allZones.flatMap((zone) => {
+          const zoneRates = getZoneEntry(row.rates, zone)
+          return [
+            zoneRates.forward_per_kg ?? zoneRates.forward ?? '',
+            zoneRates.rto_per_kg ?? zoneRates.rto ?? '',
+          ]
+        })
+
+        return [
+          row.courier_id ?? courier.id ?? '',
+          row.courier_name ?? courier.name ?? '',
+          row.service_provider || row.serviceProvider || courier.serviceProvider || '',
+          row.mode || '',
+          type,
+          row.min_weight || '',
+          ...zoneValues,
+          row.cod_charges ?? '',
+          row.cod_percent ?? '',
+          row.other_charges ?? '',
+        ]
       })
-      return [courier.id ?? row.courier_id ?? '', courier.name ?? row.courier_name ?? '', courier.serviceProvider || row.service_provider || '', normalizeMode(courier.mode || row.mode || ''), type, row.min_weight || '', ...zoneValues, row.cod_charges ?? '', row.cod_percent ?? '', row.other_charges ?? '']
-    })
-    triggerDownload(
-      Papa.unparse({ fields: headers, data: rows }),
-      `shipping_rate_card_b2b${filenameSuffix}.csv`,
-    )
-    return
   }
+
+  const csv = Papa.unparse({ fields: headers, data: rows })
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.setAttribute('download', `shipping_rate_card_${type}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
 
 export const RateCardContainer = ({ forceBusinessType = null, embedded = false }) => {
@@ -287,12 +231,12 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
     }
   }, [forceBusinessType, forcedIndex, businessTypeIndex])
   const { zones } = useZones(businessTypes[businessTypeIndex])
-  const [userFilters, setUserFilters] = useState({})
+  const [filters, setFilters] = useState({})
+  const { data, isLoading } = useShippingRates(filters)
+
   const [selectedRate, setSelectedRate] = useState(null)
   const [isModalOpen, setModalOpen] = useState(false)
   const [isImportModalOpen, setImportModalOpen] = useState(false)
-  const [importScope, setImportScope] = useState('all')
-  const [selectedImportCourierKey, setSelectedImportCourierKey] = useState('')
 
   // Default to first plan if available
   const [selectedPlanId, setSelectedPlanId] = useState('')
@@ -301,41 +245,30 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
   useEffect(() => {
     if (plans?.length > 0) {
       // Always set to first plan if not set, or if current selection is invalid
-      if (!selectedPlanId || !plans.find((p) => p.id === selectedPlanId)) {
+      if (!selectedPlanId || !plans.find((p) => String(p.id) === String(selectedPlanId))) {
         setSelectedPlanId(plans[0].id)
       }
     }
   }, [plans, selectedPlanId])
 
-  // Combine user filters with internal query constraints for API
-  const queryFilters = useMemo(() => {
-    const combined = { ...userFilters, businessType: selectedBusinessType }
+  // Update filters whenever business type or plan changes
+  useEffect(() => {
+    const nextFilters = { businessType: selectedBusinessType }
     if (selectedBusinessType === 'b2c' && selectedPlanId) {
-      combined.planId = selectedPlanId
+      nextFilters.planId = selectedPlanId
     }
-    return combined
-  }, [userFilters, selectedBusinessType, selectedPlanId])
+    setFilters(nextFilters)
+  }, [selectedBusinessType, selectedPlanId])
 
-  const { data, isLoading } = useShippingRates(queryFilters)
+  const activePlanId = selectedPlanId || filters?.planId || plans?.[0]?.id || ''
 
-  const importCourierOptions = useMemo(
-    () =>
-      (courierList || []).map((courier) => ({
-        ...courier,
-        importKey: getImportCourierKey(courier),
-        importLabel: getImportCourierLabel(courier),
-      })),
-    [courierList],
-  )
-
-  const selectedImportCourier = useMemo(
-    () =>
-      importScope === 'single'
-        ? importCourierOptions.find((courier) => courier.importKey === selectedImportCourierKey) ||
-          null
-        : null,
-    [importScope, importCourierOptions, selectedImportCourierKey],
-  )
+  const applyRateFilters = (nextFilters = {}) => {
+    setFilters({
+      ...nextFilters,
+      businessType: selectedBusinessType,
+      ...(selectedBusinessType === 'b2c' && activePlanId ? { planId: activePlanId } : {}),
+    })
+  }
 
   const openEditModal = (row) => {
     setSelectedRate(row)
@@ -353,28 +286,6 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
 
   const handleImportRates = () => setImportModalOpen(true)
 
-  const handleTemplateDownload = () => {
-    if (importScope === 'single' && !selectedImportCourier) {
-      toast({
-        title: 'Select a courier first',
-        description:
-          'Choose the courier you want to import before downloading the single-courier template.',
-        status: 'warning',
-        duration: 3000,
-        isClosable: true,
-      })
-      return
-    }
-
-    downloadCSV(
-      courierList || [],
-      zones || [],
-      data || [],
-      queryFilters,
-      selectedImportCourier,
-    )
-  }
-
   const filterOptions = useMemo(
     () => {
       const options = [
@@ -382,7 +293,7 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
           key: 'courier_name',
           label: 'Courier',
           type: 'multiselect',
-          options: courierList?.map((c) => ({ label: c?.name, value: c?.name })) || [],
+          options: DELIVERY_ONE_COURIER_FILTER_OPTIONS,
         },
         {
           key: 'mode',
@@ -408,7 +319,7 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
 
       return options
     },
-    [courierList, selectedBusinessType, zones],
+    [selectedBusinessType, zones],
   )
 
   return (
@@ -502,14 +413,14 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
 
           {/* Filters and actions */}
           <Grid templateColumns="3fr 2fr" width="100%" gap={4} mb={4} alignItems="center">
-            <TableFilters filters={filterOptions} values={userFilters} onApply={setUserFilters} />
+            <TableFilters filters={filterOptions} values={filters} onApply={applyRateFilters} />
             <Flex justify="flex-end" gap={2}>
               <Button
                 size="sm"
                 colorScheme="brand"
                 leftIcon={<AddIcon />}
                 onClick={openAddModal}
-                isDisabled={!selectedPlanId || plans?.length === 0}
+                isDisabled={!activePlanId || plans?.length === 0}
               >
                 Add Rate
               </Button>
@@ -518,7 +429,7 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
                 colorScheme="pink"
                 leftIcon={<IconUpload />}
                 onClick={handleImportRates}
-                isDisabled={!selectedPlanId || plans?.length === 0}
+                isDisabled={!activePlanId || plans?.length === 0}
               >
                 Import Rate Card
               </Button>
@@ -529,7 +440,7 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
           <RateCardTable
             data={data || []}
             zones={zones}
-            planId={selectedPlanId || queryFilters?.planId}
+            planId={activePlanId}
             businessType={selectedBusinessType}
             onEdit={openEditModal}
             loading={isLoading}
@@ -542,7 +453,7 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
             data={selectedRate}
             existingRates={data}
             zones={zones}
-            planId={queryFilters?.planId}
+            planId={activePlanId}
             couriers={courierList || []}
             businessType={selectedBusinessType}
           />
@@ -557,118 +468,34 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
               <Button
                 size="sm"
                 colorScheme="blue"
-                onClick={handleTemplateDownload}
+                onClick={() =>
+                  downloadCSV(courierList || [], zones || [], data || [], {
+                    ...filters,
+                    businessType: selectedBusinessType,
+                    planId: activePlanId,
+                  })
+                }
               >
-                Download Sample Template
+                Download CSV
               </Button>
             }
           >
-            <Stack spacing={3} mb={4}>
-              <Box>
-                <Text fontSize="sm" color="gray.700" fontWeight="semibold" mb={1}>
-                  Import scope
-                </Text>
-                <Select
-                  value={importScope}
-                  onChange={(e) => setImportScope(e.target.value)}
-                  maxW="260px"
-                >
-                  <option value="all">All couriers in one file</option>
-                  <option value="single">Single courier only</option>
-                </Select>
-              </Box>
-
-              {importScope === 'single' && (
-                <Box>
-                  <Text fontSize="sm" color="gray.700" fontWeight="semibold" mb={1}>
-                    Select courier
-                  </Text>
-                  <Select
-                    placeholder="Choose one courier"
-                    value={selectedImportCourierKey}
-                    onChange={(e) => setSelectedImportCourierKey(e.target.value)}
-                  >
-                    {importCourierOptions.map((courier) => (
-                      <option key={courier.importKey} value={courier.importKey}>
-                        {courier.importLabel}
-                      </option>
-                    ))}
-                  </Select>
-                  <Text fontSize="sm" color="gray.500" mt={2}>
-                    The single-courier template is prefilled for this courier and the upload is
-                    locked to the same courier, provider, and mode.
-                  </Text>
-                </Box>
-              )}
-            </Stack>
-
-            {selectedBusinessType === 'b2c' && (
-              <Stack spacing={2} mb={4}>
-                <Text fontSize="sm" color="gray.700" fontWeight="semibold">
-                  B2C import format
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  Use one row per slab with `Slab Type` set to `First`, `Additional`,
-                  `Forward`, `Reverse`, or `Reverse Additional`.
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  Fill forward rates zone-wise. For separate reverse pricing, add explicit
-                  `Reverse` and `Reverse Additional` rows; otherwise `Reverse Pickup %` remains a
-                  multiplier of the forward slab.
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  The downloaded sample template already includes the accepted B2C headers and
-                  default reverse logic columns.
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  `RTO %` creates RTO slabs only when it is greater than zero, so forward and
-                  reverse-only cards can be imported without creating RTO rates.
-                </Text>
-              </Stack>
-            )}
             <FileUploader
               maxSizeMb={5}
               folderKey="rates"
-              accept=".csv,.xlsx,.xls"
               uploadLoading={isImporting}
               onUploaded={(files) => {
                 if (!files.length) return
-                if (importScope === 'single' && !selectedImportCourier) {
-                  toast({
-                    title: 'Select a courier first',
-                    description:
-                      'Choose the courier you want to import before uploading a single-courier rate card.',
-                    status: 'warning',
-                    duration: 3000,
-                    isClosable: true,
-                  })
-                  return
-                }
                 importRates(
                   {
                     file: files[0],
-                    planId: selectedPlanId || queryFilters?.planId,
-                    businessType: queryFilters?.businessType || selectedBusinessType,
-                    targetCourier:
-                      importScope === 'single' && selectedImportCourier
-                        ? {
-                            courierId: selectedImportCourier.id,
-                            courierName: selectedImportCourier.name,
-                            serviceProvider:
-                              selectedImportCourier.serviceProvider ||
-                              selectedImportCourier.service_provider ||
-                              '',
-                            mode: selectedImportCourier.mode || '',
-                          }
-                        : undefined,
+                    planId: activePlanId,
+                    businessType: filters?.businessType || selectedBusinessType,
                   },
                   {
-                    onSuccess: (result) => {
+                    onSuccess: () => {
                       toast({
                         title: 'Imported successfully',
-                        description: result?.data?.savedRows
-                          ? `${result.data.savedRows} rate rows saved.`
-                          : undefined,
                         status: 'success',
                         duration: 3000,
                         isClosable: true,

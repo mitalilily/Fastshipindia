@@ -2,7 +2,6 @@ import {
   Badge,
   Box,
   Button,
-  Divider,
   Flex,
   FormControl,
   FormLabel,
@@ -17,7 +16,6 @@ import {
   ModalHeader,
   ModalOverlay,
   Spinner,
-  SimpleGrid,
   Switch,
   Table,
   TableContainer,
@@ -30,6 +28,8 @@ import {
   useDisclosure,
   useToast,
   VStack,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react'
 import { CopyIcon, DeleteIcon, EditIcon, AddIcon } from '@chakra-ui/icons'
 import { useState } from 'react'
@@ -43,13 +43,8 @@ import {
   useWebhooks,
   useCreateWebhook,
   useDeleteWebhook,
-  useConnectShopifyEnvStore,
-  useConnectShopifyManualStore,
-  useShopifyStatus,
-  useSyncShopifyOrders,
   useUpdateWebhook,
 } from 'hooks/useApiIntegration'
-import DelhiveryLifecyclePanel from './DelhiveryLifecyclePanel'
 
 const WEBHOOK_EVENTS = [
   'order.created',
@@ -61,30 +56,31 @@ const WEBHOOK_EVENTS = [
   'order.cancelled',
   'order.return_created',
   'order.ndr',
+  'order.weight_discrepancy',
   'shipment.label_generated',
   'shipment.manifest_generated',
   'tracking.updated',
 ]
 
-const normalizeShopifyStoreUrl = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/\/+$/, '')
-    .replace(/\/admin(?:\/.*)?$/, '')
+const WEBHOOK_EVENT_LABELS = {
+  'order.created': 'Order created',
+  'order.updated': 'Order updated',
+  'order.shipped': 'Order shipped',
+  'order.delivered': 'Order delivered',
+  'order.failed': 'Order failed',
+  'order.rto': 'Order RTO',
+  'order.cancelled': 'Order cancelled',
+  'order.return_created': 'Return created',
+  'order.ndr': 'Order NDR',
+  'order.weight_discrepancy': 'Weight discrepancy',
+  'shipment.label_generated': 'Label generated',
+  'shipment.manifest_generated': 'Manifest generated',
+  'tracking.updated': 'Tracking updated',
+}
 
 const ApiIntegration = () => {
-  const [activeTab, setActiveTab] = useState('delhivery')
+  const [activeTab, setActiveTab] = useState('apiKeys')
   const [copiedKey, setCopiedKey] = useState(null)
-  const [shopifyTargetUserId, setShopifyTargetUserId] = useState('')
-  const [shopifySyncLimit, setShopifySyncLimit] = useState(50)
-  const [shopifyManualForm, setShopifyManualForm] = useState({
-    storeUrl: '',
-    apiKey: '',
-    adminApiAccessToken: '',
-    apiSecretKey: '',
-  })
   const toast = useToast()
 
   // API Keys
@@ -100,19 +96,6 @@ const ApiIntegration = () => {
   const createWebhook = useCreateWebhook()
   const updateWebhook = useUpdateWebhook()
   const deleteWebhook = useDeleteWebhook()
-
-  const {
-    data: shopifyStatusData,
-    isLoading: shopifyStatusLoading,
-    isFetching: shopifyStatusFetching,
-    isError: shopifyStatusIsError,
-    error: shopifyStatusError,
-    refetch: refetchShopifyStatus,
-  } = useShopifyStatus()
-  const shopifyStatus = shopifyStatusData?.data || null
-  const connectShopifyEnvStore = useConnectShopifyEnvStore()
-  const connectShopifyManualStore = useConnectShopifyManualStore()
-  const syncShopifyOrders = useSyncShopifyOrders()
 
   // Modals
   const {
@@ -218,57 +201,6 @@ const ApiIntegration = () => {
     }
   }
 
-  const handleConnectShopifyEnvStore = () => {
-    const targetUserId = shopifyTargetUserId.trim()
-    connectShopifyEnvStore.mutate({
-      ...(targetUserId ? { targetUserId } : {}),
-      settings: {
-        fulfillTrigger: 'do_not_fulfill',
-        customerNotifyOnFulfill: 'do_not_notify',
-        autoUpdateShipmentStatus: false,
-        autoCancelOrders: false,
-        markCodPaidOnDelivery: false,
-      },
-    })
-  }
-
-  const handleConnectShopifyManualStore = () => {
-    const targetUserId = shopifyTargetUserId.trim()
-    const payload = {
-      ...shopifyManualForm,
-      storeUrl: normalizeShopifyStoreUrl(shopifyManualForm.storeUrl),
-      apiKey: shopifyManualForm.apiKey.trim(),
-      adminApiAccessToken: shopifyManualForm.adminApiAccessToken.trim(),
-      apiSecretKey: shopifyManualForm.apiSecretKey.trim(),
-      webhookSecret: shopifyManualForm.apiSecretKey.trim(),
-      ...(targetUserId ? { targetUserId, userId: targetUserId } : {}),
-      settings: {
-        fulfillTrigger: 'do_not_fulfill',
-        customerNotifyOnFulfill: 'do_not_notify',
-        autoUpdateShipmentStatus: false,
-        autoCancelOrders: false,
-        markCodPaidOnDelivery: false,
-      },
-    }
-
-    if (!payload.storeUrl || !payload.apiKey || !payload.adminApiAccessToken || !payload.apiSecretKey) {
-      toast({
-        title: 'Enter Shopify credentials',
-        status: 'warning',
-        duration: 3000,
-        isClosable: true,
-      })
-      return
-    }
-
-    connectShopifyManualStore.mutate(payload)
-  }
-
-  const handleSyncShopifyOrders = () => {
-    const limit = Number(shopifySyncLimit)
-    syncShopifyOrders.mutate({ limit: Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 250) : 50 })
-  }
-
   const toggleEvent = (event) => {
     setWebhookForm((prev) => ({
       ...prev,
@@ -287,13 +219,6 @@ const ApiIntegration = () => {
       {/* Tabs */}
       <HStack spacing={4} borderBottom="1px" borderColor="gray.200">
         <Button
-          variant={activeTab === 'delhivery' ? 'solid' : 'ghost'}
-          colorScheme={activeTab === 'delhivery' ? 'blue' : 'gray'}
-          onClick={() => setActiveTab('delhivery')}
-        >
-          Delhivery ONE
-        </Button>
-        <Button
           variant={activeTab === 'apiKeys' ? 'solid' : 'ghost'}
           colorScheme={activeTab === 'apiKeys' ? 'blue' : 'gray'}
           onClick={() => setActiveTab('apiKeys')}
@@ -307,17 +232,7 @@ const ApiIntegration = () => {
         >
           Webhooks
         </Button>
-        <Button
-          variant={activeTab === 'shopify' ? 'solid' : 'ghost'}
-          colorScheme={activeTab === 'shopify' ? 'blue' : 'gray'}
-          onClick={() => setActiveTab('shopify')}
-        >
-          Shopify
-        </Button>
       </HStack>
-
-      {/* Delhivery ONE Tab */}
-      {activeTab === 'delhivery' && <DelhiveryLifecyclePanel />}
 
       {/* API Keys Tab */}
       {activeTab === 'apiKeys' && (
@@ -443,12 +358,43 @@ const ApiIntegration = () => {
                           </Text>
                         </Td>
                         <Td>
-                          <Text fontSize="sm">{webhook.events?.length || 0} events</Text>
+                          <VStack align="start" spacing={1}>
+                            <Text fontSize="sm" fontWeight="600">
+                              {webhook.events?.length || 0} events
+                            </Text>
+                            <Wrap spacing={1}>
+                              {(webhook.events || []).slice(0, 3).map((event) => (
+                                <WrapItem key={event}>
+                                  <Badge colorScheme="blue" variant="subtle">
+                                    {WEBHOOK_EVENT_LABELS[event] || event}
+                                  </Badge>
+                                </WrapItem>
+                              ))}
+                              {(webhook.events || []).length > 3 && (
+                                <WrapItem>
+                                  <Badge colorScheme="gray" variant="subtle">
+                                    +{(webhook.events || []).length - 3} more
+                                  </Badge>
+                                </WrapItem>
+                              )}
+                            </Wrap>
+                          </VStack>
                         </Td>
                         <Td>
-                          <Badge colorScheme={webhook.is_active ? 'green' : 'red'}>
-                            {webhook.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
+                          <HStack spacing={2}>
+                            <Switch
+                              colorScheme="purple"
+                              isChecked={webhook.is_active}
+                              onChange={(e) =>
+                                handleUpdateWebhook(webhook.id, {
+                                  is_active: e.target.checked,
+                                })
+                              }
+                            />
+                            <Badge colorScheme={webhook.is_active ? 'green' : 'red'}>
+                              {webhook.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </HStack>
                         </Td>
                         <Td>
                           <Text fontSize="xs">
@@ -486,222 +432,6 @@ const ApiIntegration = () => {
                 </Tbody>
               </Table>
             </TableContainer>
-          )}
-        </Box>
-      )}
-
-      {/* Shopify Tab */}
-      {activeTab === 'shopify' && (
-        <Box>
-          <Flex
-            justify="space-between"
-            mb={4}
-            gap={3}
-            direction={{ base: 'column', md: 'row' }}
-            align={{ base: 'stretch', md: 'center' }}
-          >
-            <Text fontSize="lg" fontWeight="semibold">
-              Shopify Custom App
-            </Text>
-            <HStack spacing={2}>
-              <Button
-                colorScheme="blue"
-                variant="outline"
-                onClick={() => refetchShopifyStatus()}
-                isLoading={shopifyStatusFetching}
-              >
-                Test Connection
-              </Button>
-              <Button
-                colorScheme="green"
-                onClick={handleConnectShopifyEnvStore}
-                isDisabled={!shopifyStatus?.configured}
-                isLoading={connectShopifyEnvStore.isLoading || connectShopifyEnvStore.isPending}
-              >
-                Bind Store
-              </Button>
-            </HStack>
-          </Flex>
-
-          {shopifyStatusLoading ? (
-            <Spinner size="md" />
-          ) : shopifyStatusIsError ? (
-            <Box p={4} border="1px" borderColor="red.200" borderRadius="md" bg="red.50">
-              <Text color="red.700" fontWeight="semibold">
-                Shopify status unavailable
-              </Text>
-              <Text color="red.600" fontSize="sm">
-                {shopifyStatusError?.response?.data?.error ||
-                  shopifyStatusError?.response?.data?.message ||
-                  'Connection test failed'}
-              </Text>
-            </Box>
-          ) : (
-            <VStack align="stretch" spacing={4}>
-              <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
-                <Box p={4} border="1px" borderColor="gray.200" borderRadius="md">
-                  <Text fontSize="sm" color="gray.500" mb={2}>
-                    Status
-                  </Text>
-                  <Badge
-                    colorScheme={
-                      shopifyStatus?.connected ? 'green' : shopifyStatus?.configured ? 'yellow' : 'red'
-                    }
-                  >
-                    {shopifyStatus?.connected
-                      ? 'Connected'
-                      : shopifyStatus?.configured
-                        ? 'Configured'
-                        : 'Missing Env'}
-                  </Badge>
-                </Box>
-                <Box p={4} border="1px" borderColor="gray.200" borderRadius="md">
-                  <Text fontSize="sm" color="gray.500" mb={2}>
-                    Store
-                  </Text>
-                  <Text fontWeight="semibold">{shopifyStatus?.shop?.domain || shopifyStatus?.store || '-'}</Text>
-                </Box>
-                <Box p={4} border="1px" borderColor="gray.200" borderRadius="md">
-                  <Text fontSize="sm" color="gray.500" mb={2}>
-                    API Version
-                  </Text>
-                  <Text fontWeight="semibold">{shopifyStatus?.apiVersion || '-'}</Text>
-                </Box>
-                <Box p={4} border="1px" borderColor="gray.200" borderRadius="md">
-                  <Text fontSize="sm" color="gray.500" mb={2}>
-                    Webhook
-                  </Text>
-                  <Badge colorScheme={shopifyStatus?.webhookPublic ? 'green' : 'orange'}>
-                    {shopifyStatus?.webhookPublic ? 'Public HTTPS' : 'Local'}
-                  </Badge>
-                </Box>
-              </SimpleGrid>
-
-              <Box p={4} border="1px" borderColor="gray.200" borderRadius="md">
-                <Flex
-                  justify="space-between"
-                  gap={3}
-                  align={{ base: 'stretch', md: 'center' }}
-                  direction={{ base: 'column', md: 'row' }}
-                >
-                  <Box minW={0}>
-                    <Text fontSize="sm" color="gray.500" mb={1}>
-                      Delivery URL
-                    </Text>
-                    <Text fontSize="sm" wordBreak="break-all">
-                      {shopifyStatus?.webhookUrl || '-'}
-                    </Text>
-                  </Box>
-                  <IconButton
-                    aria-label="Copy Shopify webhook URL"
-                    icon={<CopyIcon />}
-                    onClick={() => handleCopy(shopifyStatus?.webhookUrl || '', 'shopifyWebhook')}
-                    isDisabled={!shopifyStatus?.webhookUrl}
-                    colorScheme={copiedKey === 'shopifyWebhook' ? 'green' : 'gray'}
-                  />
-                </Flex>
-              </Box>
-
-              <Divider />
-
-              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} alignItems="end">
-                <FormControl>
-                  <FormLabel>Target User ID</FormLabel>
-                  <Input
-                    value={shopifyTargetUserId}
-                    onChange={(e) => setShopifyTargetUserId(e.target.value)}
-                    placeholder="Current user"
-                  />
-                </FormControl>
-                <Button
-                  colorScheme="green"
-                  onClick={handleConnectShopifyEnvStore}
-                  isDisabled={!shopifyStatus?.configured}
-                  isLoading={connectShopifyEnvStore.isLoading || connectShopifyEnvStore.isPending}
-                >
-                  Bind Env Store
-                </Button>
-                <FormControl>
-                  <FormLabel>Sync Limit</FormLabel>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={250}
-                    value={shopifySyncLimit}
-                    onChange={(e) => setShopifySyncLimit(e.target.value)}
-                  />
-                </FormControl>
-                <Button
-                  colorScheme="blue"
-                  onClick={handleSyncShopifyOrders}
-                  isDisabled={!shopifyStatus?.connected}
-                  isLoading={syncShopifyOrders.isLoading || syncShopifyOrders.isPending}
-                >
-                  Sync Orders
-                </Button>
-              </SimpleGrid>
-
-              <Box p={4} border="1px" borderColor="gray.200" borderRadius="md">
-                <Text fontSize="md" fontWeight="semibold" mb={4}>
-                  Manual Shopify Store Connection
-                </Text>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl isRequired>
-                    <FormLabel>Shopify Store URL</FormLabel>
-                    <Input
-                      value={shopifyManualForm.storeUrl}
-                      onChange={(e) =>
-                        setShopifyManualForm((prev) => ({ ...prev, storeUrl: e.target.value }))
-                      }
-                      placeholder="mystore.myshopify.com"
-                    />
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Shopify API Key</FormLabel>
-                    <Input
-                      value={shopifyManualForm.apiKey}
-                      onChange={(e) =>
-                        setShopifyManualForm((prev) => ({ ...prev, apiKey: e.target.value }))
-                      }
-                    />
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Admin API Access Token</FormLabel>
-                    <Input
-                      type="password"
-                      value={shopifyManualForm.adminApiAccessToken}
-                      onChange={(e) =>
-                        setShopifyManualForm((prev) => ({
-                          ...prev,
-                          adminApiAccessToken: e.target.value,
-                        }))
-                      }
-                    />
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>App Secret / Webhook Secret</FormLabel>
-                    <Input
-                      type="password"
-                      value={shopifyManualForm.apiSecretKey}
-                      onChange={(e) =>
-                        setShopifyManualForm((prev) => ({ ...prev, apiSecretKey: e.target.value }))
-                      }
-                    />
-                  </FormControl>
-                </SimpleGrid>
-                <Flex justify="flex-end" mt={4}>
-                  <Button
-                    colorScheme="green"
-                    onClick={handleConnectShopifyManualStore}
-                    isLoading={
-                      connectShopifyManualStore.isLoading || connectShopifyManualStore.isPending
-                    }
-                  >
-                    Connect Manual Store
-                  </Button>
-                </Flex>
-              </Box>
-            </VStack>
           )}
         </Box>
       )}
@@ -836,7 +566,7 @@ const ApiIntegration = () => {
                           onChange={() => toggleEvent(event)}
                           style={{ marginRight: '8px' }}
                         />
-                        <Text fontSize="sm">{event}</Text>
+                        <Text fontSize="sm">{WEBHOOK_EVENT_LABELS[event] || event}</Text>
                       </Flex>
                     ))}
                   </VStack>
@@ -881,3 +611,4 @@ const ApiIntegration = () => {
 }
 
 export default ApiIntegration
+

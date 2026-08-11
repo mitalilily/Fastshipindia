@@ -90,7 +90,7 @@ export default function B2CForm({ formData, onChange, shipmentType }) {
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mt={6}>
         <Flex bg={tileBg} p={4} borderRadius="12px" align="center" gap={3} borderWidth="1px" borderColor={sectionBorder}>
-          <TbRulerMeasure size={22} color="#1F4FA8" />
+          <TbRulerMeasure size={22} color="#8A1F43" />
           <Box>
             <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" fontWeight="700">
               Volumetric Weight

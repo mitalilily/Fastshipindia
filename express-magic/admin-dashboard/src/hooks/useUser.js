@@ -13,7 +13,6 @@ import {
   revokeKyc,
   resetUserPassword,
   updateBankAccountStatus,
-  updateUserBusinessType,
 } from 'services/user.service'
 
 export const useUserInfo = (id) =>
@@ -70,34 +69,6 @@ export function useApproveUser() {
 export function useResetUserPassword() {
   return useMutation({
     mutationFn: resetUserPassword,
-  })
-}
-
-export function useUpdateUserBusinessType() {
-  const queryClient = useQueryClient()
-  const toast = useToast()
-
-  return useMutation({
-    mutationFn: ({ userId, businessType }) => updateUserBusinessType(userId, businessType),
-    onSuccess: (_data, { userId }) => {
-      toast({
-        title: 'Business type updated',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      })
-      queryClient.invalidateQueries(['userInfo', userId])
-      queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
-    },
-    onError: (error) => {
-      toast({
-        title: 'Failed to update business type',
-        description: error?.response?.data?.message || error?.message || 'An error occurred.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
-    },
   })
 }
 

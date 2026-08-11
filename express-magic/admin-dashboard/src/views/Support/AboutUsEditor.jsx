@@ -13,13 +13,14 @@ import {
   useToast,
   VStack,
 } from '@chakra-ui/react'
-import { ContentState, convertFromHTML, convertToRaw, EditorState } from 'draft-js'
+import { ContentState, EditorState, convertFromHTML, convertToRaw } from 'draft-js'
 import draftToHtml from 'draftjs-to-html'
-import { useStaticPage, useUpdateStaticPage } from 'hooks/useStaticPage'
+import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { Editor } from 'react-draft-wysiwyg'
 import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css'
-import { FiCheck, FiRefreshCcw } from 'react-icons/fi'
+import { FiCheck, FiRefreshCcw, FiStar } from 'react-icons/fi'
+import { useStaticPage, useUpdateStaticPage } from 'hooks/useStaticPage'
 import api from 'services/axios'
 
 const ABOUT_US_SLUG = 'about_us'
@@ -50,27 +51,27 @@ const AboutUsEditor = () => {
 
   const handleLoadTemplate = () => {
     const templateHtml = `
-      <h2>About FastShip</h2>
-      <p><strong>FastShip</strong> is a courier aggregator technology platform designed to help entrepreneurs, D2C brands, and logistics businesses run a branded shipping operation with a cleaner and more scalable software stack.</p>
+      <h2>About Ship Aggregator</h2>
+      <p><strong>Ship Aggregator</strong> is a modern shipping operations platform built for ecommerce sellers who want faster dispatch, lower courier costs, and a smoother post-purchase experience.</p>
 
       <h3>What We Do</h3>
       <ul>
-        <li>Provide a ready-to-use white label logistics platform under your own brand</li>
-        <li>Integrate with leading courier partners across India</li>
-        <li>Offer advanced tools for tracking, billing, reconciliation, and operations</li>
+        <li>Compare courier partners from one clean operations workspace</li>
+        <li>Automate shipping, billing, reconciliation, and support flows</li>
+        <li>Track every shipment across B2C and B2B order journeys</li>
       </ul>
 
       <h3>Why Brands Choose Us</h3>
       <ul>
-        <li>Startup India recognized & MSME registered company</li>
-        <li>End-to-end technology, hosting, maintenance, and support handled by us</li>
-        <li>Scalable, profitable model with recurring revenue potential</li>
+        <li>One platform for shipping, finance visibility, and delivery follow-up</li>
+        <li>Built for growing ecommerce teams that need better operational clarity</li>
+        <li>Delightful branding and simple workflows that reduce panel fatigue</li>
       </ul>
 
       <h3>Contact</h3>
-      <p><strong>Registered Office:</strong> B-76 Shiv Shakti Nagar, Jagatpura Road, Malviya Nagar, Jaipur, Rajasthan, India 302017</p>
-      <p><strong>Email:</strong> support@fastship.in</p>
-      <p><strong>Website:</strong> www.fastship.in</p>
+      <p><strong>Email:</strong> cs@shipaggregator.com</p>
+      <p><strong>Website:</strong> www.shipaggregator.com</p>
+      <p><strong>Message:</strong> Ship smarter. Save more on every order.</p>
     `
 
     const blocksFromHTML = convertFromHTML(templateHtml)
@@ -97,28 +98,37 @@ const AboutUsEditor = () => {
 
   const uploadImageCallback = async (file) => {
     try {
+      const contentType = file.type || 'application/octet-stream'
       const { data } = await api.post('/uploads/presign', {
-        contentType: file.type || 'image/*',
+        contentType,
         filename: file.name,
         folder: 'about-us',
       })
 
-      await api.put(data.uploadUrl, file, {
-        headers: { 'Content-Type': file.type || 'image/*' },
+      if (!data?.uploadUrl || !data?.publicUrl) {
+        throw new Error('Upload service did not return a valid presigned URL')
+      }
+
+      await axios.put(data.uploadUrl, file, {
+        headers: { 'Content-Type': contentType },
+        withCredentials: false,
       })
 
-      // react-draft-wysiwyg expects this shape
       return { data: { link: data.publicUrl } }
     } catch (err) {
-      console.error('Image upload failed', err)
+      console.error('Image upload failed', {
+        message: err?.message,
+        response: err?.response?.data,
+        status: err?.response?.status,
+        stack: err?.stack,
+      })
       toast({
         title: 'Image upload failed',
-        description: 'Please try again or use a smaller image.',
+        description: err?.response?.data?.message || 'Please try again or use a smaller image.',
         status: 'error',
         duration: 4000,
         isClosable: true,
       })
-      // Fallback: no image inserted
       return Promise.reject(err)
     }
   }
@@ -129,7 +139,7 @@ const AboutUsEditor = () => {
     if (!validateForm()) return
 
     try {
-      await updatePageMutation.mutateAsync({ title: 'About Us - FastShip', content })
+      await updatePageMutation.mutateAsync({ title: 'About Us - Ship Aggregator', content })
       toast({
         title: 'About Us content saved',
         status: 'success',
@@ -167,12 +177,17 @@ const AboutUsEditor = () => {
           px={{ base: 4, md: 6 }}
         >
           <Box>
-            <Heading size="md" color={textColor}>
-              About Us Page
-            </Heading>
+            <HStack spacing={2}>
+              <Box color="brand.500">
+                <FiStar />
+              </Box>
+              <Heading size="md" color={textColor}>
+                About Us Page
+              </Heading>
+            </HStack>
             <HStack spacing={3} mt={1}>
               <Text fontSize="sm" color="gray.500">
-                Manage rich content shown on the customer About Us screen.
+                Manage the Ship Aggregator story shown on the customer support screen.
               </Text>
               {page?.updated_at && (
                 <Badge colorScheme="green" variant="subtle" fontSize="0.7rem">
@@ -190,10 +205,10 @@ const AboutUsEditor = () => {
               onClick={handleLoadTemplate}
               isDisabled={isLoading || updatePageMutation.isLoading}
             >
-              Load Template
+              Load Ship Aggregator Copy
             </Button>
             <Button
-              colorScheme="blue"
+              colorScheme="brand"
               leftIcon={<FiCheck />}
               onClick={handleSubmit}
               isLoading={updatePageMutation.isLoading}
@@ -233,15 +248,7 @@ const AboutUsEditor = () => {
                       editorClassName="editor"
                       toolbarClassName="editor-toolbar"
                       toolbar={{
-                        options: [
-                          'inline',
-                          'blockType',
-                          'list',
-                          'textAlign',
-                          'link',
-                          'image',
-                          'history',
-                        ],
+                        options: ['inline', 'blockType', 'list', 'textAlign', 'link', 'image', 'history'],
                         inline: { inDropdown: false },
                         list: { inDropdown: true },
                         textAlign: { inDropdown: true },
@@ -259,14 +266,7 @@ const AboutUsEditor = () => {
                   </Box>
                   {errors.content && <FormErrorMessage>{errors.content}</FormErrorMessage>}
                   <Text fontSize="xs" color="gray.500" mt={2}>
-                    {
-                      content
-                        .replace(/<[^>]+>/g, '')
-                        .trim()
-                        .split(/\s+/)
-                        .filter(Boolean).length
-                    }{' '}
-                    words
+                    {content.replace(/<[^>]+>/g, '').trim().split(/\s+/).filter(Boolean).length} words
                   </Text>
                 </FormControl>
               </VStack>
@@ -294,9 +294,7 @@ const AboutUsEditor = () => {
                 '& ul, & ol': { pl: 4, mb: 2 },
                 '& li': { mb: 0.5 },
               }}
-              dangerouslySetInnerHTML={{
-                __html: content || '<p>Start writing to see preview here.</p>',
-              }}
+              dangerouslySetInnerHTML={{ __html: content || '<p>Start writing to see preview here.</p>' }}
             />
           </Box>
         </Flex>
@@ -306,3 +304,5 @@ const AboutUsEditor = () => {
 }
 
 export default AboutUsEditor
+
+

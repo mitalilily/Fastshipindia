@@ -1,10 +1,6 @@
 import { useToast } from '@chakra-ui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  apiKeyService,
-  shopifyIntegrationService,
-  webhookService,
-} from '../services/apiIntegration.service'
+import { apiKeyService, webhookService } from '../services/apiIntegration.service'
 
 // API Keys hooks
 export const useApiKeys = () => {
@@ -191,97 +187,6 @@ export const useDeleteWebhook = () => {
         description: error?.response?.data?.message || 'Something went wrong',
         status: 'error',
         duration: 4000,
-        isClosable: true,
-      })
-    },
-  })
-}
-
-export const useShopifyStatus = () => {
-  return useQuery({
-    queryKey: ['shopifyStatus'],
-    queryFn: () => shopifyIntegrationService.getStatus(),
-    staleTime: 60 * 1000,
-    retry: false,
-  })
-}
-
-export const useConnectShopifyEnvStore = () => {
-  const queryClient = useQueryClient()
-  const toast = useToast()
-
-  return useMutation({
-    mutationFn: shopifyIntegrationService.connectEnvStore,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['shopifyStatus'])
-      toast({
-        title: 'Shopify store connected',
-        description: data?.data?.warning || 'Custom app credentials are now bound in FastShip.',
-        status: data?.data?.warning ? 'warning' : 'success',
-        duration: 5000,
-        isClosable: true,
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: 'Failed to connect Shopify store',
-        description: error?.response?.data?.error || error?.response?.data?.message || 'Something went wrong',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
-    },
-  })
-}
-
-export const useConnectShopifyManualStore = () => {
-  const queryClient = useQueryClient()
-  const toast = useToast()
-
-  return useMutation({
-    mutationFn: shopifyIntegrationService.connectManualStore,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['shopifyStatus'])
-      toast({
-        title: 'Shopify store connected',
-        description: data?.warning || data?.message || 'Store credentials were saved successfully.',
-        status: data?.warning ? 'warning' : 'success',
-        duration: 5000,
-        isClosable: true,
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: 'Failed to connect Shopify store',
-        description: error?.response?.data?.error || error?.response?.data?.message || 'Something went wrong',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      })
-    },
-  })
-}
-
-export const useSyncShopifyOrders = () => {
-  const toast = useToast()
-
-  return useMutation({
-    mutationFn: shopifyIntegrationService.syncOrders,
-    onSuccess: (data) => {
-      toast({
-        title: 'Shopify orders synced',
-        description: `Created: ${data?.created || 0}, Updated: ${data?.updated || 0}, Skipped: ${data?.skipped || 0}`,
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: 'Failed to sync Shopify orders',
-        description: error?.response?.data?.error || error?.response?.data?.message || 'Something went wrong',
-        status: 'error',
-        duration: 5000,
         isClosable: true,
       })
     },

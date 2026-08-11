@@ -2,18 +2,6 @@ import api from './axios'
 
 const BASE_URL = '/admin/b2b'
 
-const normalizeArrayPayload = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.zones)) return payload.zones
-  if (Array.isArray(payload?.rates)) return payload.rates
-  if (Array.isArray(payload?.overheads)) return payload.overheads
-  if (Array.isArray(payload?.states)) return payload.states
-  if (Array.isArray(payload?.holidays)) return payload.holidays
-  if (Array.isArray(payload?.items)) return payload.items
-  return []
-}
-
 const buildQuery = (params = {}) => {
   const searchParams = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -32,7 +20,7 @@ export const b2bAdminService = {
   async getZones(params = {}) {
     const query = buildQuery(params)
     const { data } = await api.get(`${BASE_URL}/zones${query ? `?${query}` : ''}`)
-    return normalizeArrayPayload(data)
+    return data.data ?? data
   },
 
   async createZone(payload) {
@@ -57,7 +45,7 @@ export const b2bAdminService = {
 
   async getStates() {
     const { data } = await api.get(`${BASE_URL}/states`)
-    return normalizeArrayPayload(data)
+    return data.data ?? data
   },
 
   // Pincodes
@@ -111,7 +99,7 @@ export const b2bAdminService = {
   async getZoneRates(params = {}) {
     const query = buildQuery(params)
     const { data } = await api.get(`${BASE_URL}/zone-rates${query ? `?${query}` : ''}`)
-    return normalizeArrayPayload(data)
+    return data.data ?? data
   },
 
   async upsertZoneRate(payload) {
@@ -138,7 +126,7 @@ export const b2bAdminService = {
   async getOverheads(params = {}) {
     const query = buildQuery(params)
     const { data } = await api.get(`${BASE_URL}/overheads${query ? `?${query}` : ''}`)
-    return normalizeArrayPayload(data)
+    return data.data ?? data
   },
 
   async upsertOverhead(payload) {
@@ -165,7 +153,7 @@ export const b2bAdminService = {
   async getAdditionalCharges(params = {}) {
     const query = buildQuery(params)
     const { data } = await api.get(`${BASE_URL}/additional-charges${query ? `?${query}` : ''}`)
-    return normalizeArrayPayload(data)
+    return data.data ?? data
   },
 
   async upsertAdditionalCharges(payload) {
@@ -184,7 +172,7 @@ export const b2bAdminService = {
   async getZoneStates(params = {}) {
     const query = buildQuery(params)
     const { data } = await api.get(`${BASE_URL}/zone-states${query ? `?${query}` : ''}`)
-    return normalizeArrayPayload(data)
+    return data.data ?? data
   },
 
   async createZoneState(payload) {
@@ -206,7 +194,7 @@ export const b2bAdminService = {
   async getHolidays(params = {}) {
     const query = buildQuery(params)
     const { data } = await api.get(`${BASE_URL}/holidays${query ? `?${query}` : ''}`)
-    return normalizeArrayPayload(data)
+    return data.data ?? data
   },
 
   async getHoliday(id) {

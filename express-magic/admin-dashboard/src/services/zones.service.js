@@ -3,14 +3,6 @@ import api from './axios'
 
 const API_URL = '/admin/zones/'
 
-const normalizeArrayPayload = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.zones)) return payload.zones
-  if (Array.isArray(payload?.items)) return payload.items
-  return []
-}
-
 export const zoneService = {
   getZones: async (businessType, filters = {}) => {
     // Build query params dynamically
@@ -23,7 +15,7 @@ export const zoneService = {
     }
 
     const res = await api.get(`${API_URL}?${params.toString()}`)
-    return normalizeArrayPayload(res.data)
+    return res.data
   },
 
   getZoneById: async (zoneId) => {
@@ -62,6 +54,14 @@ export const zoneService = {
     if (!mappingId) throw new Error('Mapping ID is required')
     await api.delete(`${API_URL}mappings/${mappingId}`)
     return mappingId
+  },
+  bulkDeleteMappings: async (mappingIds) => {
+    const res = await api.post(`${API_URL}mappings/bulk-delete`, { mappingIds })
+    return res.data
+  },
+  bulkMoveMappings: async (mappingIds, zoneId) => {
+    const res = await api.post(`${API_URL}mappings/bulk-move`, { mappingIds, zoneId })
+    return res.data
   },
   importZoneMappings: async (zoneId, fileObj, userChoices) => {
     const formData = new FormData()

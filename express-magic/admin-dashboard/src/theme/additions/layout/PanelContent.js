@@ -1,11 +1,10 @@
 const PanelContent = {
   baseStyle: {
-    width: "100%",
-    minWidth: 0,
     ms: "auto",
     me: "auto",
-    ps: "15px",
-    pe: "15px",
+    ps: { base: "8px", md: "14px" },
+    pe: { base: "8px", md: "14px" },
+    maxW: "1600px",
   },
 };
 

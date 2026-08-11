@@ -44,9 +44,9 @@ const TableFilters = ({
   const { isOpen, onOpen, onClose } = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, md: false })
 
-  const cardBg = useColorModeValue('rgba(255,255,255,0.92)', 'rgba(14, 23, 43, 0.9)')
-  const borderColor = useColorModeValue('rgba(148, 163, 184, 0.24)', 'rgba(148, 163, 184, 0.18)')
-  const labelColor = useColorModeValue('gray.700', 'gray.100')
+  const cardBg = useColorModeValue('#FFFFFF', '#161B22')
+  const borderColor = useColorModeValue('#E2E8F0', '#30363D')
+  const labelColor = useColorModeValue('#0F172A', '#8B949E')
 
   useEffect(() => {
     const currentValues = values || {}
@@ -94,13 +94,16 @@ const TableFilters = ({
   const visibleFilters = shouldLimit ? filters.slice(0, DEFAULT_VISIBLE_COUNT) : filters
 
   const commonInputProps = {
-    bg: useColorModeValue('white', 'rgba(15, 28, 53, 0.85)'),
+    bg: useColorModeValue('#FFFFFF', '#161B22'),
     borderColor,
-    borderRadius: '14px',
-    h: '46px',
+    borderRadius: '8px',
+    color: useColorModeValue('#0F172A', '#E6EDF3'),
+    _placeholder: {
+      color: useColorModeValue('#94A3B8', '#6E7681'),
+    },
     _focus: {
-      borderColor: 'brand.500',
-      boxShadow: '0 0 0 3px rgba(109, 40, 217, 0.12)',
+      borderColor: '#6C5CE7',
+      boxShadow: '0 0 0 3px rgba(108, 92, 231, 0.18)',
     },
   }
 
@@ -114,7 +117,7 @@ const TableFilters = ({
     if (type === 'text' || type === 'search') {
       return (
         <Box key={key}>
-          <Text mb="1.5" fontWeight="700" fontSize="sm" color={labelColor}>
+          <Text mb="1.5" fontWeight="500" fontSize="sm" color={labelColor}>
             {label}
           </Text>
           <InputGroup>
@@ -153,7 +156,7 @@ const TableFilters = ({
     if (type === 'date') {
       return (
         <Box key={key}>
-          <Text mb="1.5" fontWeight="700" fontSize="sm" color={labelColor}>
+          <Text mb="1.5" fontWeight="500" fontSize="sm" color={labelColor}>
             {label}
           </Text>
           <InputGroup>
@@ -175,7 +178,7 @@ const TableFilters = ({
     if (type === 'number') {
       return (
         <Box key={key}>
-          <Text mb="1.5" fontWeight="700" fontSize="sm" color={labelColor}>
+          <Text mb="1.5" fontWeight="500" fontSize="sm" color={labelColor}>
             {label}
           </Text>
           <Input
@@ -192,7 +195,7 @@ const TableFilters = ({
     if (type === 'select') {
       return (
         <Box key={key}>
-          <Text mb="1.5" fontWeight="700" fontSize="sm" color={labelColor}>
+          <Text mb="1.5" fontWeight="500" fontSize="sm" color={labelColor}>
             {label}
           </Text>
           <Select
@@ -230,15 +233,7 @@ const TableFilters = ({
   }
 
   const filterContent = (
-    <Box
-      bg={cardStyle ? cardBg : 'transparent'}
-      borderWidth={cardStyle ? '1px' : '0'}
-      borderColor={cardStyle ? borderColor : 'transparent'}
-      borderRadius={cardStyle ? '24px' : '0'}
-      px={cardStyle ? { base: 4, md: 5 } : 0}
-      py={cardStyle ? { base: 4, md: 5 } : 0}
-      boxShadow={cardStyle ? useColorModeValue('0 16px 40px rgba(15, 23, 42, 0.06)', '0 20px 48px rgba(2, 8, 23, 0.34)') : 'none'}
-    >
+    <Box>
       <Grid
         templateColumns={{
           base: '1fr',
@@ -274,7 +269,7 @@ const TableFilters = ({
           >
             Apply Filters
           </Button>
-          <Button variant="outline" size="sm" onClick={handleReset} isDisabled={!hasFilters} borderColor={borderColor} borderRadius="12px">
+          <Button variant="outline" size="sm" onClick={handleReset} isDisabled={!hasFilters} borderColor={borderColor}>
             Clear All
           </Button>
           {showActiveFiltersCount && activeFiltersCount > 0 && (

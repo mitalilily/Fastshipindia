@@ -5,9 +5,6 @@ export const usePaymentOptions = () => {
   return useQuery({
     queryKey: ['paymentOptions'],
     queryFn: () => paymentOptionsService.getPaymentOptions(),
-    retry: false,
-    refetchOnWindowFocus: false,
-    staleTime: 60 * 1000,
   })
 }
 

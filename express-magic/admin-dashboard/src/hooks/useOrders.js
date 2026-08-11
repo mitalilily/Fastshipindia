@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
-  addManualNdrToOrder,
   cancelAdminOrder,
   fetchAllOrders,
   regenerateAdminOrderDocuments,
@@ -28,16 +27,8 @@ export const useRegenerateOrderDocumentsMutation = () => {
   })
 }
 
-export const useAddManualNdrMutation = () => {
-  return useMutation({
-    mutationFn: ({ orderId, status = 'ndr', reason, remarks, attemptNo }) =>
-      addManualNdrToOrder(orderId, { status, reason, remarks, attemptNo }),
-  })
-}
-
 export const useUpdateOrderStatusMutation = () => {
   return useMutation({
-    mutationFn: ({ orderId, status, reason, remarks, attemptNo }) =>
-      updateAdminOrderStatus(orderId, { status, reason, remarks, attemptNo }),
+    mutationFn: ({ orderId, status, note }) => updateAdminOrderStatus(orderId, { status, note }),
   })
 }

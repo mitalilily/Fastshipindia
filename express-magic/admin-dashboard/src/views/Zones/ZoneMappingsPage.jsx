@@ -38,7 +38,7 @@ import { useZoneById, useZones } from 'hooks/useZones'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min'
-import { getExactLocation, normalizePincodeInput } from 'services/location.service'
+import { getCourierDisplayName } from 'utils/courierDisplay'
 import { GenericTable } from 'views/Dashboard/Tables/components/GenericTable'
 import { useZoneMappings } from '../../hooks/useZoneMappings'
 
@@ -156,15 +156,15 @@ const ZoneMappingsPage = () => {
   const [manualOverrides, setManualOverrides] = useState({ city: false, state: false })
 
   const { data: locationLookup, isFetching: loadingLocation } = useLocations(
-    isB2B && mappingForm.pincode?.length === 6 ? { pincode: mappingForm.pincode, limit: 1 } : null,
-    isB2B && mappingForm.pincode?.length === 6,
+    isB2B && mappingForm.pincode?.length >= 6 ? { pincode: mappingForm.pincode } : null,
+    isB2B && mappingForm.pincode?.length >= 6,
     ['b2b-zone-mapping', mappingForm.pincode],
   )
 
   const autoDetectedLocation = useMemo(() => {
-    if (!locationLookup?.data?.length || mappingForm.pincode?.length !== 6) return null
-    return getExactLocation(locationLookup, mappingForm.pincode)
-  }, [locationLookup, mappingForm.pincode])
+    if (!locationLookup?.data?.length) return null
+    return locationLookup.data[0]
+  }, [locationLookup])
 
   useEffect(() => {
     if (!modalOpen || !isB2B) return
@@ -463,7 +463,9 @@ const ZoneMappingsPage = () => {
             <Flex direction="column">
               <Text fontSize="lg" fontWeight="bold">
                 {specificZone?.name} ({specificZone?.code}){' '}
-                {specificZone?.courier_name ? `- ${specificZone?.courier_name} ` : null}
+                {specificZone?.courier_name
+                  ? `- ${getCourierDisplayName(specificZone.courier_name)} `
+                  : null}
               </Text>
               <Text fontSize="sm">{specificZone?.description || 'No description available'}</Text>
             </Flex>
@@ -889,7 +891,7 @@ const ZoneMappingsPage = () => {
               <Button
                 colorScheme="blue"
                 onClick={handleSaveMapping}
-                isLoading={createMapping.isPending}
+                isLoading={isEdit ? updateMapping.isPending : createMapping.isPending}
               >
                 {isEdit ? 'Update' : 'Save Mapping'}
               </Button>
@@ -901,16 +903,10 @@ const ZoneMappingsPage = () => {
               <Input
                 placeholder="Pincode"
                 value={mappingForm.pincode}
-                onChange={(e) =>
-                  setMappingForm({
-                    ...mappingForm,
-                    pincode: normalizePincodeInput(e.target.value),
-                    ...(isB2B ? { city: '', state: '' } : {}),
-                  })
-                }
-                maxLength={6}
+                onChange={(e) => setMappingForm({ ...mappingForm, pincode: e.target.value })}
+                maxLength={10}
               />
-              {isB2B && mappingForm.pincode?.length === 6 && (
+              {isB2B && mappingForm.pincode?.length >= 6 && (
                 <InputRightElement width="3rem">
                   {loadingLocation ? <Spinner size="sm" /> : <Tag colorScheme="green">Auto</Tag>}
                 </InputRightElement>

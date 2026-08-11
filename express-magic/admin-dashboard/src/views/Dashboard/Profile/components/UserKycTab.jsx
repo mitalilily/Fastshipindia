@@ -17,8 +17,10 @@ import {
   PopoverHeader,
   PopoverTrigger,
   Spinner,
+  StackDivider,
   Text,
   useColorModeValue,
+  VStack,
 } from '@chakra-ui/react'
 import StatusBadge from 'components/Badge/StatusBadge'
 import Card from 'components/Card/Card'
@@ -43,7 +45,16 @@ const StatusChip = ({ status }) => {
 }
 
 // Card for each document
-const DocCard = ({ label, presignedUrl, status, onApprove, onReject, kycStatus }) => {
+const DocCard = ({
+  label,
+  fileKey,
+  presignedUrl,
+  status,
+  rejectionReason,
+  onApprove,
+  onReject,
+  kycStatus,
+}) => {
   const bgColor = useColorModeValue('gray.50', 'gray.700')
   const hoverBg = useColorModeValue('gray.100', 'gray.600')
   const [isOpen, setIsOpen] = useState(false)
@@ -73,8 +84,16 @@ const DocCard = ({ label, presignedUrl, status, onApprove, onReject, kycStatus }
         <Link href={presignedUrl} isExternal color="blue.500" fontWeight="bold">
           View Document <ExternalLinkIcon mx="2px" />
         </Link>
+      ) : fileKey ? (
+        <Text color="orange.500">Uploaded, preview unavailable</Text>
       ) : (
         <Text color="gray.500">Not uploaded</Text>
+      )}
+
+      {status === 'rejected' && rejectionReason && (
+        <Text mt={2} color="red.500" fontSize="sm">
+          Rejected: {rejectionReason}
+        </Text>
       )}
 
       <Flex mt={2} gap={2}>
@@ -123,65 +142,6 @@ const DocCard = ({ label, presignedUrl, status, onApprove, onReject, kycStatus }
   )
 }
 
-const formatKycValue = (value) => {
-  if (!value) return '-'
-  return String(value)
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-const InfoTile = ({ label, value, mono = false }) => {
-  const bgColor = useColorModeValue('gray.50', 'gray.700')
-  const borderColor = useColorModeValue('gray.200', 'gray.600')
-
-  return (
-    <Box p={4} bg={bgColor} border="1px solid" borderColor={borderColor} borderRadius="lg">
-      <Text fontSize="xs" color="gray.500" fontWeight="700" textTransform="uppercase" mb={1}>
-        {label}
-      </Text>
-      <Text
-        fontWeight="700"
-        fontSize="md"
-        fontFamily={mono ? 'mono' : 'inherit'}
-        letterSpacing={mono ? '0.04em' : 'normal'}
-        color={value ? 'gray.800' : 'gray.500'}
-      >
-        {value || '-'}
-      </Text>
-    </Box>
-  )
-}
-
-const DOC_LABELS = {
-  aadhaarUrl: 'Aadhaar',
-  boardResolutionUrl: 'Board Resolution',
-  businessPanUrl: 'Business PAN',
-  cancelledChequeUrl: 'Cancelled Cheque',
-  companyAddressProofUrl: 'Company Address Proof',
-  gstCertificateUrl: 'GST Certificate',
-  llpAgreementUrl: 'LLP Agreement',
-  panCardUrl: 'PAN Card',
-  partnershipDeedUrl: 'Partnership Deed',
-}
-
-const DOC_ORDER = [
-  'aadhaarUrl',
-  'boardResolutionUrl',
-  'businessPanUrl',
-  'cancelledChequeUrl',
-  'companyAddressProofUrl',
-  'gstCertificateUrl',
-  'llpAgreementUrl',
-  'panCardUrl',
-  'partnershipDeedUrl',
-]
-
-const prettyDocLabel = (key) =>
-  String(key)
-    .replace(/Url$/, '')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
-
 const UserKycPage = ({ userId }) => {
   console.log('user id', userId)
   const { data: kycData, isLoading, isError, refetch } = useUserKyc(userId)
@@ -199,7 +159,12 @@ const UserKycPage = ({ userId }) => {
   const docKeys = useMemo(() => {
     if (!kyc) return []
     return Object.entries(kyc)
-      .filter(([key, value]) => key.toLowerCase().includes('url') && value)
+      .filter(
+        ([key, value]) =>
+          key.toLowerCase().includes('url') &&
+          typeof value === 'string' &&
+          value.trim().length > 0,
+      )
       .map(([_, value]) => value)
   }, [kyc])
 
@@ -208,10 +173,20 @@ const UserKycPage = ({ userId }) => {
   })
 
   const presignedUrlMap = useMemo(() => {
-    if (!presignedUrlsData) return {}
+    if (!Array.isArray(presignedUrlsData)) return {}
     const map = {}
-    docKeys.forEach((key, index) => {
-      map[key] = presignedUrlsData[index]
+    presignedUrlsData.forEach((entry, index) => {
+      const sourceKey = docKeys[index]
+      if (!sourceKey) return
+
+      if (typeof entry === 'string') {
+        map[sourceKey] = entry
+        return
+      }
+
+      if (entry?.url) {
+        map[entry.key || sourceKey] = entry.url
+      }
     })
     return map
   }, [presignedUrlsData, docKeys])
@@ -226,6 +201,9 @@ const UserKycPage = ({ userId }) => {
     approveDocumentMutation.mutate(key, { onSuccess: () => refetch() })
   const handleRejectDoc = ({ key, reason }) =>
     rejectDocumentMutation.mutate({ key, reason }, { onSuccess: () => refetch() })
+
+  // All hooks must be called before any conditional returns
+  const dividerBorderColor = useColorModeValue('gray.200', 'gray.600')
 
   if (isLoading || urlsLoading)
     return (
@@ -249,33 +227,52 @@ const UserKycPage = ({ userId }) => {
     )
 
   const textFields = [
-    { label: 'PAN Number', value: kyc.panNumber, mono: true },
-    { label: 'GST Number', value: kyc.gstin, mono: true },
-    { label: 'Business Structure', value: formatKycValue(kyc.structure) },
-    { label: 'Company Type', value: formatKycValue(kyc.companyType) },
-    { label: 'KYC Status', value: formatKycValue(kyc.status) },
+    { label: 'GSTIN', value: kyc.gstin },
+    { label: 'Company Type', value: kyc.structure },
+    { label: 'KYC Status', value: kyc.status },
+    { label: 'Last Updated', value: new Date(kyc.updatedAt).toLocaleString() },
+  ].filter((f) => f.value)
+
+  const legacyAadhaarField =
+    !kyc.aadhaarFrontUrl && !kyc.aadhaarBackUrl && kyc.aadhaarUrl
+      ? [
+          {
+            label: 'Aadhaar',
+            key: 'aadhaarUrl',
+            status: kyc.aadhaarStatus,
+            rejectionReason: kyc.aadhaarRejectionReason,
+          },
+        ]
+      : []
+
+  const docFields = [
     {
-      label: 'Last Updated',
-      value: kyc.updatedAt ? new Date(kyc.updatedAt).toLocaleString() : '-',
+      label: 'Aadhaar Front Side',
+      key: 'aadhaarFrontUrl',
+      status: kyc.aadhaarFrontStatus,
+      rejectionReason: kyc.aadhaarFrontRejectionReason,
     },
-  ]
-
-  const docFields = useMemo(() => {
-    const seen = new Set()
-    const orderedDocFields = DOC_ORDER.map((key) => {
-      const value = kyc?.[key]
-      if (!value) return null
-      seen.add(key)
-      const statusKey = `${key.replace('Url', '')}Status`
-      return {
-        label: DOC_LABELS[key] || prettyDocLabel(key),
-        key,
-        status: kyc?.[statusKey],
-      }
-    }).filter(Boolean)
-
-    return orderedDocFields
-  }, [kyc])
+    {
+      label: 'Aadhaar Back Side',
+      key: 'aadhaarBackUrl',
+      status: kyc.aadhaarBackStatus,
+      rejectionReason: kyc.aadhaarBackRejectionReason,
+    },
+    ...legacyAadhaarField,
+    { label: 'Board Resolution', key: 'boardResolutionUrl', status: kyc.boardResolutionStatus },
+    { label: 'Business PAN', key: 'businessPanUrl', status: kyc.businessPanStatus },
+    { label: 'Cancelled Cheque', key: 'cancelledChequeUrl', status: kyc.cancelledChequeStatus },
+    {
+      label: 'Company Address Proof',
+      key: 'companyAddressProofUrl',
+      status: kyc.companyAddressProofStatus,
+    },
+    { label: 'GST Certificate', key: 'gstCertificateUrl', status: kyc.gstCertificateStatus },
+    { label: 'LLP Agreement', key: 'llpAgreementUrl', status: kyc.llpAgreementStatus },
+    { label: 'PAN Card', key: 'panCardUrl', status: kyc.panCardStatus },
+    { label: 'Partnership Deed', key: 'partnershipDeedUrl', status: kyc.partnershipDeedStatus },
+    { label: 'Selfie', key: 'selfieUrl', status: kyc.selfieStatus },
+  ].filter((f) => kyc[f?.key])
 
   return (
     <Card p={6} borderRadius="xl" boxShadow="md">
@@ -355,33 +352,30 @@ const UserKycPage = ({ userId }) => {
       )}
 
       {/* Text fields */}
-      <Box mb={6}>
-        <Heading size="md" mb={3}>
-          Identity Details
-        </Heading>
-        <Grid templateColumns={['1fr', '1fr 1fr', 'repeat(3, 1fr)']} gap={4}>
-          {textFields.map((field) => (
-            <InfoTile
-              key={field.label}
-              label={field.label}
-              value={field.value}
-              mono={field.mono}
-            />
-          ))}
-        </Grid>
-      </Box>
+      <VStack
+        spacing={4}
+        align="stretch"
+        mb={6}
+        divider={<StackDivider borderColor={dividerBorderColor} />}
+      >
+        {textFields.map((field) => (
+          <Box key={field.label}>
+            <Text fontWeight="600">{field.label}</Text>
+            <Text>{field.value}</Text>
+          </Box>
+        ))}
+      </VStack>
 
       {/* Document fields */}
-      <Heading size="md" mb={3}>
-        Uploaded Documents
-      </Heading>
       <Grid templateColumns={['1fr', '1fr 1fr']} gap={4}>
         {docFields.map((doc) => (
           <DocCard
             key={doc.key}
             label={doc.label}
+            fileKey={kyc[doc.key]}
             presignedUrl={presignedUrlMap[kyc[doc.key]]}
             status={doc.status}
+            rejectionReason={doc.rejectionReason}
             onApprove={() => handleApproveDoc(doc.key)}
             onReject={(reason) => handleRejectDoc({ key: doc.key, reason })}
             kycStatus={kyc?.status}

@@ -1,7 +1,6 @@
 import api from './axios'
 
 const API_BASE = '/v1'
-const INTEGRATION_BASE = '/integrations'
 
 // API Keys
 export const apiKeyService = {
@@ -50,28 +49,6 @@ export const webhookService = {
 
   deleteWebhook: async (id) => {
     const res = await api.delete(`${API_BASE}/webhooks/${id}`)
-    return res.data
-  },
-}
-
-export const shopifyIntegrationService = {
-  getStatus: async () => {
-    const res = await api.get(`${INTEGRATION_BASE}/shopify/test-connection`)
-    return res.data
-  },
-
-  connectEnvStore: async (data = {}) => {
-    const res = await api.post(`${INTEGRATION_BASE}/shopify/connect-env`, data)
-    return res.data
-  },
-
-  connectManualStore: async (data = {}) => {
-    const res = await api.post(`${INTEGRATION_BASE}/shopify-auth`, data)
-    return res.data
-  },
-
-  syncOrders: async (data = {}) => {
-    const res = await api.post(`${INTEGRATION_BASE}/shopify/sync-orders`, data)
     return res.data
   },
 }

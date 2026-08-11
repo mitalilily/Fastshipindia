@@ -12,19 +12,42 @@ const TablesTableRow = ({
   actionsStickyLeft = false,
   hasCheckbox = false,
   actionsColumnWidth = '180px',
+  stickyDivider,
+  stickyShadow,
+  stickyRightColumnKeys = [],
+  stickyRightOffsets = {},
 }) => {
-  const bg = useColorModeValue('white', 'gray.800')
-  const rowHover = useColorModeValue('#FAF7FF', '#18233D')
+  const bg = useColorModeValue('#FFFFFF', '#161B22')
+  const borderColor = useColorModeValue('#E2E8F0', '#30363D')
 
   return (
-    <Tr _hover={{ bg: rowHover }}>
+    <Tr>
       {checkboxComponent}
       {columnKeys.map((key, idx) => {
         const value = row[key]
         const content = renderers[key] ? renderers[key](value, row) : value
+        const isLastDataColumn = idx === columnKeys.length - 1
 
         return (
-          <Td key={idx} ps={8} minW={columnWidths[key] || 'auto'} overflow="visible" py={4.5}>
+          <Td
+            key={idx}
+            ps={5}
+            pe={isLastDataColumn && renderActions ? 8 : 5}
+            minW={columnWidths[key] || 'auto'}
+            maxW={columnWidths[key] || 'auto'}
+            overflow="visible"
+            position={stickyRightColumnKeys.includes(key) ? 'sticky' : 'static'}
+            right={stickyRightColumnKeys.includes(key) ? stickyRightOffsets[key] || 0 : undefined}
+            zIndex={stickyRightColumnKeys.includes(key) ? 2 : undefined}
+            bg={stickyRightColumnKeys.includes(key) ? bg : undefined}
+            borderColor={borderColor}
+            py="18px"
+            boxShadow={
+              stickyRightColumnKeys.includes(key) && (stickyRightOffsets[key] || 0) === 0
+                ? '-6px 0 10px rgba(1, 4, 9, 0.25)'
+                : undefined
+            }
+          >
             {content ?? '—'}
           </Td>
         )
@@ -32,7 +55,7 @@ const TablesTableRow = ({
 
       {renderActions && (
         <Td
-          px={8}
+          px={5}
           minW={actionsColumnWidth}
           w={actionsColumnWidth}
           bg={bg}
@@ -41,6 +64,9 @@ const TablesTableRow = ({
           zIndex={3}
           overflow="visible"
           whiteSpace="nowrap"
+          borderLeft="1px solid"
+          borderColor={stickyDivider || borderColor}
+          boxShadow={stickyShadow}
         >
           {renderActions(row)}
         </Td>

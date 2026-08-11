@@ -1,109 +1,265 @@
 import {
+  Badge,
   Box,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
+  Button,
   Flex,
-  Link,
+  HStack,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuDivider,
+  MenuItem,
+  MenuList,
+  Text,
+  useColorMode,
   useColorModeValue,
 } from '@chakra-ui/react'
+import {
+  IconBell,
+  IconDashboard,
+  IconKey,
+  IconLayoutSidebarLeftCollapse,
+  IconLogout,
+  IconMenu2,
+  IconMoon,
+  IconSettings,
+  IconSun,
+} from '@tabler/icons-react'
+import { useSocket } from 'hooks/useSocket'
 import PropTypes from 'prop-types'
-import { BRAND } from '../../constants/brand'
-import BrandMark from '../Brand/BrandMark'
-import AdminNavbarLinks from './AdminNavbarLinks'
+import { useEffect } from 'react'
+import { useHistory } from 'react-router-dom'
+import { getNotifications } from 'services/notification.service'
+import { useAuthStore } from 'store/useAuthStore'
+import { useNotificationsStore } from 'store/useNotificationsStore'
 
 export default function AdminNavbar(props) {
-  const { variant, children, fixed, secondary, brandText, onOpen, sidebarWidth = 275, ...rest } = props
+  const { onOpen, onToggleSidebar, isSidebarCollapsed = false, sidebarWidth = 300, brandText } = props
+  const { colorMode, toggleColorMode } = useColorMode()
+  const history = useHistory()
+  const logout = useAuthStore((state) => state.logout)
+  const { unreadCount, setNotifications } = useNotificationsStore()
+  useSocket()
 
-  const mainText = useColorModeValue('gray.800', 'gray.100')
-  const secondaryText = useColorModeValue('gray.500', 'gray.400')
-  const paddingX = '18px'
+  const navBg = useColorModeValue('#FFFFFF', '#161B22')
+  const borderColor = useColorModeValue('#E2E8F0', '#30363D')
+  const titleColor = useColorModeValue('#0F172A', '#E6EDF3')
+  const iconColor = useColorModeValue('#64748B', '#8B949E')
+  const iconHoverBg = useColorModeValue('#F9FAFB', '#21262D')
+  const iconHoverColor = useColorModeValue('#0F172A', '#E6EDF3')
+  const switchBg = useColorModeValue('#F5F3FF', '#1a2234')
+  const switchBorder = useColorModeValue('#E2E8F0', '#30363D')
+  const switchActiveBg = useColorModeValue('#FFFFFF', '#242349')
+  const notificationBg = useColorModeValue('#F9FAFB', '#21262D')
+  const notificationHoverBg = useColorModeValue('#EDE9FE', '#30363D')
+  const avatarBg = useColorModeValue('#EDE9FE', '#6C5CE7')
+  const avatarColor = useColorModeValue('#5A4BD1', '#FFFFFF')
+  const menuBg = useColorModeValue('#FFFFFF', '#161B22')
+  const menuText = useColorModeValue('#0F172A', '#E6EDF3')
+  const menuMuted = useColorModeValue('#64748B', '#8B949E')
+  const menuHoverBg = useColorModeValue('#F9FAFB', '#21262D')
 
-  const fixedNavbarShadow = useColorModeValue(
-    '0 16px 38px rgba(7, 25, 35, 0.08)',
-    '0 16px 38px rgba(5, 4, 10, 0.42)',
-  )
-  const fixedNavbarBg = useColorModeValue(
-    'rgba(255,255,255,0.94)',
-    'rgba(4,26,56,0.92)',
-  )
-  const fixedNavbarBorder = useColorModeValue(BRAND.colors.border, 'rgba(134, 168, 211, 0.18)')
+  const setLightMode = () => {
+    if (colorMode !== 'light') toggleColorMode()
+  }
+
+  const setDarkMode = () => {
+    if (colorMode !== 'dark') toggleColorMode()
+  }
+
+  const handleLogout = () => {
+    logout()
+    history.replace('/login')
+  }
+
+  useEffect(() => {
+    let mounted = true
+
+    getNotifications()
+      .then((data) => {
+        if (mounted) setNotifications(data?.notifications || [])
+      })
+      .catch(() => {
+        if (mounted) setNotifications([])
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [setNotifications])
 
   return (
     <Flex
-      position="relative"
-      zIndex="20"
-      boxShadow={fixedNavbarShadow}
-      bg={fixedNavbarBg}
-      borderColor={fixedNavbarBorder}
-      backdropFilter="blur(18px)"
-      borderWidth="1px"
-      borderStyle="solid"
-      transition="all 0.3s ease"
-      alignItems={{ xl: 'center' }}
-      borderRadius="18px"
-      display="flex"
-      minH="88px"
-      justifyContent={{ xl: 'center' }}
-      mx={{ base: '10px', xl: '16px' }}
-      mt="14px"
-      px={{ sm: paddingX, md: '24px' }}
-      py="14px"
-      w={{
-        base: 'calc(100% - 20px)',
-        xl: 'calc(100% - 32px)',
-      }}
+      position="fixed"
+      top="0"
+      left={{ base: '0', xl: `${sidebarWidth}px` }}
+      right="0"
+      h="70px"
+      px={{ base: '16px', md: '30px' }}
+      align="center"
+      justify="space-between"
+      bg={navBg}
+      borderBottom="1px solid"
+      borderColor={borderColor}
+      zIndex="1200"
     >
-      <Flex w="100%" flexDirection={{ sm: 'column', md: 'row' }} alignItems={{ xl: 'center' }} gap={{ sm: 2, md: 0 }}>
-        <Box mb={{ sm: '4px', md: '0px' }} display="flex" alignItems="center" gap="14px">
-          <Box display={{ base: 'none', md: 'block' }}>
-            <BrandMark compact showTagline align="start" size={40} />
-          </Box>
+      <HStack spacing="20px" minW={0}>
+        <IconButton
+          aria-label="Open menu"
+          display={{ base: 'inline-flex', xl: 'none' }}
+          icon={<IconMenu2 size={20} />}
+          onClick={onOpen}
+          variant="ghost"
+          color={iconColor}
+          _hover={{ bg: iconHoverBg, color: iconHoverColor }}
+        />
+        <IconButton
+          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          display={{ base: 'none', xl: 'inline-flex' }}
+          icon={<IconLayoutSidebarLeftCollapse size={22} />}
+          variant="ghost"
+          color={iconColor}
+          _hover={{ bg: iconHoverBg, color: iconHoverColor }}
+          onClick={onToggleSidebar}
+        />
+        <Text color={titleColor} fontSize="18px" fontWeight="800" noOfLines={1}>
+          {brandText || 'Dashboard'}
+        </Text>
+      </HStack>
 
-          <Box>
-            <Breadcrumb separator="/" spacing="8px" mb="3px">
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#" color={secondaryText} fontSize="xs" fontWeight="600" _hover={{ color: 'brand.500', textDecoration: 'none' }}>
-                  {BRAND.name}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="#" color={mainText} fontSize="xs" fontWeight="700" _hover={{ color: 'brand.500', textDecoration: 'none' }}>
-                  {brandText}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </Breadcrumb>
+      <HStack spacing="10px">
+        <HStack spacing="2px" bg={switchBg} border="1px solid" borderColor={switchBorder} borderRadius="18px" p="3px">
+          <IconButton
+            aria-label="Light mode"
+            icon={<IconSun size={16} />}
+            size="sm"
+            borderRadius="50%"
+            variant="ghost"
+            color="#ff7a1a"
+            bg={colorMode === 'light' ? switchActiveBg : 'transparent'}
+            _hover={{ bg: switchActiveBg }}
+            onClick={setLightMode}
+          />
+          <IconButton
+            aria-label="Dark mode"
+            icon={<IconMoon size={16} />}
+            size="sm"
+            borderRadius="50%"
+            variant="ghost"
+            color="#8d80ff"
+            bg={colorMode === 'dark' ? switchActiveBg : 'transparent'}
+            _hover={{ bg: switchActiveBg }}
+            onClick={setDarkMode}
+          />
+        </HStack>
 
-            <Link
-              color={mainText}
-              href="#"
-              bg="inherit"
-              borderRadius="inherit"
-              fontWeight="800"
-              fontSize={{ base: 'lg', md: 'xl' }}
-              letterSpacing="-0.01em"
-              _hover={{ color: 'brand.500', textDecoration: 'none' }}
-              _active={{ bg: 'inherit', transform: 'none', borderColor: 'transparent' }}
-              _focus={{ boxShadow: 'none' }}
+        <Box position="relative">
+          <IconButton
+            aria-label="Notifications"
+            icon={<IconBell size={20} />}
+            w="38px"
+            h="38px"
+            borderRadius="50%"
+            variant="ghost"
+            color={titleColor}
+            bg={notificationBg}
+            _hover={{ bg: notificationHoverBg }}
+            onClick={() => history.push('/admin/notifications')}
+          />
+          {unreadCount > 0 ? (
+            <Badge
+              position="absolute"
+              top="-3px"
+              right="-7px"
+              bg="#f97316"
+              color="white"
+              borderRadius="999px"
+              fontSize="10px"
+              minW="18px"
+              h="18px"
+              px="5px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
             >
-              {brandText}
-            </Link>
-          </Box>
+              {unreadCount}
+            </Badge>
+          ) : null}
         </Box>
 
-        <Box ms="auto" w={{ sm: '100%', md: 'unset' }}>
-          <AdminNavbarLinks onOpen={onOpen} logoText={props.logoText} secondary={false} fixed={true} />
-        </Box>
-      </Flex>
+        <Menu placement="bottom-end">
+          <MenuButton
+            as={Button}
+            h="40px"
+            w="40px"
+            minW="40px"
+            p="0"
+            variant="ghost"
+            borderRadius="999px"
+            color={titleColor}
+            _hover={{ bg: iconHoverBg }}
+            _active={{ bg: iconHoverBg }}
+          >
+            <HStack spacing="8px">
+              <Flex
+                w="32px"
+                h="32px"
+                borderRadius="50%"
+                align="center"
+                justify="center"
+                bg={avatarBg}
+                color={avatarColor}
+                fontSize="13px"
+                fontWeight="800"
+                flexShrink={0}
+              >
+                SA
+              </Flex>
+            </HStack>
+          </MenuButton>
+          <MenuList
+            bg={menuBg}
+            borderColor={borderColor}
+            color={menuText}
+            boxShadow="0 18px 42px rgba(15, 23, 42, 0.18)"
+            minW="220px"
+            zIndex="popover"
+          >
+            <Box px="12px" py="10px">
+              <Text fontSize="sm" fontWeight="800">
+                Super Admin
+              </Text>
+              <Text fontSize="xs" color={menuMuted}>
+                Admin workspace
+              </Text>
+            </Box>
+            <MenuDivider borderColor={borderColor} />
+            <MenuItem icon={<IconDashboard size={18} />} _hover={{ bg: menuHoverBg }} onClick={() => history.push('/admin/dashboard')}>
+              Dashboard
+            </MenuItem>
+            <MenuItem icon={<IconKey size={18} />} _hover={{ bg: menuHoverBg }} onClick={() => history.push('/admin/settings/change-password')}>
+              Change password
+            </MenuItem>
+            <MenuItem icon={<IconSettings size={18} />} _hover={{ bg: menuHoverBg }} onClick={() => history.push('/admin/settings/payment-options')}>
+              Payment options
+            </MenuItem>
+            <MenuDivider borderColor={borderColor} />
+            <MenuItem icon={<IconLogout size={18} />} color="red.400" _hover={{ bg: menuHoverBg }} onClick={handleLogout}>
+              Logout
+            </MenuItem>
+          </MenuList>
+        </Menu>
+      </HStack>
     </Flex>
   )
 }
 
 AdminNavbar.propTypes = {
-  brandText: PropTypes.string,
   variant: PropTypes.string,
   secondary: PropTypes.bool,
   fixed: PropTypes.bool,
   onOpen: PropTypes.func,
+  onToggleSidebar: PropTypes.func,
+  isSidebarCollapsed: PropTypes.bool,
   sidebarWidth: PropTypes.number,
 }

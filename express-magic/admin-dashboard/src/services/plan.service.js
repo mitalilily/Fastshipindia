@@ -3,18 +3,10 @@ import api from './axios' // your pre-configured axios instance
 
 const API_URL = '/plans' // adjust if your backend is on another host
 
-const normalizePlansResponse = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.plans)) return payload.plans
-  if (Array.isArray(payload?.items)) return payload.items
-  return []
-}
-
 export const PlansService = {
   getPlans: async () => {
     const res = await api.get(API_URL)
-    return normalizePlansResponse(res.data)
+    return res.data
   },
 
   createPlan: async (data) => {

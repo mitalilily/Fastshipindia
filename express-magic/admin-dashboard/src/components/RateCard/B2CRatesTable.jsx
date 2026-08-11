@@ -2,13 +2,27 @@ import { DeleteIcon, EditIcon } from '@chakra-ui/icons'
 import { Badge, Box, Flex, IconButton, Text } from '@chakra-ui/react'
 import { useDeleteB2CZone } from 'hooks/useCouriers'
 import { useMemo } from 'react'
+import { getCourierDisplayName, getProviderDisplayName } from 'utils/courierDisplay'
 import { GenericTable } from 'views/Dashboard/Tables/components/GenericTable'
 
-const B2C_RATE_SUMMARY_TYPES = [
-  { key: 'forward', label: 'F' },
-  { key: 'rto', label: 'RTO' },
-  { key: 'reverse_pickup', label: 'RP' },
-]
+const getZoneLookupKeys = (zone) =>
+  [
+    zone?.id,
+    zone?.code,
+    zone?.name,
+    zone?.code && zone?.name ? `${zone.code} - ${zone.name}` : '',
+    zone?.code && zone?.name ? `${zone.name} (${zone.code})` : '',
+  ].filter(Boolean)
+
+const getZoneEntry = (collection, zone) => {
+  if (!collection) return {}
+  for (const key of getZoneLookupKeys(zone)) {
+    if (collection[key] !== undefined) return collection[key] || {}
+  }
+  return {}
+}
+
+const getZoneLabel = (zone) => [zone?.code, zone?.name].filter(Boolean).join(' - ') || 'Zone'
 
 export const B2CTable = ({ data, zones, onEdit, planId, loading }) => {
   const deleteB2CZoneMutation = useDeleteB2CZone(planId)
@@ -20,19 +34,29 @@ export const B2CTable = ({ data, zones, onEdit, planId, loading }) => {
     return `${slabs.length} slabs (${first.weight_from}-${last.weight_to ?? 'open'} kg)`
   }
 
+  const renderCodSlabSummary = (slabs = []) => {
+    if (!slabs.length) return 'Legacy fallback'
+    return slabs
+      .map((slab) => {
+        const value =
+          slab.charge_type === 'percent'
+            ? `${slab.charge_value}%`
+            : `Rs ${slab.charge_value}`
+        return `${slab.amount_from}-${slab.amount_to ?? 'open'}: ${value}`
+      })
+      .join(', ')
+  }
+
   const columns = useMemo(() => {
     const zoneColumns =
       zones?.map((zone) => ({
         key: zone.code,
-        label: `${zone.name} (F | RTO | RP)`,
+        label: `${getZoneLabel(zone)} (F | RTO)`,
         width: '180px',
         renderer: (_, row) => {
-          const rates = row.rates?.[zone.name] || {}
-          const zoneSlabs = row.zone_slabs?.[zone.name] || {}
-          return B2C_RATE_SUMMARY_TYPES.map(
-            ({ key, label }) =>
-              `${label}: ${renderSlabSummary(zoneSlabs[key], rates[key])}`,
-          ).join(' | ')
+          const rates = getZoneEntry(row.rates, zone)
+          const zoneSlabs = getZoneEntry(row.zone_slabs, zone)
+          return `${renderSlabSummary(zoneSlabs.forward, rates.forward)} | ${renderSlabSummary(zoneSlabs.rto, rates.rto)}`
         },
       })) || []
 
@@ -45,10 +69,13 @@ export const B2CTable = ({ data, zones, onEdit, planId, loading }) => {
           const serviceProvider = row.service_provider || row.serviceProvider
           return (
             <Box>
-              <Text fontWeight="semibold">{row.courier_name || 'N/A'}</Text>
+              <Text fontWeight="semibold">{getCourierDisplayName(row)}</Text>
               {serviceProvider && (
                 <Text fontSize="xs" color="gray.600" mt={0.5}>
-                  Provider: <Badge colorScheme="green" fontSize="xs">{serviceProvider}</Badge>
+                  Provider:{' '}
+                  <Badge colorScheme="green" fontSize="xs">
+                    {getProviderDisplayName(serviceProvider)}
+                  </Badge>
                 </Text>
               )}
             </Box>
@@ -60,9 +87,9 @@ export const B2CTable = ({ data, zones, onEdit, planId, loading }) => {
     const postColumns = [
       {
         key: 'cod',
-        label: 'COD (Charges | %)',
-        width: '200px',
-        renderer: (_, row) => `₹${row.cod_charges ?? '0'} | ${row.cod_percent ?? '0'}%`,
+        label: 'COD Slabs',
+        width: '260px',
+        renderer: (_, row) => renderCodSlabSummary(row.cod_slabs || []),
       },
       {
         key: 'other',

@@ -5,7 +5,7 @@ import {
   getAllCodRemittances,
   getCodPlatformStats,
   getUserCodRemittances,
-  manualMarkSettlement,
+  manualCreditWallet,
   previewCourierSettlement,
   updateRemittanceNotes,
 } from '../services/codRemittance.service'
@@ -45,21 +45,21 @@ export const useUserCodRemittances = (userId) => {
 }
 
 /**
- * Hook to manually mark settlement
+ * Hook to manually mark remittances as settled offline
  */
-export const useManualMarkSettlement = () => {
+export const useManualCreditWallet = () => {
   const queryClient = useQueryClient()
   const toast = useToast()
 
   return useMutation({
-    mutationFn: ({ remittanceId, payload }) => manualMarkSettlement(remittanceId, payload),
+    mutationFn: manualCreditWallet,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allCodRemittances'] })
       queryClient.invalidateQueries({ queryKey: ['codPlatformStats'] })
       queryClient.invalidateQueries({ queryKey: ['userCodRemittances'] })
       toast({
-        title: 'Settlement Marked',
-        description: 'COD remittance marked settled successfully',
+        title: 'Remittance Settled',
+        description: 'Marked COD remittance as settled offline',
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -68,7 +68,7 @@ export const useManualMarkSettlement = () => {
     onError: (error) => {
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Failed to mark settlement',
+        description: error.response?.data?.message || 'Failed to mark remittance as settled',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -119,7 +119,7 @@ export const usePreviewCourierSettlement = () => {
 }
 
 /**
- * Hook to confirm courier settlement and mark remittances settled
+ * Hook to confirm courier settlement and mark remittances settled offline
  */
 export const useConfirmCourierSettlement = () => {
   const queryClient = useQueryClient()
