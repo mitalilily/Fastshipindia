@@ -26,6 +26,7 @@ import DataTable, { type Column } from '../../components/UI/table/DataTable'
 import FileUploader, { type UploadedFileInfo } from '../../components/UI/uploader/FileUploader'
 import { toast } from '../../components/UI/Toast'
 import { getCourierDisplayName } from '../../utils/courierDisplay'
+import { useFastLoading } from '../../hooks/useFastLoading'
 
 type NdrRow = {
   id?: string
@@ -55,6 +56,7 @@ export default function NdrList() {
   const [rows, setRows] = useState<NdrRow[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const showTableLoading = useFastLoading(loading)
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [filters, setFilters] = useState<{ search?: string; fromDate?: string; toDate?: string }>(
@@ -296,11 +298,11 @@ export default function NdrList() {
           setFilters(f)
           setPage(1)
         }}
-        loading={loading}
+        loading={showTableLoading}
       />
 
       <Paper sx={{ borderRadius: 2, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-        {loading ? (
+        {showTableLoading ? (
           <Typography p={3}>Loading NDRs...</Typography>
         ) : (
           <DataTable

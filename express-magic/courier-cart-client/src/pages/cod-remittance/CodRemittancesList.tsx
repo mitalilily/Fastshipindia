@@ -18,6 +18,7 @@ import {
   useCodStats,
 } from '../../hooks/useCodRemittance'
 import { getCourierDisplayName } from '../../utils/courierDisplay'
+import { useFastLoading } from '../../hooks/useFastLoading'
 
 export default function CodRemittancesList() {
   const [page, setPage] = useState(1)
@@ -38,6 +39,7 @@ export default function CodRemittancesList() {
   // Use custom hooks
   const { data: stats } = useCodStats()
   const { data, isLoading } = useCodRemittances(page, rowsPerPage, apiFilters)
+  const showTableLoading = useFastLoading(isLoading)
 
   const handleExport = async () => {
     try {
@@ -395,7 +397,7 @@ export default function CodRemittancesList() {
       </Box>
 
       {/* Data Table */}
-      {isLoading ? (
+      {showTableLoading ? (
         <Box display="flex" justifyContent="center" py={4}>
           <Typography>Loading remittances...</Typography>
         </Box>

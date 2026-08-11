@@ -21,6 +21,7 @@ import {
   useRaiseDispute,
   useRecordPayment,
 } from '../../hooks/useInvoices'
+import { useFastLoading } from '../../hooks/useFastLoading'
 
 const formatDate = (d?: string | Date) =>
   d
@@ -48,6 +49,7 @@ const Invoices = () => {
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false)
 
   const { data, isLoading } = useInvoices(page, rowsPerPage, filters)
+  const showTableLoading = useFastLoading(isLoading)
   const presignMutation = usePresignedDownloadMutation()
   const raiseDisputeMutation = useRaiseDispute()
   const recordPaymentMutation = useRecordPayment()
@@ -411,7 +413,7 @@ const Invoices = () => {
         appliedCount={Object.keys(filters).filter((k) => filters[k as keyof typeof filters]).length}
       />
 
-      {isLoading ? (
+      {showTableLoading ? (
         <TableSkeleton />
       ) : (
         <DataTable

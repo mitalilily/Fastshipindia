@@ -48,7 +48,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 1,
+      retry: 0,
+      staleTime: 2 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      placeholderData: (previousData: unknown) => previousData,
     },
   },
 });

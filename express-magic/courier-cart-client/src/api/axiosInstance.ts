@@ -50,7 +50,7 @@ export const API_BASE_URL = getApiBaseUrl()
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 25000,
+  timeout: 8000,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -109,6 +109,10 @@ api.interceptors.request.use((cfg) => {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
+    if (err?.code === 'ECONNABORTED' || /timeout/i.test(String(err?.message || ''))) {
+      err.message = 'Live data is taking longer than expected. This page is ready; try Refresh shortly.'
+    }
+
     if (isDemoSessionActive()) return Promise.reject(err)
 
     const original = err.config

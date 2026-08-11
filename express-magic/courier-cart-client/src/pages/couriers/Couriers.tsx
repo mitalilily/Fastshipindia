@@ -7,6 +7,7 @@ import PageHeading from '../../components/UI/heading/PageHeading'
 import CourierList from '../../components/integrations/couriers/CourierList'
 import CourierSummaryCard from '../../components/integrations/couriers/CourierSummaryCard'
 import { useCouriers } from '../../hooks/Integrations/useCouriers'
+import { useFastLoading } from '../../hooks/useFastLoading'
 
 const filterFields: FilterField[] = [
   {
@@ -82,6 +83,7 @@ const Couriers = () => {
     limit: rowsPerPage,
     filters,
   })
+  const showTableLoading = useFastLoading(isLoading)
 
   const appliedCount = Object.entries(filters).filter(
     ([key, value]) => key !== 'sortBy' && Boolean(value),
@@ -118,7 +120,7 @@ const Couriers = () => {
       />
 
       <CourierList
-        loading={isLoading}
+        loading={showTableLoading}
         couriers={data?.couriers ?? []}
         totalCount={data?.totalCount ?? 0}
         page={page}

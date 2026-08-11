@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import moment from 'moment'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { useB2BOrdersByUser, useGenerateManifest } from '../../../hooks/Orders/useOrders'
+import { useFastLoading } from '../../../hooks/useFastLoading'
 import type { B2BOrder } from '../../../types/generic.types'
 import { getCourierDisplayName } from '../../../utils/courierDisplay'
 import StatusChip from '../../UI/chip/StatusChip'
@@ -41,6 +42,7 @@ const B2BOrdersList = ({
 }: B2BOrdersListProps) => {
   const location = useLocation()
   const { data, isLoading, isError } = useB2BOrdersByUser(page, rowsPerPage, filters)
+  const showTableLoading = useFastLoading(isLoading)
   const { mutate: triggerManifest, isPending: isGeneratingManifest } = useGenerateManifest()
   const [manifestingAwb, setManifestingAwb] = useState<string | null>(null)
   const [manifestScheduleOrder, setManifestScheduleOrder] = useState<B2BOrder | null>(null)
@@ -222,7 +224,7 @@ const B2BOrdersList = ({
 
   return (
     <Stack spacing={2}>
-      {isLoading ? (
+      {showTableLoading ? (
         <TableSkeleton />
       ) : (
         <DataTable<B2BOrder>

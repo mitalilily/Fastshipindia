@@ -13,6 +13,7 @@ import Signup from '../pages/auth/Signup'
 import ClientPreview from '../pages/preview/ClientPreview'
 import AppEntry from './AppEntry'
 import GlobalRedirectHandler from './WalletRedirectHandler'
+import { useAuth } from '../context/auth/AuthContext'
 
 /* ---------- Lazy-loaded components ---------- */
 // Onboarding & Dashboard
@@ -22,10 +23,14 @@ const FastShipLanding = lazy(() => import('../pages/marketing/FastShipLanding'))
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'))
 
 // Orders
-const Orders = lazy(() => import('../pages/orders/Orders'))
-const B2COrdersList = lazy(() => import('../components/orders/b2c/B2COrdersList'))
-const B2bOrders = lazy(() => import('../pages/orders/B2bOrders'))
-const CreateOrderWrapper = lazy(() => import('../components/orders/CreateOrderWrapper'))
+const loadOrders = () => import('../pages/orders/Orders')
+const loadB2COrders = () => import('../components/orders/b2c/B2COrdersList')
+const loadB2BOrders = () => import('../pages/orders/B2bOrders')
+const loadCreateOrder = () => import('../components/orders/CreateOrderWrapper')
+const Orders = lazy(loadOrders)
+const B2COrdersList = lazy(loadB2COrders)
+const B2bOrders = lazy(loadB2BOrders)
+const CreateOrderWrapper = lazy(loadCreateOrder)
 // Settings
 const Settings = lazy(() => import('../pages/settings/Settings'))
 const PickupAddresses = lazy(() => import('../pages/pickup-addresses/PickupAddresses'))
@@ -37,11 +42,14 @@ const CourierPriorityPage = lazy(
 )
 
 // Billing
-const WalletTransactions = lazy(() => import('../pages/billings/WalletTransactions'))
-const Invoices = lazy(() => import('../pages/billings/Invoices'))
+const loadWalletTransactions = () => import('../pages/billings/WalletTransactions')
+const loadInvoices = () => import('../pages/billings/Invoices')
+const WalletTransactions = lazy(loadWalletTransactions)
+const Invoices = lazy(loadInvoices)
 
 // Channels
-const Channels = lazy(() => import('../pages/channels/Channels'))
+const loadChannels = () => import('../pages/channels/Channels')
+const Channels = lazy(loadChannels)
 const ChannelList = lazy(() => import('../pages/channels/ChannelList'))
 
 // Policies
@@ -71,17 +79,19 @@ const RateCalculator = lazy(() =>
 const OrderTrackingForm = lazy(() => import('../pages/tools/OrderTrackingForm'))
 
 // Support
-const SupportTicketsPage = lazy(() =>
-  import('../pages/support/SupportTicketsPage').then((m) => ({ default: m.SupportTicketsPage })),
-)
+const loadSupportTickets = () =>
+  import('../pages/support/SupportTicketsPage').then((m) => ({ default: m.SupportTicketsPage }))
+const SupportTicketsPage = lazy(loadSupportTickets)
 const TicketDetailsPage = lazy(
   () => import('../pages/support/TicketDetailsPage').then((m) => ({ default: m.TicketDetailsPage })),
 )
 
 // Other
 const Home = lazy(() => import('../pages/home/Home'))
-const Couriers = lazy(() => import('../pages/couriers/Couriers'))
-const CodRemittancesList = lazy(() => import('../pages/cod-remittance/CodRemittancesList'))
+const loadCouriers = () => import('../pages/couriers/Couriers')
+const loadCodRemittances = () => import('../pages/cod-remittance/CodRemittancesList')
+const Couriers = lazy(loadCouriers)
+const CodRemittancesList = lazy(loadCodRemittances)
 const KeyboardShortcutsPage = lazy(() => import('../pages/KeyboardShortcutsPage'))
 const Reports = lazy(() => import('../pages/reports/Reports'))
 
@@ -94,10 +104,48 @@ const WeightReconciliationSettings = lazy(
   () => import('../pages/weight-reconciliation/WeightReconciliationSettings'),
 )
 // Ops (NDR/RTO)
-const NdrList = lazy(() => import('../pages/ops/NdrList'))
-const RtoList = lazy(() => import('../pages/ops/RtoList'))
+const loadNdrList = () => import('../pages/ops/NdrList')
+const loadRtoList = () => import('../pages/ops/RtoList')
+const NdrList = lazy(loadNdrList)
+const RtoList = lazy(loadRtoList)
 // API Integration
 const ApiIntegration = lazy(() => import('../pages/settings/ApiIntegration'))
+
+const PRIVATE_ROUTE_PRELOADERS = [
+  loadOrders,
+  loadB2COrders,
+  loadB2BOrders,
+  loadCreateOrder,
+  loadWalletTransactions,
+  loadInvoices,
+  loadChannels,
+  loadSupportTickets,
+  loadCouriers,
+  loadCodRemittances,
+  loadNdrList,
+  loadRtoList,
+]
+
+function PrivateRoutePreloader() {
+  const { isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined
+
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+    if (connection?.saveData) return undefined
+
+    const timer = window.setTimeout(() => {
+      PRIVATE_ROUTE_PRELOADERS.forEach((loadRoute) => {
+        void loadRoute().catch(() => undefined)
+      })
+    }, 900)
+
+    return () => window.clearTimeout(timer)
+  }, [isAuthenticated])
+
+  return null
+}
 
 const ROUTE_RELOAD_KEY = 'fastship-route-asset-reload'
 
@@ -195,6 +243,7 @@ function RoutedApp() {
   return (
     <>
       <NavigationLoader />
+      <PrivateRoutePreloader />
       <GlobalRedirectHandler />
       <RouteAssetRecovery />
       <RouteErrorBoundary resetKey={routeKey}>

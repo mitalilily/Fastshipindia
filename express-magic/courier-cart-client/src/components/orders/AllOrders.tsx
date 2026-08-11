@@ -51,6 +51,7 @@ import { toast } from '../UI/Toast'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
 import DataTable, { type Column } from '../UI/table/DataTable'
 import TableSkeleton from '../UI/table/TableSkeleton'
+import { useFastLoading } from '../../hooks/useFastLoading'
 import { statusColorMap } from './b2c/B2COrdersList'
 import B2COrderFormSteps, { type B2CFormData } from './b2c/B2COrderForm'
 import {
@@ -294,6 +295,7 @@ const AllOrders = () => {
       : currentOrderView === 'b2b'
         ? b2bOrdersQuery
         : allOrdersQuery
+  const showTableLoading = useFastLoading(activeQuery.isLoading)
 
   if (activeQuery.isError)
     return (
@@ -1529,7 +1531,7 @@ const AllOrders = () => {
           overflow: 'hidden',
         }}
       >
-        {activeQuery.isLoading ? (
+        {showTableLoading ? (
           <Box sx={{ p: 1.5 }}>
             <TableSkeleton />
           </Box>

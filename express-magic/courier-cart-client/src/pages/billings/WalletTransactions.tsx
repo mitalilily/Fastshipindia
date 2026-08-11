@@ -20,6 +20,7 @@ import { FaArrowDown, FaArrowUp } from 'react-icons/fa'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
 import PageHeading from '../../components/UI/heading/PageHeading'
 import { useWalletTransactions } from '../../hooks/useWalletBalance'
+import { useFastLoading } from '../../hooks/useFastLoading'
 
 interface WalletFilter {
   type?: 'credit' | 'debit' | ''
@@ -53,6 +54,7 @@ const WalletTransactions = () => {
     dateFrom: filters.dateFrom || undefined,
     dateTo: filters.dateTo || undefined,
   })
+  const showLoading = useFastLoading(isLoading)
 
   const transactions = data?.transactions ?? []
   const totalCount = data?.totalCount ?? 0
@@ -110,7 +112,7 @@ const WalletTransactions = () => {
           <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
             Current Wallet Balance
           </Typography>
-          {isLoading ? (
+          {showLoading ? (
             <Skeleton variant="text" width={120} height={48} />
           ) : (
             <Typography variant="h4" fontWeight="bold" color="text.primary">
@@ -129,7 +131,7 @@ const WalletTransactions = () => {
           setFilters(vals)
           setPage(1) // reset page when filters change
         }}
-        loading={isLoading}
+        loading={showLoading}
       />
 
       {/* Transaction List */}
@@ -142,7 +144,7 @@ const WalletTransactions = () => {
           boxShadow: cardShadow,
         }}
       >
-        {isLoading ? (
+        {showLoading ? (
           <Stack gap={1.5} p={3}>
             {Array.from({ length: 5 }).map((_, idx) => (
               <Skeleton key={idx} variant="rectangular" height={60} />

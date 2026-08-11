@@ -59,6 +59,7 @@ import CustomDrawer from '../../UI/drawer/CustomDrawer'
 import { SmartTabs } from '../../UI/tab/Tabs'
 import DataTable, { type Column } from '../../UI/table/DataTable'
 import TableSkeleton from '../../UI/table/TableSkeleton'
+import { useFastLoading } from '../../../hooks/useFastLoading'
 import CustomSelect from '../../UI/inputs/CustomSelect'
 import {
   BULK_MANIFEST_LIMIT,
@@ -285,6 +286,7 @@ const B2COrdersList = () => {
   }
 
   const { data, isLoading, isError } = useB2COrdersByUser(page, rowsPerPage, effectiveFilters)
+  const showTableLoading = useFastLoading(isLoading)
   const { mutateAsync: requestB2CPickup, isPending: requestingPickup } = useRequestB2CPickup()
   const { mutateAsync: regenerateDocuments, isPending: regeneratingDocuments } =
     useRegenerateOrderDocuments()
@@ -1722,7 +1724,7 @@ const B2COrdersList = () => {
       )}
 
       {/* 🔹 Data Table */}
-      {isLoading ? (
+      {showTableLoading ? (
         <TableSkeleton />
       ) : (
         <DataTable<B2COrder>

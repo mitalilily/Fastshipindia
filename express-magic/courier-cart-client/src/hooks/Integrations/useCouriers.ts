@@ -116,7 +116,7 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchInterval: false,
-    retry: 1,
+    retry: 0,
   })
 }
 
@@ -146,7 +146,7 @@ export const useAvailableCouriersMutation = () => {
         useGuest: params.useGuest === true,
       })
     },
-    retry: 1,
+    retry: 0,
   })
 }
 

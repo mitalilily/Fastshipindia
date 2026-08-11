@@ -7,6 +7,7 @@ import {
 import type { Stores } from "../../api/integrations";
 import { channelIntegrationImageMapping } from "../../utils/utility";
 import TableSkeleton from "../UI/table/TableSkeleton";
+import { useFastLoading } from "../../hooks/useFastLoading";
 import { TbEditCircle } from "react-icons/tb";
 import { useState } from "react";
 import ShopifyConnectionModal from "../integrations/ShopifyConnectionModal";
@@ -22,6 +23,7 @@ const UserConnectedChannels = () => {
     useDeleteIntegration();
 
   const { data: stores, isLoading } = useUserChannelIntegrations();
+  const showTableLoading = useFastLoading(isLoading);
 
   const { mutate: integrateShopify, isPending: integrating } =
     useIntegrateShopify();
@@ -178,7 +180,7 @@ const UserConnectedChannels = () => {
 
   return (
     <>
-      {isLoading ? (
+      {showTableLoading ? (
         <TableSkeleton />
       ) : (
         <DataTable<Stores>

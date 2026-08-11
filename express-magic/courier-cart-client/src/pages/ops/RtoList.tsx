@@ -1,5 +1,6 @@
 import { Chip, Paper, Stack, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
+import { useFastLoading } from '../../hooks/useFastLoading'
 import { fetchMyRto } from '../../api/rto'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
 import PageHeading from '../../components/UI/heading/PageHeading'
@@ -19,6 +20,7 @@ export default function RtoList() {
   const [rows, setRows] = useState<RtoRow[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const showTableLoading = useFastLoading(loading)
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [filters, setFilters] = useState<{ search?: string; fromDate?: string; toDate?: string }>({})
@@ -95,11 +97,11 @@ export default function RtoList() {
           setFilters(f)
           setPage(1)
         }}
-        loading={loading}
+        loading={showTableLoading}
       />
 
       <Paper sx={{ borderRadius: 2, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-        {loading ? (
+        {showTableLoading ? (
           <Typography p={3}>Loading RTO events...</Typography>
         ) : (
           <DataTable

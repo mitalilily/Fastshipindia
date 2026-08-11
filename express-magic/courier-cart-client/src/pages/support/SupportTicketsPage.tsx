@@ -10,6 +10,7 @@ import { SupportTicketForm } from '../../components/support/SupportTicketForm'
 import SupportTicketList from '../../components/support/SupportTicketList'
 import TicketStatusSummaryCard from '../../components/support/TicketStatusSummaryCard'
 import { useMyTickets } from '../../hooks/User/useSupport'
+import { useFastLoading } from '../../hooks/useFastLoading'
 import { brandIdentity } from '../../theme/brand'
 
 const supportTicketFilterFields: FilterField[] = [
@@ -100,6 +101,7 @@ export const SupportTicketsPage = () => {
     limit: rowsPerPage,
     filters: filters,
   })
+  const showTableLoading = useFastLoading(isLoading)
 
   const appliedCount = Object.entries(filters).filter(
     ([key, value]) => key !== 'sortBy' && Boolean(value),
@@ -112,7 +114,7 @@ export const SupportTicketsPage = () => {
         title="Support"
         subtitle="Manage issue resolution, ticket queues, and seller support requests from a support panel."
       />
-      {isLoading ? (
+      {showTableLoading ? (
         <Skeleton />
       ) : (
         <TicketStatusSummaryCard
@@ -141,7 +143,7 @@ export const SupportTicketsPage = () => {
           Create Ticket
         </Button>
       </Stack>
-      {!isLoading && (
+      {!showTableLoading && (
         <Stack direction="row" justifyContent="flex-end">
           <Button
             href={`https://wa.me/91${brandIdentity.supportPhone}?text=Hi%2C%20I%27m%20a%20seller%20and%20I%20need%20some%20assistance.%20Can%20you%20please%20help%3F`}
@@ -161,7 +163,7 @@ export const SupportTicketsPage = () => {
         </Stack>
       )}
 
-      {isLoading ? (
+      {showTableLoading ? (
         <TableSkeleton />
       ) : (
         <SupportTicketList
