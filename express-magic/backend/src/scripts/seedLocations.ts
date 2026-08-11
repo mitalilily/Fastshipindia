@@ -7,7 +7,7 @@ import { db } from '../models/client'
 import { locations } from '../schema/schema'
 
 const DATA_DIR = path.resolve('src/scripts/data')
-const CHUNK_SIZE = 10
+const CHUNK_SIZE = 500
 const DEFAULT_FILE = 'locations.xlsx'
 
 type Row = {
