@@ -1,27 +1,16 @@
 import React from 'react'
 import Chart from 'react-apexcharts'
-import { useColorModeValue, VStack, HStack, Text, Badge, Box } from '@chakra-ui/react'
+import { useColorModeValue } from '@chakra-ui/react'
 
 const CourierDistributionChart = ({ data = {} }) => {
   const textColor = useColorModeValue('gray.700', 'white')
-  const textColorSecondary = useColorModeValue('gray.500', 'gray.400')
   const bgColor = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.200', 'gray.600')
 
-  // Enhanced color palette with gradients
   const chartColors = useColorModeValue(
-    ['#3182CE', '#319795', '#805AD5', '#D53F8C', '#DD6B20'],
-    ['#4FD1C7', '#63B3ED', '#9F7AEA', '#F687B3', '#FC8181']
+    ['#0D1B4D', '#E31B2D', '#2B6CB0', '#22A06B', '#F59E0B'],
+    ['#8DA9DD', '#FF7180', '#63B3ED', '#4ADE80', '#FBBF24']
   )
-
-  // Process data to extract orders count for each aggregator
-  const chartData = Object.entries(data).map(([name, stats]) => {
-    if (typeof stats === 'object' && stats !== null && 'count' in stats) {
-      return stats.count || 0
-    }
-    return stats || 0
-  })
-  const chartLabels = Object.keys(data)
 
   const totalOrders = Object.values(data).reduce((sum, stats) => {
     if (typeof stats === 'object' && stats !== null && 'count' in stats) {
@@ -80,7 +69,7 @@ const CourierDistributionChart = ({ data = {} }) => {
       style: {
         colors: [bgColor],
         fontSize: '12px',
-        fontFamily: 'Inter, sans-serif',
+        fontFamily: 'Plus Jakarta Sans, sans-serif',
         fontWeight: 600,
       },
       formatter: (val, opts) => {
@@ -147,7 +136,7 @@ const CourierDistributionChart = ({ data = {} }) => {
         fontSize: '12px',
         fontFamily: 'Inter, sans-serif',
       },
-      custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+      custom: ({ dataPointIndex }) => {
         const item = aggregatorData[dataPointIndex]
         return `
           <div style="padding: 12px; background: ${tooltipBg}; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: ${tooltipTextColor};">
@@ -181,57 +170,14 @@ const CourierDistributionChart = ({ data = {} }) => {
     ],
   }
 
-  const summaryBg = useColorModeValue('gray.50', 'gray.700')
-  const summaryItemBg = useColorModeValue('white', 'gray.800')
-
   return (
-    <VStack align="stretch" spacing={4}>
-      <Chart
-        options={chartOptions}
-        series={[{ name: 'Orders', data: aggregatorData.map(item => item.count) }]}
-        type="bar"
-        width="100%"
-        height="300px"
-      />
-      {/* Additional metrics summary */}
-      <Box
-        mt={4}
-        p={4}
-        bg={summaryBg}
-        borderRadius="lg"
-        borderWidth="1px"
-        borderColor={borderColor}
-      >
-        <HStack spacing={4} flexWrap="wrap" justify="center">
-          {aggregatorData.map((item, index) => (
-            <HStack
-              key={index}
-              spacing={2}
-              p={2}
-              bg={summaryItemBg}
-              borderRadius="md"
-              borderWidth="1px"
-              borderColor={item.color + '40'}
-            >
-              <Box w={3} h={3} bg={item.color} borderRadius="full" />
-              <VStack align="flex-start" spacing={0}>
-                <Text fontSize="xs" color={textColorSecondary} fontWeight="medium">
-                  {item.name}
-                </Text>
-                <HStack spacing={2}>
-                  <Badge colorScheme="blue" fontSize="xs">
-                    {item.count}
-                  </Badge>
-                  <Badge colorScheme="green" fontSize="xs">
-                    {item.deliveryRate}%
-                  </Badge>
-                </HStack>
-              </VStack>
-            </HStack>
-          ))}
-        </HStack>
-      </Box>
-    </VStack>
+    <Chart
+      options={chartOptions}
+      series={[{ name: 'Orders', data: aggregatorData.map(item => item.count) }]}
+      type="bar"
+      width="100%"
+      height="240px"
+    />
   )
 }
 

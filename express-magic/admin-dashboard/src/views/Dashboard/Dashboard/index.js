@@ -6,9 +6,11 @@ import {
   Flex,
   Grid,
   HStack,
+  Image,
   Select,
   SimpleGrid,
-  Spinner,
+  Skeleton,
+  SkeletonText,
   Stack,
   Table,
   Tbody,
@@ -22,25 +24,31 @@ import {
 } from "@chakra-ui/react";
 import {
   IconAlertTriangle,
+  IconActivity,
   IconBuildingBank,
-  IconChartBar,
+  IconCircleCheck,
   IconCoinRupee,
   IconExternalLink,
   IconPackageExport,
+  IconMapPin,
   IconRefresh,
-  IconTruck,
+  IconRoute,
   IconUsers,
   IconWallet,
 } from "@tabler/icons-react";
 import Card from "components/Card/Card";
 import CardBody from "components/Card/CardBody";
 import CardHeader from "components/Card/CardHeader";
-import CourierDistributionChart from "components/Charts/CourierDistributionChart";
-import OrdersLineChart from "components/Charts/OrdersLineChart";
-import RevenueBarChart from "components/Charts/RevenueBarChart";
 import { useDashboardStats } from "hooks/useDashboardStats";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useHistory } from "react-router-dom";
+import { brandIdentity } from "theme/brand";
+
+const CourierDistributionChart = lazy(() =>
+  import("components/Charts/CourierDistributionChart")
+);
+const OrdersLineChart = lazy(() => import("components/Charts/OrdersLineChart"));
+const RevenueBarChart = lazy(() => import("components/Charts/RevenueBarChart"));
 
 const ui = {
   page: "var(--dash-page)",
@@ -83,17 +91,21 @@ const toNum = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-function EmptyState({ label = "No data", h = "160px" }) {
+function EmptyState({ label = "No data available for this selection", h = "160px" }) {
   return (
     <Flex
       minH={h}
       align="center"
       justify="center"
-      bg="transparent"
-      border="0"
-      borderRadius="0"
+      bg={ui.surfaceMuted}
+      border="1px dashed"
+      borderColor={ui.border}
+      borderRadius="14px"
       color={ui.muted}
-      fontSize="18px"
+      fontSize="14px"
+      fontWeight="600"
+      textAlign="center"
+      px={4}
     >
       {label}
     </Flex>
@@ -106,8 +118,8 @@ function Panel({ title, icon, badge, children, minH, gridColumn }) {
       bg={ui.surface}
       borderWidth="1px"
       borderColor={ui.border}
-      borderRadius="20px"
-      boxShadow="none"
+      borderRadius="18px"
+      boxShadow="0 10px 30px rgba(13, 27, 77, 0.055)"
       overflow="hidden"
       p="0"
       minH={minH}
@@ -155,10 +167,26 @@ function MetricCard({ label, value, subtitle, trend, icon: Icon, color }) {
       bg={ui.surface}
       borderWidth="1px"
       borderColor={ui.border}
-      borderRadius="14px"
-      boxShadow="none"
+      borderRadius="16px"
+      boxShadow="0 8px 24px rgba(13, 27, 77, 0.05)"
       p="0"
-      minH="120px"
+      minH="138px"
+      position="relative"
+      overflow="hidden"
+      _before={{
+        content: '""',
+        position: "absolute",
+        insetInlineStart: 0,
+        top: 0,
+        bottom: 0,
+        w: "4px",
+        bg: color,
+      }}
+      transition="transform 160ms ease, box-shadow 160ms ease"
+      _hover={{
+        transform: "translateY(-2px)",
+        boxShadow: "0 14px 34px rgba(13, 27, 77, 0.10)",
+      }}
     >
       <CardBody p={5}>
         <HStack justify="space-between" align="flex-start" spacing={4}>
@@ -403,6 +431,40 @@ function RevenueTable({ rows }) {
   );
 }
 
+function DashboardSkeleton({ dashboardVars }) {
+  return (
+    <Box minH="100vh" bg={ui.page} pb={8} sx={dashboardVars}>
+      <Container maxW="full" pt={{ base: "120px", md: "75px" }} px={{ base: 4, md: 6 }}>
+        <Flex
+          bg={ui.surface}
+          border="1px solid"
+          borderColor={ui.border}
+          borderRadius="20px"
+          p={{ base: 5, md: 7 }}
+          mb={5}
+          justify="space-between"
+          align="center"
+        >
+          <Box w={{ base: "70%", md: "38%" }}>
+            <Skeleton h="28px" borderRadius="8px" mb={3} />
+            <SkeletonText noOfLines={2} spacing={2} />
+          </Box>
+          <Skeleton display={{ base: "none", md: "block" }} w="128px" h="42px" borderRadius="10px" />
+        </Flex>
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 6 }} spacing={4} mb={5}>
+          {[0, 1, 2, 3, 4, 5].map((item) => (
+            <Skeleton key={item} h="138px" borderRadius="16px" />
+          ))}
+        </SimpleGrid>
+        <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap={5}>
+          <Skeleton h="330px" borderRadius="18px" />
+          <Skeleton h="330px" borderRadius="18px" />
+        </Grid>
+      </Container>
+    </Box>
+  );
+}
+
 export default function Dashboard() {
   const [dashboardFilters, setDashboardFilters] = useState({
     range: "30d",
@@ -410,7 +472,7 @@ export default function Dashboard() {
     paymentType: "all",
   });
   const dashboardVars = {
-    "--dash-page": useColorModeValue("#F8FAFD", "#0D1117"),
+    "--dash-page": useColorModeValue("#F4F7FC", "#0D1117"),
     "--dash-surface": useColorModeValue("#FFFFFF", "#161B22"),
     "--dash-surface-muted": useColorModeValue("#F7F9FC", "#21262D"),
     "--dash-border": useColorModeValue("#E5EAF3", "#30363D"),
@@ -418,7 +480,7 @@ export default function Dashboard() {
       "#E5EAF3",
       "rgba(48, 54, 61, 0.72)"
     ),
-    "--dash-header-bg": useColorModeValue("#F4F1FF", "#1A2234"),
+    "--dash-header-bg": useColorModeValue("#F2F5FA", "#1A2234"),
     "--dash-progress-bg": useColorModeValue(
       "#EEF2F7",
       "rgba(48, 54, 61, 0.42)"
@@ -426,12 +488,12 @@ export default function Dashboard() {
     "--dash-text": useColorModeValue("#0F172A", "#E6EDF3"),
     "--dash-muted": useColorModeValue("#607397", "#8B949E"),
     "--dash-tertiary": useColorModeValue("#93A0BA", "#6E7681"),
-    "--dash-primary": useColorModeValue("#6C5CE7", "#8B7CF6"),
-    "--dash-primary-bg": useColorModeValue("#F0EDFF", "#242349"),
-    "--dash-accent": useColorModeValue("#F97316", "#F97316"),
+    "--dash-primary": useColorModeValue("#0D1B4D", "#8DA9DD"),
+    "--dash-primary-bg": useColorModeValue("#EDF2FA", "#202C49"),
+    "--dash-accent": useColorModeValue("#E31B2D", "#FF7180"),
     "--dash-accent-bg": useColorModeValue(
-      "#FFF3E8",
-      "rgba(249, 115, 22, 0.14)"
+      "#FFF0F2",
+      "rgba(227, 27, 45, 0.14)"
     ),
     "--dash-success": useColorModeValue("#00A881", "#4ADE80"),
     "--dash-success-bg": useColorModeValue(
@@ -446,12 +508,12 @@ export default function Dashboard() {
     "--dash-blue": useColorModeValue("#407BFF", "#3B82F6"),
     "--dash-blue-bg": useColorModeValue("#EEF5FF", "rgba(59, 130, 246, 0.14)"),
     "--dash-amber-action-bg": useColorModeValue(
-      "#FFF7EA",
-      "rgba(249, 115, 22, 0.12)"
+      "#FFF1F3",
+      "rgba(227, 27, 45, 0.12)"
     ),
     "--dash-amber-action-border": useColorModeValue(
-      "#FFE0AD",
-      "rgba(249, 115, 22, 0.18)"
+      "#FFC8CE",
+      "rgba(227, 27, 45, 0.18)"
     ),
     "--dash-green-action-bg": useColorModeValue(
       "#DDFBEC",
@@ -461,7 +523,7 @@ export default function Dashboard() {
       "#B8F0D5",
       "rgba(74, 222, 128, 0.16)"
     ),
-    "--dash-badge-bg": useColorModeValue("#FFF3E8", "rgba(249, 115, 22, 0.16)"),
+    "--dash-badge-bg": useColorModeValue("#FFF0F2", "rgba(227, 27, 45, 0.16)"),
   };
   const {
     data: statsData,
@@ -508,10 +570,25 @@ export default function Dashboard() {
       : totalOrders > 0
       ? 0
       : -100;
-  const revenueTrend = toNum(
-    financial.revenueTrend ??
-      financial.revenueGrowth ??
-      (totalRevenue > 0 ? 0 : -100)
+  const yesterdayRevenue = toNum(yesterdayOps.revenue);
+  const revenueTrend =
+    yesterdayRevenue > 0
+      ? Math.round(
+          ((toNum(financial.todayRevenue) - yesterdayRevenue) /
+            yesterdayRevenue) *
+            100
+        )
+      : totalRevenue > 0
+      ? 0
+      : -100;
+  const rangeLabel =
+    dashboardFilters.range === "all"
+      ? "All time"
+      : `${dashboardFilters.range.replace("d", " days")}`;
+  const ndrRate = toNum(operational.ndrRate);
+  const rtoRate = toNum(operational.rtoRate);
+  const avgDeliveryTime = toNum(
+    operational.avgDeliveryTime || operational.avgDeliveryDays
   );
 
   const statusItems = [
@@ -520,6 +597,12 @@ export default function Dashboard() {
       name: "Pending",
       count: toNum(operational.pendingOrders || todayOps.pending),
       fill: ui.primary,
+    },
+    {
+      status: "transit",
+      name: "In Transit",
+      count: toNum(operational.inTransitOrders),
+      fill: ui.blue,
     },
     {
       status: "delivered",
@@ -539,7 +622,7 @@ export default function Dashboard() {
       count: toNum(operational.rtoOrders),
       fill: ui.danger,
     },
-  ].filter((item) => item.count > 0);
+  ];
 
   const courierRows = Object.entries(couriers.performance || {}).map(
     ([courier, value]) => ({
@@ -561,8 +644,8 @@ export default function Dashboard() {
     })
   );
 
-  const topStates =
-    geographic.topStates || geographic.topDestinationStates || [];
+  const topOrigins = geographic.topOriginCities || [];
+  const topDestinations = geographic.topDestinationCities || [];
   const prepaid =
     stats.paymentSplit?.prepaid || financial.paymentSplit?.prepaid || {};
   const cod = stats.paymentSplit?.cod || financial.paymentSplit?.cod || {};
@@ -572,22 +655,16 @@ export default function Dashboard() {
   const codRemittances = toNum(
     alerts.codRemittancesPending || financial.codRemittancesPending
   );
+  const totalAlerts =
+    toNum(alerts.openTickets) +
+    toNum(alerts.overdueTickets) +
+    toNum(alerts.pendingKyc) +
+    toNum(alerts.weightDiscrepancies) +
+    bankApprovals +
+    codRemittances;
 
   if (isLoading) {
-    return (
-      <Flex
-        minH="70vh"
-        align="center"
-        justify="center"
-        bg={ui.page}
-        sx={dashboardVars}
-      >
-        <VStack spacing={4}>
-          <Spinner size="xl" color={ui.primary} thickness="4px" />
-          <Text color={ui.muted}>Loading dashboard...</Text>
-        </VStack>
-      </Flex>
-    );
+    return <DashboardSkeleton dashboardVars={dashboardVars} />;
   }
 
   return (
@@ -599,25 +676,61 @@ export default function Dashboard() {
       >
         <Flex
           justify="space-between"
-          align={{ base: "flex-start", lg: "flex-end" }}
-          gap={4}
-          mb="27px"
+          align={{ base: "flex-start", lg: "center" }}
+          gap={5}
+          mb={5}
           flexWrap="wrap"
+          bg="linear-gradient(120deg, #FFFFFF 0%, #F4F7FC 58%, #FFF0F2 100%)"
+          border="1px solid"
+          borderColor={ui.border}
+          borderRadius="20px"
+          boxShadow="0 14px 38px rgba(13, 27, 77, 0.07)"
+          p={{ base: 5, md: 7 }}
+          position="relative"
+          overflow="hidden"
         >
-          <Box>
-            <Text
-              color={ui.text}
-              fontSize={{ base: "26px", md: "28px" }}
-              fontWeight="800"
-              lineHeight="1.2"
+          <HStack spacing={4} align="center">
+            <Flex
+              w={{ base: "52px", md: "64px" }}
+              h={{ base: "52px", md: "64px" }}
+              bg="white"
+              border="1px solid"
+              borderColor={ui.border}
+              borderRadius="16px"
+              align="center"
+              justify="center"
+              boxShadow="0 10px 24px rgba(13, 27, 77, 0.09)"
+              flexShrink={0}
             >
-              Dashboard
-            </Text>
-            <Text color={ui.muted} fontSize="18px" mt="8px">
-              Platform overview
-            </Text>
-          </Box>
-          <HStack spacing={2} flexWrap="wrap">
+              <Image src={brandIdentity.logoPath} alt="FastShip" w="82%" objectFit="contain" />
+            </Flex>
+            <Box>
+              <HStack spacing={2} flexWrap="wrap">
+                <Text
+                  color={ui.text}
+                  fontSize={{ base: "24px", md: "30px" }}
+                  fontWeight="800"
+                  lineHeight="1.2"
+                >
+                  FastShip Analytics
+                </Text>
+                <Badge
+                  bg={ui.successBg}
+                  color={ui.success}
+                  borderRadius="full"
+                  px={2.5}
+                  py={1}
+                  textTransform="none"
+                >
+                  Live
+                </Badge>
+              </HStack>
+              <Text color={ui.muted} fontSize={{ base: "14px", md: "16px" }} mt={1.5}>
+                Orders, revenue and delivery performance in one command center
+              </Text>
+            </Box>
+          </HStack>
+          <HStack spacing={2} flexWrap="wrap" w={{ base: "100%", lg: "auto" }}>
             <Select
               value={dashboardFilters.range}
               onChange={(e) =>
@@ -626,13 +739,14 @@ export default function Dashboard() {
                   range: e.target.value,
                 }))
               }
-              h="30px"
-              w="124px"
+              h="42px"
+              w={{ base: "100%", sm: "132px" }}
               bg={ui.surface}
               borderColor={ui.border}
               color={ui.text}
-              borderRadius="7px"
-              fontSize="18px"
+              borderRadius="10px"
+              fontSize="14px"
+              fontWeight="700"
             >
               <option value="7d">7 days</option>
               <option value="15d">15 days</option>
@@ -648,13 +762,14 @@ export default function Dashboard() {
                   courier: e.target.value,
                 }))
               }
-              h="30px"
-              w="150px"
+              h="42px"
+              w={{ base: "100%", sm: "160px" }}
               bg={ui.surface}
               borderColor={ui.border}
               color={ui.tertiary}
-              borderRadius="7px"
-              fontSize="17px"
+              borderRadius="10px"
+              fontSize="14px"
+              fontWeight="700"
             >
               <option value="all">All couriers</option>
               {courierOptions.map((courier) => (
@@ -671,18 +786,33 @@ export default function Dashboard() {
                   paymentType: e.target.value,
                 }))
               }
-              h="30px"
-              w="126px"
+              h="42px"
+              w={{ base: "100%", sm: "142px" }}
               bg={ui.surface}
               borderColor={ui.border}
               color={ui.tertiary}
-              borderRadius="7px"
-              fontSize="17px"
+              borderRadius="10px"
+              fontSize="14px"
+              fontWeight="700"
             >
               <option value="all">All payments</option>
               <option value="prepaid">Prepaid</option>
               <option value="cod">COD</option>
             </Select>
+            <Button
+              h="42px"
+              minW="42px"
+              px={3}
+              bg={ui.primary}
+              color="white"
+              borderRadius="10px"
+              aria-label="Refresh analytics"
+              isLoading={isRefetching}
+              onClick={() => refetch()}
+              _hover={{ bg: "#193A75" }}
+            >
+              <IconRefresh size={18} />
+            </Button>
           </HStack>
         </Flex>
 
@@ -699,7 +829,7 @@ export default function Dashboard() {
                 onClick={() => refetch()}
                 bg={ui.primary}
                 color="white"
-                _hover={{ bg: "#5A4BD1" }}
+                _hover={{ bg: "#193A75" }}
               >
                 Retry
               </Button>
@@ -707,9 +837,9 @@ export default function Dashboard() {
           </Panel>
         ) : (
           <Stack spacing="25px">
-            <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing="15px">
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 6 }} spacing="15px">
               <MetricCard
-                label="Orders (30d)"
+                label={`Orders · ${rangeLabel}`}
                 value={totalOrders.toLocaleString()}
                 subtitle={`${toNum(todayOps.orders)} today`}
                 trend={ordersTrend}
@@ -723,7 +853,7 @@ export default function Dashboard() {
                 color={ui.blue}
               />
               <MetricCard
-                label="Revenue (30d)"
+                label={`Revenue · ${rangeLabel}`}
                 value={formatCurrency(totalRevenue)}
                 trend={revenueTrend}
                 icon={IconCoinRupee}
@@ -732,19 +862,29 @@ export default function Dashboard() {
               <MetricCard
                 label="Delivery Rate"
                 value={`${deliveryRate}%`}
-                subtitle={
-                  operational.avgDeliveryDays
-                    ? `Avg ${operational.avgDeliveryDays}d`
-                    : undefined
-                }
-                icon={IconTruck}
+                subtitle={avgDeliveryTime ? `Avg ${avgDeliveryTime} days` : "Delivery health"}
+                icon={IconCircleCheck}
+                color={ui.success}
+              />
+              <MetricCard
+                label="NDR Rate"
+                value={`${ndrRate}%`}
+                subtitle={`${toNum(operational.ndrOrders)} shipments`}
+                icon={IconAlertTriangle}
                 color={ui.accent}
+              />
+              <MetricCard
+                label="RTO Rate"
+                value={`${rtoRate}%`}
+                subtitle={`${toNum(operational.rtoOrders)} returns`}
+                icon={IconRoute}
+                color={ui.danger}
               />
             </SimpleGrid>
 
             <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap="20px">
               <Panel
-                title="Orders by Status (30d)"
+                title={`Orders by Status · ${rangeLabel}`}
                 badge={statusItems.reduce((sum, item) => sum + item.count, 0)}
                 icon={{
                   node: <IconPackageExport size={18} />,
@@ -756,9 +896,7 @@ export default function Dashboard() {
               </Panel>
               <Panel
                 title="Alerts & Actions"
-                badge={
-                  toNum(alerts.totalAlerts) + bankApprovals + codRemittances
-                }
+                badge={totalAlerts}
                 icon={{
                   node: <IconAlertTriangle size={18} />,
                   color: ui.danger,
@@ -766,6 +904,30 @@ export default function Dashboard() {
                 minH="258px"
               >
                 <Stack spacing={3}>
+                  {toNum(alerts.openTickets) > 0 ? (
+                    <ActionRow
+                      icon={<IconActivity size={18} />}
+                      label="Open support tickets"
+                      count={toNum(alerts.openTickets)}
+                      route="/admin/support"
+                    />
+                  ) : null}
+                  {toNum(alerts.pendingKyc) > 0 ? (
+                    <ActionRow
+                      icon={<IconUsers size={18} />}
+                      label="Seller KYC pending"
+                      count={toNum(alerts.pendingKyc)}
+                      route="/admin/users-management"
+                    />
+                  ) : null}
+                  {toNum(alerts.weightDiscrepancies) > 0 ? (
+                    <ActionRow
+                      icon={<IconPackageExport size={18} />}
+                      label="Weight discrepancies"
+                      count={toNum(alerts.weightDiscrepancies)}
+                      route="/admin/weight-reconciliation"
+                    />
+                  ) : null}
                   {bankApprovals > 0 ? (
                     <ActionRow
                       icon={<IconBuildingBank size={18} />}
@@ -783,7 +945,7 @@ export default function Dashboard() {
                       tone="green"
                     />
                   ) : null}
-                  {bankApprovals === 0 && codRemittances === 0 ? (
+                  {totalAlerts === 0 ? (
                     <EmptyState
                       label="No alerts or pending actions"
                       h="126px"
@@ -794,16 +956,18 @@ export default function Dashboard() {
             </Grid>
 
             <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap="20px">
-              <Panel title="Trends (30d)" minH="330px">
+              <Panel title={`Order Trend · ${rangeLabel}`} minH="330px">
                 {(charts.ordersByDate || []).length ? (
                   <Box h="280px">
-                    <OrdersLineChart data={charts.ordersByDate || []} />
+                    <Suspense fallback={<Skeleton h="100%" borderRadius="12px" />}>
+                      <OrdersLineChart data={charts.ordersByDate || []} />
+                    </Suspense>
                   </Box>
                 ) : (
                   <EmptyState h="280px" />
                 )}
               </Panel>
-              <Panel title="Courier Performance (30d)" minH="330px">
+              <Panel title={`Courier Performance · ${rangeLabel}`} minH="330px">
                 {topCouriers.length ? (
                   <Stack spacing={3}>
                     {topCouriers.slice(0, 5).map((courier) => (
@@ -834,7 +998,7 @@ export default function Dashboard() {
               </Panel>
             </Grid>
 
-            <Panel title="Revenue & Margins" minH="430px">
+            <Panel title={`Revenue & Margin Analytics · ${rangeLabel}`} minH="430px">
               <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4} mb={6}>
                 <Box p={4} borderRadius="10px" bg={ui.primaryBg}>
                   <Text color={ui.muted} fontSize="sm">
@@ -877,18 +1041,22 @@ export default function Dashboard() {
               <Panel title="Order Distribution by Courier" minH="310px">
                 {topCouriers.length ? (
                   <Box h="250px">
-                    <CourierDistributionChart
-                      data={couriers.performance || {}}
-                    />
+                    <Suspense fallback={<Skeleton h="100%" borderRadius="12px" />}>
+                      <CourierDistributionChart
+                        data={couriers.performance || {}}
+                      />
+                    </Suspense>
                   </Box>
                 ) : (
                   <EmptyState h="250px" />
                 )}
               </Panel>
-              <Panel title="Payment Type Split (30d)" minH="310px">
+              <Panel title={`Payment Analytics · ${rangeLabel}`} minH="310px">
                 {(charts.revenueByDate || []).length ? (
                   <Box h="164px" mb={4}>
-                    <RevenueBarChart data={charts.revenueByDate || []} />
+                    <Suspense fallback={<Skeleton h="100%" borderRadius="12px" />}>
+                      <RevenueBarChart data={charts.revenueByDate || []} />
+                    </Suspense>
                   </Box>
                 ) : (
                   <EmptyState h="164px" />
@@ -930,80 +1098,75 @@ export default function Dashboard() {
               </Panel>
             </Grid>
 
+            <Panel
+              title="Today’s Operations Pulse"
+              icon={{ node: <IconActivity size={18} />, color: ui.accent }}
+              minH="210px"
+            >
+              <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
+                {[
+                  { label: "Pending", value: todayOps.pending, color: ui.accent },
+                  { label: "In Transit", value: todayOps.inTransit, color: ui.blue },
+                  { label: "Delivered", value: todayOps.delivered, color: ui.success },
+                  { label: "Stuck > 5 days", value: todayOps.stuck, color: ui.danger },
+                ].map((item) => (
+                  <Box
+                    key={item.label}
+                    p={{ base: 4, md: 5 }}
+                    borderRadius="14px"
+                    bg={ui.surfaceMuted}
+                    border="1px solid"
+                    borderColor={ui.borderSoft}
+                  >
+                    <Text color={ui.muted} fontSize="13px" fontWeight="700">
+                      {item.label}
+                    </Text>
+                    <Text color={item.color} fontSize={{ base: "24px", md: "30px" }} fontWeight="800" mt={2}>
+                      {toNum(item.value).toLocaleString()}
+                    </Text>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            </Panel>
+
             <Grid templateColumns={{ base: "1fr", xl: "1fr 1fr" }} gap="20px">
               <Panel
-                title="Top Sellers"
-                icon={{ node: <IconChartBar size={18} />, color: ui.primary }}
-                minH="235px"
+                title="Top Origin Cities"
+                icon={{ node: <IconMapPin size={18} />, color: ui.primary }}
+                minH="250px"
               >
-                {(sellers.topSellers || []).length ? (
-                  <Stack spacing={3}>
-                    {(sellers.topSellers || []).slice(0, 5).map((seller) => (
-                      <Flex
-                        key={seller.name || seller.sellerName}
-                        justify="space-between"
-                        color={ui.text}
-                      >
-                        <Text>{seller.name || seller.sellerName}</Text>
-                        <Text fontWeight="800">{toNum(seller.orders)}</Text>
+                {topOrigins.length ? (
+                  <Stack spacing={2.5}>
+                    {topOrigins.slice(0, 5).map((city, index) => (
+                      <Flex key={`${city.city}-${index}`} p={3} borderRadius="10px" bg={ui.surfaceMuted} justify="space-between">
+                        <Text color={ui.text} fontWeight="700">{city.city}</Text>
+                        <Badge bg={ui.primaryBg} color={ui.primary}>{toNum(city.count)} orders</Badge>
                       </Flex>
                     ))}
                   </Stack>
                 ) : (
-                  <EmptyState label="No seller data" h="120px" />
+                  <EmptyState label="Origin analytics will appear after the first booking" h="145px" />
                 )}
               </Panel>
               <Panel
-                title="High RTO Sellers"
-                icon={{
-                  node: <IconAlertTriangle size={18} />,
-                  color: ui.danger,
-                }}
-                minH="235px"
+                title="Top Destination Cities"
+                icon={{ node: <IconRoute size={18} />, color: ui.accent }}
+                minH="250px"
               >
-                {(sellers.highRtoSellers || []).length ? (
-                  <Stack spacing={3}>
-                    {(sellers.highRtoSellers || [])
-                      .slice(0, 5)
-                      .map((seller) => (
-                        <Flex
-                          key={seller.name || seller.sellerName}
-                          justify="space-between"
-                          color={ui.text}
-                        >
-                          <Text>{seller.name || seller.sellerName}</Text>
-                          <Text color={ui.danger} fontWeight="800">
-                            {toNum(seller.rtoRate)}%
-                          </Text>
-                        </Flex>
-                      ))}
+                {topDestinations.length ? (
+                  <Stack spacing={2.5}>
+                    {topDestinations.slice(0, 5).map((city, index) => (
+                      <Flex key={`${city.city}-${index}`} p={3} borderRadius="10px" bg={ui.surfaceMuted} justify="space-between">
+                        <Text color={ui.text} fontWeight="700">{city.city}</Text>
+                        <Badge bg={ui.accentBg} color={ui.accent}>{toNum(city.count)} orders</Badge>
+                      </Flex>
+                    ))}
                   </Stack>
                 ) : (
-                  <EmptyState label="No high RTO sellers" h="120px" />
+                  <EmptyState label="Destination analytics will appear after the first booking" h="145px" />
                 )}
               </Panel>
             </Grid>
-
-            <Panel title="Top States (30d)" minH="235px">
-              {topStates.length ? (
-                <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={3}>
-                  {topStates.slice(0, 8).map((state) => (
-                    <Flex
-                      key={state.state || state.name}
-                      p={3}
-                      borderRadius="8px"
-                      bg={ui.surfaceMuted}
-                      justify="space-between"
-                    >
-                      <Text color={ui.text}>{state.state || state.name}</Text>
-                      <Badge>{toNum(state.count)}</Badge>
-                    </Flex>
-                  ))}
-                </SimpleGrid>
-              ) : (
-                <EmptyState h="120px" />
-              )}
-            </Panel>
           </Stack>
         )}
       </Container>

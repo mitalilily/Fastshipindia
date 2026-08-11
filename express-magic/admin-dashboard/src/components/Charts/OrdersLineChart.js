@@ -31,14 +31,14 @@ const OrdersLineChart = ({ data = [] }) => {
       height: '100%',
       zoom: { enabled: false },
       animations: { enabled: false },
-      fontFamily: 'Inter, sans-serif',
+      fontFamily: 'Plus Jakarta Sans, sans-serif',
     },
     dataLabels: { enabled: false },
     stroke: {
       curve: 'smooth',
       width: 3,
       lineCap: 'round',
-      colors: ['#FF8A28'],
+      colors: ['#E31B2D'],
     },
     fill: {
       type: 'gradient',
@@ -50,7 +50,7 @@ const OrdersLineChart = ({ data = [] }) => {
         stops: [0, 100],
       },
     },
-    colors: ['#FF8A28'],
+    colors: ['#E31B2D'],
     markers: {
       size: 0,
       hover: { size: 5 },

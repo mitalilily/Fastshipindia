@@ -31,6 +31,15 @@ with combined_orders as (
     coalesce(nullif(btrim(state), ''), 'Unknown') as destination_state,
     coalesce(nullif(btrim(pickup_details->>'city'), ''), nullif(btrim(city), ''), 'Unknown') as origin_city
   from b2b_orders
+), filtered_orders as (
+  select *
+  from combined_orders
+  where ($1::timestamptz is null or created_at >= $1)
+    and (
+      $2::text = 'all'
+      or lower(coalesce(courier_name, '')) like '%' || lower($2) || '%'
+    )
+    and ($3::text = 'all' or order_type = lower($3))
 )
 `
 
@@ -75,7 +84,33 @@ const normalizeCourierName = (value: unknown) => {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-export const getAdminDashboardStats = async () => {
+type AdminDashboardFilters = {
+  range?: string
+  courier?: string
+  paymentType?: string
+}
+
+const rangeDays: Record<string, number | null> = {
+  '7d': 7,
+  '15d': 15,
+  '30d': 30,
+  '90d': 90,
+  all: null,
+}
+
+export const getAdminDashboardStats = async (filters: AdminDashboardFilters = {}) => {
+  const range = Object.prototype.hasOwnProperty.call(rangeDays, filters.range || '')
+    ? String(filters.range)
+    : '30d'
+  const days = rangeDays[range]
+  const fromDate = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null
+  const courier = String(filters.courier || 'all').trim() || 'all'
+  const paymentType = ['cod', 'prepaid'].includes(String(filters.paymentType || '').toLowerCase())
+    ? String(filters.paymentType).toLowerCase()
+    : 'all'
+  const filterParams = [fromDate, courier, paymentType]
+  const chartDays = Math.min(days || 30, 30)
+
   const [
     summaryResult,
     chartResult,
@@ -90,20 +125,29 @@ export const getAdminDashboardStats = async () => {
         count(*)::int as total_orders,
         count(*) filter (where status <> 'cancelled')::int as operational_base_count,
         count(*) filter (where status = 'delivered')::int as delivered_orders,
+        count(*) filter (where ${PENDING_STATUS_PREDICATE})::int as pending_orders,
+        count(*) filter (where ${TRANSIT_STATUS_PREDICATE})::int as in_transit_orders,
         count(*) filter (where ${NDR_STATUS_PREDICATE})::int as ndr_orders,
         count(*) filter (where status like '%rto%' or status = 'returned_to_origin')::int as rto_orders,
         count(*) filter (where created_at::date = current_date)::int as today_orders,
+        count(*) filter (where created_at::date = current_date - interval '1 day')::int as yesterday_orders,
         count(*) filter (where created_at::date = current_date and ${PENDING_STATUS_PREDICATE})::int as today_pending,
         count(*) filter (where created_at::date = current_date and ${TRANSIT_STATUS_PREDICATE})::int as today_in_transit,
         count(*) filter (where updated_at::date = current_date and status = 'delivered')::int as today_delivered,
         count(*) filter (where created_at::date = current_date and ${NDR_STATUS_PREDICATE})::int as today_ndr,
         count(*) filter (where ${TRANSIT_STATUS_PREDICATE} and created_at <= now() - interval '5 days')::int as stuck_orders,
-        coalesce(sum(freight_charges - courier_cost), 0)::numeric as total_revenue,
+        coalesce(sum(freight_charges), 0)::numeric as total_revenue,
+        coalesce(sum(freight_charges - courier_cost), 0)::numeric as total_margin,
         coalesce(sum(shipping_charges), 0)::numeric as total_shipping_charges,
         coalesce(sum(freight_charges), 0)::numeric as total_freight_charges,
         coalesce(sum(courier_cost), 0)::numeric as total_courier_costs,
-        coalesce(sum(case when created_at::date = current_date then freight_charges - courier_cost else 0 end), 0)::numeric as today_revenue,
+        coalesce(sum(case when created_at::date = current_date then freight_charges else 0 end), 0)::numeric as today_revenue,
+        coalesce(sum(case when created_at::date = current_date - interval '1 day' then freight_charges else 0 end), 0)::numeric as yesterday_revenue,
         coalesce(sum(case when order_type = 'cod' then order_amount else 0 end), 0)::numeric as cod_amount,
+        count(*) filter (where order_type = 'cod')::int as cod_orders,
+        count(*) filter (where order_type = 'prepaid')::int as prepaid_orders,
+        coalesce(sum(case when order_type = 'cod' then freight_charges else 0 end), 0)::numeric as cod_revenue,
+        coalesce(sum(case when order_type = 'prepaid' then freight_charges else 0 end), 0)::numeric as prepaid_revenue,
         round(
           coalesce(
             avg(
@@ -116,19 +160,19 @@ export const getAdminDashboardStats = async () => {
             0
           )
         )::int as avg_delivery_time
-      from combined_orders
-    `),
+      from filtered_orders
+    `, filterParams),
     pool.query(`
       ${COMBINED_ORDERS_CTE}
-      with days as (
-        select generate_series(current_date - interval '6 days', current_date, interval '1 day')::date as day
+      , days as (
+        select generate_series(current_date - (($4::int - 1) * interval '1 day'), current_date, interval '1 day')::date as day
       ),
       order_days as (
         select
           created_at::date as day,
           count(*)::int as orders,
-          coalesce(sum(freight_charges - courier_cost), 0)::numeric as revenue
-        from combined_orders
+          coalesce(sum(freight_charges), 0)::numeric as revenue
+        from filtered_orders
         group by created_at::date
       )
       select
@@ -138,43 +182,50 @@ export const getAdminDashboardStats = async () => {
       from days
       left join order_days on order_days.day = days.day
       order by days.day asc
-    `),
+    `, [...filterParams, chartDays]),
     pool.query(`
       ${COMBINED_ORDERS_CTE}
       select
         coalesce(courier_name, 'Unknown') as courier_name,
         count(*) filter (where status <> 'cancelled')::int as order_count,
         count(*) filter (where status = 'delivered')::int as delivered_count,
-        coalesce(sum(freight_charges - courier_cost), 0)::numeric as revenue
-      from combined_orders
+        coalesce(sum(freight_charges), 0)::numeric as revenue,
+        coalesce(sum(courier_cost), 0)::numeric as cost,
+        coalesce(sum(freight_charges - courier_cost), 0)::numeric as margin
+      from filtered_orders
       group by coalesce(courier_name, 'Unknown')
       order by order_count desc, revenue desc
       limit 8
-    `),
+    `, filterParams),
     pool.query(`
       ${COMBINED_ORDERS_CTE}
       select
         origin_city as city,
         count(*)::int as order_count
-      from combined_orders
+      from filtered_orders
       group by origin_city
       order by order_count desc, city asc
       limit 5
-    `),
+    `, filterParams),
     pool.query(`
       ${COMBINED_ORDERS_CTE}
       select
         destination_city as city,
         count(*)::int as order_count
-      from combined_orders
+      from filtered_orders
       group by destination_city
       order by order_count desc, city asc
       limit 5
-    `),
+    `, filterParams),
     pool.query(`
       select
         (select count(*)::int from support_tickets where status = 'open') as open_tickets,
         (select count(*)::int from support_tickets where status = 'in_progress') as in_progress_tickets,
+        (
+          select count(*)::int
+          from users
+          where lower(coalesce(role, 'customer')) = 'customer'
+        ) as active_sellers,
         (
           select count(*)::int
           from support_tickets
@@ -216,12 +267,19 @@ export const getAdminDashboardStats = async () => {
     courierResult.rows.map((row) => {
       const count = toNumber(row.order_count)
       const delivered = toNumber(row.delivered_count)
+      const revenue = toNumber(row.revenue)
+      const cost = toNumber(row.cost)
+      const margin = toNumber(row.margin)
       return [
         normalizeCourierName(row.courier_name),
         {
           count,
           deliveryRate: count > 0 ? Math.round((delivered / count) * 100) : 0,
-          revenue: toNumber(row.revenue),
+          revenue,
+          cost,
+          margin,
+          marginPercent: revenue > 0 ? Number(((margin / revenue) * 100).toFixed(1)) : 0,
+          revPerOrder: count > 0 ? Number((revenue / count).toFixed(2)) : 0,
         },
       ]
     }),
@@ -238,9 +296,15 @@ export const getAdminDashboardStats = async () => {
         ndr: toNumber(summary.today_ndr),
         stuck: toNumber(summary.stuck_orders),
       },
+      yesterdayOperations: {
+        orders: toNumber(summary.yesterday_orders),
+        revenue: toNumber(summary.yesterday_revenue),
+      },
       financial: {
         todayRevenue: toNumber(summary.today_revenue),
         totalRevenue: toNumber(summary.total_revenue),
+        totalMargin: toNumber(summary.total_margin),
+        totalCost: toNumber(summary.total_courier_costs),
         totalShippingCharges: toNumber(summary.total_shipping_charges),
         totalFreightCharges: toNumber(summary.total_freight_charges),
         totalCourierCosts: toNumber(summary.total_courier_costs),
@@ -254,9 +318,22 @@ export const getAdminDashboardStats = async () => {
         rtoRate: nonCancelledOrders > 0 ? Math.round((rtoOrders / nonCancelledOrders) * 100) : 0,
         avgDeliveryTime: toNumber(summary.avg_delivery_time),
         totalOrders,
+        activeSellers: toNumber(alerts.active_sellers),
         deliveredOrders,
+        pendingOrders: toNumber(summary.pending_orders),
+        inTransitOrders: toNumber(summary.in_transit_orders),
         ndrOrders,
         rtoOrders,
+      },
+      paymentSplit: {
+        prepaid: {
+          orders: toNumber(summary.prepaid_orders),
+          revenue: toNumber(summary.prepaid_revenue),
+        },
+        cod: {
+          orders: toNumber(summary.cod_orders),
+          revenue: toNumber(summary.cod_revenue),
+        },
       },
       alerts: {
         openTickets: toNumber(alerts.open_tickets),

@@ -14,7 +14,6 @@ const formatChartDate = (value) => {
 }
 
 const RevenueBarChart = ({ data = [] }) => {
-  const textColor = useColorModeValue('#111827', 'white')
   const textColorSecondary = useColorModeValue('#64748B', 'gray.400')
   const gridColor = useColorModeValue('#E5E7EB', 'gray.700')
 
@@ -31,7 +30,7 @@ const RevenueBarChart = ({ data = [] }) => {
       type: 'bar',
       height: '100%',
       animations: { enabled: false },
-      fontFamily: 'Inter, sans-serif',
+      fontFamily: 'Plus Jakarta Sans, sans-serif',
     },
     plotOptions: {
       bar: {
@@ -45,7 +44,7 @@ const RevenueBarChart = ({ data = [] }) => {
       type: 'solid',
       opacity: 0.95,
     },
-    colors: ['#FF8A28'],
+    colors: ['#0D1B4D'],
     xaxis: {
       categories: data.map((item) => formatChartDate(item.date)),
       labels: {

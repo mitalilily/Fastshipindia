@@ -27,7 +27,7 @@ const fieldBase = {
   },
   _focusVisible: {
     borderColor: "brand.500",
-    boxShadow: "0 0 0 3px rgba(108, 92, 231, 0.18)",
+    boxShadow: "0 0 0 3px rgba(13, 27, 77, 0.16)",
     bg: "#FFFFFF",
   },
   _dark: {
@@ -41,8 +41,8 @@ const fieldBase = {
       borderColor: "#3f4652",
     },
     _focusVisible: {
-      borderColor: "#6C5CE7",
-      boxShadow: "0 0 0 3px rgba(108, 92, 231, 0.22)",
+      borderColor: "#0D1B4D",
+      boxShadow: "0 0 0 3px rgba(13, 27, 77, 0.22)",
       bg: "#161B22",
     },
   },
@@ -76,7 +76,7 @@ const componentOverrides = {
         filled: {
           field: {
             ...fieldBase,
-            bg: "rgba(255,248,240,0.92)",
+            bg: "rgba(255,247,248,0.92)",
           },
         },
       },
