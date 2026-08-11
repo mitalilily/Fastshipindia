@@ -75,7 +75,7 @@ interface SidebarProps {
   onNavigate?: () => void
 }
 
-export const COLLAPSED_WIDTH = 72
+export const COLLAPSED_WIDTH = 88
 export const DESKTOP_SIDEBAR_WIDTH = 260
 
 const STANDARD_ICON_SIZE = 21
@@ -272,10 +272,15 @@ export default function Sidebar({
   }
 
   const navItemSx = {
-    minHeight: temporary ? 'clamp(34px, 5.2vh, 43px)' : 'clamp(29px, 4.25vh, 38px)',
-    borderRadius: 0,
+    minHeight: isSidebarExpanded
+      ? temporary
+        ? 'clamp(34px, 5.2vh, 43px)'
+        : 'clamp(29px, 4.25vh, 38px)'
+      : 44,
+    borderRadius: isSidebarExpanded ? 0 : 1.5,
     px: isSidebarExpanded ? (temporary ? 3.6 : 2.75) : 0,
     py: 0,
+    mx: isSidebarExpanded ? 0 : 1.25,
     color: TEXT,
     position: 'relative',
     transition: 'background-color 160ms ease, color 160ms ease',
@@ -331,7 +336,11 @@ export default function Sidebar({
       >
         <ListItemIcon
           sx={{
-            minWidth: isSidebarExpanded ? 38 : 0,
+            minWidth: isSidebarExpanded ? 38 : 36,
+            width: isSidebarExpanded ? 'auto' : 36,
+            height: isSidebarExpanded ? 'auto' : 36,
+            flexShrink: 0,
+            alignItems: 'center',
             justifyContent: 'center',
             color: active ? ACCENT : iconMuted,
             transition: 'color 160ms ease',
@@ -516,7 +525,9 @@ export default function Sidebar({
               sx={{
                 mb: temporary
                   ? 'clamp(6px, 1.8vh, 18px)'
-                  : 'clamp(3px, 1.1vh, 12px)',
+                  : isSidebarExpanded
+                    ? 'clamp(3px, 1.1vh, 12px)'
+                    : 0.5,
               }}
             >
               {isSidebarExpanded ? (
@@ -539,7 +550,12 @@ export default function Sidebar({
                   {section.title}
                 </Typography>
               ) : null}
-              <List disablePadding>{section.items.map(renderItem)}</List>
+              <List
+                disablePadding
+                sx={isSidebarExpanded ? undefined : { display: 'grid', gap: 0.5 }}
+              >
+                {section.items.map(renderItem)}
+              </List>
             </Box>
           ) : null,
         )}
