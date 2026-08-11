@@ -343,6 +343,116 @@ function ActionRow({ icon, label, count, route, tone = "amber" }) {
   );
 }
 
+function QuickActionCard({ icon: Icon, label, subtitle, route, badge, color }) {
+  const history = useHistory();
+
+  return (
+    <Flex
+      as="button"
+      type="button"
+      align="center"
+      justify="space-between"
+      gap={3}
+      minH="82px"
+      p={{ base: 3.5, md: 4 }}
+      borderRadius="14px"
+      border="1px solid"
+      borderColor={ui.border}
+      bg={ui.surface}
+      boxShadow="0 8px 24px rgba(13, 27, 77, 0.045)"
+      textAlign="left"
+      onClick={() => history.push(route)}
+      transition="transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease"
+      _hover={{
+        transform: "translateY(-2px)",
+        borderColor: color,
+        boxShadow: "0 14px 34px rgba(13, 27, 77, 0.10)",
+      }}
+    >
+      <HStack spacing={3} minW={0}>
+        <Flex
+          w="42px"
+          h="42px"
+          borderRadius="13px"
+          align="center"
+          justify="center"
+          color={color}
+          bg={
+            color === ui.success
+              ? ui.successBg
+              : color === ui.accent
+              ? ui.accentBg
+              : color === ui.blue
+              ? ui.blueBg
+              : ui.primaryBg
+          }
+          flexShrink={0}
+        >
+          <Icon size={20} strokeWidth={1.9} />
+        </Flex>
+        <Box minW={0}>
+          <Text color={ui.text} fontSize="15px" fontWeight="800" noOfLines={1}>
+            {label}
+          </Text>
+          <Text color={ui.muted} fontSize="12px" mt={1} noOfLines={1}>
+            {subtitle}
+          </Text>
+        </Box>
+      </HStack>
+      <HStack spacing={2} flexShrink={0}>
+        {badge !== undefined ? (
+          <Badge
+            color={color}
+            bg={ui.surfaceMuted}
+            border="1px solid"
+            borderColor={ui.border}
+            borderRadius="8px"
+          >
+            {badge}
+          </Badge>
+        ) : null}
+        <IconExternalLink size={15} color="var(--dash-muted)" />
+      </HStack>
+    </Flex>
+  );
+}
+
+function InsightCard({ label, value, subtitle, color }) {
+  return (
+    <Box
+      p={{ base: 3.5, md: 4 }}
+      borderRadius="14px"
+      bg={ui.surface}
+      border="1px solid"
+      borderColor={ui.border}
+      boxShadow="0 8px 24px rgba(13, 27, 77, 0.045)"
+      position="relative"
+      overflow="hidden"
+      _after={{
+        content: '""',
+        position: "absolute",
+        insetInlineEnd: "-22px",
+        top: "-28px",
+        w: "84px",
+        h: "84px",
+        borderRadius: "999px",
+        bg: color,
+        opacity: 0.08,
+      }}
+    >
+      <Text color={ui.muted} fontSize="12px" fontWeight="700" textTransform="uppercase">
+        {label}
+      </Text>
+      <Text color={ui.text} fontSize={{ base: "22px", md: "24px" }} fontWeight="900" mt={1}>
+        {value}
+      </Text>
+      <Text color={ui.muted} fontSize="12px" mt={1} noOfLines={1}>
+        {subtitle}
+      </Text>
+    </Box>
+  );
+}
+
 function RevenueTable({ rows }) {
   return (
     <Box borderTop="1px solid" borderColor={ui.border} pt={4}>
@@ -662,6 +772,101 @@ export default function Dashboard() {
     toNum(alerts.weightDiscrepancies) +
     bankApprovals +
     codRemittances;
+  const totalPaymentOrders = toNum(prepaid.orders) + toNum(cod.orders);
+  const prepaidShare =
+    totalPaymentOrders > 0
+      ? Math.round((toNum(prepaid.orders) / totalPaymentOrders) * 100)
+      : 0;
+  const codShare =
+    totalPaymentOrders > 0
+      ? Math.round((toNum(cod.orders) / totalPaymentOrders) * 100)
+      : 0;
+  const avgRevenuePerOrder =
+    totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const marginRate =
+    totalRevenue > 0 ? Number(((totalMargin / totalRevenue) * 100).toFixed(1)) : 0;
+  const alertLoad =
+    totalOrders > 0 ? Number(((totalAlerts / totalOrders) * 100).toFixed(1)) : 0;
+  const quickActions = [
+    {
+      label: "Manage Orders",
+      subtitle: "Search, update and export shipments",
+      route: "/admin/orders",
+      badge: totalOrders.toLocaleString(),
+      icon: IconPackageExport,
+      color: ui.primary,
+    },
+    {
+      label: "Registered Users",
+      subtitle: "Review new sellers and approvals",
+      route: "/admin/users-management",
+      badge: activeSellers.toLocaleString(),
+      icon: IconUsers,
+      color: ui.blue,
+    },
+    {
+      label: "Serviceability",
+      subtitle: "Check pincode coverage fast",
+      route: "/admin/serviceability",
+      icon: IconMapPin,
+      color: ui.success,
+    },
+    {
+      label: "COD Remittance",
+      subtitle: "Pending payouts and statements",
+      route: "/admin/cod-remittance",
+      badge: formatCurrency(toNum(financial.codRemittanceDue)),
+      icon: IconWallet,
+      color: ui.accent,
+    },
+    {
+      label: "Reports",
+      subtitle: "Download operational summaries",
+      route: "/admin/reports",
+      icon: IconActivity,
+      color: ui.primary,
+    },
+    {
+      label: "Support Queue",
+      subtitle: "Tickets that need action",
+      route: "/admin/support",
+      badge: toNum(alerts.openTickets),
+      icon: IconAlertTriangle,
+      color: totalAlerts > 0 ? ui.accent : ui.success,
+    },
+  ];
+  const insightCards = [
+    {
+      label: "Avg revenue / order",
+      value: formatCurrency(avgRevenuePerOrder),
+      subtitle: `${rangeLabel} booking quality`,
+      color: ui.primary,
+    },
+    {
+      label: "Margin rate",
+      value: `${marginRate}%`,
+      subtitle: `${formatCurrency(totalMargin)} total margin`,
+      color: marginRate >= 0 ? ui.success : ui.danger,
+    },
+    {
+      label: "Prepaid mix",
+      value: `${prepaidShare}%`,
+      subtitle: `${toNum(prepaid.orders)} prepaid orders`,
+      color: ui.blue,
+    },
+    {
+      label: "COD mix",
+      value: `${codShare}%`,
+      subtitle: `${toNum(cod.orders)} COD orders`,
+      color: ui.accent,
+    },
+    {
+      label: "Alert load",
+      value: `${alertLoad}%`,
+      subtitle: `${totalAlerts} open dashboard actions`,
+      color: totalAlerts > 0 ? ui.accent : ui.success,
+    },
+  ];
 
   if (isLoading) {
     return <DashboardSkeleton dashboardVars={dashboardVars} />;
@@ -837,6 +1042,45 @@ export default function Dashboard() {
           </Panel>
         ) : (
           <Stack spacing="18px">
+            <Panel
+              title="Quick Options"
+              icon={{ node: <IconActivity size={18} />, color: ui.primary }}
+            >
+              <SimpleGrid columns={{ base: 1, sm: 2, xl: 3, "2xl": 6 }} spacing="12px">
+                {quickActions.map((action) => (
+                  <QuickActionCard key={action.label} {...action} />
+                ))}
+              </SimpleGrid>
+            </Panel>
+
+            <Box>
+              <HStack justify="space-between" align="center" mb={3} flexWrap="wrap" gap={2}>
+                <Box>
+                  <Text color={ui.text} fontSize={{ base: "18px", md: "20px" }} fontWeight="900">
+                    Smart Analytics
+                  </Text>
+                  <Text color={ui.muted} fontSize="13px">
+                    Fast KPIs for revenue quality, payment split and operational pressure
+                  </Text>
+                </Box>
+                <Badge
+                  color={ui.success}
+                  bg={ui.successBg}
+                  borderRadius="full"
+                  px={3}
+                  py={1}
+                  textTransform="none"
+                >
+                  Auto refresh 30s
+                </Badge>
+              </HStack>
+              <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 5 }} spacing="12px">
+                {insightCards.map((insight) => (
+                  <InsightCard key={insight.label} {...insight} />
+                ))}
+              </SimpleGrid>
+            </Box>
+
             <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 6 }} spacing="12px">
               <MetricCard
                 label={`Orders · ${rangeLabel}`}
