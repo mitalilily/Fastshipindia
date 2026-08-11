@@ -24,12 +24,15 @@ export default function Dashboard(props) {
   const location = useLocation()
   const [sidebarVariant, setSidebarVariant] = useState('transparent')
   const expandedSidebarWidth = 260
+  const collapsedSidebarWidth = 76
   const [sidebarWidth, setSidebarWidth] = useState(expandedSidebarWidth)
   const mainBg = useColorModeValue('#FAFBFE', '#0D1117')
-  const isSidebarCollapsed = sidebarWidth === 0
+  const isSidebarCollapsed = sidebarWidth === collapsedSidebarWidth
 
   const toggleSidebar = () => {
-    setSidebarWidth((currentWidth) => (currentWidth === 0 ? expandedSidebarWidth : 0))
+    setSidebarWidth((currentWidth) =>
+      currentWidth === collapsedSidebarWidth ? expandedSidebarWidth : collapsedSidebarWidth,
+    )
   }
 
   const getRoute = () => window.location.pathname !== '/admin/full-screen-maps'
@@ -80,6 +83,8 @@ export default function Dashboard(props) {
         logoText="Admin Panel"
         sidebarVariant={sidebarVariant}
         sidebarWidth={sidebarWidth}
+        isCollapsed={isSidebarCollapsed}
+        onExpandSidebar={() => setSidebarWidth(expandedSidebarWidth)}
         {...rest}
       />
       <Drawer isOpen={isOpen} onClose={onClose} placement="left">

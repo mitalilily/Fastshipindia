@@ -5,7 +5,7 @@ import SidebarContent from './SidebarContent'
 
 function Sidebar(props) {
   const mainPanel = React.useRef()
-  const { logoText, routes, sidebarVariant, sidebarWidth } = props
+  const { logoText, routes, sidebarVariant, sidebarWidth, isCollapsed, onExpandSidebar } = props
 
   return (
     <Box ref={mainPanel}>
@@ -13,7 +13,7 @@ function Sidebar(props) {
         <Box
           pointerEvents="auto"
           w={`${sidebarWidth}px`}
-          minW={sidebarWidth > 0 ? '240px' : '0px'}
+          minW={`${sidebarWidth}px`}
           h="100vh"
           overflow="hidden"
           position="relative"
@@ -23,6 +23,8 @@ function Sidebar(props) {
             routes={routes}
             logoText={logoText || brandIdentity.name}
             sidebarVariant={sidebarVariant}
+            isCollapsed={isCollapsed}
+            onCollapsedGroupClick={onExpandSidebar}
           />
         </Box>
       </Box>

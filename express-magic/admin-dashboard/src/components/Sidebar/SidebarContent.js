@@ -6,6 +6,7 @@ import {
   Flex,
   Stack,
   Text,
+  Tooltip,
   useColorModeValue,
 } from "@chakra-ui/react";
 import {
@@ -191,6 +192,8 @@ const SidebarContent = ({
   sidebarWidth,
   position = "fixed",
   onNavigate,
+  isCollapsed = false,
+  onCollapsedGroupClick,
 }) => {
   const location = useLocation();
   const [openGroups, setOpenGroups] = React.useState({});
@@ -260,8 +263,9 @@ const SidebarContent = ({
     >
       <Flex
         h="58px"
-        px="20px"
+        px={isCollapsed ? "10px" : "20px"}
         align="center"
+        justify={isCollapsed ? "center" : "flex-start"}
         gap="10px"
         borderBottom="1px solid"
         borderColor={borderColor}
@@ -270,53 +274,66 @@ const SidebarContent = ({
           as="img"
           src={brandIdentity.logoPath}
           alt={brandIdentity.name}
-          w="92px"
-          h="42px"
+          w={isCollapsed ? "46px" : "92px"}
+          h={isCollapsed ? "32px" : "42px"}
           objectFit="contain"
           flexShrink="0"
         />
-        <Text
-          color={logoColor}
-          fontSize="16px"
-          fontWeight="800"
-          letterSpacing="0"
-        >
-          {logoText || "Admin Panel"}
-        </Text>
+        {!isCollapsed ? (
+          <Text
+            color={logoColor}
+            fontSize="16px"
+            fontWeight="800"
+            letterSpacing="0"
+          >
+            {logoText || "Admin Panel"}
+          </Text>
+        ) : null}
       </Flex>
 
-      <Stack spacing="5px" px="12px" py="16px">
+      <Stack spacing="5px" px={isCollapsed ? "10px" : "12px"} py="16px">
         {sidebarItems.map((item) => {
           const active = isItemActive(location.pathname, item);
           const Icon = item.icon || IconTruck;
 
           if (!item.children) {
             return (
-              <NavLink key={item.label} to={item.path} onClick={onNavigate}>
-                <Flex
-                  h="38px"
-                  px="13px"
-                  align="center"
-                  gap="9px"
-                  borderRadius="8px"
-                  bg={active ? itemActiveBg : "transparent"}
-                  color={active ? itemActiveColor : itemColor}
-                  _hover={{
-                    bg: active ? itemActiveBg : itemHoverBg,
-                    color: itemHoverColor,
-                  }}
-                  transition="all 0.16s ease"
-                >
-                  {renderIcon(Icon, active)}
-                  <Text
-                    fontSize="15px"
-                    fontWeight={active ? "700" : "500"}
-                    lineHeight="1.15"
+              <Tooltip
+                key={item.label}
+                label={item.label}
+                placement="right"
+                isDisabled={!isCollapsed}
+                hasArrow
+              >
+                <NavLink to={item.path} onClick={onNavigate}>
+                  <Flex
+                    h="38px"
+                    px={isCollapsed ? "0" : "13px"}
+                    align="center"
+                    justify={isCollapsed ? "center" : "flex-start"}
+                    gap="9px"
+                    borderRadius="8px"
+                    bg={active ? itemActiveBg : "transparent"}
+                    color={active ? itemActiveColor : itemColor}
+                    _hover={{
+                      bg: active ? itemActiveBg : itemHoverBg,
+                      color: itemHoverColor,
+                    }}
+                    transition="all 0.16s ease"
                   >
-                    {item.label}
-                  </Text>
-                </Flex>
-              </NavLink>
+                    {renderIcon(Icon, active)}
+                    {!isCollapsed ? (
+                      <Text
+                        fontSize="15px"
+                        fontWeight={active ? "700" : "500"}
+                        lineHeight="1.15"
+                      >
+                        {item.label}
+                      </Text>
+                    ) : null}
+                  </Flex>
+                </NavLink>
+              </Tooltip>
             );
           }
 
@@ -324,43 +341,58 @@ const SidebarContent = ({
 
           return (
             <Box key={item.label}>
-              <Button
-                type="button"
-                onClick={() => toggleGroup(item.label)}
-                minH="38px"
-                w="100%"
-                px="13px"
-                py="0"
-                justifyContent="space-between"
-                borderRadius="8px"
-                bg={active ? itemActiveBg : "transparent"}
-                color={active ? itemActiveColor : itemColor}
-                fontWeight="500"
-                _hover={{
-                  bg: active ? itemActiveBg : itemHoverBg,
-                  color: itemHoverColor,
-                }}
-                _active={{ bg: itemActiveBg }}
+              <Tooltip
+                label={item.label}
+                placement="right"
+                isDisabled={!isCollapsed}
+                hasArrow
               >
-                <Flex align="center" gap="9px" minW={0}>
-                  {renderIcon(Icon, active)}
-                  <Text
-                    fontSize="15px"
-                    whiteSpace="normal"
-                    textAlign="left"
-                    lineHeight="1.25"
-                  >
-                    {item.label}
-                  </Text>
-                </Flex>
-                <Box
-                  transition="transform 0.16s ease"
-                  transform={open ? "rotate(90deg)" : "rotate(0deg)"}
+                <Button
+                  type="button"
+                  onClick={() =>
+                    isCollapsed
+                      ? onCollapsedGroupClick?.()
+                      : toggleGroup(item.label)
+                  }
+                  minH="38px"
+                  w="100%"
+                  px={isCollapsed ? "0" : "13px"}
+                  py="0"
+                  justifyContent={isCollapsed ? "center" : "space-between"}
+                  borderRadius="8px"
+                  bg={active ? itemActiveBg : "transparent"}
+                  color={active ? itemActiveColor : itemColor}
+                  fontWeight="500"
+                  _hover={{
+                    bg: active ? itemActiveBg : itemHoverBg,
+                    color: itemHoverColor,
+                  }}
+                  _active={{ bg: itemActiveBg }}
                 >
-                  <ChevronRightIcon boxSize="15px" />
-                </Box>
-              </Button>
-              <Collapse in={open} animateOpacity>
+                  <Flex align="center" gap="9px" minW={0}>
+                    {renderIcon(Icon, active)}
+                    {!isCollapsed ? (
+                      <Text
+                        fontSize="15px"
+                        whiteSpace="normal"
+                        textAlign="left"
+                        lineHeight="1.25"
+                      >
+                        {item.label}
+                      </Text>
+                    ) : null}
+                  </Flex>
+                  {!isCollapsed ? (
+                    <Box
+                      transition="transform 0.16s ease"
+                      transform={open ? "rotate(90deg)" : "rotate(0deg)"}
+                    >
+                      <ChevronRightIcon boxSize="15px" />
+                    </Box>
+                  ) : null}
+                </Button>
+              </Tooltip>
+              <Collapse in={!isCollapsed && open} animateOpacity>
                 <Stack
                   spacing="5px"
                   mt="6px"
