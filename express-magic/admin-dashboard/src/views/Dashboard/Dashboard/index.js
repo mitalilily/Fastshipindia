@@ -118,15 +118,15 @@ function Panel({ title, icon, badge, children, minH, gridColumn }) {
       bg={ui.surface}
       borderWidth="1px"
       borderColor={ui.border}
-      borderRadius="18px"
-      boxShadow="0 10px 30px rgba(13, 27, 77, 0.055)"
+      borderRadius="14px"
+      boxShadow="0 8px 22px rgba(13, 27, 77, 0.05)"
       overflow="hidden"
       p="0"
       minH={minH}
       gridColumn={gridColumn}
     >
       <CardHeader
-        p={{ base: 4, md: 5 }}
+        p={{ base: 3.5, md: 4 }}
         borderBottom="1px solid"
         borderColor={ui.borderSoft}
       >
@@ -134,7 +134,7 @@ function Panel({ title, icon, badge, children, minH, gridColumn }) {
           {icon ? <Box color={icon.color}>{icon.node}</Box> : null}
           <Text
             color={ui.text}
-            fontSize={{ base: "20px", md: "22px" }}
+            fontSize={{ base: "18px", md: "20px" }}
             fontWeight="800"
           >
             {title}
@@ -152,7 +152,7 @@ function Panel({ title, icon, badge, children, minH, gridColumn }) {
           ) : null}
         </HStack>
       </CardHeader>
-      <CardBody p={{ base: 4, md: 5 }}>{children}</CardBody>
+      <CardBody p={{ base: 3.5, md: 4 }}>{children}</CardBody>
     </Card>
   );
 }
@@ -167,10 +167,10 @@ function MetricCard({ label, value, subtitle, trend, icon: Icon, color }) {
       bg={ui.surface}
       borderWidth="1px"
       borderColor={ui.border}
-      borderRadius="16px"
-      boxShadow="0 8px 24px rgba(13, 27, 77, 0.05)"
+      borderRadius="12px"
+      boxShadow="0 7px 18px rgba(13, 27, 77, 0.045)"
       p="0"
-      minH="138px"
+      minH="112px"
       position="relative"
       overflow="hidden"
       _before={{
@@ -188,29 +188,29 @@ function MetricCard({ label, value, subtitle, trend, icon: Icon, color }) {
         boxShadow: "0 14px 34px rgba(13, 27, 77, 0.10)",
       }}
     >
-      <CardBody p={5}>
-        <HStack justify="space-between" align="flex-start" spacing={4}>
+      <CardBody p={4}>
+        <HStack justify="space-between" align="flex-start" spacing={3}>
           <Box minW={0}>
-            <Text color={ui.muted} fontSize="16px" fontWeight="500">
+            <Text color={ui.muted} fontSize="14px" fontWeight="500">
               {label}
             </Text>
             <Text
               color={ui.text}
-              fontSize={{ base: "26px", md: "28px" }}
+              fontSize={{ base: "23px", md: "24px" }}
               fontWeight="800"
               lineHeight="1.1"
-              mt={2}
+              mt={1.5}
             >
               {value}
             </Text>
-            <HStack spacing={2} mt={2} minH="18px">
+            <HStack spacing={2} mt={1.5} minH="17px">
               {subtitle ? (
-                <Text color={ui.muted} fontSize="15px">
+                <Text color={ui.muted} fontSize="13px">
                   {subtitle}
                 </Text>
               ) : null}
               {hasTrend ? (
-                <Text color={trendColor} fontSize="15px" fontWeight="700">
+                <Text color={trendColor} fontSize="13px" fontWeight="700">
                   {trendValue > 0 ? "+" : ""}
                   {trendValue}%
                 </Text>
@@ -218,9 +218,9 @@ function MetricCard({ label, value, subtitle, trend, icon: Icon, color }) {
             </HStack>
           </Box>
           <Flex
-            w="50px"
-            h="50px"
-            borderRadius="14px"
+            w="42px"
+            h="42px"
+            borderRadius="12px"
             align="center"
             justify="center"
             color={color}
@@ -235,7 +235,7 @@ function MetricCard({ label, value, subtitle, trend, icon: Icon, color }) {
             }
             flexShrink={0}
           >
-            <Icon size={25} strokeWidth={1.9} />
+            <Icon size={21} strokeWidth={1.9} />
           </Flex>
         </HStack>
       </CardBody>
@@ -433,15 +433,15 @@ function RevenueTable({ rows }) {
 
 function DashboardSkeleton({ dashboardVars }) {
   return (
-    <Box minH="100vh" bg={ui.page} pb={8} sx={dashboardVars}>
-      <Container maxW="full" pt={{ base: "120px", md: "75px" }} px={{ base: 4, md: 6 }}>
+    <Box minH="100vh" bg={ui.page} pb={6} sx={dashboardVars}>
+      <Container maxW="full" pt={{ base: "92px", md: "62px" }} px={{ base: 3, md: 5 }}>
         <Flex
           bg={ui.surface}
           border="1px solid"
           borderColor={ui.border}
-          borderRadius="20px"
-          p={{ base: 5, md: 7 }}
-          mb={5}
+          borderRadius="16px"
+          p={{ base: 4, md: 5 }}
+          mb={4}
           justify="space-between"
           align="center"
         >
@@ -451,14 +451,14 @@ function DashboardSkeleton({ dashboardVars }) {
           </Box>
           <Skeleton display={{ base: "none", md: "block" }} w="128px" h="42px" borderRadius="10px" />
         </Flex>
-        <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 6 }} spacing={4} mb={5}>
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 6 }} spacing={3} mb={4}>
           {[0, 1, 2, 3, 4, 5].map((item) => (
-            <Skeleton key={item} h="138px" borderRadius="16px" />
+            <Skeleton key={item} h="112px" borderRadius="12px" />
           ))}
         </SimpleGrid>
-        <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap={5}>
-          <Skeleton h="330px" borderRadius="18px" />
-          <Skeleton h="330px" borderRadius="18px" />
+        <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap={4}>
+          <Skeleton h="300px" borderRadius="14px" />
+          <Skeleton h="300px" borderRadius="14px" />
         </Grid>
       </Container>
     </Box>
@@ -668,35 +668,35 @@ export default function Dashboard() {
   }
 
   return (
-    <Box minH="100vh" bg={ui.page} color={ui.text} pb={8} sx={dashboardVars}>
+    <Box minH="100vh" bg={ui.page} color={ui.text} pb={6} sx={dashboardVars}>
       <Container
         maxW="full"
-        pt={{ base: "120px", md: "75px" }}
-        px={{ base: 4, md: 6 }}
+        pt={{ base: "92px", md: "62px" }}
+        px={{ base: 3, md: 5 }}
       >
         <Flex
           justify="space-between"
           align={{ base: "flex-start", lg: "center" }}
-          gap={5}
-          mb={5}
+          gap={4}
+          mb={4}
           flexWrap="wrap"
           bg="linear-gradient(120deg, #FFFFFF 0%, #F4F7FC 58%, #FFF0F2 100%)"
           border="1px solid"
           borderColor={ui.border}
-          borderRadius="20px"
-          boxShadow="0 14px 38px rgba(13, 27, 77, 0.07)"
-          p={{ base: 5, md: 7 }}
+          borderRadius="16px"
+          boxShadow="0 10px 28px rgba(13, 27, 77, 0.06)"
+          p={{ base: 4, md: 5 }}
           position="relative"
           overflow="hidden"
         >
-          <HStack spacing={4} align="center">
+          <HStack spacing={3.5} align="center">
             <Flex
-              w={{ base: "52px", md: "64px" }}
-              h={{ base: "52px", md: "64px" }}
+              w={{ base: "48px", md: "54px" }}
+              h={{ base: "48px", md: "54px" }}
               bg="white"
               border="1px solid"
               borderColor={ui.border}
-              borderRadius="16px"
+              borderRadius="14px"
               align="center"
               justify="center"
               boxShadow="0 10px 24px rgba(13, 27, 77, 0.09)"
@@ -708,7 +708,7 @@ export default function Dashboard() {
               <HStack spacing={2} flexWrap="wrap">
                 <Text
                   color={ui.text}
-                  fontSize={{ base: "24px", md: "30px" }}
+                  fontSize={{ base: "22px", md: "25px" }}
                   fontWeight="800"
                   lineHeight="1.2"
                 >
@@ -725,7 +725,7 @@ export default function Dashboard() {
                   Live
                 </Badge>
               </HStack>
-              <Text color={ui.muted} fontSize={{ base: "14px", md: "16px" }} mt={1.5}>
+              <Text color={ui.muted} fontSize={{ base: "13px", md: "14px" }} mt={1}>
                 Orders, revenue and delivery performance in one command center
               </Text>
             </Box>
@@ -739,13 +739,13 @@ export default function Dashboard() {
                   range: e.target.value,
                 }))
               }
-              h="42px"
-              w={{ base: "100%", sm: "132px" }}
+              h="38px"
+              w={{ base: "100%", sm: "122px" }}
               bg={ui.surface}
               borderColor={ui.border}
               color={ui.text}
               borderRadius="10px"
-              fontSize="14px"
+              fontSize="13px"
               fontWeight="700"
             >
               <option value="7d">7 days</option>
@@ -762,13 +762,13 @@ export default function Dashboard() {
                   courier: e.target.value,
                 }))
               }
-              h="42px"
-              w={{ base: "100%", sm: "160px" }}
+              h="38px"
+              w={{ base: "100%", sm: "148px" }}
               bg={ui.surface}
               borderColor={ui.border}
               color={ui.tertiary}
               borderRadius="10px"
-              fontSize="14px"
+              fontSize="13px"
               fontWeight="700"
             >
               <option value="all">All couriers</option>
@@ -786,13 +786,13 @@ export default function Dashboard() {
                   paymentType: e.target.value,
                 }))
               }
-              h="42px"
-              w={{ base: "100%", sm: "142px" }}
+              h="38px"
+              w={{ base: "100%", sm: "132px" }}
               bg={ui.surface}
               borderColor={ui.border}
               color={ui.tertiary}
               borderRadius="10px"
-              fontSize="14px"
+              fontSize="13px"
               fontWeight="700"
             >
               <option value="all">All payments</option>
@@ -800,8 +800,8 @@ export default function Dashboard() {
               <option value="cod">COD</option>
             </Select>
             <Button
-              h="42px"
-              minW="42px"
+              h="38px"
+              minW="38px"
               px={3}
               bg={ui.primary}
               color="white"
@@ -811,7 +811,7 @@ export default function Dashboard() {
               onClick={() => refetch()}
               _hover={{ bg: "#193A75" }}
             >
-              <IconRefresh size={18} />
+              <IconRefresh size={16} />
             </Button>
           </HStack>
         </Flex>
@@ -836,8 +836,8 @@ export default function Dashboard() {
             </VStack>
           </Panel>
         ) : (
-          <Stack spacing="25px">
-            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 6 }} spacing="15px">
+          <Stack spacing="18px">
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, "2xl": 6 }} spacing="12px">
               <MetricCard
                 label={`Orders · ${rangeLabel}`}
                 value={totalOrders.toLocaleString()}
@@ -882,7 +882,7 @@ export default function Dashboard() {
               />
             </SimpleGrid>
 
-            <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap="20px">
+            <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap="16px">
               <Panel
                 title={`Orders by Status · ${rangeLabel}`}
                 badge={statusItems.reduce((sum, item) => sum + item.count, 0)}
@@ -890,7 +890,7 @@ export default function Dashboard() {
                   node: <IconPackageExport size={18} />,
                   color: ui.primary,
                 }}
-                minH="258px"
+                minH="226px"
               >
                 <StatusBars items={statusItems} />
               </Panel>
@@ -901,7 +901,7 @@ export default function Dashboard() {
                   node: <IconAlertTriangle size={18} />,
                   color: ui.danger,
                 }}
-                minH="258px"
+                minH="226px"
               >
                 <Stack spacing={3}>
                   {toNum(alerts.openTickets) > 0 ? (
@@ -955,19 +955,19 @@ export default function Dashboard() {
               </Panel>
             </Grid>
 
-            <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap="20px">
-              <Panel title={`Order Trend · ${rangeLabel}`} minH="330px">
+            <Grid templateColumns={{ base: "1fr", xl: "2fr 1fr" }} gap="16px">
+              <Panel title={`Order Trend · ${rangeLabel}`} minH="300px">
                 {(charts.ordersByDate || []).length ? (
-                  <Box h="280px">
+                  <Box h="250px">
                     <Suspense fallback={<Skeleton h="100%" borderRadius="12px" />}>
                       <OrdersLineChart data={charts.ordersByDate || []} />
                     </Suspense>
                   </Box>
                 ) : (
-                  <EmptyState h="280px" />
+                  <EmptyState h="250px" />
                 )}
               </Panel>
-              <Panel title={`Courier Performance · ${rangeLabel}`} minH="330px">
+              <Panel title={`Courier Performance · ${rangeLabel}`} minH="300px">
                 {topCouriers.length ? (
                   <Stack spacing={3}>
                     {topCouriers.slice(0, 5).map((courier) => (
@@ -993,13 +993,13 @@ export default function Dashboard() {
                     ))}
                   </Stack>
                 ) : (
-                  <EmptyState h="280px" />
+                  <EmptyState h="250px" />
                 )}
               </Panel>
             </Grid>
 
-            <Panel title={`Revenue & Margin Analytics · ${rangeLabel}`} minH="430px">
-              <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4} mb={6}>
+            <Panel title={`Revenue & Margin Analytics · ${rangeLabel}`} minH="380px">
+              <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={5}>
                 <Box p={4} borderRadius="10px" bg={ui.primaryBg}>
                   <Text color={ui.muted} fontSize="sm">
                     Total Revenue
@@ -1037,7 +1037,7 @@ export default function Dashboard() {
               <RevenueTable rows={courierRows} />
             </Panel>
 
-            <Grid templateColumns={{ base: "1fr", xl: "1fr 1fr" }} gap="20px">
+            <Grid templateColumns={{ base: "1fr", xl: "1fr 1fr" }} gap="16px">
               <Panel title="Order Distribution by Courier" minH="310px">
                 {topCouriers.length ? (
                   <Box h="250px">
@@ -1129,7 +1129,7 @@ export default function Dashboard() {
               </SimpleGrid>
             </Panel>
 
-            <Grid templateColumns={{ base: "1fr", xl: "1fr 1fr" }} gap="20px">
+            <Grid templateColumns={{ base: "1fr", xl: "1fr 1fr" }} gap="16px">
               <Panel
                 title="Top Origin Cities"
                 icon={{ node: <IconMapPin size={18} />, color: ui.primary }}

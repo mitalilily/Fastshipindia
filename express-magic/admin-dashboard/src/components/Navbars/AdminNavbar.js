@@ -31,7 +31,7 @@ import { useAuthStore } from 'store/useAuthStore'
 import { useNotificationsStore } from 'store/useNotificationsStore'
 
 export default function AdminNavbar(props) {
-  const { onOpen, onToggleSidebar, isSidebarCollapsed = false, sidebarWidth = 300, brandText } = props
+  const { onOpen, onToggleSidebar, isSidebarCollapsed = false, sidebarWidth = 260, brandText } = props
   const history = useHistory()
   const logout = useAuthStore((state) => state.logout)
   const { unreadCount, setNotifications } = useNotificationsStore()
@@ -79,8 +79,8 @@ export default function AdminNavbar(props) {
       top="0"
       left={{ base: '0', xl: `${sidebarWidth}px` }}
       right="0"
-      h="70px"
-      px={{ base: '16px', md: '30px' }}
+      h="58px"
+      px={{ base: '14px', md: '22px' }}
       align="center"
       justify="space-between"
       bg={navBg}
@@ -88,7 +88,7 @@ export default function AdminNavbar(props) {
       borderColor={borderColor}
       zIndex="1200"
     >
-      <HStack spacing="20px" minW={0}>
+      <HStack spacing="14px" minW={0}>
         <IconButton
           aria-label="Open menu"
           display={{ base: 'inline-flex', xl: 'none' }}
@@ -101,13 +101,13 @@ export default function AdminNavbar(props) {
         <IconButton
           aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           display={{ base: 'none', xl: 'inline-flex' }}
-          icon={<IconLayoutSidebarLeftCollapse size={22} />}
+          icon={<IconLayoutSidebarLeftCollapse size={19} />}
           variant="ghost"
           color={iconColor}
           _hover={{ bg: iconHoverBg, color: iconHoverColor }}
           onClick={onToggleSidebar}
         />
-        <Text color={titleColor} fontSize="18px" fontWeight="800" noOfLines={1}>
+        <Text color={titleColor} fontSize="16px" fontWeight="800" noOfLines={1}>
           {brandText || 'Dashboard'}
         </Text>
       </HStack>
@@ -116,9 +116,9 @@ export default function AdminNavbar(props) {
         <Box position="relative">
           <IconButton
             aria-label="Notifications"
-            icon={<IconBell size={20} />}
-            w="38px"
-            h="38px"
+            icon={<IconBell size={18} />}
+            w="34px"
+            h="34px"
             borderRadius="50%"
             variant="ghost"
             color={titleColor}
@@ -150,9 +150,9 @@ export default function AdminNavbar(props) {
         <Menu placement="bottom-end">
           <MenuButton
             as={Button}
-            h="40px"
-            w="40px"
-            minW="40px"
+            h="36px"
+            w="36px"
+            minW="36px"
             p="0"
             variant="ghost"
             borderRadius="999px"
@@ -162,14 +162,14 @@ export default function AdminNavbar(props) {
           >
             <HStack spacing="8px">
               <Flex
-                w="32px"
-                h="32px"
+                w="30px"
+                h="30px"
                 borderRadius="50%"
                 align="center"
                 justify="center"
                 bg={avatarBg}
                 color={avatarColor}
-                fontSize="13px"
+                fontSize="12px"
                 fontWeight="800"
                 flexShrink={0}
               >
