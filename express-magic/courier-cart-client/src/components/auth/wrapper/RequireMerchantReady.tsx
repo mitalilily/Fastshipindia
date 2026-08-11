@@ -2,15 +2,22 @@ import { Alert, AlertTitle, Box, Button, Container, LinearProgress, Stack, Typog
 import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useMerchantReadiness } from '../../../hooks/useMerchantReadiness'
-import FullScreenLoader from '../../UI/loader/FullScreenLoader'
 
 const BRAND_PRIMARY = '#0D3B8E'
 const BRAND_ACCENT = '#FF7A00'
 
 export default function RequireMerchantReady({ children }: { children: ReactNode }) {
   const theme = useTheme()
-  const { isReady, isLoading, checklist, progress, firstIncompleteStep, assignedPlanName, assignedPlanId } =
-    useMerchantReadiness()
+  const {
+    isReady,
+    isLoading,
+    readinessUnavailable,
+    checklist,
+    progress,
+    firstIncompleteStep,
+    assignedPlanName,
+    assignedPlanId,
+  } = useMerchantReadiness()
   const location = useLocation()
   const navigate = useNavigate()
   const isDark = theme.palette.mode === 'dark'
@@ -28,7 +35,35 @@ export default function RequireMerchantReady({ children }: { children: ReactNode
     ? 'Checking assigned plan...'
     : assignedPlanName || assignedPlanId || 'Not assigned'
 
-  if (isLoading) return <FullScreenLoader />
+  if (isLoading || readinessUnavailable) {
+    return (
+      <Stack spacing={1.25}>
+        {isLoading ? (
+          <Box sx={{ px: { xs: 1.5, md: 3 }, pt: 1.5 }}>
+            <LinearProgress
+              aria-label="Checking order readiness"
+              sx={{
+                height: 3,
+                borderRadius: 999,
+                bgcolor: progressTrack,
+                '& .MuiLinearProgress-bar': { bgcolor: BRAND_PRIMARY },
+              }}
+            />
+          </Box>
+        ) : null}
+        {readinessUnavailable ? (
+          <Alert
+            severity="warning"
+            sx={{ mx: { xs: 1.5, md: 3 }, mt: 1.5, borderRadius: 2 }}
+          >
+            Live account checks are temporarily unavailable. The order form remains open; final
+            validation will run when you submit.
+          </Alert>
+        ) : null}
+        {children}
+      </Stack>
+    )
+  }
 
   if (isReady) {
     return <>{children}</>

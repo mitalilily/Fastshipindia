@@ -40,9 +40,21 @@ const hasRequiredCompanyInfo = (companyInfo: CompanyInfoLike | null | undefined)
 
 export const useMerchantReadiness = () => {
   const { user, loading: authLoading } = useAuth()
-  const { data: pickupData, isLoading: pickupLoading } = usePickupAddresses({ page: 1, limit: 1 })
-  const { data: walletData, isLoading: walletLoading } = useWalletBalance()
-  const { data: paymentOptions, isLoading: paymentOptionsLoading } = usePaymentOptions()
+  const {
+    data: pickupData,
+    isLoading: pickupLoading,
+    isError: pickupError,
+  } = usePickupAddresses({ page: 1, limit: 1 })
+  const {
+    data: walletData,
+    isLoading: walletLoading,
+    isError: walletError,
+  } = useWalletBalance()
+  const {
+    data: paymentOptions,
+    isLoading: paymentOptionsLoading,
+    isError: paymentOptionsError,
+  } = usePaymentOptions()
 
   const walletBalance = Number(walletData?.data?.balance || 0)
   const requiredWalletBalance = Math.max(Number(paymentOptions?.minWalletRecharge || 0), 1)
@@ -124,5 +136,6 @@ export const useMerchantReadiness = () => {
     assignedPlanName,
     assignedPlanId,
     isLoading: authLoading || pickupLoading || walletLoading || paymentOptionsLoading,
+    readinessUnavailable: pickupError || walletError || paymentOptionsError,
   }
 }
