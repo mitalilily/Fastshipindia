@@ -833,17 +833,22 @@ export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) 
       brand_logo: null,
     })
 
-    // 6) create default invoice preferences
-    await tx.insert(schema.invoicePreferences).values({
-      userId: user.id,
-      prefix: 'INV',
-      suffix: '',
-      template: 'classic',
-      includeLogo: true,
-      includeSignature: true,
-      logoFile: null,
-      signatureFile: null,
-    })
+    // 6) create default invoice preferences.
+    // Use a minimal raw insert so signup remains compatible with production
+    // databases that have not yet received the newest optional invoice columns.
+    await tx.execute(sql`
+      insert into invoice_preferences (
+        user_id,
+        prefix,
+        suffix,
+        template,
+        include_logo,
+        include_signature,
+        logo_file,
+        signature_file
+      )
+      values (${user.id}, 'INV', '', 'classic', true, true, null, null)
+    `)
 
     const companyInfo = {
       ...DEFAULT_PROFILE.companyInfo, // keeps required fields
