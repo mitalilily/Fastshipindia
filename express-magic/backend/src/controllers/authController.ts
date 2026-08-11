@@ -15,6 +15,7 @@ import {
   handleEmailVerificationRequest,
   markEmailVerified,
   saveRefreshToken,
+  syncUserProfileIdentity,
   requestPasswordResetCode,
   updateUserByEmail,
   updateUserOtpByEmail,
@@ -514,17 +515,21 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
 }
 
 export const requestEmailVerification = async (req: Request, res: Response): Promise<any> => {
-  const { idToken, password, email } = req.body
+  const { idToken, password, email, name, phone } = req.body
 
   try {
     let userEmail = email
     let googleId: string | null = null
+    let profileName = typeof name === 'string' ? name.trim() : ''
+    let profilePicture = ''
 
     // If idToken is provided, verify it to extract email and googleId
     if (idToken) {
       const googleUser = await verifyGoogleToken(idToken)
       userEmail = googleUser.email
       googleId = googleUser.googleId
+      profileName = profileName || googleUser.name || ''
+      profilePicture = googleUser.picture || ''
     }
 
     if (!userEmail) {
@@ -535,6 +540,11 @@ export const requestEmailVerification = async (req: Request, res: Response): Pro
       userEmail,
       password,
       googleId, // null for password logins
+      {
+        name: profileName,
+        phone,
+        profilePicture,
+      },
     )
 
     const user = result.data?.user
@@ -718,6 +728,12 @@ export const googleOAuthLogin = async (req: Request, res: Response): Promise<any
         profilePicture: picture,
         emailVerified: true,
         // firstName: user.firstName ?? name,
+      })
+      await syncUserProfileIdentity(user.id, {
+        name,
+        email,
+        phone: user.phone,
+        profilePicture: picture,
       })
     } else {
       await db.transaction(async (tx) => {

@@ -69,6 +69,91 @@ const DEFAULT_PROFILE: Omit<typeof schema.userProfiles.$inferInsert, 'userId' | 
   salesChannels: {},
   profileComplete: false,
 }
+
+const normalizeProfileName = (value?: unknown) => String(value || '').trim()
+
+const normalizeProfilePhone = (value?: unknown) => {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`
+  if (digits.length === 10) return `+91${digits}`
+  return raw
+}
+
+export const syncUserProfileIdentity = async (
+  userId: string,
+  identity: {
+    name?: string | null
+    email?: string | null
+    phone?: string | null
+    profilePicture?: string | null
+  },
+  tx: any = db,
+) => {
+  const name = normalizeProfileName(identity.name)
+  const email = String(identity.email || '').trim().toLowerCase()
+  const phone = normalizeProfilePhone(identity.phone)
+  const profilePicture = String(identity.profilePicture || '').trim()
+
+  if (!name && !email && !phone && !profilePicture) return null
+
+  const [profile] = await tx
+    .select()
+    .from(schema.userProfiles)
+    .where(eq(schema.userProfiles.userId, userId))
+    .limit(1)
+
+  const currentCompanyInfo = (profile?.companyInfo || {}) as Record<string, any>
+  const companyInfo = {
+    ...DEFAULT_PROFILE.companyInfo,
+    ...currentCompanyInfo,
+    ...(name
+      ? {
+          businessName: currentCompanyInfo.businessName || name,
+          brandName: currentCompanyInfo.brandName || name,
+          contactPerson: currentCompanyInfo.contactPerson || name,
+        }
+      : {}),
+    ...(email
+      ? {
+          contactEmail: currentCompanyInfo.contactEmail || email,
+          companyEmail: currentCompanyInfo.companyEmail || email,
+        }
+      : {}),
+    ...(phone
+      ? {
+          contactNumber: currentCompanyInfo.contactNumber || phone,
+          companyContactNumber: currentCompanyInfo.companyContactNumber || phone,
+        }
+      : {}),
+    ...(profilePicture
+      ? {
+          profilePicture: currentCompanyInfo.profilePicture || profilePicture,
+        }
+      : {}),
+  }
+
+  if (profile) {
+    const [updated] = await tx
+      .update(schema.userProfiles)
+      .set({ companyInfo })
+      .where(eq(schema.userProfiles.userId, userId))
+      .returning()
+    return updated
+  }
+
+  const [created] = await tx
+    .insert(schema.userProfiles)
+    .values({
+      ...DEFAULT_PROFILE,
+      userId,
+      companyInfo,
+    })
+    .returning()
+
+  return created
+}
 // ✅ Get user by phone
 
 export const findUserByPhone = async (phone: string) => {
@@ -449,9 +534,12 @@ export const handleEmailVerificationRequest = async (
   email: string,
   password: string | null,
   googleId: string | null,
+  identity: { name?: string | null; phone?: string | null; profilePicture?: string | null } = {},
 ): Promise<{ status: number; data: any }> => {
   return await db.transaction(async (tx) => {
     const normalizedEmail = email.trim().toLowerCase()
+    const normalizedName = normalizeProfileName(identity.name)
+    const normalizedPhone = normalizeProfilePhone(identity.phone)
     const token = generate8DigitsVerificationToken()
     const expiresAt = new Date(Date.now() + OTP_EXPIRY)
     let shouldSendEmail = false
@@ -459,6 +547,17 @@ export const handleEmailVerificationRequest = async (
     const user = await findUserByEmail(normalizedEmail, tx)
 
     if (user) {
+      await syncUserProfileIdentity(
+        user.id,
+        {
+          name: normalizedName,
+          email: normalizedEmail,
+          phone: normalizedPhone || user.phone,
+          profilePicture: identity.profilePicture,
+        },
+        tx,
+      )
+
       if (user.emailVerified) {
         if (googleId) {
           if (user.googleId && user.googleId !== googleId) {
@@ -552,9 +651,10 @@ export const handleEmailVerificationRequest = async (
     if (googleId) {
       await createUserWithWallet({
         email: normalizedEmail,
-        phone: '',
+        phone: normalizedPhone || undefined,
         passwordHash: password ? await bcrypt.hash(password, 10) : null,
         googleId,
+        firstName: normalizedName,
         emailVerified: true,
         onboardingStep: 0,
       })
@@ -567,9 +667,10 @@ export const handleEmailVerificationRequest = async (
 
     await createUserWithWallet({
       email: normalizedEmail,
-      phone: '',
+      phone: normalizedPhone || undefined,
       passwordHash: await bcrypt.hash(password, 10),
       googleId: null,
+      firstName: normalizedName,
       emailVerificationToken: token,
       emailVerificationTokenExpiresAt: expiresAt,
       emailVerified: false,
@@ -629,10 +730,33 @@ export const clampPreviousRefreshTokenExpiry = async (
 
 export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) {
   return txn?.transaction(async (tx: any) => {
+    const profileName = normalizeProfileName(data.firstName || data.lastName)
+    const profilePhone = normalizeProfilePhone(data.phone)
+    const profileEmail = String(data.email || '').trim().toLowerCase()
+    const {
+      firstName,
+      lastName,
+      businessInfo,
+      locationInfo,
+      salesChannels,
+      shippingPreferences,
+      paymentDetails,
+      documents,
+      monthlyOrderCount,
+      profileCompletion,
+      businessType,
+      ...userInsertData
+    } = data as any
+
     // 1) insert user
     const [user] = await tx
       .insert(users)
-      .values(data as IUser)
+      .values({
+        ...userInsertData,
+        email: profileEmail || data.email,
+        phone: profilePhone || null,
+        role: data.role || 'customer',
+      })
       .returning()
 
     // 2) insert wallet
@@ -721,8 +845,13 @@ export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) 
 
     const companyInfo = {
       ...DEFAULT_PROFILE.companyInfo, // keeps required fields
-      contactEmail: data.email ?? '',
-      contactNumber: data.phone ?? '',
+      businessName: profileName,
+      brandName: profileName,
+      contactPerson: profileName,
+      contactEmail: profileEmail,
+      companyEmail: profileEmail,
+      contactNumber: profilePhone,
+      companyContactNumber: profilePhone,
       profilePicture: data?.profilePicture,
     }
 
