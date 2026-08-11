@@ -17,10 +17,10 @@
 }
 
 export const brandIdentity = {
-  name: 'Ship Aggregator',
-  shortName: 'Ship Aggregator',
-  tagline: 'Customized supply chain solutions.',
-  supportEmail: 'cs@shipaggregator.com',
+  name: 'FastShip',
+  shortName: 'FastShip',
+  tagline: 'Delivering Trust, Every Time.',
+  supportEmail: 'admin@fastship.in',
   supportPhone: '+91 94038 91046',
   supportAddress: 'G-10, Bajrang Complex, Telipara, Bilaspur, Chhattisgarh',
   logoPath: '/fastship-logo.png',

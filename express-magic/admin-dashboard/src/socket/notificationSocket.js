@@ -3,7 +3,7 @@ import { io } from 'socket.io-client'
 const isLocalhost =
   typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
 const normalizeSocketUrl = (rawUrl) => {
-  const fallback = isLocalhost ? 'http://127.0.0.1:5002' : 'https://aggregator-backend-7gmk.onrender.com'
+  const fallback = isLocalhost ? 'http://127.0.0.1:5002' : 'https://fastshipindia.onrender.com'
   if (!rawUrl) return fallback
   try {
     const candidate = new URL(rawUrl)

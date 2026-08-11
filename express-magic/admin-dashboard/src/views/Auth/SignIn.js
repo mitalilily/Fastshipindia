@@ -134,7 +134,7 @@ function SignIn() {
   return (
     <Flex
       minH="100vh"
-      bg="#0E131A"
+      bg="#F4F7FB"
       align="stretch"
       justify="stretch"
       position="relative"
@@ -152,8 +152,8 @@ function SignIn() {
           display={{ base: "none", lg: "flex" }}
           w={{ lg: "45%", xl: "42%" }}
           minH="100vh"
-          bg="linear-gradient(135deg, #070C12 0%, #141A22 100%)"
-          color="white"
+          bg="linear-gradient(135deg, #FFFFFF 0%, #EEF4FF 100%)"
+          color="#0D1B4D"
           direction="column"
           justify="space-between"
           position="relative"
@@ -180,7 +180,7 @@ function SignIn() {
                 flexShrink="0"
               />
               <Text
-                color="#FFFFFF"
+                color="#0D1B4D"
                 fontSize="24px"
                 fontWeight="700"
                 lineHeight="1"
@@ -193,14 +193,14 @@ function SignIn() {
             <Box>
               <Heading
                 as="h1"
-                color="#FFFFFF"
+                color="#0D1B4D"
                 fontSize={{ lg: "30px", xl: "36px" }}
                 fontWeight="700"
                 lineHeight="1.22"
                 letterSpacing="0"
                 mb="16px"
               >
-                Ship Aggregator
+                FastShip
                 <Text
                   as="span"
                   display="block"
@@ -211,7 +211,7 @@ function SignIn() {
                 </Text>
               </Heading>
               <Text
-                color="rgba(255,255,255,0.5)"
+                color="#607397"
                 fontSize="14px"
                 lineHeight="1.65"
                 maxW="384px"
@@ -228,9 +228,9 @@ function SignIn() {
               return (
                 <Box
                   key={card.title}
-                  bg="rgba(255,255,255,0.06)"
+                  bg="#FFFFFF"
                   border="1px solid"
-                  borderColor="rgba(255,255,255,0.08)"
+                  borderColor="#D6E0EF"
                   borderRadius="12px"
                   p="16px"
                   backdropFilter="blur(8px)"
@@ -249,7 +249,7 @@ function SignIn() {
                     <Box as={FeatureIcon} size={20} strokeWidth={2} />
                   </Box>
                   <Text
-                    color="#FFFFFF"
+                    color="#0D1B4D"
                     fontSize="14px"
                     fontWeight="600"
                     lineHeight="1.25"
@@ -258,7 +258,7 @@ function SignIn() {
                     {card.title}
                   </Text>
                   <Text
-                    color="rgba(255,255,255,0.4)"
+                    color="#607397"
                     fontSize="12px"
                     lineHeight="1.6"
                   >
@@ -270,7 +270,7 @@ function SignIn() {
           </SimpleGrid>
         </Flex>
 
-        <Flex flex="1" minH="100vh" bg="#171C23" direction="column">
+        <Flex flex="1" minH="100vh" bg="#F8FAFE" direction="column">
           <HStack
             as="a"
             href="/"
@@ -281,7 +281,7 @@ function SignIn() {
             w="100%"
             px="20px"
             borderBottom="1px solid"
-            borderColor="#272E38"
+            borderColor="#D6E0EF"
             textDecoration="none"
             _hover={{ textDecoration: "none" }}
           >
@@ -295,7 +295,7 @@ function SignIn() {
               flexShrink="0"
             />
             <Text
-              color="#FFFFFF"
+              color="#0D1B4D"
               fontSize="16px"
               fontWeight="700"
               lineHeight="1"
@@ -324,7 +324,7 @@ function SignIn() {
                 <Box mb="16px">
                   <Heading
                     as="h2"
-                    color="#FFFFFF"
+                    color="#0D1B4D"
                     fontSize={{ base: "24px", sm: "30px" }}
                     fontWeight="700"
                     lineHeight="1.2"
@@ -334,7 +334,7 @@ function SignIn() {
                     {brandIdentity.name} Admin Login
                   </Heading>
                   <Text color="#8A95A3" fontSize="14px">
-                    Sign in with your Ship Aggregator admin credentials
+                    Sign in with your FastShip admin credentials
                   </Text>
                 </Box>
 
@@ -352,17 +352,17 @@ function SignIn() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@aggregator.com"
+                      placeholder="admin@fastship.in"
                       autoComplete="username"
                       required
                       h="48px"
                       pl="40px"
                       pr="12px"
                       borderRadius="12px"
-                      bg="#0E131A"
+                      bg="#FFFFFF"
                       border="2px solid"
-                      borderColor="#29313B"
-                      color="#FFFFFF"
+                      borderColor="#D6E0EF"
+                      color="#0D1B4D"
                       fontSize="14px"
                       fontWeight="500"
                       _placeholder={{ color: "#65707D" }}
@@ -370,7 +370,7 @@ function SignIn() {
                       _focus={{
                         borderColor: "#6C5CE7",
                         boxShadow: "none",
-                        bg: "#0E131A",
+                        bg: "#FFFFFF",
                       }}
                     />
                   </InputGroup>
@@ -397,10 +397,10 @@ function SignIn() {
                       pl="40px"
                       pr="44px"
                       borderRadius="12px"
-                      bg="#0E131A"
+                      bg="#FFFFFF"
                       border="2px solid"
-                      borderColor="#29313B"
-                      color="#FFFFFF"
+                      borderColor="#D6E0EF"
+                      color="#0D1B4D"
                       fontSize="14px"
                       fontWeight="500"
                       _placeholder={{ color: "#65707D" }}
@@ -408,7 +408,7 @@ function SignIn() {
                       _focus={{
                         borderColor: "#6C5CE7",
                         boxShadow: "none",
-                        bg: "#0E131A",
+                        bg: "#FFFFFF",
                       }}
                     />
                     <InputRightElement h="48px" w="44px">
@@ -422,7 +422,7 @@ function SignIn() {
                         color="#8B94A1"
                         tabIndex={-1}
                         onClick={() => setShowPassword(!showPassword)}
-                        _hover={{ bg: "transparent", color: "#FFFFFF" }}
+                        _hover={{ bg: "transparent", color: "#0D1B4D" }}
                         _active={{ bg: "transparent" }}
                       />
                     </InputRightElement>
@@ -433,7 +433,7 @@ function SignIn() {
                   type="submit"
                   h="48px"
                   borderRadius="12px"
-                  bg="linear-gradient(90deg, #6C5CE7 0%, #7C6CF2 100%)"
+                  bg="linear-gradient(90deg, #0D1B4D 0%, #E31B23 100%)"
                   color="#FFFFFF"
                   fontSize="14px"
                   fontWeight="600"
@@ -441,11 +441,11 @@ function SignIn() {
                   loadingText="Signing in"
                   boxShadow="0 12px 28px rgba(108, 92, 231, 0.2)"
                   _hover={{
-                    bg: "linear-gradient(90deg, #7464EF 0%, #8878FF 100%)",
-                    boxShadow: "0 16px 34px rgba(108, 92, 231, 0.35)",
+                    bg: "linear-gradient(90deg, #14275F 0%, #F12B32 100%)",
+                    boxShadow: "0 16px 34px rgba(13, 27, 77, 0.28)",
                   }}
                   _active={{
-                    bg: "linear-gradient(90deg, #6251DE 0%, #7E6BEA 100%)",
+                    bg: "linear-gradient(90deg, #091437 0%, #C8141B 100%)",
                   }}
                 >
                   Sign in

@@ -11,7 +11,7 @@ export const useSocket = () => {
   const normalizeSocketUrl = (rawUrl) => {
     const fallback = isLocalhost
       ? 'http://127.0.0.1:5002'
-      : 'https://aggregator-backend-7gmk.onrender.com'
+      : 'https://fastshipindia.onrender.com'
     if (!rawUrl) return fallback
     try {
       const candidate = new URL(rawUrl)

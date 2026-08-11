@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const DEFAULT_API_BASE_URL = "https://aggregator-backend-7gmk.onrender.com/api";
+const DEFAULT_API_BASE_URL = "https://fastshipindia.onrender.com/api";
 const LEGACY_RAILWAY_API_HOST = ["choice", "me-backend-production.up.railway.app"].join("");
 const PLACEHOLDER_API_HOST = "your-backend-url.onrender.com";
 

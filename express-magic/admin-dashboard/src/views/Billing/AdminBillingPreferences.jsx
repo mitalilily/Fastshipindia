@@ -497,7 +497,7 @@ export default function AdminBillingPreferences() {
               <Box>
                 <FormLabel>Issuer Name</FormLabel>
                 <Input
-                  placeholder="Ship Aggregator"
+                  placeholder="FastShip"
                   value={issuerForm.brandName}
                   onChange={(e) => handleIssuerFieldChange('brandName', e.target.value)}
                 />

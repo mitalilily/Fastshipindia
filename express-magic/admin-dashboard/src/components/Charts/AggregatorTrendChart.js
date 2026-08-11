@@ -172,7 +172,7 @@ const AggregatorTrendChart = ({ data = [] }) => {
         <HStack>
           <Icon as={IconWorld} w={5} h={5} color={useColorModeValue('purple.600', 'purple.300')} />
           <Text fontSize="md" color={textColor} fontWeight="600">
-            Orders by Shipping Aggregator
+            Orders by Courier Partner
           </Text>
         </HStack>
         <Text fontSize="xs" color={textColorSecondary} mt={1}>

@@ -1,4 +1,4 @@
-import { ChakraProvider } from "@chakra-ui/react";
+import { ChakraProvider, useColorMode } from "@chakra-ui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import AdminLayout from "layouts/Admin.js";
@@ -6,6 +6,7 @@ import AuthLayout from "layouts/Auth.js";
 import RTLLayout from "layouts/RTL.js";
 import SignIn from "views/Auth/SignIn";
 import { createRoot } from "react-dom/client";
+import { useEffect } from "react";
 import { BrowserRouter, Redirect, Route, Switch } from "react-router-dom";
 import theme from "theme/theme.js";
 import "./index.css";
@@ -21,8 +22,19 @@ const queryClient = new QueryClient({
 
 const root = createRoot(document.getElementById("root"));
 
+function ForceLightMode() {
+  const { colorMode, setColorMode } = useColorMode();
+
+  useEffect(() => {
+    if (colorMode !== "light") setColorMode("light");
+  }, [colorMode, setColorMode]);
+
+  return null;
+}
+
 root.render(
   <ChakraProvider theme={theme} resetCss={false}>
+    <ForceLightMode />
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Switch>

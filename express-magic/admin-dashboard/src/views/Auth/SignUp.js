@@ -91,7 +91,7 @@ function SignUp() {
               </Text>
             </Heading>
             <Text color={textSecondary} fontSize="sm" maxW="360px" lineHeight="1.8">
-              Create a Ship Aggregator workspace for teams that need cleaner shipment
+              Create a FastShip workspace for teams that need cleaner shipment
               control, billing visibility, and faster daily operations.
             </Text>
           </VStack>
@@ -139,7 +139,7 @@ function SignUp() {
                   Create your admin workspace
                 </Heading>
                 <Text mt={2} color={textSecondary} fontSize="sm" lineHeight="1.8">
-                  Use this setup form to onboard your Ship Aggregator operations team.
+                  Use this setup form to onboard your FastShip operations team.
                 </Text>
               </Box>
 
@@ -162,7 +162,7 @@ function SignUp() {
                     Company
                   </FormLabel>
                   <Input
-                    placeholder="Ship Aggregator operations"
+                    placeholder="FastShip operations"
                     h="52px"
                     borderRadius="10px"
                     bg={inputBg}
@@ -217,7 +217,7 @@ function SignUp() {
                 _hover={{ boxShadow: '0 20px 36px rgba(255, 122, 21, 0.28)', transform: 'translateY(-1px)' }}
                 _active={{ transform: 'translateY(0)' }}
               >
-                Start with Ship Aggregator
+                Start with FastShip
               </Button>
 
               <Text color={textSecondary} fontWeight="medium" textAlign="center">

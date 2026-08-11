@@ -1,6 +1,6 @@
 ﻿{
-  "short_name": "Ship Aggregator",
-  "name": "Ship Aggregator",
+  "short_name": "FastShip Admin",
+  "name": "FastShip Admin Panel",
   "icons": [
     {
       "src": "fastship-logo.png",

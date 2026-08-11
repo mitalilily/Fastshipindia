@@ -11,7 +11,6 @@ import {
   MenuItem,
   MenuList,
   Text,
-  useColorMode,
   useColorModeValue,
 } from '@chakra-ui/react'
 import {
@@ -21,9 +20,7 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLogout,
   IconMenu2,
-  IconMoon,
   IconSettings,
-  IconSun,
 } from '@tabler/icons-react'
 import { useSocket } from 'hooks/useSocket'
 import PropTypes from 'prop-types'
@@ -35,7 +32,6 @@ import { useNotificationsStore } from 'store/useNotificationsStore'
 
 export default function AdminNavbar(props) {
   const { onOpen, onToggleSidebar, isSidebarCollapsed = false, sidebarWidth = 300, brandText } = props
-  const { colorMode, toggleColorMode } = useColorMode()
   const history = useHistory()
   const logout = useAuthStore((state) => state.logout)
   const { unreadCount, setNotifications } = useNotificationsStore()
@@ -47,9 +43,6 @@ export default function AdminNavbar(props) {
   const iconColor = useColorModeValue('#64748B', '#8B949E')
   const iconHoverBg = useColorModeValue('#F9FAFB', '#21262D')
   const iconHoverColor = useColorModeValue('#0F172A', '#E6EDF3')
-  const switchBg = useColorModeValue('#F5F3FF', '#1a2234')
-  const switchBorder = useColorModeValue('#E2E8F0', '#30363D')
-  const switchActiveBg = useColorModeValue('#FFFFFF', '#242349')
   const notificationBg = useColorModeValue('#F9FAFB', '#21262D')
   const notificationHoverBg = useColorModeValue('#EDE9FE', '#30363D')
   const avatarBg = useColorModeValue('#EDE9FE', '#6C5CE7')
@@ -58,14 +51,6 @@ export default function AdminNavbar(props) {
   const menuText = useColorModeValue('#0F172A', '#E6EDF3')
   const menuMuted = useColorModeValue('#64748B', '#8B949E')
   const menuHoverBg = useColorModeValue('#F9FAFB', '#21262D')
-
-  const setLightMode = () => {
-    if (colorMode !== 'light') toggleColorMode()
-  }
-
-  const setDarkMode = () => {
-    if (colorMode !== 'dark') toggleColorMode()
-  }
 
   const handleLogout = () => {
     logout()
@@ -128,31 +113,6 @@ export default function AdminNavbar(props) {
       </HStack>
 
       <HStack spacing="10px">
-        <HStack spacing="2px" bg={switchBg} border="1px solid" borderColor={switchBorder} borderRadius="18px" p="3px">
-          <IconButton
-            aria-label="Light mode"
-            icon={<IconSun size={16} />}
-            size="sm"
-            borderRadius="50%"
-            variant="ghost"
-            color="#ff7a1a"
-            bg={colorMode === 'light' ? switchActiveBg : 'transparent'}
-            _hover={{ bg: switchActiveBg }}
-            onClick={setLightMode}
-          />
-          <IconButton
-            aria-label="Dark mode"
-            icon={<IconMoon size={16} />}
-            size="sm"
-            borderRadius="50%"
-            variant="ghost"
-            color="#8d80ff"
-            bg={colorMode === 'dark' ? switchActiveBg : 'transparent'}
-            _hover={{ bg: switchActiveBg }}
-            onClick={setDarkMode}
-          />
-        </HStack>
-
         <Box position="relative">
           <IconButton
             aria-label="Notifications"
