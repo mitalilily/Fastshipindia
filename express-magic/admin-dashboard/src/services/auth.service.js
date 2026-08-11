@@ -1,5 +1,10 @@
 import api from "./axios";
 
+export const warmAdminApi = async () => {
+  const response = await api.get("/health", { timeout: 8000 });
+  return response.data;
+};
+
 export const loginAdmin = async (email, password) => {
   const response = await api.post("/auth/admin/login", { email, password });
   return response.data;

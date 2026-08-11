@@ -1,43 +1,49 @@
+import { spawn } from 'child_process'
 import * as dotenv from 'dotenv'
 import path from 'path'
 import { server } from './app'
 import './crons'
-import { testDatabaseConnection } from './models/client'
 
-// Determine environment
 const env = process.env.NODE_ENV || 'development'
 console.log('node env', env)
 
-// Load correct .env file
 dotenv.config({ path: path.resolve(__dirname, `../.env.${env}`) })
 
-// Use PORT from env or fallback
 const PORT = process.env.PORT || 4000
 
-// Test database connection before starting server
-async function startServer() {
-  console.log('🔍 Testing database connection...')
-  const dbConnected = await testDatabaseConnection()
+const startDatabaseBootstrap = () => {
+  const bootstrapPath = path.join(__dirname, 'scripts', 'bootstrapDatabase.js')
+  const bootstrap = spawn(process.execPath, [bootstrapPath], {
+    env: process.env,
+    stdio: 'inherit',
+  })
 
-  if (!dbConnected) {
-    console.error('❌ Failed to connect to database. Server will not start.')
-    process.exit(1)
-  }
+  bootstrap.on('error', (error) => {
+    console.error('Database bootstrap process failed to start:', error)
+  })
 
-  // Set server timeout to 3.5 minutes (210000ms) to allow for slow external API calls
-  // Default Node.js server timeout is 2 minutes (120000ms)
-  server.timeout = 210000 // 3.5 minutes
+  bootstrap.on('exit', (code) => {
+    if (code === 0) {
+      console.log('Database bootstrap completed')
+    } else {
+      console.warn(`Database bootstrap exited with code ${code}; API remains available`)
+    }
+  })
+}
+
+function startServer() {
+  // Keep support for slower courier API calls without blocking server startup.
+  server.timeout = 210000
 
   server.listen(PORT, () => {
     const url =
       env === 'production'
         ? process.env.API_URL || process.env.API_PUBLIC_URL || 'https://api.fastship.in'
         : `http://localhost:${PORT}`
-    console.log(`🚀 Server running on port ${PORT} in ${env} mode at ${url}`)
+
+    console.log(`Server running on port ${PORT} in ${env} mode at ${url}`)
+    startDatabaseBootstrap()
   })
 }
 
-startServer().catch((err) => {
-  console.error('❌ Failed to start server:', err)
-  process.exit(1)
-})
+startServer()

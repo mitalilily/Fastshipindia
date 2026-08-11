@@ -189,6 +189,9 @@ app.use(
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' })
 })
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' })
+})
 
 // Shopify webhooks require raw body for HMAC verification
 app.post('/api/webhooks/shopify/order-created', express.raw({ type: 'application/json' }), shopifyOrderWebhookController)

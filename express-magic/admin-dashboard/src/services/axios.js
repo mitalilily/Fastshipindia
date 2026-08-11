@@ -30,6 +30,7 @@ const API_BASE_URL = normalizeApiBaseUrl(process.env.REACT_APP_API_BASE_URL);
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: 15000,
 });
 
 let refreshPromise = null;
@@ -65,6 +66,7 @@ const refreshAuthTokens = (refreshToken) => {
           headers: {
             "x-refresh-token": refreshToken,
           },
+          timeout: 15000,
         }
       )
       .then(async ({ data }) => {

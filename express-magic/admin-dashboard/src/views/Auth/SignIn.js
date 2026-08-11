@@ -28,7 +28,7 @@ import { motion } from "framer-motion";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
-import { loginAdmin } from "../../services/auth.service";
+import { loginAdmin, warmAdminApi } from "../../services/auth.service";
 import { useAuthStore } from "../../store/useAuthStore";
 import { brandIdentity } from "../../theme/brand";
 
@@ -82,16 +82,24 @@ function SignIn() {
       history.push("/admin/dashboard");
     } catch (err) {
       const status = err?.response?.status;
+      const isTimeout = err?.code === "ECONNABORTED" || /timeout/i.test(err?.message || "");
+      const isUnavailable = !err?.response;
 
       toast({
         title:
-          status === 401 ? "Invalid email or password" : "Unable to sign in",
+          status === 401
+            ? "Invalid email or password"
+            : isTimeout
+              ? "Server is starting"
+              : "Unable to sign in",
         description:
           status === 401
             ? "Please use a valid admin account."
-            : "Please try again in a moment.",
-        status: "error",
-        duration: 3000,
+            : isTimeout || isUnavailable
+              ? "Please wait a few seconds and try again."
+              : "Please try again in a moment.",
+        status: isTimeout ? "info" : "error",
+        duration: 4500,
         isClosable: true,
       });
     } finally {
@@ -100,6 +108,8 @@ function SignIn() {
   };
 
   useEffect(() => {
+    warmAdminApi().catch(() => undefined);
+
     const accessToken = localStorage.getItem("accessToken");
     const refreshToken = localStorage.getItem("refreshToken");
 
