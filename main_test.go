@@ -41,11 +41,25 @@ func TestFrontendServer(t *testing.T) {
 			bodyIncludes: []string{"<svg"},
 		},
 		{
-			name:         "services page",
+			name:         "tracking page",
 			method:       http.MethodGet,
-			target:       "/services",
+			target:       "/tracking",
 			status:       http.StatusOK,
-			bodyIncludes: []string{"Shipray Logistics"},
+			bodyIncludes: []string{"Fastship India"},
+		},
+		{
+			name:         "rate calculator page",
+			method:       http.MethodGet,
+			target:       "/rate-calculator",
+			status:       http.StatusOK,
+			bodyIncludes: []string{"Fastship India"},
+		},
+		{
+			name:         "weight calculator page",
+			method:       http.MethodGet,
+			target:       "/weight-calculator",
+			status:       http.StatusOK,
+			bodyIncludes: []string{"Fastship India"},
 		},
 		{
 			name:   "runtime config",

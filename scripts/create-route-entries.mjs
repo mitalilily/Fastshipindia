@@ -9,6 +9,8 @@ const routes = [
   'rate-calculator',
   'tracking',
   'blogs',
+  'about',
+  'contact',
   'integrations',
   'integrations/sales-channels',
   'integrations/courier-partners',

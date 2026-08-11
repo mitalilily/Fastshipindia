@@ -57,6 +57,7 @@ function Logo({ light = false }) {
 
 function Header() {
   const [open, setOpen] = useState(false)
+  const { pathname } = useLocation()
   const loginHref = resolveLoginHref(
     import.meta.env.VITE_AUTH_APP_URL ||
     import.meta.env.VITE_PLATFORM_LOGIN_URL ||
@@ -66,8 +67,8 @@ function Header() {
     <div className="nav-shell">
       <Link to="/" className="brand" onClick={() => setOpen(false)}><Logo /></Link>
       <nav className={`main-nav ${open ? 'is-open' : ''}`}>
-        {navItems.map(([label, to]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}>{label}</NavLink>)}
-        <NavLink className="nav-track" to="/tracking" onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</NavLink>
+        {navItems.map(([label, href]) => <a key={href} href={href} className={pathname === href ? 'active' : undefined} aria-current={pathname === href ? 'page' : undefined} onClick={() => setOpen(false)}>{label}</a>)}
+        <a className={`nav-track${pathname === '/tracking' ? ' active' : ''}`} href="/tracking" aria-current={pathname === '/tracking' ? 'page' : undefined} onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</a>
         <a className="nav-login-mobile" href={loginHref} onClick={() => setOpen(false)}>Log in</a>
       </nav>
       <div className="nav-actions"><a className="text-link login-link" href={loginHref}>Log in</a><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>
