@@ -1,4 +1,5 @@
 import { pool } from '../client'
+import { getAllUsersWithRoleUser } from './userService'
 
 const COMBINED_ORDERS_CTE = `
 with combined_orders as (
@@ -118,6 +119,7 @@ export const getAdminDashboardStats = async (filters: AdminDashboardFilters = {}
     originResult,
     destinationResult,
     alertResult,
+    registeredUsersResult,
   ] = await Promise.all([
     pool.query(`
       ${COMBINED_ORDERS_CTE}
@@ -252,6 +254,12 @@ export const getAdminDashboardStats = async (filters: AdminDashboardFilters = {}
           where status = 'pending'
         ) as cod_remittance_due
     `),
+    getAllUsersWithRoleUser({
+      page: 1,
+      perPage: 1,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    }),
   ])
 
   const summary = summaryResult.rows[0] || {}
@@ -318,7 +326,7 @@ export const getAdminDashboardStats = async (filters: AdminDashboardFilters = {}
         rtoRate: nonCancelledOrders > 0 ? Math.round((rtoOrders / nonCancelledOrders) * 100) : 0,
         avgDeliveryTime: toNumber(summary.avg_delivery_time),
         totalOrders,
-        activeSellers: toNumber(alerts.active_sellers),
+        activeSellers: toNumber(registeredUsersResult.totalCount),
         deliveredOrders,
         pendingOrders: toNumber(summary.pending_orders),
         inTransitOrders: toNumber(summary.in_transit_orders),
