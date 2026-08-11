@@ -788,7 +788,7 @@ export async function getAllUsersWithRoleUser({
       or(
         ilike(sql`coalesce(${users.email}, '')`, pattern),
         ilike(sql`coalesce(${users.phone}, '')`, pattern),
-        ilike(sql`coalesce(${users.id}, '')`, pattern),
+        ilike(sql`coalesce(${users.id}::text, '')`, pattern),
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'brandName', '')`, pattern), // Brand name
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'contactPerson', '')`, pattern),
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'contactEmail', '')`, pattern),
