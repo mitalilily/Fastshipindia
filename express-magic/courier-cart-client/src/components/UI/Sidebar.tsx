@@ -488,14 +488,14 @@ export default function Sidebar({
               ? temporary
                 ? 'clamp(138px, 18vh, 156px)'
                 : 'clamp(124px, 17vh, 144px)'
-              : 52,
+              : 56,
             height: isSidebarExpanded
               ? temporary
                 ? 'clamp(46px, 6.2vh, 52px)'
                 : 'clamp(42px, 5.8vh, 48px)'
-              : 18,
+              : 32,
             aspectRatio: 'auto',
-            backgroundSize: 'cover',
+            backgroundSize: isSidebarExpanded ? 'cover' : '68px 68px',
             backgroundPosition: 'center',
             flexShrink: 0,
           }}
