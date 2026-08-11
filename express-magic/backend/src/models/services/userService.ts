@@ -745,6 +745,8 @@ export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) 
       monthlyOrderCount,
       profileCompletion,
       businessType,
+      onboardingStep,
+      onboardingComplete,
       ...userInsertData
     } = data as any
 
