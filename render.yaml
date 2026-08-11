@@ -1,3 +1,8 @@
+databases:
+  - name: fastship-postgres
+    databaseName: fastship
+    user: fastship
+
 services:
   - type: web
     runtime: static
@@ -93,16 +98,16 @@ services:
       - key: AUTO_MIGRATE_ON_START
         value: "true"
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: fastship-postgres
+          property: connectionString
       - key: ACCESS_TOKEN_SECRET
-        sync: false
+        generateValue: true
       - key: REFRESH_TOKEN_SECRET
-        sync: false
+        generateValue: true
       - key: COURIER_SECRET_KEY
-        sync: false
+        generateValue: true
       - key: ADMIN_SEED_EMAIL
         value: admin@fastship.in
-      - key: ADMIN_SEED_PASSWORD
-        sync: false
       - key: ADMIN_FORCE_PASSWORD_RESET
         value: "false"

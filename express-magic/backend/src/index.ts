@@ -2,7 +2,6 @@ import { spawn } from 'child_process'
 import * as dotenv from 'dotenv'
 import path from 'path'
 import { server } from './app'
-import './crons'
 
 const env = process.env.NODE_ENV || 'development'
 console.log('node env', env)
@@ -31,6 +30,18 @@ const startDatabaseBootstrap = () => {
   })
 }
 
+const startBackgroundJobs = () => {
+  setTimeout(() => {
+    import('./crons')
+      .then(() => {
+        console.log('Background jobs scheduled')
+      })
+      .catch((error) => {
+        console.error('Background jobs failed to initialize:', error)
+      })
+  }, Number(process.env.BACKGROUND_JOBS_START_DELAY_MS || 5000))
+}
+
 function startServer() {
   // Keep support for slower courier API calls without blocking server startup.
   server.timeout = 210000
@@ -43,6 +54,7 @@ function startServer() {
 
     console.log(`Server running on port ${PORT} in ${env} mode at ${url}`)
     startDatabaseBootstrap()
+    startBackgroundJobs()
   })
 }
 
