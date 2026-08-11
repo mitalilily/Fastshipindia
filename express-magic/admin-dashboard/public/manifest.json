@@ -3,9 +3,9 @@
   "name": "Ship Aggregator",
   "icons": [
     {
-      "src": "favicon.jpg",
-      "sizes": "640x640",
-      "type": "image/jpeg"
+      "src": "fastship-logo.png",
+      "sizes": "1536x1024",
+      "type": "image/png"
     }
   ],
   "start_url": "./index.html",

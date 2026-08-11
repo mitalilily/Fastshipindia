@@ -270,14 +270,14 @@ const SidebarContent = ({
           as="img"
           src={brandIdentity.logoPath}
           alt={brandIdentity.name}
-          w="42px"
-          h="42px"
-          borderRadius="50%"
-          objectFit="cover"
+          w="112px"
+          h="52px"
+          objectFit="contain"
+          flexShrink="0"
         />
         <Text
           color={logoColor}
-          fontSize="22px"
+          fontSize="18px"
           fontWeight="800"
           letterSpacing="0"
         >

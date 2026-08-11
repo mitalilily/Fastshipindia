@@ -23,7 +23,7 @@ export const brandIdentity = {
   supportEmail: 'cs@shipaggregator.com',
   supportPhone: '+91 94038 91046',
   supportAddress: 'G-10, Bajrang Complex, Telipara, Bilaspur, Chhattisgarh',
-  logoPath: '/favicon.jpg',
+  logoPath: '/fastship-logo.png',
 }
 
 export const brandFonts = {
