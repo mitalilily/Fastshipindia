@@ -23,8 +23,8 @@ import {
 import { IconSearch } from "@tabler/icons-react";
 
 export const adminUi = {
-  pageTop: { base: "120px", md: "75px" },
-  cardRadius: "20px",
+  pageTop: { base: "96px", md: "64px" },
+  cardRadius: "16px",
   purple: "#6C5CE7",
   text: "#0F172A",
   muted: "#607397",
@@ -34,7 +34,7 @@ export const adminUi = {
 
 export function AdminStack({ children, ...props }) {
   return (
-    <Stack spacing="20px" pt={adminUi.pageTop} {...props}>
+    <Stack spacing="16px" pt={adminUi.pageTop} {...props}>
       {children}
     </Stack>
   );
@@ -62,31 +62,31 @@ export function PageIntro({
   subtitle,
   right,
   py = "22px",
-  px = "26px",
+  px = "22px",
 }) {
   const titleColor = useColorModeValue(adminUi.text, "#E6EDF3");
   const mutedColor = useColorModeValue(adminUi.muted, "#8B949E");
   return (
     <AdminCard px={px} py={py}>
       <Flex justify="space-between" align="center" gap={4} wrap="wrap">
-        <HStack spacing="16px" minW={0}>
+        <HStack spacing="13px" minW={0}>
           {icon ? (
             <Flex
               align="center"
               justify="center"
-              w="46px"
-              h="46px"
+              w="40px"
+              h="40px"
               borderRadius="14px"
               bg="#F0EDFF"
               color={adminUi.purple}
               flexShrink={0}
             >
-              <Icon as={icon} boxSize="23px" strokeWidth={1.8} />
+              <Icon as={icon} boxSize="20px" strokeWidth={1.8} />
             </Flex>
           ) : null}
           <Box minW={0}>
             <Text
-              fontSize="22px"
+              fontSize="19px"
               fontWeight="800"
               color={titleColor}
               lineHeight="1.2"
@@ -95,7 +95,7 @@ export function PageIntro({
               {title}
             </Text>
             {subtitle ? (
-              <Text fontSize="15px" color={mutedColor} mt="3px" noOfLines={2}>
+              <Text fontSize="13px" color={mutedColor} mt="3px" noOfLines={2}>
                 {subtitle}
               </Text>
             ) : null}
@@ -123,11 +123,11 @@ export function SearchInput({
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         placeholder={placeholder}
-        h="40px"
+        h="36px"
         bg="#FFFFFF"
         borderColor="#D6DEE9"
         color={adminUi.text}
-        fontSize="16px"
+        fontSize="14px"
         fontWeight="500"
         _placeholder={{ color: "#A7B0BE" }}
       />
@@ -146,11 +146,11 @@ export function AdminSelect({
     <Select
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
-      h="40px"
+      h="36px"
       maxW={maxW}
       bg="#FFFFFF"
       borderColor="#D6DEE9"
-      fontSize="16px"
+      fontSize="14px"
       fontWeight="500"
       {...props}
     >
@@ -161,7 +161,7 @@ export function AdminSelect({
 
 export function ToolbarCard({ children, ...props }) {
   return (
-    <AdminCard px="26px" py="16px" {...props}>
+    <AdminCard px="22px" py="13px" {...props}>
       {children}
     </AdminCard>
   );
@@ -173,10 +173,10 @@ export function Metric({ icon, value, label, color = adminUi.purple }) {
       {icon ? (
         <Icon as={icon} boxSize="18px" color={color} strokeWidth={1.8} />
       ) : null}
-      <Text fontSize="18px" fontWeight="800" color={adminUi.text}>
+      <Text fontSize="15px" fontWeight="800" color={adminUi.text}>
         {value}
       </Text>
-      <Text fontSize="15px" color={adminUi.muted}>
+      <Text fontSize="13px" color={adminUi.muted}>
         {label}
       </Text>
     </HStack>
@@ -204,12 +204,12 @@ export function DataTable({
                   key={column.key}
                   bg={adminUi.headerBg}
                   color="#93A0BA"
-                  fontSize="14px"
+                  fontSize="12px"
                   fontWeight="800"
                   letterSpacing="0"
                   textTransform="uppercase"
-                  py="17px"
-                  px="21px"
+                  py="13px"
+                  px="17px"
                   borderColor={adminUi.border}
                   textAlign={column.align || "left"}
                   w={column.w}
@@ -221,12 +221,12 @@ export function DataTable({
                 <Th
                   bg={adminUi.headerBg}
                   color="#93A0BA"
-                  fontSize="14px"
+                  fontSize="12px"
                   fontWeight="800"
                   letterSpacing="0"
                   textTransform="uppercase"
-                  py="17px"
-                  px="21px"
+                  py="13px"
+                  px="17px"
                   borderColor={adminUi.border}
                   textAlign="right"
                 >
@@ -252,11 +252,11 @@ export function DataTable({
                   {columns.map((column) => (
                     <Td
                       key={column.key}
-                      py="18px"
-                      px="21px"
+                      py="14px"
+                      px="17px"
                       borderColor={adminUi.border}
                       color={adminUi.text}
-                      fontSize="17px"
+                      fontSize="14px"
                       textAlign={column.align || "left"}
                     >
                       {column.render
@@ -266,8 +266,8 @@ export function DataTable({
                   ))}
                   {actions ? (
                     <Td
-                      py="18px"
-                      px="21px"
+                      py="14px"
+                      px="17px"
                       borderColor={adminUi.border}
                       textAlign="right"
                     >
@@ -283,7 +283,7 @@ export function DataTable({
                   py="64px"
                   textAlign="center"
                 >
-                  <Text color={adminUi.muted} fontSize="16px">
+                  <Text color={adminUi.muted} fontSize="14px">
                     {emptyText}
                   </Text>
                 </Td>
@@ -297,8 +297,8 @@ export function DataTable({
           justify="flex-end"
           align="center"
           gap={3}
-          px="21px"
-          py="13px"
+          px="17px"
+          py="11px"
           borderTop="1px solid"
           borderColor={adminUi.border}
         >
@@ -317,7 +317,7 @@ export function SoftBadge({ children, colorScheme = "purple", ...props }) {
       px="10px"
       py="4px"
       textTransform="none"
-      fontSize="14px"
+      fontSize="12px"
       fontWeight="600"
       {...props}
     >

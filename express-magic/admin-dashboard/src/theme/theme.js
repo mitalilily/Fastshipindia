@@ -18,7 +18,7 @@ const fieldBase = {
   borderColor: "#E2E8F0",
   bg: "#FFFFFF",
   fontWeight: "500",
-  fontSize: "16px",
+  fontSize: "14px",
   _placeholder: {
     color: "gray.500",
   },
@@ -169,11 +169,11 @@ const componentOverrides = {
                 textTransform: "uppercase",
                 letterSpacing: "0",
                 fontWeight: "800",
-                fontSize: "14px",
+                fontSize: "12px",
                 color: "#93A0BA",
                 borderColor: "#E2E8F0",
                 bg: "#F4F1FF",
-                py: "17px",
+                py: "13px",
                 _dark: {
                   color: "#8B949E",
                   borderColor: "#30363D",
@@ -187,9 +187,9 @@ const componentOverrides = {
               td: {
                 bg: "#FFFFFF",
                 borderColor: "#E2E8F0",
-                fontSize: "17px",
+                fontSize: "14px",
                 color: "#0F172A",
-                py: "18px",
+                py: "14px",
                 _dark: {
                   bg: "#161B22",
                   borderColor: "#30363D",

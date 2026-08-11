@@ -266,7 +266,7 @@ function RequiredBadge() {
     <HStack
       spacing="4px"
       color={adminUi.muted}
-      fontSize="13px"
+      fontSize="12px"
       fontWeight="600"
     >
       <Icon as={IconLock} boxSize="14px" strokeWidth={1.8} />
@@ -278,19 +278,19 @@ function RequiredBadge() {
 function ChannelControl({ icon, label }) {
   return (
     <Flex
-      h="46px"
-      px="16px"
+      h="40px"
+      px="13px"
       align="center"
       justify="space-between"
       border="1px solid"
       borderColor={adminUi.border}
-      borderRadius="13px"
+      borderRadius="11px"
       bg="#FAFBFF"
-      minW={{ base: "100%", md: "328px" }}
+      minW={{ base: "100%", md: "292px" }}
     >
       <HStack spacing="10px">
-        <Icon as={icon} boxSize="20px" color="#607397" strokeWidth={1.8} />
-        <Text fontSize="16px" fontWeight="700" color={adminUi.text}>
+        <Icon as={icon} boxSize="17px" color="#607397" strokeWidth={1.8} />
+        <Text fontSize="14px" fontWeight="700" color={adminUi.text}>
           {label}
         </Text>
       </HStack>
@@ -306,17 +306,17 @@ function SettingRow({ row, isLast }) {
     <Flex
       align="center"
       justify="space-between"
-      gap="24px"
-      px="26px"
-      py="19px"
+      gap="18px"
+      px="22px"
+      py="15px"
       borderTop="1px solid"
       borderColor={adminUi.border}
-      minH="87px"
+      minH="72px"
     >
       <Box minW={0}>
-        <HStack spacing="12px" align="center" wrap="wrap">
+        <HStack spacing="9px" align="center" wrap="wrap">
           <Text
-            fontSize="20px"
+            fontSize="16px"
             fontWeight="700"
             color={adminUi.text}
             lineHeight="1.2"
@@ -325,7 +325,7 @@ function SettingRow({ row, isLast }) {
           </Text>
           {required ? <RequiredBadge /> : null}
         </HStack>
-        <Text fontSize="16px" color={adminUi.muted} mt="5px">
+        <Text fontSize="13px" color={adminUi.muted} mt="4px">
           {subtitle}
         </Text>
       </Box>
@@ -366,8 +366,8 @@ function SettingRow({ row, isLast }) {
 function SettingsGroup({ title, rows }) {
   return (
     <AdminCard overflow="hidden">
-      <Box px="26px" py="18px">
-        <Text fontSize="20px" fontWeight="800" color={adminUi.text}>
+      <Box px="22px" py="14px">
+        <Text fontSize="16px" fontWeight="800" color={adminUi.text}>
           {title}
         </Text>
       </Box>
@@ -384,32 +384,32 @@ function SettingsGroup({ title, rows }) {
 
 function NotificationSettingsPage() {
   return (
-    <AdminStack maxW="1060px" mx="auto" spacing="30px">
+    <AdminStack maxW="1060px" mx="auto" spacing="22px">
       <Box>
         <HStack spacing="12px" align="center">
           <Icon
             as={IconSettings}
-            boxSize="25px"
+            boxSize="21px"
             color={adminUi.purple}
             strokeWidth={1.9}
           />
-          <Text fontSize="28px" fontWeight="800" color={adminUi.text}>
+          <Text fontSize="23px" fontWeight="800" color={adminUi.text}>
             Notification settings
           </Text>
         </HStack>
-        <Text fontSize="16px" color={adminUi.muted} mt="4px">
+        <Text fontSize="14px" color={adminUi.muted} mt="4px">
           Control how you receive alerts for admin events.
         </Text>
       </Box>
 
-      <AdminCard p="26px">
-        <Text fontSize="20px" fontWeight="800" color={adminUi.text}>
+      <AdminCard p="22px">
+        <Text fontSize="16px" fontWeight="800" color={adminUi.text}>
           Mute channels
         </Text>
-        <Text fontSize="16px" color={adminUi.muted} mt="16px">
+        <Text fontSize="13px" color={adminUi.muted} mt="12px">
           Muting a channel stops all non-essential notifications on it.
         </Text>
-        <Flex gap="14px" mt="20px" wrap="wrap">
+        <Flex gap="12px" mt="16px" wrap="wrap">
           <ChannelControl icon={IconMail} label="Email" />
           <ChannelControl icon={IconBell} label="In-app" />
         </Flex>
@@ -480,18 +480,18 @@ function NotificationsListPage() {
   };
 
   return (
-    <AdminStack maxW="1060px" mx="auto" spacing="26px">
+    <AdminStack maxW="1060px" mx="auto" spacing="18px">
       <Flex justify="space-between" align="center" gap={4} wrap="wrap">
         <Box>
           <Text
-            fontSize="32px"
+            fontSize="25px"
             fontWeight="800"
             color={adminUi.text}
             lineHeight="1.1"
           >
             Notifications
           </Text>
-          <Text fontSize="16px" color={adminUi.muted} mt="7px">
+          <Text fontSize="13px" color={adminUi.muted} mt="5px">
             {unreadCount || 2} unread
           </Text>
         </Box>
@@ -499,7 +499,8 @@ function NotificationsListPage() {
           <Button
             leftIcon={<IconCheck size={18} />}
             variant="outline"
-            h="38px"
+            h="34px"
+            fontSize="13px"
             borderColor={adminUi.border}
             borderRadius="12px"
             bg="#FFFFFF"
@@ -511,7 +512,8 @@ function NotificationsListPage() {
           <Button
             leftIcon={<IconTool size={18} />}
             variant="outline"
-            h="38px"
+            h="34px"
+            fontSize="13px"
             borderColor={adminUi.border}
             borderRadius="12px"
             bg="#FFFFFF"
@@ -534,27 +536,27 @@ function NotificationsListPage() {
               return (
                 <Flex
                   key={notification.id}
-                  minH="91px"
-                  px="26px"
-                  py="20px"
+                  minH="74px"
+                  px="22px"
+                  py="15px"
                   borderTop={notification === rows[0] ? "0" : "1px solid"}
                   borderColor={adminUi.border}
                   align="flex-start"
-                  gap="16px"
+                  gap="13px"
                   cursor={isUnread ? "pointer" : "default"}
                   onClick={() =>
                     handleRead(notification.id, notification.isRead)
                   }
                 >
                   <Box
-                    w="10px"
-                    h="10px"
+                    w="8px"
+                    h="8px"
                     borderRadius="full"
                     bg={isUnread ? "#FF7417" : "transparent"}
-                    mt="14px"
+                    mt="12px"
                   />
                   <Box flex="1" minW={0}>
-                    <HStack spacing="10px" align="center">
+                    <HStack spacing="9px" align="center">
                       <SoftBadge
                         colorScheme="green"
                         bg="#DDFBEC"
@@ -565,7 +567,7 @@ function NotificationsListPage() {
                           "ACCOUNT"}
                       </SoftBadge>
                       <Text
-                        fontSize="18px"
+                        fontSize="15px"
                         fontWeight="800"
                         color={adminUi.text}
                       >
@@ -573,15 +575,15 @@ function NotificationsListPage() {
                       </Text>
                     </HStack>
                     <Text
-                      fontSize="16px"
+                      fontSize="13px"
                       color={adminUi.muted}
-                      mt="7px"
+                      mt="5px"
                       noOfLines={1}
                     >
                       {notification.message}
                     </Text>
                   </Box>
-                  <Text fontSize="15px" color={adminUi.muted} flexShrink={0}>
+                  <Text fontSize="13px" color={adminUi.muted} flexShrink={0}>
                     {notification.time ||
                       (notification.createdAt
                         ? new Date(notification.createdAt).toLocaleString()

@@ -13,13 +13,14 @@ export const globalStyles = {
         color: mode("#0F172A", "#E6EDF3")(props),
         colorScheme: props.colorMode,
         fontFamily: brandFonts.body,
-        fontSize: "16px",
+        fontSize: "14px",
         backgroundImage: "none",
         backgroundAttachment: "fixed",
       },
       html: {
         fontFamily: brandFonts.body,
         bg: mode("#FAFBFE", "#0D1117")(props),
+        fontSize: "93.75%",
       },
       "#root": {
         minHeight: "100vh",
@@ -30,7 +31,7 @@ export const globalStyles = {
       },
       ".chakra-button": {
         borderRadius: "8px !important",
-        minHeight: "40px",
+        minHeight: "36px",
         alignItems: "center",
         justifyContent: "center",
       },
