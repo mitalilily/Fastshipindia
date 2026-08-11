@@ -60,6 +60,7 @@
 	"scripts": {
 		"start": "react-scripts start",
 		"build": "cross-env CI=false cross-env DISABLE_ESLINT_PLUGIN=true cross-env GENERATE_SOURCEMAP=false cross-env PUBLIC_URL=/ react-scripts build",
+		"postbuild": "node scripts/create-route-entries.mjs",
 		"build:netlify": "cross-env CI=false cross-env DISABLE_ESLINT_PLUGIN=true cross-env GENERATE_SOURCEMAP=false cross-env PUBLIC_URL=/ react-scripts build",
 		"test": "react-scripts test --env=jsdom",
 		"eject": "react-scripts eject",
