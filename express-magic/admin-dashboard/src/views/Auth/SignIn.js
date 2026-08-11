@@ -28,7 +28,7 @@ import { motion } from "framer-motion";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
-import { loginAdmin, warmAdminApi } from "../../services/auth.service";
+import { loginAdmin, waitForAdminApi } from "../../services/auth.service";
 import { useAuthStore } from "../../store/useAuthStore";
 import { brandIdentity } from "../../theme/brand";
 
@@ -46,6 +46,7 @@ function SignIn() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Signing in");
   const toast = useToast();
   const history = useHistory();
   const login = useAuthStore((state) => state.login);
@@ -65,8 +66,12 @@ function SignIn() {
     }
 
     setLoading(true);
+    setLoadingText("Waking server");
 
     try {
+      await waitForAdminApi();
+      setLoadingText("Signing in");
+
       const data = await loginAdmin(email, password);
 
       const adminUser = data?.user || data?.admin || null;
@@ -90,13 +95,13 @@ function SignIn() {
           status === 401
             ? "Invalid email or password"
             : isTimeout
-              ? "Server is starting"
+              ? "Server is still waking"
               : "Unable to sign in",
         description:
           status === 401
             ? "Please use a valid admin account."
             : isTimeout || isUnavailable
-              ? "Please wait a few seconds and try again."
+              ? "Backend did not respond yet. Please retry once after this deploy finishes."
               : "Please try again in a moment.",
         status: isTimeout ? "info" : "error",
         duration: 4500,
@@ -108,7 +113,7 @@ function SignIn() {
   };
 
   useEffect(() => {
-    warmAdminApi().catch(() => undefined);
+    waitForAdminApi({ maxWaitMs: 60000 }).catch(() => undefined);
 
     const accessToken = localStorage.getItem("accessToken");
     const refreshToken = localStorage.getItem("refreshToken");
@@ -448,7 +453,7 @@ function SignIn() {
                   fontSize="14px"
                   fontWeight="600"
                   isLoading={loading}
-                  loadingText="Signing in"
+                  loadingText={loadingText}
                   boxShadow="0 12px 28px rgba(108, 92, 231, 0.2)"
                   _hover={{
                     bg: "linear-gradient(90deg, #14275F 0%, #F12B32 100%)",
