@@ -10,10 +10,10 @@ export const useDashboardStats = (filters = {}) => {
     queryFn: () => getAdminDashboardStats(filters),
     initialData: () => getCachedAdminDashboardStats(filters),
     placeholderData: (previousData) => previousData,
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchInterval: 2 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30 * 1000,
     retry: 1,
   })
 }

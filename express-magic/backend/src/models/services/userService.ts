@@ -770,7 +770,8 @@ export async function getAllUsersWithRoleUser({
   kycStatus,
 }: GetUsersParams) {
   const offset = (page - 1) * perPage
-  const filters: any[] = [eq(users.role, 'customer')]
+  const customerRoleExpr = sql`lower(coalesce(nullif(btrim(${users.role}), ''), 'customer'))`
+  const filters: any[] = [sql`${customerRoleExpr} = 'customer'`]
   const normalizedOnboardingComplete = normalizeOptionalBoolean(onboardingComplete)
   const normalizedApproved = normalizeOptionalBoolean(approved)
   const kycStatusExpr = sql<string>`coalesce(${schema.kyc.status}::text, ${schema.userProfiles.domesticKyc} ->> 'status', 'pending')`
@@ -785,10 +786,15 @@ export async function getAllUsersWithRoleUser({
     const pattern = `%${search.trim()}%`
     filters.push(
       or(
+        ilike(sql`coalesce(${users.email}, '')`, pattern),
+        ilike(sql`coalesce(${users.phone}, '')`, pattern),
+        ilike(sql`coalesce(${users.id}, '')`, pattern),
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'brandName', '')`, pattern), // Brand name
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'contactPerson', '')`, pattern),
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'contactEmail', '')`, pattern),
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'contactNumber', '')`, pattern),
+        ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'companyEmail', '')`, pattern),
+        ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'companyContactNumber', '')`, pattern),
         ilike(sql`coalesce(${schema.userProfiles.companyInfo} ->> 'businessName', '')`, pattern),
       ),
     )
@@ -831,8 +837,8 @@ export async function getAllUsersWithRoleUser({
     createdAt: users.createdAt,
     email: users.email,
     role: users.role,
-    companyName: sql`coalesce(${schema.userProfiles.companyInfo} ->> 'businessName', ${schema.userProfiles.companyInfo} ->> 'brandName', '')`,
-    contactPerson: sql`${schema.userProfiles.companyInfo} ->> 'contactPerson'`,
+    companyName: sql`coalesce(nullif(${schema.userProfiles.companyInfo} ->> 'businessName', ''), nullif(${schema.userProfiles.companyInfo} ->> 'brandName', ''), ${users.email}, '')`,
+    contactPerson: sql`coalesce(nullif(${schema.userProfiles.companyInfo} ->> 'contactPerson', ''), ${users.email}, ${users.phone}, '')`,
   }
   const sortColumn = sortColumns[sortBy] ?? users.createdAt
 
@@ -841,15 +847,16 @@ export async function getAllUsersWithRoleUser({
     .select({
       id: users.id,
       email: users.email,
+      phone: users.phone,
       role: users.role,
       createdAt: users.createdAt,
-      companyName: sql<string>`coalesce(${schema.userProfiles.companyInfo} ->> 'businessName', ${schema.userProfiles.companyInfo} ->> 'brandName', '')`,
+      companyName: sql<string>`coalesce(nullif(${schema.userProfiles.companyInfo} ->> 'businessName', ''), nullif(${schema.userProfiles.companyInfo} ->> 'brandName', ''), ${users.email}, '')`,
       businessType: schema.userProfiles.businessType,
-      approved: schema.userProfiles.approved,
-      onboardingComplete: schema.userProfiles.onboardingComplete,
-      onboardingStep: schema.userProfiles.onboardingStep,
-      contactPerson: sql<string>`${schema.userProfiles.companyInfo} ->> 'contactPerson'`,
-      contactNumber: sql<string>`${schema.userProfiles.companyInfo} ->> 'contactNumber'`,
+      approved: sql<boolean>`coalesce(${schema.userProfiles.approved}, false)`,
+      onboardingComplete: sql<boolean>`coalesce(${schema.userProfiles.onboardingComplete}, false)`,
+      onboardingStep: sql<number>`coalesce(${schema.userProfiles.onboardingStep}, 0)`,
+      contactPerson: sql<string>`coalesce(nullif(${schema.userProfiles.companyInfo} ->> 'contactPerson', ''), ${users.email}, ${users.phone}, '')`,
+      contactNumber: sql<string>`coalesce(nullif(${schema.userProfiles.companyInfo} ->> 'contactNumber', ''), nullif(${schema.userProfiles.companyInfo} ->> 'companyContactNumber', ''), ${users.phone}, '')`,
       profilePicture: sql<string>`${schema.userProfiles.companyInfo} ->> 'profilePicture'`,
       domesticKyc: schema.userProfiles.domesticKyc,
       kycStatus: kycStatusExpr,
@@ -879,7 +886,7 @@ export async function getAllUsersWithRoleUser({
 
   // Count total
   const totalCountResult = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<number>`count(distinct ${users.id})` })
     .from(users)
     .leftJoin(schema.userProfiles, eq(schema.userProfiles.userId, users.id))
     .leftJoin(schema.kyc, eq(schema.kyc.userId, users.id))

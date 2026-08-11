@@ -224,7 +224,7 @@ export const getAdminDashboardStats = async (filters: AdminDashboardFilters = {}
         (
           select count(*)::int
           from users
-          where lower(coalesce(role, 'customer')) = 'customer'
+          where lower(coalesce(nullif(btrim(role), ''), 'customer')) = 'customer'
         ) as active_sellers,
         (
           select count(*)::int
@@ -238,7 +238,7 @@ export const getAdminDashboardStats = async (filters: AdminDashboardFilters = {}
           from users
           left join user_profiles on user_profiles."userId" = users.id
           left join kyc on kyc."userId" = users.id
-          where lower(coalesce(users.role, 'customer')) = 'customer'
+          where lower(coalesce(nullif(btrim(users.role), ''), 'customer')) = 'customer'
             and coalesce(kyc.status::text, user_profiles."domesticKyc" ->> 'status', 'pending') = 'verification_in_progress'
         ) as pending_kyc,
         (

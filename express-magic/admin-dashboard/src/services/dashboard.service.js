@@ -10,7 +10,7 @@ export const getCachedAdminDashboardStats = (filters = {}) => {
     const raw = sessionStorage.getItem(cacheKey(filters))
     if (!raw) return undefined
     const cached = JSON.parse(raw)
-    if (!cached?.data || Date.now() - cached.savedAt > 10 * 60 * 1000) {
+    if (!cached?.data || Date.now() - cached.savedAt > 30 * 1000) {
       sessionStorage.removeItem(cacheKey(filters))
       return undefined
     }

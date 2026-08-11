@@ -847,7 +847,7 @@ export default function Dashboard() {
                 color={ui.primary}
               />
               <MetricCard
-                label="Active Sellers"
+                label="Registered Users"
                 value={activeSellers.toLocaleString()}
                 icon={IconUsers}
                 color={ui.blue}
