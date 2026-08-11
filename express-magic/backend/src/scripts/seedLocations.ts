@@ -2,13 +2,14 @@
 import fs from 'fs'
 import path from 'path'
 import XLSX from 'xlsx'
+import { inArray } from 'drizzle-orm'
 import { db } from '../models/client'
 import { locations } from '../schema/schema'
 
 const DATA_DIR = path.resolve('src/scripts/data')
 const CHUNK_SIZE = 10
+const DEFAULT_FILE = 'locations.xlsx'
 
-// ---------- Types ----------
 type Row = {
   pincode: string
   city: string
@@ -17,7 +18,6 @@ type Row = {
   tags: string[]
 }
 
-// ---------- Helpers ----------
 function normalize(x: any): string {
   return (x ?? '').toString().trim()
 }
@@ -54,16 +54,30 @@ function mapRow(raw: Record<string, any>): Row | null {
   return { pincode, city, state, country: 'India', tags }
 }
 
-// ---------- Insert helper ----------
 async function insertBatch(rows: Row[]) {
   if (!rows.length) return
 
-  const values = rows.map((r) => ({
+  const pincodes = Array.from(new Set(rows.map((row) => row.pincode)))
+  const existingRows = await db
+    .select({ pincode: locations.pincode })
+    .from(locations)
+    .where(inArray(locations.pincode, pincodes))
+  const existingPincodes = new Set(existingRows.map((row) => row.pincode))
+  const newRows = rows.filter((row) => !existingPincodes.has(row.pincode))
+
+  if (!newRows.length) {
+    console.log(
+      `skipping batch: ${rows[0].pincode}-${rows[rows.length - 1].pincode} already exists`,
+    )
+    return
+  }
+
+  const values = newRows.map((r) => ({
     pincode: r.pincode,
     city: r.city,
     state: r.state,
     country: r.country,
-    tags: Array.isArray(r.tags) ? r.tags : [], // force array
+    tags: Array.isArray(r.tags) ? r.tags : [],
     created_at: new Date(),
   }))
 
@@ -72,18 +86,16 @@ async function insertBatch(rows: Row[]) {
   )
   await db.insert(locations).values(values)
 
-  console.log(`✅ Inserted ${rows.length} rows`)
+  console.log(`Inserted ${newRows.length} rows, skipped ${rows.length - newRows.length}`)
 }
 
-// ---------- Main import ----------
 async function importXlsx(filename: string) {
   const fullPath = path.join(DATA_DIR, filename)
   if (!fs.existsSync(fullPath)) {
-    console.error('File not found:', fullPath)
-    return
+    throw new Error(`File not found: ${fullPath}`)
   }
-  console.log('📂 Reading XLSX:', fullPath)
 
+  console.log('Reading XLSX:', fullPath)
   const wb = XLSX.readFile(fullPath)
   const sheet = wb.Sheets[wb.SheetNames[0]]
   const jsonRows: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: '' })
@@ -102,7 +114,7 @@ async function importXlsx(filename: string) {
     if (batch.length >= CHUNK_SIZE) {
       await insertBatch(batch)
       processed += batch.length
-      if (processed % 1000 === 0) console.log(`➡️  Processed ${processed} rows...`)
+      if (processed % 1000 === 0) console.log(`Processed ${processed} rows...`)
       batch = []
     }
   }
@@ -112,16 +124,11 @@ async function importXlsx(filename: string) {
     processed += batch.length
   }
 
-  console.log(`✅ Import finished. Total inserted: ${processed}`)
+  console.log(`Import finished. Total processed: ${processed}`)
 }
 
-// ---------- CLI ----------
 ;(async () => {
-  const arg = process.argv[2]
-  if (!arg) {
-    console.error('Usage: node dist/scripts/seedLocations.js <file.xlsx>')
-    process.exit(1)
-  }
+  const arg = process.argv[2] || DEFAULT_FILE
 
   try {
     await importXlsx(arg)
