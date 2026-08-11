@@ -326,36 +326,29 @@ export default function DataTable<T extends { id: string | number }>(props: Data
           </Stack>
         )}
 
-        {rows.length === 0 ? (
-          <Stack
-            alignItems="center"
-            justifyContent="center"
-            spacing={1.3}
-            sx={{
-              minHeight: isCompact ? 220 : 300,
-              py: isCompact ? 3 : 5,
-              borderRadius: isCompact ? '8px' : '12px',
-              border: `1px dashed ${alpha(primary, 0.16)}`,
-              background: isDark
-                ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
-                : 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(247,241,235,0.92) 100%)',
-            }}
-          >
-            <Box
-              component="img"
-              src="/images/empty-files.png"
-              alt="No data"
-              sx={{ width: 260, opacity: 0.78 }}
-            />
-            <Typography variant="body1" sx={{ fontSize: '14px', fontWeight: 600, color: textPrimary }}>
-              No records to display
-            </Typography>
-            <Typography variant="body2" sx={{ color: textSecondary }}>
-              Once activity starts, the operations feed will appear here.
-            </Typography>
-          </Stack>
-        ) : isMobile ? (
-          <Stack spacing={isCompact ? 1 : 1.6}>
+        {isMobile ? (
+          rows.length === 0 ? (
+            <Stack
+              alignItems="center"
+              justifyContent="center"
+              spacing={0.6}
+              sx={{
+                minHeight: 150,
+                py: 3,
+                borderRadius: isCompact ? '8px' : '12px',
+                border: `1px solid ${borderColor}`,
+                background: mobileCardBg,
+              }}
+            >
+              <Typography sx={{ fontSize: '14px', fontWeight: 600, color: textPrimary }}>
+                No records found
+              </Typography>
+              <Typography variant="body2" sx={{ color: textSecondary }}>
+                There is no data to display yet.
+              </Typography>
+            </Stack>
+          ) : (
+            <Stack spacing={isCompact ? 1 : 1.6}>
             {selectable && (
               <Stack
                 direction="row"
@@ -463,7 +456,8 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                 </Card>
               )
             })}
-          </Stack>
+            </Stack>
+          )
         ) : (
           <Box sx={{ overflowX: isShipmentVariant ? 'hidden' : 'auto', borderRadius: isCompact ? '8px' : '14px' }}>
             <TableContainer
@@ -601,6 +595,38 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                 </TableHead>
 
                 <TableBody>
+                  {rows.length === 0 && (
+                    <TableRow
+                      sx={{
+                        backgroundColor: isDark ? surface : '#FFFFFF',
+                        '& > td': { borderBottom: 'none' },
+                      }}
+                    >
+                      <TableCell
+                        colSpan={
+                          columns.length +
+                          (selectable ? 1 : 0) +
+                          (expandable && renderExpandedRow ? 1 : 0)
+                        }
+                        align="center"
+                        sx={{
+                          height: isCompact ? 170 : 220,
+                          px: 2,
+                          py: 4,
+                          backgroundColor: isDark ? surface : '#FFFFFF',
+                        }}
+                      >
+                        <Stack alignItems="center" spacing={0.65}>
+                          <Typography sx={{ color: textPrimary, fontSize: '14px', fontWeight: 600 }}>
+                            No records found
+                          </Typography>
+                          <Typography sx={{ color: textSecondary, fontSize: '12px' }}>
+                            There is no data to display yet.
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  )}
                   {rows.map((row) => {
                     const isExpanded = expandedRowId === row.id
                     return (

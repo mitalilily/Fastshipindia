@@ -51,8 +51,6 @@ import { FilterBar, type FilterField } from '../FilterBar'
 import { toast } from '../UI/Toast'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
 import DataTable, { type Column } from '../UI/table/DataTable'
-import TableSkeleton from '../UI/table/TableSkeleton'
-import { useFastLoading } from '../../hooks/useFastLoading'
 import { statusColorMap } from './b2c/B2COrdersList'
 import B2COrderFormSteps, { type B2CFormData } from './b2c/B2COrderForm'
 import {
@@ -296,8 +294,6 @@ const AllOrders = () => {
       : currentOrderView === 'b2b'
         ? b2bOrdersQuery
         : allOrdersQuery
-  const showTableLoading = useFastLoading(activeQuery.isLoading)
-
   const normalizedOrders: Order[] = (activeQuery.data?.orders ?? []).map((order: Order) => ({
     ...order,
     type: order.type || (currentOrderView === 'b2c' ? 'b2c' : currentOrderView === 'b2b' ? 'b2b' : order.type),
@@ -1506,46 +1502,40 @@ const AllOrders = () => {
           overflow: 'hidden',
         }}
       >
-        {showTableLoading ? (
-          <Box sx={{ p: 1.5 }}>
-            <TableSkeleton />
-          </Box>
-        ) : (
-          <DataTable<Order>
-            rows={orders}
-            columns={columns}
-            title={
-              currentOrderView === 'b2c'
-                ? `${totalCount} total B2C orders`
-                : currentOrderView === 'b2b'
-                  ? `${totalCount} total B2B orders`
-                  : `${totalCount} total orders`
-            }
-            pagination
-            selectable
-            density="compact"
-            tableVariant="shipment"
-            maxHeight={640}
-            currentPage={page}
-            onPageChange={(newPage) => {
-              setPage(newPage + 1)
-              clearSelection()
-              setBulkFeedback(null)
-            }}
-            onRowsPerPageChange={(newRowsPerPage) => {
-              setRowsPerPage(newRowsPerPage)
-              setPage(1)
-              clearSelection()
-              setBulkFeedback(null)
-            }}
-            defaultRowsPerPage={rowsPerPage}
-            rowsPerPageOptions={[10, 25, 50]}
-            totalCount={totalCount}
-            onSelectRows={(ids) => setSelectedOrderIds(ids as Array<Order['id']>)}
-            selectedRowIds={selectedOrderIds}
-            selectionResetToken={selectionResetToken}
-          />
-        )}
+        <DataTable<Order>
+          rows={orders}
+          columns={columns}
+          title={
+            currentOrderView === 'b2c'
+              ? `${totalCount} total B2C orders`
+              : currentOrderView === 'b2b'
+                ? `${totalCount} total B2B orders`
+                : `${totalCount} total orders`
+          }
+          pagination
+          selectable
+          density="compact"
+          tableVariant="shipment"
+          maxHeight={640}
+          currentPage={page}
+          onPageChange={(newPage) => {
+            setPage(newPage + 1)
+            clearSelection()
+            setBulkFeedback(null)
+          }}
+          onRowsPerPageChange={(newRowsPerPage) => {
+            setRowsPerPage(newRowsPerPage)
+            setPage(1)
+            clearSelection()
+            setBulkFeedback(null)
+          }}
+          defaultRowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          totalCount={totalCount}
+          onSelectRows={(ids) => setSelectedOrderIds(ids as Array<Order['id']>)}
+          selectedRowIds={selectedOrderIds}
+          selectionResetToken={selectionResetToken}
+        />
       </Box>
 
       <ManifestScheduleDialog
