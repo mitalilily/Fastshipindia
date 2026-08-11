@@ -1,5 +1,4 @@
 import { alpha, Box, Button, Chip, Grid, Stack, Typography } from '@mui/material'
-import { useState } from 'react'
 import { TbBolt, TbChartArcs3, TbMapPinBolt, TbRoute, TbSparkles, TbTruckDelivery } from 'react-icons/tb'
 import BrandLogo from '../../components/brand/BrandLogo'
 import Sidebar, { COLLAPSED_WIDTH } from '../../components/UI/Sidebar'
@@ -35,7 +34,6 @@ const focusCards = [
 ]
 
 export default function ClientPreview() {
-  const [hovered, setHovered] = useState(false)
   const pinned = true
   const sidebarWidth = pinned ? DRAWER_WIDTH : COLLAPSED_WIDTH
 
@@ -49,8 +47,6 @@ export default function ClientPreview() {
     >
       <Sidebar
         pinned={pinned}
-        hovered={hovered}
-        setHovered={setHovered}
         handleDrawerToggle={() => undefined}
       />
 

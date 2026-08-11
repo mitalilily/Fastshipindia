@@ -10,7 +10,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material'
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useState } from 'react'
 import {
   TbAlertTriangle,
   TbApps,
@@ -69,8 +69,6 @@ interface SidebarProps {
   role?: Role
   pinned: boolean
   handleDrawerToggle: () => void
-  setHovered: Dispatch<SetStateAction<boolean>>
-  hovered: boolean
   temporary?: boolean
   onNavigate?: () => void
 }
@@ -223,15 +221,13 @@ const itemHasActiveChild = (pathname: string, item: NavItem) =>
 export default function Sidebar({
   role = 'customer',
   pinned,
-  hovered,
-  setHovered,
   temporary = false,
   onNavigate,
 }: SidebarProps) {
   const location = useLocation()
   const theme = useTheme()
   const { user } = useAuth()
-  const isSidebarExpanded = temporary || pinned || hovered
+  const isSidebarExpanded = temporary || pinned
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
   const isDark = theme.palette.mode === 'dark'
   const DARK_BG = isDark ? '#151b23' : '#ffffff'
@@ -462,12 +458,6 @@ export default function Sidebar({
         boxShadow: 'none',
         contain: 'layout paint style',
         willChange: temporary ? 'auto' : 'width',
-      }}
-      onMouseEnter={() => {
-        if (!temporary) setHovered(true)
-      }}
-      onMouseLeave={() => {
-        if (!temporary) setHovered(false)
       }}
     >
       <Box

@@ -36,7 +36,6 @@ export default function Layout() {
   const scrollProgressRef = useRef<HTMLDivElement | null>(null)
   const [pinned, setPinned] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [hovered, setHovered] = useState(false)
   const isDark = theme.palette.mode === 'dark'
   const shellBg = isDark ? '#0f141b' : '#f6f8fc'
   const drawerBg = isDark ? '#151b23' : '#ffffff'
@@ -53,7 +52,6 @@ export default function Layout() {
 
   useEffect(() => {
     setMobileOpen(false)
-    setHovered(false)
   }, [routeContentKey])
 
   useEffect(() => {
@@ -109,8 +107,6 @@ export default function Layout() {
           }}
         >
           <Sidebar
-            hovered={hovered}
-            setHovered={setHovered}
             pinned
             temporary
             handleDrawerToggle={handleDrawerToggle}
@@ -129,8 +125,6 @@ export default function Layout() {
           }}
         >
           <Sidebar
-            hovered={hovered}
-            setHovered={setHovered}
             pinned={pinned}
             handleDrawerToggle={handleDrawerToggle}
           />
