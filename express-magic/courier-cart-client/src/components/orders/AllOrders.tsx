@@ -46,6 +46,7 @@ import {
 } from '../../hooks/Orders/useOrders'
 import { usePresignedDownloadMutation } from '../../hooks/Uploads/usePresignedDownloadUrls'
 import { downloadClientOrdersCsv } from '../../utils/orderCsvExport'
+import type { B2COrder } from '../../types/generic.types'
 import { FilterBar, type FilterField } from '../FilterBar'
 import { toast } from '../UI/Toast'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
@@ -296,37 +297,6 @@ const AllOrders = () => {
         ? b2bOrdersQuery
         : allOrdersQuery
   const showTableLoading = useFastLoading(activeQuery.isLoading)
-
-  if (activeQuery.isError)
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          py: 6,
-          px: 3,
-          backgroundColor: surface,
-          borderRadius: '12px',
-          border: `1px solid ${borderColor}`,
-          boxShadow: panelShadow,
-        }}
-      >
-        <Typography
-          color="error"
-          textAlign="center"
-          fontSize="16px"
-          fontWeight={600}
-          sx={{ color: '#E74C3C' }}
-        >
-          Failed to fetch orders
-        </Typography>
-        <Typography textAlign="center" fontSize="14px" sx={{ color: textSecondary, mt: 1 }}>
-          Please try refreshing the page
-        </Typography>
-      </Box>
-    )
 
   const normalizedOrders: Order[] = (activeQuery.data?.orders ?? []).map((order: Order) => ({
     ...order,
@@ -860,7 +830,7 @@ const AllOrders = () => {
     }
 
     setEditingOrder(order)
-    setOrderFormDefaults(getB2COrderFormDefaults(order as any))
+    setOrderFormDefaults(getB2COrderFormDefaults(order as B2COrder))
     setOrderFormKey((current) => current + 1)
   }
 
@@ -1333,6 +1303,11 @@ const AllOrders = () => {
 
   return (
     <Stack gap={1.2}>
+      {activeQuery.isError && (
+        <Alert severity="warning">
+          Live orders are temporarily unavailable. The table remains open and will update on the next refresh.
+        </Alert>
+      )}
       <Box
         sx={{
           backgroundColor: surface,
@@ -1588,7 +1563,7 @@ const AllOrders = () => {
 
       <B2CSelectCourierDialog
         open={Boolean(selectCourierOrder)}
-        order={selectCourierOrder as any}
+        order={selectCourierOrder as B2COrder | null}
         onClose={() => setSelectCourierOrder(null)}
       />
 

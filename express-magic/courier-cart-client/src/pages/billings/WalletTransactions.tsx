@@ -1,4 +1,5 @@
 import {
+  Alert,
   Avatar,
   Button,
   Card,
@@ -84,13 +85,6 @@ const WalletTransactions = () => {
     { name: 'dateTo', label: 'To Date', type: 'date' },
   ]
 
-  if (isError)
-    return (
-      <Typography color="#E74C3C" sx={{ p: 4, textAlign: 'center' }}>
-        Error loading Transactions
-      </Typography>
-    )
-
   return (
     <Stack gap={3} p={4}>
       <PageHeading
@@ -98,6 +92,11 @@ const WalletTransactions = () => {
         title="Wallet Transactions"
         subtitle="Track balance movement, filter credits and debits, and review recharge activity in the same billing workspace."
       />
+      {isError && (
+        <Alert severity="warning">
+          Live wallet transactions are temporarily unavailable. This page remains usable and will update on refresh.
+        </Alert>
+      )}
       {/* Wallet Balance Card (back to your original solid look) */}
       <Card
         sx={{

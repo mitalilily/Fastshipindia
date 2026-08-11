@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -8,7 +9,6 @@ import {
   Menu,
   MenuItem,
   Stack,
-  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
@@ -23,7 +23,6 @@ import ExportConfirmDialog from '../../components/pickups/ExportConfirmDialog'
 import PickupAddressesList from '../../components/pickups/PickupAddressesList'
 import UploadPickupCSVModal from '../../components/pickups/UploadPickupCSV'
 import CustomDrawer from '../../components/UI/drawer/CustomDrawer'
-import TableSkeleton from '../../components/UI/table/TableSkeleton'
 import { toast } from '../../components/UI/Toast'
 import {
   useExportPickupAddresses,
@@ -31,6 +30,7 @@ import {
   usePickupAddresses,
 } from '../../hooks/Pickup/usePickupAddresses'
 import type { HydratedPickup } from '../../types/generic.types'
+import { useFastLoading } from '../../hooks/useFastLoading'
 
 // Filter fields with sort order support
 const filterFields: FilterField[] = [
@@ -129,6 +129,7 @@ const PickupAddresses = () => {
     page: page + 1,
     limit: rowsPerPage,
   })
+  const showLoading = useFastLoading(isLoading)
 
   // Action menu for mobile
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
@@ -204,13 +205,6 @@ const PickupAddresses = () => {
       .length
   }, [filters])
 
-  if (isError)
-    return (
-      <Typography color="error" textAlign="center" mt={4}>
-        Failed to load pickup addresses.
-      </Typography>
-    )
-
   return (
     <Stack
       spacing={3}
@@ -224,6 +218,11 @@ const PickupAddresses = () => {
         pb: 2,
       }}
     >
+      {isError && (
+        <Alert severity="warning">
+          Live pickup addresses are temporarily unavailable. The address list remains open and will update on refresh.
+        </Alert>
+      )}
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         alignItems={{ xs: 'stretch', md: 'center' }}
@@ -239,7 +238,7 @@ const PickupAddresses = () => {
             Object.entries(filters)?.filter(([_, v]) => v !== '' && v !== undefined && v !== null)
               .length
           }
-          loading={isLoading}
+          loading={showLoading}
         />
         {/* Right side: Actions */}
         <Stack
@@ -345,21 +344,17 @@ const PickupAddresses = () => {
 
       {/* Pickup list */}
       <Box>
-        {isLoading ? (
-          <TableSkeleton />
-        ) : (
-          <PickupAddressesList
-            listData={data?.pickupAddresses ?? []}
-            totalCount={data?.totalCount ?? 0}
-            page={page}
-            rowsPerPage={rowsPerPage}
-            onPageChange={setPage}
-            onRowsPerPageChange={(limit) => {
-              setRowsPerPage(limit)
-              setPage(0)
-            }}
-          />
-        )}
+        <PickupAddressesList
+          listData={data?.pickupAddresses ?? []}
+          totalCount={data?.totalCount ?? 0}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          onPageChange={setPage}
+          onRowsPerPageChange={(limit) => {
+            setRowsPerPage(limit)
+            setPage(0)
+          }}
+        />
       </Box>
 
       <ExportConfirmDialog
@@ -398,7 +393,7 @@ const PickupAddresses = () => {
               handleFilterApply(filters)
               handleCloseDrawer()
             }}
-            loading={isLoading}
+            loading={showLoading}
           />
         )}
       </CustomDrawer>

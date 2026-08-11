@@ -1566,16 +1566,13 @@ const B2COrdersList = () => {
     statusColor: 'success' as const,
   }))
 
-  if (isError) {
-    return (
-      <Typography color="error" textAlign="center" py={4}>
-        Failed to fetch orders
-      </Typography>
-    )
-  }
-
   return (
     <Stack spacing={0.65} sx={{ pt: 0, pb: 0.5 }}>
+      {isError && (
+        <Alert severity="warning">
+          Live B2C orders are temporarily unavailable. The table remains open and will update on refresh.
+        </Alert>
+      )}
       {/* Top row: Create button */}
       <Stack direction={{ xs: 'column', sm: 'row' }} alignItems="center" justifyContent="space-between" gap={0.65}>
         <Box sx={{ width: { xs: '100%', sm: 176 } }}>

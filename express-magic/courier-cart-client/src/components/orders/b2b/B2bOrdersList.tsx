@@ -1,4 +1,4 @@
-import { Button, Link, Stack, Typography } from '@mui/material'
+import { Alert, Button, Link, Stack } from '@mui/material'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import moment from 'moment'
@@ -215,15 +215,13 @@ const B2BOrdersList = ({
     },
   ]
 
-  if (isError)
-    return (
-      <Typography color="error" textAlign="center" py={4}>
-        Failed to fetch B2B orders
-      </Typography>
-    )
-
   return (
     <Stack spacing={2}>
+      {isError && (
+        <Alert severity="warning">
+          Live B2B orders are temporarily unavailable. The table remains open and will update on refresh.
+        </Alert>
+      )}
       {showTableLoading ? (
         <TableSkeleton />
       ) : (

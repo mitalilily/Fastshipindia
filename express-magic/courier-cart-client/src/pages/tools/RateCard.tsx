@@ -1,6 +1,7 @@
 // src/pages/client/RateCard.tsx
 
 import {
+  Alert,
   Avatar,
   Button,
   Card,
@@ -22,7 +23,6 @@ import PageHeading from '../../components/UI/heading/PageHeading'
 import { SmartTabs } from '../../components/UI/tab/Tabs'
 import type { Column } from '../../components/UI/table/DataTable'
 import DataTable from '../../components/UI/table/DataTable'
-import TableSkeleton from '../../components/UI/table/TableSkeleton'
 import { useShippingRates } from '../../hooks/Integrations/useCouriers'
 import { useZones } from '../../hooks/useZones'
 import {
@@ -243,7 +243,7 @@ const RateCard = () => {
   })
 
   const { zones } = useZones(businessType)
-  const { data, isLoading, isError } = useShippingRates({ ...filters, businessType: businessType })
+  const { data, isError } = useShippingRates({ ...filters, businessType: businessType })
 
   const rates: ShippingRate[] = data || []
 
@@ -352,11 +352,13 @@ const RateCard = () => {
         </Button>
       </Stack>
 
-      {isLoading ? (
-        <TableSkeleton />
-      ) : isError ? (
-        <Typography color="error">Error loading shipping rates</Typography>
-      ) : businessType === 'b2b' ? (
+      {isError && (
+        <Alert severity="warning">
+          Live shipping rates are temporarily unavailable. The rate table remains open and will update on refresh.
+        </Alert>
+      )}
+
+      {businessType === 'b2b' ? (
         <B2BClientTable zones={zones} data={rates} />
       ) : (
         <B2CClientTable data={rates} zones={zones} />
