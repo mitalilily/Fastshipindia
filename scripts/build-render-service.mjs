@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const clientDir = path.join(rootDir, 'express-magic', 'courier-cart-client')
+const adminDir = path.join(rootDir, 'express-magic', 'admin-dashboard')
 const outputDir = path.join(rootDir, 'dist')
 const isWindows = process.platform === 'win32'
 const npmCommand = isWindows ? 'npm.cmd' : 'npm'
@@ -32,8 +33,24 @@ const renderHostname = String(
 ).toLowerCase()
 const isClientService =
   renderServiceName === 'fastshipindia-1' || renderHostname.includes('fastshipindia-1.onrender.com')
+const isAdminService =
+  renderServiceName === 'fastshipadmin' || renderHostname.includes('fastshipadmin.onrender.com')
 
-if (isClientService) {
+if (isAdminService) {
+  if (String(process.env.RENDER_SKIP_ADMIN_INSTALL || '').toLowerCase() !== 'true') {
+    run(adminDir, ['install', '--legacy-peer-deps'])
+  }
+  run(adminDir, ['run', 'build'])
+
+  rmSync(outputDir, { force: true, recursive: true })
+  cpSync(path.join(adminDir, 'build'), outputDir, { recursive: true })
+
+  if (!existsSync(path.join(outputDir, 'index.html'))) {
+    throw new Error('Admin panel build did not create dist/index.html')
+  }
+
+  console.log(`Admin panel prepared for Render service ${renderServiceName || renderHostname}`)
+} else if (isClientService) {
   if (String(process.env.RENDER_SKIP_CLIENT_INSTALL || '').toLowerCase() !== 'true') {
     run(clientDir, ['ci'])
   }
