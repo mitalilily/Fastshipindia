@@ -9,6 +9,7 @@
 | Expected TAT | `GET /api/dc/expected_tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` | `GET /api/delhivery/b2c/tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` |
 | Fetch WayBill | `GET /waybill/api/bulk/json/?token={token}&count={count}` | `GET /api/delhivery/b2c/waybills?count={count}` |
 | Fetch Single WayBill | `GET /waybill/api/fetch/json/?token={token}` | `GET /api/delhivery/b2c/waybill` |
+| Shipment Tracking | `GET /api/v1/packages/json/?waybill={waybill}&ref_ids={order_id}` | `GET /api/delhivery/b2c/shipments/track?waybill={waybill}&ref_ids={order_id}` |
 | Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
 | MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
@@ -39,6 +40,10 @@ manifest creation.
 For Fetch Single WayBill, FastShip forwards Delhivery's token in the provider
 query string and returns the single generated waybill response unchanged under
 `data`.
+
+For Shipment Tracking, FastShip requires `waybill`, accepts up to 50
+comma-separated waybills, forwards optional `ref_ids`, and returns Delhivery's
+current status plus scan-history payload unchanged under `data`.
 
 For Shipment Creation, FastShip accepts the documented JSON manifest, validates
 required shipment fields plus `pickup_location.name`, canonicalizes

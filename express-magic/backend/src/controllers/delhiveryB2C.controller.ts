@@ -72,6 +72,15 @@ export const fetchWaybillsController = (req: Request, res: Response) =>
 export const fetchSingleWaybillController = (_req: Request, res: Response) =>
   sendDataResult(res, service.fetchB2CSingleWaybill())
 
+export const trackShipmentController = (req: Request, res: Response) =>
+  sendDataResult(
+    res,
+    service.trackB2CShipment({
+      waybill: req.query.waybill,
+      ref_ids: req.query.ref_ids,
+    }),
+  )
+
 export const createShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CShipmentManifest(req.body))
 

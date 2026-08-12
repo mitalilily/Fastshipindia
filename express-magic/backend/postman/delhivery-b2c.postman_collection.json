@@ -50,7 +50,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/auth/admin/login",
             "body": {
               "mode": "raw",
@@ -200,6 +205,36 @@
           ]
         },
         {
+          "name": "Shipment Tracking",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/track?waybill={{trackingWaybill}}&ref_ids={{trackingRefIds}}",
+            "description": "Tracks up to 50 comma-separated Delhivery B2C waybills, or a shipment by optional order ID, using GET /api/v1/packages/json/?waybill={waybill}&ref_ids={order_id}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Shipment Tracking proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Tracking data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.ShipmentData || data).to.exist;",
+                  "});",
+                  "pm.test('Tracking contains status or scan signal', function () {",
+                  "  var data = body.data || {};",
+                  "  var shipment = (data.ShipmentData || [])[0] || data;",
+                  "  var details = shipment.Shipment || shipment;",
+                  "  pm.expect(details.Status !== undefined || details.Scans !== undefined || details.status !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Shipment Creation (mutating)",
           "event": [
             {
@@ -231,7 +266,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/delhivery/b2c/shipments",
             "description": "Creates a Delhivery B2C shipment via POST /api/cmu/create.json. FastShip accepts JSON, validates the required fields, and forwards it to Delhivery as URL-encoded format=json&data={...}. This request is skipped unless allowMutations=true.",
             "body": {
@@ -272,7 +312,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/delhivery/b2c/shipments/mps",
             "description": "Creates a Delhivery B2C Multi-Package Shipment via POST /api/cmu/create.json. Prefetched waybills are mandatory; every box includes shipment_type=MPS, mps_amount, mps_children, master_id, and waybill. This request is skipped unless allowMutations=true.",
             "body": {
@@ -313,7 +358,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/delhivery/b2c/shipments/edit",
             "description": "Edits allowed B2C shipment fields via Delhivery POST /api/p/edit. The waybill is required. Payment mode updates support COD and Pre-paid; COD edits require cod amount. This request is skipped unless allowMutations=true.",
             "body": {
@@ -354,7 +404,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/delhivery/b2c/shipments/cancel",
             "description": "Cancels a Delhivery B2C shipment via POST /api/p/edit with cancellation=true. Cancellation availability depends on the current package status in Delhivery. This request is skipped unless allowMutations=true.",
             "body": {
@@ -395,7 +450,12 @@
           ],
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/delhivery/b2c/shipments/{{ewaybillWaybill}}/ewaybill",
             "description": "Updates a Delhivery B2C shipment e-waybill via PUT /api/rest/ewaybill/{waybill}/ with data entries containing dcn and ewbn. This request is skipped unless allowMutations=true.",
             "body": {

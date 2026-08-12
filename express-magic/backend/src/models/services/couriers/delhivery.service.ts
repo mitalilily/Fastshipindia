@@ -118,6 +118,28 @@ const normalizeDelhiveryWaybillCount = (value: unknown) => {
   return count
 }
 
+const normalizeDelhiveryB2CTrackingWaybills = (value: unknown) => {
+  const rawWaybill = String(value ?? '').trim()
+  if (!rawWaybill) throw new HttpError(400, 'waybill is required')
+
+  const waybills = rawWaybill
+    .split(',')
+    .map((waybill) => waybill.trim())
+    .filter(Boolean)
+
+  if (waybills.length === 0) throw new HttpError(400, 'waybill is required')
+  if (waybills.length > 50) {
+    throw new HttpError(400, 'waybill supports up to 50 comma-separated values')
+  }
+
+  return waybills.join(',')
+}
+
+const normalizeOptionalDelhiveryText = (value: unknown) => {
+  if (value === undefined || value === null) return undefined
+  return String(value).trim()
+}
+
 const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
   const normalized = String(value ?? '').trim().toLowerCase()
   const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
@@ -743,6 +765,37 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to fetch Delhivery B2C single waybill')
+    }
+  }
+
+  async trackB2CShipment(params: { waybill: unknown; ref_ids?: unknown }) {
+    try {
+      const waybill = normalizeDelhiveryB2CTrackingWaybills(params.waybill)
+      const refIds = normalizeOptionalDelhiveryText(params.ref_ids)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/v1/packages/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        params: {
+          waybill,
+          ref_ids: refIds ?? '',
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C shipment tracking error:', {
+        waybill: params.waybill,
+        ref_ids: params.ref_ids,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C shipment tracking')
     }
   }
 

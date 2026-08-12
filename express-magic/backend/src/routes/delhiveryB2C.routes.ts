@@ -9,6 +9,7 @@ import {
   fetchWaybillsController,
   heavyProductServiceabilityController,
   serviceabilityController,
+  trackShipmentController,
   updateEwaybillController,
 } from '../controllers/delhiveryB2C.controller'
 import { isAdminMiddleware } from '../middlewares/isAdmin'
@@ -22,6 +23,7 @@ router.get('/heavy-serviceability/:pincode', heavyProductServiceabilityControlle
 router.get('/tat', expectedTatController)
 router.get('/waybills', fetchWaybillsController)
 router.get('/waybill', fetchSingleWaybillController)
+router.get('/shipments/track', trackShipmentController)
 router.post('/shipments', createShipmentController)
 router.post('/shipments/mps', createMpsShipmentController)
 router.post('/shipments/edit', editShipmentController)

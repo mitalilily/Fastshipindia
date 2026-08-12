@@ -77,6 +77,28 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'GET' && pathname === '/api/delhivery/b2c/shipments/track') {
+    return success({
+      ShipmentData: [
+        {
+          Shipment: {
+            AWB: '1122345678722',
+            Status: {
+              Status: 'In Transit',
+            },
+            Scans: [
+              {
+                ScanDetail: {
+                  Scan: 'Manifested',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    })
+  }
+
   if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments') {
     return success({
       success: true,

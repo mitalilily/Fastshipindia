@@ -62,6 +62,30 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/api/v1/packages/json/')) {
+      return {
+        status: 200,
+        data: {
+          ShipmentData: [
+            {
+              Shipment: {
+                AWB: '1122345678722',
+                Status: {
+                  Status: 'In Transit',
+                },
+                Scans: [
+                  {
+                    ScanDetail: {
+                      Scan: 'Manifested',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -586,6 +610,43 @@ const run = async () => {
     await assert.rejects(
       () => service.updateB2CEwaybill('843000000004', { dcn: 'INV-004' }),
       /ewbn is required/,
+    )
+
+    const trackingResponse = await service.trackB2CShipment({
+      waybill: '1122345678722',
+      ref_ids: '',
+    })
+    assert.equal((trackingResponse as any)?.ShipmentData?.[0]?.Shipment?.AWB, '1122345678722')
+
+    const trackingRequest = requests.at(-1)
+    assert.equal(trackingRequest?.method, 'GET')
+    assert.equal(
+      trackingRequest?.url,
+      'https://staging-express.delhivery.com/api/v1/packages/json/',
+    )
+    assert.equal(trackingRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(trackingRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(trackingRequest?.params, {
+      waybill: '1122345678722',
+      ref_ids: '',
+    })
+
+    await service.trackB2CShipment({
+      waybill: 'WB000001, WB000002',
+      ref_ids: 'ORDER-001',
+    })
+    assert.deepEqual(requests.at(-1)?.params, {
+      waybill: 'WB000001,WB000002',
+      ref_ids: 'ORDER-001',
+    })
+
+    await assert.rejects(() => service.trackB2CShipment({ waybill: '  ' }), /waybill is required/)
+    await assert.rejects(
+      () =>
+        service.trackB2CShipment({
+          waybill: Array.from({ length: 51 }, (_, index) => `WB${index + 1}`).join(','),
+        }),
+      /up to 50/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
