@@ -995,7 +995,9 @@ const run = async () => {
 
   await service.cancelPickupRequest('pur_id_1')
   const pickupCancellation = lastRequest('DELETE', '/pickup_requests/pur_id_1')
+  assert.equal(pickupCancellation.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(pickupCancellation.headers?.Accept, 'application/json')
+  assert.equal(typeof pickupCancellation.headers?.['X-Request-Id'], 'string')
   assert.equal(pickupCancellation.data, undefined)
   assert.throws(() => service.cancelPickupRequest('   '), /pickup_id is required/)
 

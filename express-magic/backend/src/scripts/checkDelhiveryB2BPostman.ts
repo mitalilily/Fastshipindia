@@ -95,7 +95,11 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
       /^\/api\/delhivery\/b2b\/shipments\/[^/]+$/,
       success({ cancelled: true, status: 'Returned' }),
     ],
-    ['DELETE', /^\/api\/delhivery\/b2b\/pickups\/[^/]+$/, success({ cancelled: true })],
+    [
+      'DELETE',
+      /^\/api\/delhivery\/b2b\/pickups\/[^/]+$/,
+      success({ cancelled: true, pickup_id: 'mock-pickup-id' }),
+    ],
     [
       'GET',
       /^\/api\/delhivery\/b2b\/shipments\/[^/]+\/labels\/(sm|md|a4|std)$/,

@@ -128,6 +128,10 @@ Pickup requests forward `POST /pickup_requests` with the exact
 `HH:MM:SS`, and a positive integer `expected_package_count`. FastShip includes
 the UMS bearer token and an `X-Request-Id` for traceability.
 
+Pickup cancellations forward `DELETE /pickup_requests/{pickup_id}` for pickup
+requests created through Delhivery. The proxy validates the pickup ID and sends
+the UMS bearer token plus `X-Request-Id`.
+
 ## Verification
 
 Run both automated layers from `backend`:

@@ -609,6 +609,16 @@
             "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();",
             "var pickupId = String(pm.environment.get('pickupId') || '').trim();",
             "if (!pickupId || pickupId === 'replace-with-pickup-id') { throw new Error('Set pickupId to a real Delhivery pickup request ID before cancellation.'); }"
+          ] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Pickup cancellation request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(pm.response.json().success).to.eql(true);",
+            "});",
+            "pm.test('Pickup cancellation response is returned', function () {",
+            "  var data = pm.response.json().data || {};",
+            "  pm.expect(data.cancelled).to.eql(true);",
+            "  pm.expect(data.pickup_id).to.be.a('string').and.not.empty;",
+            "});"
           ] } }],
           "request": {
             "description": "Cancels the Delhivery pickup request identified by pickupId. This is destructive; the pre-request script blocks the default placeholder value. Run Create Pickup first or set pickupId to an existing pickup request ID.",
