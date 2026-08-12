@@ -80,6 +80,36 @@ const normalizeDelhiveryPincode = (value: unknown, field = 'pincode') => {
   return pincode
 }
 
+const normalizeDelhiveryMot = (value: unknown) => {
+  const mot = String(value || 'S')
+    .trim()
+    .toUpperCase()
+  if (!['S', 'E', 'N'].includes(mot)) {
+    throw new HttpError(400, "mot must be one of 'S', 'E', or 'N'")
+  }
+  return mot as 'S' | 'E' | 'N'
+}
+
+const normalizeDelhiveryProductType = (value: unknown) => {
+  const pdt = String(value ?? 'B2C')
+    .trim()
+    .toUpperCase()
+  if (!pdt) return undefined
+  if (!['B2B', 'B2C'].includes(pdt)) {
+    throw new HttpError(400, "pdt must be 'B2B', 'B2C', or empty")
+  }
+  return pdt as 'B2B' | 'B2C'
+}
+
+const normalizeDelhiveryExpectedPickupDate = (value: unknown) => {
+  const expectedPickupDate = String(value ?? '').trim()
+  if (!expectedPickupDate) return undefined
+  if (!/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/.test(expectedPickupDate)) {
+    throw new HttpError(400, 'expected_pickup_date must be in YYYY-MM-DD or YYYY-MM-DD HH:mm format')
+  }
+  return expectedPickupDate
+}
+
 export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
   const payload = response as any
   const rows = Array.isArray(payload)
@@ -369,6 +399,49 @@ export class DelhiveryService {
     } catch (err: any) {
       console.error('Delhivery TAT API error:', err.response?.data || err.message)
       return null
+    }
+  }
+
+  async getB2CExpectedTAT(params: {
+    origin_pin: unknown
+    destination_pin: unknown
+    mot: unknown
+    pdt?: unknown
+    expected_pickup_date?: unknown
+  }) {
+    try {
+      const originPin = normalizeDelhiveryPincode(params.origin_pin, 'origin_pin')
+      const destinationPin = normalizeDelhiveryPincode(params.destination_pin, 'destination_pin')
+      const mot = normalizeDelhiveryMot(params.mot)
+      const pdt = normalizeDelhiveryProductType(params.pdt)
+      const expectedPickupDate = normalizeDelhiveryExpectedPickupDate(params.expected_pickup_date)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/dc/expected_tat`
+      const res = await this.getWithTimeout(url, {
+        headers: this.headers,
+        params: {
+          origin_pin: originPin,
+          destination_pin: destinationPin,
+          mot,
+          ...(pdt ? { pdt } : {}),
+          ...(expectedPickupDate ? { expected_pickup_date: expectedPickupDate } : {}),
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C Expected TAT error:', {
+        origin_pin: params.origin_pin,
+        destination_pin: params.destination_pin,
+        mot: params.mot,
+        pdt: params.pdt,
+        expected_pickup_date: params.expected_pickup_date,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C Expected TAT')
     }
   }
 

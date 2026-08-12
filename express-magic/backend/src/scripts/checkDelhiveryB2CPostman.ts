@@ -56,6 +56,15 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     }
   }
 
+  if (method === 'GET' && pathname === '/api/delhivery/b2c/tat') {
+    return success({
+      data: {
+        tat: 3,
+        expected_delivery_date: '2024-06-03',
+      },
+    })
+  }
+
   return null
 }
 

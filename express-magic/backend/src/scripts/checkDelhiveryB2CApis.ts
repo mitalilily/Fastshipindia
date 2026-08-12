@@ -32,6 +32,17 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/api/dc/expected_tat')) {
+      return {
+        status: 200,
+        data: {
+          data: {
+            tat: 3,
+            expected_delivery_date: '2024-06-03',
+          },
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -101,6 +112,65 @@ const run = async () => {
     await assert.rejects(
       () => service.checkHeavyProductTypeServiceability('40008A'),
       /valid 6-digit pincode/,
+    )
+
+    const tatResponse = await service.getB2CExpectedTAT({
+      origin_pin: '122003',
+      destination_pin: '136118',
+      mot: 'S',
+      pdt: 'B2C',
+      expected_pickup_date: '2024-05-31',
+    })
+    assert.equal((tatResponse as any)?.data?.tat, 3)
+
+    const tatRequest = requests.at(-1)
+    assert.equal(tatRequest?.method, 'GET')
+    assert.equal(tatRequest?.url, 'https://staging-express.delhivery.com/api/dc/expected_tat')
+    assert.deepEqual(tatRequest?.params, {
+      origin_pin: '122003',
+      destination_pin: '136118',
+      mot: 'S',
+      pdt: 'B2C',
+      expected_pickup_date: '2024-05-31',
+    })
+    assert.equal(tatRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(tatRequest?.headers?.Accept, 'application/json')
+    assert.equal(tatRequest?.headers?.['Content-Type'], 'application/json')
+
+    await service.getB2CExpectedTAT({
+      origin_pin: '122003',
+      destination_pin: '136118',
+      mot: 'N',
+      pdt: '',
+    })
+    const tatWithoutOptionalRequest = requests.at(-1)
+    assert.deepEqual(tatWithoutOptionalRequest?.params, {
+      origin_pin: '122003',
+      destination_pin: '136118',
+      mot: 'N',
+    })
+
+    await assert.rejects(
+      () => service.getB2CExpectedTAT({ origin_pin: '12200', destination_pin: '136118', mot: 'S' }),
+      /origin_pin must be a valid 6-digit pincode/,
+    )
+    await assert.rejects(
+      () => service.getB2CExpectedTAT({ origin_pin: '122003', destination_pin: '13611A', mot: 'S' }),
+      /destination_pin must be a valid 6-digit pincode/,
+    )
+    await assert.rejects(
+      () => service.getB2CExpectedTAT({ origin_pin: '122003', destination_pin: '136118', mot: 'X' }),
+      /mot must be one of/,
+    )
+    await assert.rejects(
+      () =>
+        service.getB2CExpectedTAT({
+          origin_pin: '122003',
+          destination_pin: '136118',
+          mot: 'S',
+          expected_pickup_date: '31-05-2024',
+        }),
+      /expected_pickup_date/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)

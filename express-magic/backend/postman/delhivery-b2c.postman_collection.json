@@ -112,6 +112,34 @@
               }
             }
           ]
+        },
+        {
+          "name": "Expected TAT",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/tat?origin_pin={{originPincode}}&destination_pin={{destinationPincode}}&mot={{mot}}&pdt={{pdt}}&expected_pickup_date={{expectedPickupDate}}",
+            "description": "Returns Delhivery's current expected TAT for origin/destination pincodes via GET /api/dc/expected_tat. MOT supports S, E, and N. PDT is optional and defaults to B2C when omitted by Delhivery."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Expected TAT proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Expected TAT data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.data || data).to.be.an('object');",
+                  "});",
+                  "pm.test('Expected TAT contains tat or delivery date signal', function () {",
+                  "  var data = (body.data || {}).data || body.data || {};",
+                  "  pm.expect(data.tat !== undefined || data.expected_delivery_date !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
