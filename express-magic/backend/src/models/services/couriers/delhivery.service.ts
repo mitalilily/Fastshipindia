@@ -336,6 +336,33 @@ const normalizeDelhiveryB2CClientWarehousePayload = (payload: unknown) => {
   return normalized
 }
 
+const normalizeDelhiveryB2CClientWarehouseUpdatePayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Client warehouse update payload is required')
+  }
+
+  const normalized: Record<string, unknown> = {
+    name: requiredManifestText(input.name, 'name'),
+  }
+
+  if (input.pin !== undefined && input.pin !== null && String(input.pin).trim()) {
+    normalized.pin = normalizeDelhiveryPincode(input.pin, 'pin')
+  }
+
+  for (const field of ['address', 'phone']) {
+    if (input[field] === undefined || input[field] === null) continue
+    const value = String(input[field]).trim()
+    if (value) normalized[field] = value
+  }
+
+  if (Object.keys(normalized).length === 1) {
+    throw new HttpError(400, 'At least one warehouse update field is required')
+  }
+
+  return normalized
+}
+
 const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
   const normalized = String(value ?? '').trim().toLowerCase()
   const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
@@ -1106,6 +1133,34 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to create Delhivery B2C client warehouse')
+    }
+  }
+
+  async updateB2CClientWarehouse(payload: unknown) {
+    try {
+      const warehouse = normalizeDelhiveryB2CClientWarehouseUpdatePayload(payload)
+
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(
+        `${this.apiBase}/api/backend/clientwarehouse/edit/`,
+        warehouse,
+        {
+          headers: {
+            Authorization: `Token ${this.token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C client warehouse update error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to update Delhivery B2C client warehouse')
     }
   }
 

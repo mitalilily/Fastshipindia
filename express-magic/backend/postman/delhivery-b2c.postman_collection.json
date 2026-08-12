@@ -384,6 +384,52 @@
           }
         },
         {
+          "name": "Client Warehouse Updation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Client Warehouse Updation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Warehouse update response is returned', function () {",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Warehouse update response carries name or status signal', function () {",
+                  "  pm.expect(data.name !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/warehouses/update",
+            "description": "Updates an existing Delhivery B2C client warehouse via POST /api/backend/clientwarehouse/edit/. Warehouse name cannot be updated; pass name plus one or more editable fields. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{warehouseUpdateName}}\",\n  \"phone\": \"{{warehouseUpdatePhone}}\",\n  \"address\": \"{{warehouseUpdateAddress}}\",\n  \"pin\": \"{{warehouseUpdatePincode}}\"\n}"
+            }
+          }
+        },
+        {
           "name": "Shipment Creation (mutating)",
           "event": [
             {

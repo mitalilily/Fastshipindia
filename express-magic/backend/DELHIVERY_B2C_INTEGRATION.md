@@ -14,6 +14,7 @@
 | Generate Shipping Label | `GET /api/p/packing_slip?wbns={waybill}&pdf={pdf}&pdf_size={pdf_size}` | `GET /api/delhivery/b2c/shipments/label?waybill={waybill}&pdf={pdf}&pdf_size={pdf_size}` |
 | Pickup Request Creation | `POST /fm/request/new/` | `POST /api/delhivery/b2c/pickup-requests` |
 | Client Warehouse Creation | `POST /api/backend/clientwarehouse/create/` | `POST /api/delhivery/b2c/warehouses` |
+| Client Warehouse Updation | `POST /api/backend/clientwarehouse/edit/` | `POST /api/delhivery/b2c/warehouses/update` |
 | Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
 | MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
@@ -69,6 +70,10 @@ For Client Warehouse Creation, FastShip requires `name`, `phone`, six-digit
 `pin`, and `return_address`, validates optional `return_pin` when present, and
 forwards supported warehouse and return-address fields to Delhivery. Warehouse
 names are case-sensitive and should match the value used during order creation.
+
+For Client Warehouse Updation, FastShip requires the existing warehouse `name`
+and at least one editable field from `address`, `pin`, or `phone`. Warehouse
+name itself is not changed; optional `pin` is validated as a six-digit pincode.
 
 For Shipment Creation, FastShip accepts the documented JSON manifest, validates
 required shipment fields plus `pickup_location.name`, canonicalizes

@@ -14,6 +14,7 @@ import {
   heavyProductServiceabilityController,
   serviceabilityController,
   trackShipmentController,
+  updateClientWarehouseController,
   updateEwaybillController,
 } from '../controllers/delhiveryB2C.controller'
 import { isAdminMiddleware } from '../middlewares/isAdmin'
@@ -32,6 +33,7 @@ router.get('/shipping-cost', calculateShippingCostController)
 router.get('/shipments/label', generateShippingLabelController)
 router.post('/pickup-requests', createPickupRequestController)
 router.post('/warehouses', createClientWarehouseController)
+router.post('/warehouses/update', updateClientWarehouseController)
 router.post('/shipments', createShipmentController)
 router.post('/shipments/mps', createMpsShipmentController)
 router.post('/shipments/edit', editShipmentController)

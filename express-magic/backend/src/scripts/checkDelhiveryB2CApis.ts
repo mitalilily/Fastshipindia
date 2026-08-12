@@ -147,6 +147,16 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/api/backend/clientwarehouse/edit/')) {
+      return {
+        status: 200,
+        data: {
+          success: true,
+          name: 'registered_wh_name',
+          message: 'Warehouse updated',
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -987,6 +997,51 @@ const run = async () => {
           return_pin: '11004A',
         }),
       /return_pin must be a valid 6-digit pincode/,
+    )
+
+    const warehouseUpdateResponse = await service.updateB2CClientWarehouse({
+      name: 'registered_wh_name',
+      phone: '9988998899',
+      address: 'HUDA Market, Gurugram, Haryana - 122001',
+    })
+    assert.equal((warehouseUpdateResponse as any)?.message, 'Warehouse updated')
+
+    const warehouseUpdateRequest = requests.at(-1)
+    assert.equal(warehouseUpdateRequest?.method, 'POST')
+    assert.equal(
+      warehouseUpdateRequest?.url,
+      'https://staging-express.delhivery.com/api/backend/clientwarehouse/edit/',
+    )
+    assert.equal(warehouseUpdateRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(warehouseUpdateRequest?.headers?.Accept, 'application/json')
+    assert.equal(warehouseUpdateRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(warehouseUpdateRequest?.data, {
+      name: 'registered_wh_name',
+      address: 'HUDA Market, Gurugram, Haryana - 122001',
+      phone: '9988998899',
+    })
+
+    await service.updateB2CClientWarehouse({
+      name: 'registered_wh_name',
+      pin: '110042',
+    })
+    assert.deepEqual(requests.at(-1)?.data, {
+      name: 'registered_wh_name',
+      pin: '110042',
+    })
+
+    await assert.rejects(() => service.updateB2CClientWarehouse({}), /name is required/)
+    await assert.rejects(
+      () => service.updateB2CClientWarehouse({ name: 'registered_wh_name' }),
+      /At least one warehouse update field is required/,
+    )
+    await assert.rejects(
+      () =>
+        service.updateB2CClientWarehouse({
+          name: 'registered_wh_name',
+          pin: '11004A',
+        }),
+      /pin must be a valid 6-digit pincode/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)

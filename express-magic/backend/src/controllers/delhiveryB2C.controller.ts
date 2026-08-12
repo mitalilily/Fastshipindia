@@ -114,6 +114,9 @@ export const createPickupRequestController = (req: Request, res: Response) =>
 export const createClientWarehouseController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CClientWarehouse(req.body))
 
+export const updateClientWarehouseController = (req: Request, res: Response) =>
+  sendDataResult(res, service.updateB2CClientWarehouse(req.body))
+
 export const createShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CShipmentManifest(req.body))
 

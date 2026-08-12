@@ -63,12 +63,13 @@ The collection signs in as a FastShip admin and checks the Delhivery B2C
 pincode serviceability, Heavy product type pincode serviceability, Expected TAT,
 Fetch WayBill, Fetch Single WayBill, Shipment Tracking, Calculate Shipping Cost,
 Generate Shipping Label, Pickup Request Creation, Client Warehouse Creation,
+Client Warehouse Updation, Shipment Creation, MPS Manifestation, Shipment
+Updation/Edit, Shipment Cancellation, and Ewaybill Update proxies. Pickup
+Request Creation, Client Warehouse Creation, Client Warehouse Updation,
 Shipment Creation, MPS Manifestation, Shipment Updation/Edit, Shipment
-Cancellation, and Ewaybill Update proxies. Pickup Request Creation, Client
-Warehouse Creation, Shipment Creation, MPS Manifestation, Shipment
-Updation/Edit, Shipment Cancellation, and Ewaybill Update are state-changing
-and skipped by default; set `allowMutations=true` only when the mutation is
-intended. Local Newman verification:
+Cancellation, and Ewaybill Update are state-changing and skipped by default;
+set `allowMutations=true` only when the mutation is intended. Local Newman
+verification:
 
 ```bash
 npm run check:delhivery-b2c-postman
