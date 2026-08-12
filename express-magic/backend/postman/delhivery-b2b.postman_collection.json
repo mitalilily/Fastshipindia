@@ -665,7 +665,15 @@
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
-            "pm.test('LR copy PDF payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+            "pm.test('LR copy request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(body.success).to.eql(true);",
+            "});",
+            "pm.test('LR copy PDF payload is returned', function () {",
+            "  var data = body.data || {};",
+            "  var url = data.url || data.pdf_url || data.document_url;",
+            "  pm.expect(url).to.be.a('string').and.not.empty;",
+            "});"
           ] } }],
           "request": {
             "description": "Generates a PDF LR copy for one LRN. lrCopyTypes is a comma-separated selection from SHIPPER COPY, ORIGIN ACCOUNTS COPY, REGULATORY COPY, LM POD, and RECIPIENT COPY. Remove the query parameter to request all copy types.",

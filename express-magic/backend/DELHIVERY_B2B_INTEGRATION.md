@@ -137,6 +137,10 @@ to `sm`, `md`, `a4`, or `std`. Delhivery returns links for the waybills in the
 LRN; those links contain Base64 image streams that clients decode to PNG before
 printing.
 
+LR copies forward `GET /lr_copy/print/{lrn}` for one LRN at a time. Optional
+`lr_copy_type` is a comma-separated selection from Delhivery's five documented
+copy variants; when omitted, Delhivery returns all copy types by default.
+
 ## Verification
 
 Run both automated layers from `backend`:

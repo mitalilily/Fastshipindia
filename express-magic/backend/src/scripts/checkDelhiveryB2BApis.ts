@@ -1025,8 +1025,10 @@ const run = async () => {
   await service.getLrCopy('220110457', lrCopyTypes)
   const allLrCopies = lastRequest('GET', '/lr_copy/print/220110457')
   assert.equal(allLrCopies.params?.lr_copy_type, lrCopyTypes.join(','))
+  assert.equal(allLrCopies.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(allLrCopies.headers?.Accept, 'application/json')
   assert.equal(allLrCopies.headers?.['Content-Type'], 'application/json')
+  assert.equal(typeof allLrCopies.headers?.['X-Request-Id'], 'string')
 
   await service.getLrCopy('220110457')
   assert.equal(lastRequest('GET', '/lr_copy/print/220110457').params, undefined)
