@@ -394,10 +394,20 @@ export const toggleEmployeeStatusService = async (
 }
 
 export const setEmployeeOnlineStatus = async (employeeId: string, isOnline: boolean) => {
+  const normalizedEmployeeId = String(employeeId || '').trim()
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      normalizedEmployeeId,
+    )
+
+  if (!isUuid) {
+    return null
+  }
+
   const [updatedEmployee] = await db
     .update(employees)
     .set({ isOnline })
-    .where(eq(employees.userId, employeeId))
+    .where(eq(employees.userId, normalizedEmployeeId))
     .returning()
 
   return updatedEmployee

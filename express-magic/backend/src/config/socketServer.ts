@@ -29,8 +29,12 @@ export const initSocketServer = (server: HttpServer) => {
       activeConnections[userId].add(socket.id)
       console.log('active connections', userId, activeConnections[userId].size)
 
-      // Mark employee online
-      await setEmployeeOnlineStatus(userId, true)
+      // Mark employee online when the socket belongs to an employee user.
+      // Demo/client sessions can register non-UUID ids; never let presence
+      // bookkeeping crash the backend process.
+      await setEmployeeOnlineStatus(userId, true).catch((error) => {
+        console.warn('Skipping employee online status update:', error?.message || error)
+      })
 
       // Handle heartbeat ping
       socket.on('employee_ping', () => {
@@ -44,7 +48,9 @@ export const initSocketServer = (server: HttpServer) => {
         activeConnections[currentUserId].delete(socket.id)
 
         if (activeConnections[currentUserId].size === 0) {
-          await setEmployeeOnlineStatus(currentUserId, false)
+          await setEmployeeOnlineStatus(currentUserId, false).catch((error) => {
+            console.warn('Skipping employee offline status update:', error?.message || error)
+          })
           delete activeConnections[currentUserId]
         }
       }
