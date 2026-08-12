@@ -107,6 +107,11 @@ Shipment update is asynchronous: Delhivery returns an edit LR job ID from the
 update call, and FastShip tracks that ID with `GET /lrn/update/status?job_id=...`
 using the cached UMS bearer token.
 
+Shipment cancellation forwards `DELETE /lrn/cancel/{lrn}`. Delhivery remains
+authoritative for the allowed shipment stages: Manifested, In Transit, Pending,
+Open, and Scheduled. Successful prepaid or COD cancellations transition to
+Returned in Delhivery.
+
 ## Verification
 
 Run both automated layers from `backend`:

@@ -526,6 +526,19 @@
             "script": { "type": "text/javascript", "exec": [
               "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
             ] }
+          }, {
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Shipment cancellation request succeeded', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().success).to.eql(true);",
+              "});",
+              "pm.test('Cancellation response is returned from Delhivery proxy', function () {",
+              "  var data = pm.response.json().data || {};",
+              "  pm.expect(data).to.have.property('cancelled');",
+              "  pm.expect(data).to.have.property('status');",
+              "});"
+            ] }
           }],
           "request": {
             "method": "DELETE",
