@@ -85,6 +85,17 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments/mps') {
+    return success({
+      success: true,
+      upload_wbn: 'UPLOAD-B2C-MPS-000001',
+      packages: [
+        { waybill: 'WB-MASTER-000001', status: 'Success' },
+        { waybill: 'WB-CHILD-000002', status: 'Success' },
+      ],
+    })
+  }
+
   return null
 }
 

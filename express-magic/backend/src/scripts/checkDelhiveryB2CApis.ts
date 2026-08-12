@@ -290,6 +290,154 @@ const run = async () => {
     assert.equal(manifest.shipments?.[0]?.pin, '110042')
     assert.equal(manifest.shipments?.[0]?.payment_mode, 'Prepaid')
 
+    const mpsResponse = await service.createB2CMpsShipmentManifest({
+      pickup_location: { name: 'warehouse_name' },
+      shipments: [
+        {
+          order: 'MPS-ORDER-1',
+          weight: '100',
+          mps_amount: '0',
+          mps_children: '2',
+          pin: '122002',
+          products_desc: 'Toys, ToyCar',
+          add: 'Test Address',
+          shipment_type: 'MPS',
+          state: 'TAMIL NADU',
+          master_id: 'WB-MASTER-000001',
+          city: 'CHENNAI',
+          waybill: 'WB-MASTER-000001',
+          phone: '9999888800',
+          payment_mode: 'Prepaid',
+          name: 'Test Name',
+          total_amount: '4250',
+          country: 'India',
+        },
+        {
+          order: 'MPS-ORDER-1',
+          weight: '100',
+          mps_amount: '0',
+          mps_children: '2',
+          pin: '600063',
+          products_desc: 'Toy box 2',
+          add: 'Consignee Address',
+          shipment_type: 'MPS',
+          state: 'TAMIL NADU',
+          master_id: 'WB-MASTER-000001',
+          city: 'CHENNAI',
+          waybill: 'WB-CHILD-000002',
+          phone: '9999888800',
+          payment_mode: 'Prepaid',
+          name: 'Consignee Name',
+          total_amount: '4250',
+          country: 'India',
+        },
+      ],
+    })
+    assert.equal((mpsResponse as any)?.upload_wbn, 'UPLOAD-B2C-000001')
+
+    const mpsRequest = requests.at(-1)
+    assert.equal(mpsRequest?.method, 'POST')
+    assert.equal(mpsRequest?.url, 'https://staging-express.delhivery.com/api/cmu/create.json')
+    const mpsForm = new URLSearchParams(String(mpsRequest?.data || ''))
+    assert.equal(mpsForm.get('format'), 'json')
+    const mpsManifest = JSON.parse(String(mpsForm.get('data') || '{}'))
+    assert.equal(mpsManifest.pickup_location?.name, 'warehouse_name')
+    assert.equal(mpsManifest.shipments?.length, 2)
+    assert.equal(mpsManifest.shipments?.[0]?.shipment_type, 'MPS')
+    assert.equal(mpsManifest.shipments?.[0]?.mps_amount, '0')
+    assert.equal(mpsManifest.shipments?.[0]?.mps_children, '2')
+    assert.equal(mpsManifest.shipments?.[0]?.master_id, 'WB-MASTER-000001')
+    assert.equal(mpsManifest.shipments?.[0]?.waybill, 'WB-MASTER-000001')
+    assert.equal(mpsManifest.shipments?.[1]?.master_id, 'WB-MASTER-000001')
+    assert.equal(mpsManifest.shipments?.[1]?.waybill, 'WB-CHILD-000002')
+
+    await assert.rejects(
+      () =>
+        service.createB2CMpsShipmentManifest({
+          pickup_location: { name: 'warehouse_name' },
+          shipments: [
+            {
+              order: 'single-box',
+              name: 'Name',
+              phone: '9999888800',
+              add: 'Address',
+              pin: '122002',
+              payment_mode: 'Prepaid',
+              mps_amount: '0',
+              mps_children: '1',
+              master_id: 'WB-MASTER-ONLY',
+              waybill: 'WB-MASTER-ONLY',
+            },
+          ],
+        }),
+      /at least two boxes/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CMpsShipmentManifest({
+          pickup_location: { name: 'warehouse_name' },
+          shipments: [
+            {
+              order: 'missing-waybill',
+              name: 'Name',
+              phone: '9999888800',
+              add: 'Address',
+              pin: '122002',
+              payment_mode: 'Prepaid',
+              mps_amount: '0',
+              mps_children: '2',
+              master_id: 'WB-MASTER-000001',
+            },
+            {
+              order: 'missing-waybill',
+              name: 'Name',
+              phone: '9999888800',
+              add: 'Address',
+              pin: '122002',
+              payment_mode: 'Prepaid',
+              mps_amount: '0',
+              mps_children: '2',
+              master_id: 'WB-MASTER-000001',
+              waybill: 'WB-CHILD-000002',
+            },
+          ],
+        }),
+      /waybill is required/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CMpsShipmentManifest({
+          pickup_location: { name: 'warehouse_name' },
+          shipments: [
+            {
+              order: 'wrong-children',
+              name: 'Name',
+              phone: '9999888800',
+              add: 'Address',
+              pin: '122002',
+              payment_mode: 'Prepaid',
+              mps_amount: '0',
+              mps_children: '3',
+              master_id: 'WB-MASTER-000001',
+              waybill: 'WB-MASTER-000001',
+            },
+            {
+              order: 'wrong-children',
+              name: 'Name',
+              phone: '9999888800',
+              add: 'Address',
+              pin: '122002',
+              payment_mode: 'Prepaid',
+              mps_amount: '0',
+              mps_children: '3',
+              master_id: 'WB-MASTER-000001',
+              waybill: 'WB-CHILD-000002',
+            },
+          ],
+        }),
+      /mps_children must equal/,
+    )
+
     await assert.rejects(() => service.createB2CShipmentManifest({}), /shipments/)
     await assert.rejects(
       () =>

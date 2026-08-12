@@ -139,13 +139,37 @@ const requiredManifestText = (value: unknown, field: string) => {
   return text
 }
 
-const normalizeDelhiveryB2CShipmentManifest = (payload: unknown) => {
+const normalizeDelhiveryPositiveIntegerText = (value: unknown, field: string) => {
+  const text = requiredManifestText(value, field)
+  const numericValue = Number(text)
+  if (!Number.isInteger(numericValue) || numericValue < 1) {
+    throw new HttpError(400, `${field} must be a positive integer`)
+  }
+  return text
+}
+
+const normalizeDelhiveryNonNegativeIntegerText = (value: unknown, field: string) => {
+  const text = requiredManifestText(value, field)
+  const numericValue = Number(text)
+  if (!Number.isInteger(numericValue) || numericValue < 0) {
+    throw new HttpError(400, `${field} must be a non-negative integer`)
+  }
+  return text
+}
+
+const normalizeDelhiveryB2CShipmentManifest = (
+  payload: unknown,
+  options: { requireMps?: boolean } = {},
+) => {
   const manifest = payload as any
   if (!manifest || typeof manifest !== 'object') {
     throw new HttpError(400, 'Shipment manifest payload is required')
   }
   if (!Array.isArray(manifest.shipments) || manifest.shipments.length === 0) {
     throw new HttpError(400, 'shipments must be a non-empty array')
+  }
+  if (options.requireMps && manifest.shipments.length < 2) {
+    throw new HttpError(400, 'MPS shipments must include at least two boxes in shipments')
   }
 
   const pickupName = requiredManifestText(manifest.pickup_location?.name, 'pickup_location.name')
@@ -154,7 +178,7 @@ const normalizeDelhiveryB2CShipmentManifest = (payload: unknown) => {
       throw new HttpError(400, `shipments[${index}] must be an object`)
     }
 
-    return {
+    const normalizedShipment = {
       ...shipment,
       name: requiredManifestText(shipment.name, `shipments[${index}].name`),
       order: requiredManifestText(shipment.order, `shipments[${index}].order`),
@@ -163,7 +187,40 @@ const normalizeDelhiveryB2CShipmentManifest = (payload: unknown) => {
       pin: normalizeDelhiveryPincode(shipment.pin, `shipments[${index}].pin`),
       payment_mode: normalizeDelhiveryB2CPaymentMode(shipment.payment_mode),
     }
+
+    if (!options.requireMps) return normalizedShipment
+
+    return {
+      ...normalizedShipment,
+      shipment_type: 'MPS',
+      mps_amount: normalizeDelhiveryNonNegativeIntegerText(
+        shipment.mps_amount,
+        `shipments[${index}].mps_amount`,
+      ),
+      mps_children: normalizeDelhiveryPositiveIntegerText(
+        shipment.mps_children,
+        `shipments[${index}].mps_children`,
+      ),
+      master_id: requiredManifestText(shipment.master_id, `shipments[${index}].master_id`),
+      waybill: requiredManifestText(shipment.waybill, `shipments[${index}].waybill`),
+    }
   })
+
+  if (options.requireMps) {
+    const expectedChildren = shipments.length
+    const masterId = String(shipments[0].master_id)
+    shipments.forEach((shipment: any, index: number) => {
+      if (Number(shipment.mps_children) !== expectedChildren) {
+        throw new HttpError(
+          400,
+          `shipments[${index}].mps_children must equal total shipments count ${expectedChildren}`,
+        )
+      }
+      if (String(shipment.master_id) !== masterId) {
+        throw new HttpError(400, `shipments[${index}].master_id must match the master waybill`)
+      }
+    })
+  }
 
   return {
     ...manifest,
@@ -594,6 +651,22 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to create Delhivery B2C shipment')
+    }
+  }
+
+  async createB2CMpsShipmentManifest(payload: unknown) {
+    try {
+      const manifest = normalizeDelhiveryB2CShipmentManifest(payload, { requireMps: true })
+      const res = await this.postFormEncoded('/api/cmu/create.json', manifest)
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C MPS shipment creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C MPS shipment')
     }
   }
 

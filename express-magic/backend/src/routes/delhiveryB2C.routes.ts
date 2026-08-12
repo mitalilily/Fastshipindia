@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  createMpsShipmentController,
   createShipmentController,
   expectedTatController,
   fetchSingleWaybillController,
@@ -19,5 +20,6 @@ router.get('/tat', expectedTatController)
 router.get('/waybills', fetchWaybillsController)
 router.get('/waybill', fetchSingleWaybillController)
 router.post('/shipments', createShipmentController)
+router.post('/shipments/mps', createMpsShipmentController)
 
 export default router

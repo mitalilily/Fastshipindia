@@ -10,6 +10,7 @@
 | Fetch WayBill | `GET /waybill/api/bulk/json/?token={token}&count={count}` | `GET /api/delhivery/b2c/waybills?count={count}` |
 | Fetch Single WayBill | `GET /waybill/api/fetch/json/?token={token}` | `GET /api/delhivery/b2c/waybill` |
 | Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
+| MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
 
 FastShip validates a single six-digit pincode, forwards it as `filter_codes`,
 and authenticates with Delhivery's `Authorization: Token ...` header. An empty
@@ -42,6 +43,11 @@ required shipment fields plus `pickup_location.name`, canonicalizes
 `format=json&data={...}` to avoid Delhivery raw-JSON special-character issues.
 This is a state-changing request; only run it against an intended Delhivery
 account and warehouse.
+
+For MPS Manifestation, FastShip enforces at least two boxes, prefetched waybills
+on every box, `shipment_type=MPS`, `mps_amount`, `mps_children`, and a shared
+`master_id` matching the master waybill. The payload is sent to Delhivery using
+the same URL-encoded manifestation API.
 
 ## Verification
 
