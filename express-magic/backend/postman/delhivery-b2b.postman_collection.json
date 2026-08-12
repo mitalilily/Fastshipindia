@@ -468,6 +468,16 @@
           "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
             "var value = String(pm.environment.get('updateJobId') || '').trim();",
             "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+          ] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Shipment update status request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(pm.response.json().success).to.eql(true);",
+            "});",
+            "pm.test('Async update status is returned for the tracked job', function () {",
+            "  var data = pm.response.json().data || {};",
+            "  pm.expect(data).to.have.property('job_id');",
+            "  pm.expect(data).to.have.property('status');",
+            "});"
           ] } }],
           "request": {
             "method": "GET",

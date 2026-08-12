@@ -85,7 +85,7 @@ created through Delhivery's forgot-password flow, not an unrelated Delhivery One
 | Shipment manifestation | `POST /manifest` | `POST /api/delhivery/b2b/shipments/manifest` |
 | Manifest status | `GET /manifest?job_id=...` | `GET /api/delhivery/b2b/shipments/manifest/{jobId}` |
 | Shipment update | `PUT /lrn/update/{lrn}` | `PUT /api/delhivery/b2b/shipments/{lrn}` |
-| Shipment update status | `GET /lrn/update/status` | `GET /api/delhivery/b2b/shipments/update/{jobId}` |
+| Shipment update status | `GET /lrn/update/status?job_id=...` | `GET /api/delhivery/b2b/shipments/update/{jobId}` |
 | Shipment cancellation | `DELETE /lrn/cancel/{lrn}` | `DELETE /api/delhivery/b2b/shipments/{lrn}` |
 | Shipment tracking | `GET /lrn/track` | `GET /api/delhivery/b2b/shipments/{lrn}/tracking` |
 | Last-mile appointment | `POST /v2/appointments/lm` | `POST /api/delhivery/b2b/shipments/{lrn}/appointments` |
@@ -102,6 +102,10 @@ All proxy routes validate required fields, units, enumerations, dates, file form
 Delhivery limits before forwarding. Shipment and freight weights are in grams; dimensions
 are in centimetres. Manifestation and shipment updates support multipart invoice files with
 a maximum of 10 files and 20 MB aggregate size.
+
+Shipment update is asynchronous: Delhivery returns an edit LR job ID from the
+update call, and FastShip tracks that ID with `GET /lrn/update/status?job_id=...`
+using the cached UMS bearer token.
 
 ## Verification
 

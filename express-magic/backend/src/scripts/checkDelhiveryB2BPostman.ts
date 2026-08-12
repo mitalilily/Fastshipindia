@@ -78,7 +78,7 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     [
       'GET',
       /^\/api\/delhivery\/b2b\/shipments\/update\/[^/]+$/,
-      success({ updated: true }),
+      success({ job_id: 'mock-update-job', status: 'PENDING' }),
     ],
     [
       'GET',
