@@ -113,12 +113,12 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     [
       'POST',
       /^\/api\/delhivery\/b2b\/documents\/shipping_label$/,
-      success({ job_id: 'mock-shipping-label-job' }),
+      success({ job_id: 'mock-shipping-label-job', doc_type: 'shipping_label' }),
     ],
     [
       'POST',
       /^\/api\/delhivery\/b2b\/documents\/lr_copy$/,
-      success({ job_id: 'mock-lr-copy-job' }),
+      success({ job_id: 'mock-lr-copy-job', doc_type: 'lr_copy' }),
     ],
     [
       'GET',

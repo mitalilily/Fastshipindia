@@ -141,6 +141,12 @@ LR copies forward `GET /lr_copy/print/{lrn}` for one LRN at a time. Optional
 `lr_copy_type` is a comma-separated selection from Delhivery's five documented
 copy variants; when omitted, Delhivery returns all copy types by default.
 
+Async document generation forwards `POST /generate/{doc_type}` for
+`shipping_label` and `lr_copy`. Requests accept 1-25 LRNs, require an HTTP(S)
+POST callback, require `size` for shipping labels, and use optional
+`lr_copy_type` lists for LR copies. Delhivery later pushes the PDF link to the
+callback URL.
+
 ## Verification
 
 Run both automated layers from `backend`:

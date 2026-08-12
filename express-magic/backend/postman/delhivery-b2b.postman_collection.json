@@ -690,6 +690,10 @@
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('shippingLabelJobId', id);",
+            "pm.test('Generate shipping labels request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(body.success).to.eql(true);",
+            "});",
             "pm.test('document job ID is returned', function () { pm.expect(id).to.be.ok; });"
           ] } }],
           "request": {
@@ -709,6 +713,10 @@
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('lrCopyJobId', id);",
+            "pm.test('Generate LR copies request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(body.success).to.eql(true);",
+            "});",
             "pm.test('document job ID is returned', function () { pm.expect(id).to.be.ok; });"
           ] } }],
           "request": {

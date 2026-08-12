@@ -1060,7 +1060,10 @@ const run = async () => {
     size: 'a4',
     callback: { ...documentCallback, method: 'POST' },
   })
+  assert.equal(generatedLabels.headers?.Authorization, 'Bearer test-jwt')
+  assert.equal(generatedLabels.headers?.Accept, 'application/json')
   assert.equal(generatedLabels.headers?.['Content-Type'], 'application/json')
+  assert.equal(typeof generatedLabels.headers?.['X-Request-Id'], 'string')
 
   await service.generateDocument('lr_copy', {
     lrns: ['220040156'],
@@ -1074,6 +1077,10 @@ const run = async () => {
     lr_copy_type: ['SHIPPER COPY', 'LM POD'],
     callback: { ...documentCallback, method: 'POST' },
   })
+  assert.equal(generatedLrCopies.headers?.Authorization, 'Bearer test-jwt')
+  assert.equal(generatedLrCopies.headers?.Accept, 'application/json')
+  assert.equal(generatedLrCopies.headers?.['Content-Type'], 'application/json')
+  assert.equal(typeof generatedLrCopies.headers?.['X-Request-Id'], 'string')
 
   const validDocumentPayload = {
     lrns: ['220040156'],
