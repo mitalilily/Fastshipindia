@@ -103,7 +103,7 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     [
       'GET',
       /^\/api\/delhivery\/b2b\/shipments\/[^/]+\/labels\/(sm|md|a4|std)$/,
-      success({ url: 'https://example.com/mock-label.png' }),
+      success({ urls: ['data:image/png;base64,bW9jay1sYWJlbA=='] }),
     ],
     [
       'GET',

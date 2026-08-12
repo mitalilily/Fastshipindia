@@ -1004,7 +1004,9 @@ const run = async () => {
   for (const size of ['sm', 'md', 'a4', 'std']) {
     await service.getShippingLabel('220041149', size)
     const shippingLabel = lastRequest('GET', `/label/get_urls/${size}/220041149`)
+    assert.equal(shippingLabel.headers?.Authorization, 'Bearer test-jwt')
     assert.equal(shippingLabel.headers?.Accept, 'application/json')
+    assert.equal(typeof shippingLabel.headers?.['X-Request-Id'], 'string')
     assert.equal(shippingLabel.data, undefined)
   }
   await service.getShippingLabel('220041149', 'A4')

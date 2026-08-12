@@ -132,6 +132,11 @@ Pickup cancellations forward `DELETE /pickup_requests/{pickup_id}` for pickup
 requests created through Delhivery. The proxy validates the pickup ID and sends
 the UMS bearer token plus `X-Request-Id`.
 
+Shipping labels forward `GET /label/get_urls/{size}/{lrn}` with size restricted
+to `sm`, `md`, `a4`, or `std`. Delhivery returns links for the waybills in the
+LRN; those links contain Base64 image streams that clients decode to PNG before
+printing.
+
 ## Verification
 
 Run both automated layers from `backend`:

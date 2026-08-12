@@ -640,7 +640,15 @@
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
-            "pm.test('label payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+            "pm.test('Shipping label URL request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(body.success).to.eql(true);",
+            "});",
+            "pm.test('Shipping label links are returned for the LRN waybills', function () {",
+            "  var data = body.data || {};",
+            "  var links = data.urls || data.links || data.label_urls || data.labels || (data.url ? [data.url] : []);",
+            "  pm.expect(links).to.be.an('array').and.not.empty;",
+            "});"
           ] } }],
           "request": {
             "description": "Generates one shipping-label link per waybill for the LRN. labelSize must be sm (4x2 in), md (4x2.5 in), a4 (11.7x8.3 in), or std (3x2 in). Delhivery's returned links contain Base64 image streams that must be decoded to PNG before printing.",
