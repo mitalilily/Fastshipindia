@@ -31,6 +31,12 @@ type InFlightLogin = {
   promise: Promise<LoginResult>
 }
 
+type FailedLogin = {
+  credentialKey: string
+  message: string
+  retryAt: number
+}
+
 const DELHIVERY_B2B_TRACKING_STATUS_MAP: Record<string, string> = {
   MANIFESTED: 'shipment_created',
   PICKED_UP: 'pickup_initiated',
@@ -58,11 +64,17 @@ export const mapDelhiveryB2BTrackingStatus = (value: unknown) => {
 
 let cachedToken: CachedToken | null = null
 let loginInFlight: InFlightLogin | null = null
+let failedLogin: FailedLogin | null = null
 
 const clean = (value: unknown) => String(value ?? '').trim()
 const timeoutMs = () => {
   const configured = Number(process.env.DELHIVERY_B2B_REQUEST_TIMEOUT_MS || 30000)
   return Number.isFinite(configured) && configured > 0 ? configured : 30000
+}
+
+const loginFailureCooldownMs = () => {
+  const configured = Number(process.env.DELHIVERY_B2B_LOGIN_FAILURE_COOLDOWN_MS || 10 * 60 * 1000)
+  return Number.isFinite(configured) && configured > 0 ? configured : 10 * 60 * 1000
 }
 
 const trimBaseUrl = (value: string) => value.replace(/\/+$/, '')
@@ -91,9 +103,9 @@ const parseJwtExpiry = (token: string) => {
   try {
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
     const expiresAt = Number(payload?.exp || 0) * 1000
-    return expiresAt > Date.now() ? expiresAt : Date.now() + 23 * 60 * 60 * 1000
+    return expiresAt > Date.now() ? expiresAt : Date.now() + 24 * 60 * 60 * 1000
   } catch {
-    return Date.now() + 23 * 60 * 60 * 1000
+    return Date.now() + 24 * 60 * 60 * 1000
   }
 }
 
@@ -985,6 +997,7 @@ export class DelhiveryB2BService {
   static clearTokenCache() {
     cachedToken = null
     loginInFlight = null
+    failedLogin = null
   }
 
   async getOperationalDefaults() {
@@ -1042,6 +1055,17 @@ export class DelhiveryB2BService {
     const password = ensureRequired(credentials.password, 'password')
     const credentialKey = makeCredentialKey(credentials)
 
+    if (failedLogin) {
+      if (failedLogin.credentialKey !== credentialKey || failedLogin.retryAt <= Date.now()) {
+        failedLogin = null
+      } else {
+        throw new HttpError(
+          429,
+          `Delhivery B2B login is paused after rejected credentials (${failedLogin.message}). Retry after ${new Date(failedLogin.retryAt).toISOString()}`,
+        )
+      }
+    }
+
     if (
       !force &&
       cachedToken?.credentialKey === credentialKey &&
@@ -1065,9 +1089,21 @@ export class DelhiveryB2BService {
         if (!token) throw new HttpError(502, 'Delhivery B2B login response did not contain a JWT')
         const expiresAt = parseJwtExpiry(token)
         cachedToken = { credentialKey, token, expiresAt }
+        failedLogin = null
         return { token, expiresAt, cached: false }
       } catch (error) {
         if (error instanceof HttpError) throw error
+        const statusCode = Number((error as any)?.response?.status || 502)
+        if ([400, 401, 403].includes(statusCode)) {
+          failedLogin = {
+            credentialKey,
+            message:
+              extractMessage((error as any)?.response?.data) ||
+              clean((error as any)?.message) ||
+              'Delhivery B2B rejected the configured credentials',
+            retryAt: Date.now() + loginFailureCooldownMs(),
+          }
+        }
         this.providerError(error, 'Delhivery B2B login failed')
       }
     })()

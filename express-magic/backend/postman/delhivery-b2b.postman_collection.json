@@ -94,6 +94,15 @@
         },
         {
           "name": "Login / Validate Saved Credentials",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "pm.test('Delhivery authentication is confirmed without exposing its JWT', function () {",
+            "  pm.expect(body.data.authenticated).to.eql(true);",
+            "  pm.expect(body.data.expiresAt).to.be.a('string').and.not.empty;",
+            "  pm.expect(body.data).not.to.have.property('token');",
+            "  pm.expect(body.data).not.to.have.property('jwt');",
+            "});"
+          ] } }],
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/delhivery/b2b/auth/login",

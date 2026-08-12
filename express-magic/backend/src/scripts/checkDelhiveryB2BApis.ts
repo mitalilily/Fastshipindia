@@ -123,6 +123,12 @@ const run = async () => {
   })
   assert.equal(loginRequests[0].headers?.['Content-Type'], 'application/json')
   assert(loginResults.every((result) => result.token === 'test-jwt'))
+  const cachedLogin = await service.login()
+  assert.equal(cachedLogin.cached, true)
+  assert(
+    cachedLogin.expiresAt > Date.now() + 23 * 60 * 60 * 1000,
+    'Tokens without a readable JWT expiry should use Delhivery\'s documented 24-hour validity',
+  )
 
   await service.checkServiceability('122001', 1000)
   const serviceabilityRequest = lastRequest('GET', '/pincode-service/122001')
@@ -810,6 +816,25 @@ const run = async () => {
     1,
     'Expected the JWT to be reused instead of logging in for every API request',
   )
+
+  DelhiveryB2BService.clearTokenCache()
+  const loginCountBeforeFailure = requests.filter((request) =>
+    request.url?.endsWith('/ums/login'),
+  ).length
+  ;(axios as any).post = async (url: string, data: unknown, config?: CapturedRequest) => {
+    requests.push({ method: 'POST', url, data, headers: config?.headers })
+    const error: any = new Error('Invalid credentials')
+    error.response = { status: 401, data: { message: 'Invalid credentials' } }
+    throw error
+  }
+  await assert.rejects(() => service.login(), /Invalid credentials/)
+  await assert.rejects(() => service.login(), /login is paused.*Retry after/)
+  assert.equal(
+    requests.filter((request) => request.url?.endsWith('/ums/login')).length,
+    loginCountBeforeFailure + 1,
+    'Rejected credentials must not trigger another Delhivery login during its 10-minute lock window',
+  )
+  DelhiveryB2BService.clearTokenCache()
 
   assert.throws(
     () => service.getFreightCharges(Array.from({ length: 26 }, (_, index) => String(index))),

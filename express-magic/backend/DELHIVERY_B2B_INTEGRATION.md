@@ -16,6 +16,11 @@ values are API base, username, reset API password, client ID, and default wareho
 The same values can be supplied by `DELHIVERY_B2B_*` environment variables; environment
 values take precedence over stored credentials.
 
+FastShip caches the returned JWT until one minute before its 24-hour expiry and shares one
+in-flight login across concurrent requests. If Delhivery rejects credentials with HTTP
+400/401/403, further login attempts for the same credentials are suppressed for 10 minutes
+to avoid extending Delhivery's account lock. Saving corrected credentials clears the cache.
+
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password
 created through Delhivery's forgot-password flow, not an unrelated Delhivery One password.
