@@ -61,7 +61,7 @@ Import:
 
 The collection signs in as a FastShip admin and checks the Delhivery B2C
 pincode serviceability, Heavy product type pincode serviceability, and Expected
-TAT proxies. Local Newman verification:
+TAT, and Fetch WayBill proxies. Local Newman verification:
 
 ```bash
 npm run check:delhivery-b2c-postman

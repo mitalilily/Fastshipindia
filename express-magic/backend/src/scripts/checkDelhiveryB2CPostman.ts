@@ -65,6 +65,12 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'GET' && pathname === '/api/delhivery/b2c/waybills') {
+    return success({
+      waybills: ['WB000001', 'WB000002', 'WB000003', 'WB000004', 'WB000005'],
+    })
+  }
+
   return null
 }
 

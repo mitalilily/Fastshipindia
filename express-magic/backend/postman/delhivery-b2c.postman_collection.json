@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a67c41e7-3d7e-45e9-b2c-delhivery",
     "name": "FastShip - Delhivery B2C (Express)",
-    "description": "Focused checks for the admin-only FastShip Delhivery B2C proxy. The collection signs in to FastShip before calling Delhivery B2C serviceability APIs.",
+    "description": "Focused checks for the admin-only FastShip Delhivery B2C proxy. The collection signs in to FastShip before calling Delhivery B2C APIs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -135,6 +135,35 @@
                   "pm.test('Expected TAT contains tat or delivery date signal', function () {",
                   "  var data = (body.data || {}).data || body.data || {};",
                   "  pm.expect(data.tat !== undefined || data.expected_delivery_date !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fetch WayBill",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/waybills?count={{waybillCount}}",
+            "description": "Fetches Delhivery B2C bulk waybills using GET /waybill/api/bulk/json/?token={token}&count={count}. Count is mandatory and must be between 1 and 10000."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Fetch WayBill proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Waybill data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.waybills || data.waybill || data).to.exist;",
+                  "});",
+                  "pm.test('Waybill list contains requested batch data', function () {",
+                  "  var data = body.data || {};",
+                  "  var waybills = data.waybills || data.waybill || data;",
+                  "  pm.expect(Array.isArray(waybills) || typeof waybills === 'string').to.eql(true);",
                   "});"
                 ]
               }

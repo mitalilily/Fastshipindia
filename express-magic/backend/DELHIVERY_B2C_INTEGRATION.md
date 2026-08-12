@@ -7,6 +7,7 @@
 | Pincode serviceability | `GET /c/api/pin-codes/json/?filter_codes={pincode}` | `GET /api/delhivery/b2c/serviceability/{pincode}` |
 | Heavy product type pincode serviceability | `GET /api/dc/fetch/serviceability/pincode?product_type=Heavy&pincode={pincode}` | `GET /api/delhivery/b2c/heavy-serviceability/{pincode}` |
 | Expected TAT | `GET /api/dc/expected_tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` | `GET /api/delhivery/b2c/tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` |
+| Fetch WayBill | `GET /waybill/api/bulk/json/?token={token}&count={count}` | `GET /api/delhivery/b2c/waybills?count={count}` |
 
 FastShip validates a single six-digit pincode, forwards it as `filter_codes`,
 and authenticates with Delhivery's `Authorization: Token ...` header. An empty
@@ -22,6 +23,12 @@ For Expected TAT, FastShip validates origin/destination as six-digit pincodes,
 accepts `mot` values `S`, `E`, or `N`, and forwards optional `pdt` plus
 `expected_pickup_date`. The provider response is returned unchanged under
 `data` so delivery-day and expected-delivery-date fields remain available.
+
+For Fetch WayBill, FastShip requires `count` to be an integer from 1 to 10000,
+forwards Delhivery's token in the provider query string, and returns the bulk
+waybill response unchanged under `data`. Delhivery generates these in backend
+batches, so callers should store the fetched waybills and use them later during
+manifest creation.
 
 ## Verification
 

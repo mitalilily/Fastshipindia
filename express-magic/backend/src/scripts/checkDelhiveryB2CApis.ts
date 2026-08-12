@@ -43,6 +43,14 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/waybill/api/bulk/json/')) {
+      return {
+        status: 200,
+        data: {
+          waybills: ['WB000001', 'WB000002', 'WB000003', 'WB000004', 'WB000005'],
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -172,6 +180,33 @@ const run = async () => {
         }),
       /expected_pickup_date/,
     )
+
+    const waybillResponse = await service.fetchB2CBulkWaybills(5)
+    assert.deepEqual((waybillResponse as any)?.waybills, [
+      'WB000001',
+      'WB000002',
+      'WB000003',
+      'WB000004',
+      'WB000005',
+    ])
+
+    const waybillRequest = requests.at(-1)
+    assert.equal(waybillRequest?.method, 'GET')
+    assert.equal(
+      waybillRequest?.url,
+      'https://staging-express.delhivery.com/waybill/api/bulk/json/',
+    )
+    assert.deepEqual(waybillRequest?.params, {
+      token: 'test-delhivery-token',
+      count: 5,
+    })
+    assert.equal(waybillRequest?.headers?.Accept, 'application/json')
+    assert.equal(waybillRequest?.headers?.Authorization, undefined)
+
+    await assert.rejects(() => service.fetchB2CBulkWaybills(undefined), /count must be an integer/)
+    await assert.rejects(() => service.fetchB2CBulkWaybills(0), /count must be an integer/)
+    await assert.rejects(() => service.fetchB2CBulkWaybills(10001), /count must be an integer/)
+    await assert.rejects(() => service.fetchB2CBulkWaybills(1.5), /count must be an integer/)
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
   } finally {

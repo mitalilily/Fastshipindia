@@ -65,3 +65,6 @@ export const expectedTatController = (req: Request, res: Response) =>
       expected_pickup_date: req.query.expected_pickup_date,
     }),
   )
+
+export const fetchWaybillsController = (req: Request, res: Response) =>
+  sendDataResult(res, service.fetchB2CBulkWaybills(req.query.count))

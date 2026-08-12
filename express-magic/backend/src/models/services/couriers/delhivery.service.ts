@@ -110,6 +110,14 @@ const normalizeDelhiveryExpectedPickupDate = (value: unknown) => {
   return expectedPickupDate
 }
 
+const normalizeDelhiveryWaybillCount = (value: unknown) => {
+  const count = Number(value)
+  if (!Number.isInteger(count) || count < 1 || count > 10000) {
+    throw new HttpError(400, 'count must be an integer between 1 and 10000')
+  }
+  return count
+}
+
 export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
   const payload = response as any
   const rows = Array.isArray(payload)
@@ -463,6 +471,33 @@ export class DelhiveryService {
     } catch (err: any) {
       console.error('Delhivery waybill fetch error:', err.response?.data || err.message)
       throw new Error('Failed to fetch Delhivery waybill')
+    }
+  }
+
+  async fetchB2CBulkWaybills(count: unknown) {
+    try {
+      const normalizedCount = normalizeDelhiveryWaybillCount(count)
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/waybill/api/bulk/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+        params: {
+          token: this.token,
+          count: normalizedCount,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C bulk waybill error:', {
+        count,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C bulk waybills')
     }
   }
 
