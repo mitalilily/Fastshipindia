@@ -25,6 +25,9 @@ and invalidates the cached JWT only after Delhivery accepts the logout.
 Before B2B manifestation, FastShip checks both origin and consignee pincodes with the
 expected shipment weight in grams. An empty, malformed, or explicitly unsuccessful
 serviceability response fails closed and prevents the provider booking request.
+Expected TAT requires valid six-digit origin and destination pincodes. FastShip attaches the
+cached UMS bearer token and a new UUID `X-Request-Id` to every call; Delhivery's non-negative
+network estimate is returned in days without being treated as a contractual delivery promise.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password

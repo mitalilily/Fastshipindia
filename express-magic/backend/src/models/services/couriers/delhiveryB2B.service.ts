@@ -78,6 +78,22 @@ export const isDelhiveryB2BServiceableResponse = (response: any) => {
   return Array.isArray(rows) && rows.length > 0
 }
 
+export const getDelhiveryB2BTatDays = (response: any): number | null => {
+  const candidates = [
+    response?.data?.tat_days,
+    response?.data?.tat,
+    response?.data?.days,
+    response?.tat_days,
+    response?.tat,
+    response?.days,
+  ]
+  for (const value of candidates) {
+    const days = Number(value)
+    if (Number.isFinite(days) && days >= 0) return days
+  }
+  return null
+}
+
 const loginFailureCooldownMs = () => {
   const configured = Number(process.env.DELHIVERY_B2B_LOGIN_FAILURE_COOLDOWN_MS || 10 * 60 * 1000)
   return Number.isFinite(configured) && configured > 0 ? configured : 10 * 60 * 1000

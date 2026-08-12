@@ -152,6 +152,15 @@
         },
         {
           "name": "Expected TAT",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "var provider = body.data || {};",
+            "var providerData = provider.data || provider;",
+            "var days = providerData.tat_days ?? providerData.tat ?? providerData.days;",
+            "pm.test('Delhivery returns a non-negative TAT in days', function () {",
+            "  pm.expect(Number(days)).to.be.at.least(0);",
+            "});"
+          ] } }],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/delhivery/b2b/tat?origin_pin={{originPincode}}&destination_pin={{destinationPincode}}",

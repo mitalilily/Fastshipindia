@@ -29,6 +29,7 @@ const run = async () => {
   process.env.DATABASE_URL ||= 'postgresql://test:test@127.0.0.1:5432/test'
   const {
     DelhiveryB2BService,
+    getDelhiveryB2BTatDays,
     isDelhiveryB2BServiceableResponse,
     mapDelhiveryB2BTrackingStatus,
   } = await import(
@@ -51,6 +52,10 @@ const run = async () => {
   )
   assert.equal(isDelhiveryB2BServiceableResponse({ success: false }), false)
   assert.equal(isDelhiveryB2BServiceableResponse({ success: true, data: {} }), false)
+  assert.equal(getDelhiveryB2BTatDays({ data: { tat_days: 3 } }), 3)
+  assert.equal(getDelhiveryB2BTatDays({ tat: '4' }), 4)
+  assert.equal(getDelhiveryB2BTatDays({ data: {} }), null)
+  assert.equal(getDelhiveryB2BTatDays({ days: -1 }), null)
 
   assert.deepEqual(
     {
@@ -170,6 +175,14 @@ const run = async () => {
   })
   assert.equal(tatRequest.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(typeof tatRequest.headers?.['X-Request-Id'], 'string')
+
+  await service.getExpectedTat('400093', '122001')
+  const secondTatRequest = lastRequest('GET', '/tat/estimate')
+  assert.notEqual(
+    secondTatRequest.headers?.['X-Request-Id'],
+    tatRequest.headers?.['X-Request-Id'],
+    'Each Expected TAT request must receive a unique X-Request-Id',
+  )
 
   assert.throws(() => service.getExpectedTat('40009', '122001'), /origin_pin.*6-digit/)
   assert.throws(
