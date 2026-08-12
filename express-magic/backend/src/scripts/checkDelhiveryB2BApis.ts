@@ -964,7 +964,10 @@ const run = async () => {
   await service.createPickupRequest(pickupPayload)
   const pickup = lastRequest('POST', '/pickup_requests')
   assert.deepEqual(pickup.data, pickupPayload)
+  assert.equal(pickup.headers?.Authorization, 'Bearer test-jwt')
+  assert.equal(pickup.headers?.Accept, 'application/json')
   assert.equal(pickup.headers?.['Content-Type'], 'application/json')
+  assert.equal(typeof pickup.headers?.['X-Request-Id'], 'string')
   assert.throws(
     () => service.createPickupRequest({ ...pickupPayload, client_warehouse: '   ' }),
     /client_warehouse must be a non-empty string/,

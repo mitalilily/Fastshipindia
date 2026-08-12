@@ -584,7 +584,15 @@
               "pm.environment.set('pickupDate', pickupDate);"
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
-              "var body = pm.response.json(); var data = body.data || {}; var id = data.pickup_id || data.pur_id || (data.data || {}).pickup_id; if (id) pm.environment.set('pickupId', id);"
+              "pm.test('Pickup request creation succeeded', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().success).to.eql(true);",
+              "});",
+              "pm.test('Pickup request ID is returned', function () {",
+              "  var body = pm.response.json(); var data = body.data || {}; var id = data.pickup_id || data.pur_id || (data.data || {}).pickup_id;",
+              "  pm.expect(id).to.be.a('string').and.not.empty;",
+              "  pm.environment.set('pickupId', id);",
+              "});"
             ] } }
           ],
           "request": {

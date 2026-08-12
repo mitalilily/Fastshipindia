@@ -123,6 +123,11 @@ today or later, the expiry date cannot be earlier than the appointment date, onl
 Delhivery's eight documented slots are accepted, and `po_number` must contain
 one to five values such as `NotApplicable`.
 
+Pickup requests forward `POST /pickup_requests` with the exact
+`client_warehouse` name, `pickup_date` in `YYYY-MM-DD`, `start_time` in
+`HH:MM:SS`, and a positive integer `expected_package_count`. FastShip includes
+the UMS bearer token and an `X-Request-Id` for traceability.
+
 ## Verification
 
 Run both automated layers from `backend`:
