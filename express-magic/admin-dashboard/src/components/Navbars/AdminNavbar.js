@@ -15,12 +15,20 @@ import {
 } from '@chakra-ui/react'
 import {
   IconBell,
+  IconBolt,
+  IconChartBar,
   IconDashboard,
+  IconHelpCircle,
   IconKey,
   IconLayoutSidebarLeftCollapse,
   IconLogout,
+  IconMapPin,
   IconMenu2,
+  IconPackageExport,
   IconSettings,
+  IconTruck,
+  IconUsers,
+  IconWallet,
 } from '@tabler/icons-react'
 import { useSocket } from 'hooks/useSocket'
 import PropTypes from 'prop-types'
@@ -51,6 +59,12 @@ export default function AdminNavbar(props) {
   const menuText = useColorModeValue('#0F172A', '#E6EDF3')
   const menuMuted = useColorModeValue('#64748B', '#8B949E')
   const menuHoverBg = useColorModeValue('#F9FAFB', '#21262D')
+  const widgetBg = useColorModeValue('#F8FAFF', '#21262D')
+  const widgetBorder = useColorModeValue('#E5EAF3', '#30363D')
+  const widgetAccentBg = useColorModeValue('#EDE9FE', 'rgba(108, 92, 231, 0.18)')
+  const widgetAccent = useColorModeValue('#5A4BD1', '#B7AEFF')
+  const liveBg = useColorModeValue('#E9FBF4', 'rgba(74, 222, 128, 0.14)')
+  const liveColor = useColorModeValue('#00A881', '#4ADE80')
 
   const handleLogout = () => {
     logout()
@@ -72,6 +86,16 @@ export default function AdminNavbar(props) {
       mounted = false
     }
   }, [setNotifications])
+
+  const quickLinks = [
+    { label: 'Orders', route: '/admin/orders', icon: IconPackageExport },
+    { label: 'Users', route: '/admin/users-management', icon: IconUsers },
+    { label: 'Couriers', route: '/admin/couriers', icon: IconTruck },
+    { label: 'Serviceability', route: '/admin/serviceability', icon: IconMapPin },
+    { label: 'Reports', route: '/admin/reports', icon: IconChartBar },
+    { label: 'COD Remittance', route: '/admin/cod-remittance', icon: IconWallet },
+    { label: 'Support', route: '/admin/support', icon: IconHelpCircle },
+  ]
 
   return (
     <Flex
@@ -112,7 +136,89 @@ export default function AdminNavbar(props) {
         </Text>
       </HStack>
 
-      <HStack spacing="10px">
+      <HStack spacing={{ base: '8px', md: '10px' }}>
+        <HStack spacing="8px" display={{ base: 'none', lg: 'flex' }}>
+          <Flex
+            h="32px"
+            px="11px"
+            align="center"
+            gap="7px"
+            borderRadius="999px"
+            bg={liveBg}
+            color={liveColor}
+            fontSize="12px"
+            fontWeight="800"
+          >
+            <Box w="7px" h="7px" borderRadius="full" bg={liveColor} />
+            Live
+          </Flex>
+          <Flex
+            h="32px"
+            px="11px"
+            align="center"
+            gap="7px"
+            borderRadius="999px"
+            bg={widgetBg}
+            border="1px solid"
+            borderColor={widgetBorder}
+            color={menuMuted}
+            fontSize="12px"
+            fontWeight="800"
+          >
+            <IconBell size={14} />
+            {unreadCount || 0} alerts
+          </Flex>
+        </HStack>
+
+        <Menu placement="bottom-end">
+          <MenuButton
+            as={Button}
+            h="34px"
+            px="12px"
+            minW="auto"
+            borderRadius="12px"
+            bg={widgetAccentBg}
+            color={widgetAccent}
+            fontSize="13px"
+            fontWeight="800"
+            leftIcon={<IconBolt size={16} />}
+            _hover={{ bg: notificationHoverBg }}
+            _active={{ bg: notificationHoverBg }}
+          >
+            Quick
+          </MenuButton>
+          <MenuList
+            bg={menuBg}
+            borderColor={borderColor}
+            color={menuText}
+            boxShadow="0 18px 42px rgba(15, 23, 42, 0.18)"
+            minW="240px"
+            zIndex="popover"
+          >
+            <Box px="13px" py="10px">
+              <Text fontSize="13px" fontWeight="900">
+                Quick Options
+              </Text>
+              <Text fontSize="11px" color={menuMuted}>
+                Jump to common admin tools
+              </Text>
+            </Box>
+            <MenuDivider borderColor={borderColor} />
+            {quickLinks.map((link) => (
+              <MenuItem
+                key={link.route}
+                icon={<link.icon size={17} />}
+                _hover={{ bg: menuHoverBg }}
+                fontSize="13px"
+                fontWeight="700"
+                onClick={() => history.push(link.route)}
+              >
+                {link.label}
+              </MenuItem>
+            ))}
+          </MenuList>
+        </Menu>
+
         <Box position="relative">
           <IconButton
             aria-label="Notifications"
