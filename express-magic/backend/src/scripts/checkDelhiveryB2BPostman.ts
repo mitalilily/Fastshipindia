@@ -125,7 +125,11 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
       /^\/api\/delhivery\/b2b\/documents\/(shipping_label|lr_copy)\/[^/]+$/,
       success({ s3_url: 'https://example.com/mock-document.pdf', status: 'COMPLETED' }),
     ],
-    ['GET', /^\/api\/delhivery\/b2b\/documents$/, success({ documents: [] })],
+    [
+      'GET',
+      /^\/api\/delhivery\/b2b\/documents$/,
+      success({ documents: [{ name: 'LM_POD', url: 'https://example.com/mock-pod.pdf' }] }),
+    ],
   ]
 
   return routeMatchers.find(([expectedMethod, pattern]) =>

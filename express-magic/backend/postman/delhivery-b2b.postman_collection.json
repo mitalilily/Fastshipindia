@@ -778,7 +778,16 @@
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
-            "pm.test('POD document payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+            "pm.test('POD download by LRN request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(body.success).to.eql(true);",
+            "});",
+            "pm.test('POD document metadata or URL is returned', function () {",
+            "  var data = body.data || {};",
+            "  var documents = data.documents || data.docs || data.data || [];",
+            "  var url = data.url || data.download_url || data.document_url || (documents[0] && (documents[0].url || documents[0].download_url));",
+            "  pm.expect(url || documents.length).to.be.ok;",
+            "});"
           ] } }],
           "request": {
             "description": "Downloads document metadata or the first matching file for an LRN. Set podDocType to LM_POD, ALTERNATE_LM_POD, RETURN_DSP_POD, or another Delhivery-supported type. auto_download accepts true or false; version accepts latest or all.",
@@ -795,7 +804,16 @@
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
-            "pm.test('POD document payload is returned', function () { pm.expect(body).to.have.property('data'); });"
+            "pm.test('POD download by MWN request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(body.success).to.eql(true);",
+            "});",
+            "pm.test('POD document metadata or URL is returned', function () {",
+            "  var data = body.data || {};",
+            "  var documents = data.documents || data.docs || data.data || [];",
+            "  var url = data.url || data.download_url || data.document_url || (documents[0] && (documents[0].url || documents[0].download_url));",
+            "  pm.expect(url || documents.length).to.be.ok;",
+            "});"
           ] } }],
           "request": {
             "description": "Downloads document metadata or the first matching file using an MWN instead of an LRN. Remove fields when full metadata is preferred.",

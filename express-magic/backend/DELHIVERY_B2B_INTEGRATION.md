@@ -151,6 +151,11 @@ Document generation status forwards `GET /generate/{doc_type}/status/{job_id}`
 for the job returned by the async generate call. The response is expected to
 contain the S3/document PDF link once generation is complete.
 
+Document download forwards `GET /document/download` for delivered-LR documents
+such as `LM_POD`, `ALTERNATE_LM_POD`, and `RETURN_DSP_POD`. Either `lrn` or
+`mwn` is required, `auto_download` accepts `true` or `false`, `version` accepts
+`latest` or `all`, and `fields` is forwarded when metadata projection is needed.
+
 ## Verification
 
 Run both automated layers from `backend`:

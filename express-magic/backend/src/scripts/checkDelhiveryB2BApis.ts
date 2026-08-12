@@ -1182,7 +1182,9 @@ const run = async () => {
     version: 'latest',
     fields: 'name,url',
   })
+  assert.equal(lrnDocument.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(lrnDocument.headers?.Accept, 'application/json')
+  assert.equal(typeof lrnDocument.headers?.['X-Request-Id'], 'string')
 
   await service.downloadDocument({
     mwn: 'MWN123456',
@@ -1190,12 +1192,16 @@ const run = async () => {
     auto_download: 'true',
     version: 'all',
   })
-  assert.deepEqual(lastRequest('GET', '/document/download').params, {
+  const mwnDocument = lastRequest('GET', '/document/download')
+  assert.deepEqual(mwnDocument.params, {
     mwn: 'MWN123456',
     doc_type: 'RETURN_DSP_POD',
     auto_download: 'true',
     version: 'all',
   })
+  assert.equal(mwnDocument.headers?.Authorization, 'Bearer test-jwt')
+  assert.equal(mwnDocument.headers?.Accept, 'application/json')
+  assert.equal(typeof mwnDocument.headers?.['X-Request-Id'], 'string')
   assert.throws(() => service.downloadDocument({}), /either lrn or mwn is required/)
   assert.throws(
     () => service.downloadDocument({ lrn: '220079606', auto_download: 'yes' }),
