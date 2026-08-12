@@ -823,4 +823,5 @@ run()
     ;(axios as any).post = originalPost
     ;(axios as any).get = originalGet
     ;(axios as any).request = originalRequest
+    process.exit(process.exitCode || 0)
   })

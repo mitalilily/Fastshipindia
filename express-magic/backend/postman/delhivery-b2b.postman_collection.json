@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "91d8af16-20bf-4aa5-b44d-delhivery-b2b",
     "name": "FastShip - Delhivery B2B (LTL)",
-    "description": "End-to-end checks for the admin-only FastShip Delhivery B2B proxy. Save credentials in Admin > Courier Credentials first. Password Reset, Manifest, Update, Cancellation, Pickup, and Appointment requests mutate Delhivery state; run them deliberately.",
+    "description": "End-to-end checks for the admin-only FastShip Delhivery B2B proxy. The collection signs in to FastShip and verifies that Delhivery B2B credentials are configured before provider calls run. State-changing requests are skipped unless allowMutations=true.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -20,9 +20,15 @@
           "});",
           "var body = {};",
           "try { body = pm.response.json(); } catch (e) {}",
-          "pm.test('proxy reports success', function () {",
-          "  pm.expect(body.success).to.eql(true);",
-          "});"
+          "if (pm.info.requestName === 'FastShip Admin Login') {",
+          "  pm.test('FastShip admin token is returned', function () {",
+          "    pm.expect(body.token || body.accessToken).to.be.a('string').and.not.empty;",
+          "  });",
+          "} else {",
+          "  pm.test('proxy reports success', function () {",
+          "    pm.expect(body.success).to.eql(true);",
+          "  });",
+          "}"
         ]
       }
     }
@@ -32,7 +38,52 @@
       "name": "Authentication",
       "item": [
         {
+          "name": "FastShip Admin Login",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "var body = pm.response.json();",
+              "var token = body.token || body.accessToken;",
+              "if (token) pm.environment.set('adminToken', token);"
+            ] }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/admin/login",
+            "description": "Authenticates the FastShip administrator and stores the access token for every protected Delhivery proxy request.",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" }
+          }
+        },
+        {
+          "name": "Delhivery B2B Credential Preflight",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "var body = pm.response.json();",
+              "var config = ((body.data || {}).delhiveryB2B || {});",
+              "var configured = Boolean(config.username && config.hasPassword && config.clientId && config.warehouseId);",
+              "pm.environment.set('delhiveryConfigured', String(configured));",
+              "pm.test('Delhivery B2B credentials and defaults are configured', function () {",
+              "  pm.expect(configured, 'Set username, password, client ID, and warehouse ID in Admin > Courier Credentials > Delhivery B2B (LTL)').to.eql(true);",
+              "});"
+            ] }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/couriers/credentials",
+            "description": "Fails early with an actionable message when the production/UAT Delhivery username, password, client ID, or warehouse ID is missing. Secret values are never returned."
+          }
+        },
+        {
           "name": "Password Reset (manual, mutating)",
+          "event": [{
+            "listen": "prerequest",
+            "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+            ] }
+          }],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -82,6 +133,10 @@
         },
         {
           "name": "Freight Charge Breakup",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+            "var value = String(pm.environment.get('lrn') || '').trim();",
+            "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+          ] } }],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/delhivery/b2b/freight/charges?lrns={{lrn}}",
@@ -95,6 +150,12 @@
       "item": [
         {
           "name": "Create Warehouse (mutating)",
+          "event": [{
+            "listen": "prerequest",
+            "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+            ] }
+          }],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -105,6 +166,12 @@
         },
         {
           "name": "Update Warehouse (mutating)",
+          "event": [{
+            "listen": "prerequest",
+            "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+            ] }
+          }],
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -121,6 +188,11 @@
         {
           "name": "Manifest Shipment (mutating)",
           "event": [{
+            "listen": "prerequest",
+            "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+            ] }
+          }, {
             "listen": "test",
             "script": { "type": "text/javascript", "exec": [
               "var body = pm.response.json();",
@@ -159,7 +231,12 @@
         },
         {
           "name": "Manifest Status",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('manifestJobId') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var lrn = data.lrn || data.lrnum || (data.data || {}).lrn; if (lrn) pm.environment.set('lrn', lrn);"
           ] } }],
           "request": {
@@ -170,7 +247,11 @@
         },
         {
           "name": "Update Shipment (mutating)",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('updateJobId', id);"
           ] } }],
           "request": {
@@ -195,6 +276,10 @@
         },
         {
           "name": "Shipment Update Status",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+            "var value = String(pm.environment.get('updateJobId') || '').trim();",
+            "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+          ] } }],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/delhivery/b2b/shipments/update/{{updateJobId}}",
@@ -203,6 +288,10 @@
         },
         {
           "name": "Track Shipment",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+            "var value = String(pm.environment.get('lrn') || '').trim();",
+            "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+          ] } }],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}/tracking?all_wbns=true",
@@ -214,6 +303,7 @@
           "event": [{
             "listen": "prerequest",
             "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();",
               "function indiaDate(offsetDays) {",
               "  var value = new Date(Date.now() + (330 + offsetDays * 1440) * 60000);",
               "  return String(value.getUTCDate()).padStart(2, '0') + '/' + String(value.getUTCMonth() + 1).padStart(2, '0') + '/' + value.getUTCFullYear();",
@@ -232,6 +322,12 @@
         },
         {
           "name": "Cancel Shipment (destructive)",
+          "event": [{
+            "listen": "prerequest",
+            "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+            ] }
+          }],
           "request": {
             "method": "DELETE",
             "url": "{{baseUrl}}/api/delhivery/b2b/shipments/{{lrn}}",
@@ -247,6 +343,7 @@
           "name": "Create Pickup (mutating)",
           "event": [
             { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();",
               "var value = new Date(Date.now() + (330 + 1440) * 60000);",
               "var pickupDate = value.getUTCFullYear() + '-' + String(value.getUTCMonth() + 1).padStart(2, '0') + '-' + String(value.getUTCDate()).padStart(2, '0');",
               "pm.environment.set('pickupDate', pickupDate);"
@@ -266,6 +363,7 @@
         {
           "name": "Cancel Pickup (destructive)",
           "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+            "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();",
             "var pickupId = String(pm.environment.get('pickupId') || '').trim();",
             "if (!pickupId || pickupId === 'replace-with-pickup-id') { throw new Error('Set pickupId to a real Delhivery pickup request ID before cancellation.'); }"
           ] } }],
@@ -282,7 +380,12 @@
       "item": [
         {
           "name": "Shipping Label",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('lrn') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
             "pm.test('label payload is returned', function () { pm.expect(body).to.have.property('data'); });"
           ] } }],
@@ -294,7 +397,12 @@
         },
         {
           "name": "LR Copy",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('lrn') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
             "pm.test('LR copy PDF payload is returned', function () { pm.expect(body).to.have.property('data'); });"
           ] } }],
@@ -306,7 +414,12 @@
         },
         {
           "name": "Generate Shipping Labels (async)",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('lrn') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('shippingLabelJobId', id);",
             "pm.test('document job ID is returned', function () { pm.expect(id).to.be.ok; });"
           ] } }],
@@ -320,7 +433,12 @@
         },
         {
           "name": "Generate LR Copies (async)",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('lrn') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('lrCopyJobId', id);",
             "pm.test('document job ID is returned', function () { pm.expect(id).to.be.ok; });"
           ] } }],
@@ -334,7 +452,12 @@
         },
         {
           "name": "Generate Shipping Labels Status",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('shippingLabelJobId') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var nested = data.data || {}; var link = data.s3_url || data.url || data.download_url || data.document_url || nested.s3_url || nested.url || nested.download_url || nested.document_url; if (link) pm.environment.set('shippingLabelDownloadUrl', link);",
             "pm.test('document status payload is returned', function () { pm.expect(body).to.have.property('data'); });"
           ] } }],
@@ -346,7 +469,12 @@
         },
         {
           "name": "Generate LR Copies Status",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('lrCopyJobId') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json(); var data = body.data || {}; var nested = data.data || {}; var link = data.s3_url || data.url || data.download_url || data.document_url || nested.s3_url || nested.url || nested.download_url || nested.document_url; if (link) pm.environment.set('lrCopyDownloadUrl', link);",
             "pm.test('document status payload is returned', function () { pm.expect(body).to.have.property('data'); });"
           ] } }],
@@ -358,7 +486,12 @@
         },
         {
           "name": "Download POD Document by LRN",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('lrn') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
             "pm.test('POD document payload is returned', function () { pm.expect(body).to.have.property('data'); });"
           ] } }],
@@ -370,7 +503,12 @@
         },
         {
           "name": "Download POD Document by MWN",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('mwn') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var body = pm.response.json();",
             "pm.test('POD document payload is returned', function () { pm.expect(body).to.have.property('data'); });"
           ] } }],

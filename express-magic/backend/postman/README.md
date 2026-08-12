@@ -35,11 +35,21 @@ Import:
 - `delhivery-b2b.local.postman_environment.json`
 
 Save the production or UAT credentials from **Admin > Courier Credentials >
-Delhivery B2B (LTL)**, then set `adminToken` to an FastShip admin access
-token. The proxy intentionally does not expose Delhivery's JWT.
+Delhivery B2B (LTL)**, then set `adminEmail` and `adminPassword`. The first
+request signs in and stores `adminToken`; the proxy intentionally does not expose
+Delhivery's JWT. Credential Preflight checks username, password, client ID, and
+warehouse ID without returning any secret value.
 
 The collection contains state-changing requests. Run password reset, warehouse
 creation/update, manifestation, shipment update/cancellation, appointment, and
-pickup creation/cancellation individually and only against the intended account.
-For a read-only smoke test, run Login, Pincode Serviceability, Expected TAT, and
-tracking with an existing LRN.
+pickup creation/cancellation only against the intended account. They are skipped
+by default; set `allowMutations=true` only when those changes are intended. Requests
+that need an LRN, MWN, or job ID also skip their placeholder value.
+
+Run the Postman collection automatically through Newman with an isolated mock server:
+
+```bash
+npm run check:delhivery-b2b-postman
+```
+
+See `DELHIVERY_B2B_INTEGRATION.md` for the complete provider-to-FastShip route matrix.
