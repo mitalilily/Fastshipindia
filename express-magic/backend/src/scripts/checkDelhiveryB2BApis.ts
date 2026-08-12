@@ -103,7 +103,12 @@ const run = async () => {
   })
 
   await service.resetPassword('test-account')
-  assert.equal(requests.at(-1)?.url, 'https://ltl-clients-api-dev.delhivery.com/forgot-password')
+  const passwordReset = requests.at(-1)
+  assert.equal(passwordReset?.method, 'POST')
+  assert.equal(passwordReset?.url, 'https://ltl-clients-api-dev.delhivery.com/forgot-password')
+  assert.deepEqual(passwordReset?.data, { username: 'test-account' })
+  assert.equal(passwordReset?.headers?.['Content-Type'], 'application/json')
+  await assert.rejects(() => service.resetPassword('   '), /username is required/)
 
   const loginStart = requests.length
   const loginResults = await Promise.all([service.login(), service.login(), service.login()])
