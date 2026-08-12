@@ -809,8 +809,12 @@ export const upsertZoneToZoneRate = async (payload: {
     throw new Error('Origin zone ID and destination zone ID are required')
   }
 
-  if (payload.ratePerKg == null || isNaN(Number(payload.ratePerKg))) {
-    throw new Error('Rate per kg is required and must be a valid number')
+  if (
+    payload.ratePerKg == null ||
+    isNaN(Number(payload.ratePerKg)) ||
+    Number(payload.ratePerKg) <= 0
+  ) {
+    throw new Error('Rate per kg is required and must be greater than zero')
   }
 
   const { courierId, serviceProvider } = normalizeCourierScope(payload.courierScope)
@@ -1008,6 +1012,7 @@ export const importZoneRatesFromCsv = async (
   fileBuffer: Buffer,
   options: {
     courierScope?: CourierScope
+    planId?: string | null
   },
 ) => {
   const csv = fileBuffer.toString('utf8')
@@ -1052,6 +1057,7 @@ export const importZoneRatesFromCsv = async (
         destinationZoneId,
         ratePerKg: Number(row.rate_per_kg),
         courierScope: options.courierScope,
+        planId: options.planId,
       })
 
       inserted += 1
