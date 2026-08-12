@@ -520,6 +520,19 @@
               "pm.environment.set('appointmentDate', indiaDate(1));",
               "pm.environment.set('appointmentExpiryDate', indiaDate(2));"
             ] }
+          }, {
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Last-mile appointment booking request succeeded', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().success).to.eql(true);",
+              "});",
+              "pm.test('Appointment booking response is returned', function () {",
+              "  var data = pm.response.json().data || {};",
+              "  pm.expect(data).to.have.property('appointment_id');",
+              "  pm.expect(data.appointment_slot).to.eql('12:00 PM-03:00 PM');",
+              "});"
+            ] }
           }],
           "request": {
             "method": "POST",

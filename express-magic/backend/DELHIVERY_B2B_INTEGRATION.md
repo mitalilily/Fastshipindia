@@ -117,6 +117,12 @@ Shipment tracking forwards `GET /lrn/track?lrnum=...` and includes
 the latest LR status only, so FastShip maps the documented status set
 (`MANIFESTED` through `LOST`) without expecting historical scans.
 
+Last-mile appointments forward `POST /v2/appointments/lm` after manifestation
+and before OFD. Dates are validated as `DD/MM/YYYY`, the appointment date must be
+today or later, the expiry date cannot be earlier than the appointment date, only
+Delhivery's eight documented slots are accepted, and `po_number` must contain
+one to five values such as `NotApplicable`.
+
 ## Verification
 
 Run both automated layers from `backend`:

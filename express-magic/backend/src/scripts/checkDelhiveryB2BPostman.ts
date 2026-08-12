@@ -88,7 +88,7 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     [
       'POST',
       /^\/api\/delhivery\/b2b\/shipments\/[^/]+\/appointments$/,
-      success({ appointment_id: 'mock-appointment' }),
+      success({ appointment_id: 'mock-appointment', appointment_slot: '12:00 PM-03:00 PM' }),
     ],
     [
       'DELETE',
