@@ -343,18 +343,34 @@
               "var jobId = data.job_id || data.request_id || (data.data || {}).job_id;",
               "var lrn = data.lrn || data.lrnum || (data.data || {}).lrn;",
               "if (jobId) pm.environment.set('manifestJobId', jobId);",
-              "if (lrn) pm.environment.set('lrn', lrn);"
+              "if (lrn) pm.environment.set('lrn', lrn);",
+              "var fields = {};",
+              "pm.request.body.formdata.each(function (field) { if (!field.disabled) fields[field.key] = pm.variables.replaceIn(String(field.value || '')); });",
+              "pm.test('manifest returns an asynchronous job ID', function () {",
+              "  pm.expect(jobId).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.test('COD manifest fields follow Delhivery contract', function () {",
+              "  pm.expect(fields.pickup_location_name).to.eql(pm.variables.replaceIn('{{warehouseName}}'));",
+              "  pm.expect(fields.payment_mode).to.eql('cod');",
+              "  pm.expect(Number(fields.cod_amount)).to.be.at.least(0);",
+              "  pm.expect(Number(fields.weight)).to.be.above(0);",
+              "  pm.expect(JSON.parse(fields.shipment_details)).to.be.an('array').and.not.empty;",
+              "  pm.expect(JSON.parse(fields.invoices)).to.be.an('array').and.not.empty;",
+              "  pm.expect(['fop', 'fod']).to.include(fields.freight_mode);",
+              "  pm.expect(['true', 'false']).to.include(fields.fm_pickup);",
+              "});"
             ] }
           }],
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/delhivery/b2b/shipments/manifest",
-            "description": "Creates a B2B shipment asynchronously and stores the returned job/request ID for Manifest Status. Multipart JSON fields are validated and normalized; pickup and drop-off alternatives, COD rules, invoice rules, dimensions, retail fields, and the 10-file/20-MB aggregate document limits are enforced. Enable doc_data and doc_file together when uploading invoice documents.",
+            "description": "Creates a B2B shipment asynchronously and stores the returned job/request ID for Manifest Status. Multipart JSON fields are validated and normalized; pickup and drop-off alternatives, COD rules, invoice rules, dimensions, retail fields, and the 10-file/20-MB aggregate document limits are enforced. Retail clients must select an allowed doc_file and enable the matching doc_data row before running.",
             "body": {
               "mode": "formdata",
               "formdata": [
                 { "key": "pickup_location_name", "value": "{{warehouseName}}", "type": "text" },
-                { "key": "payment_mode", "value": "prepaid", "type": "text" },
+                { "key": "payment_mode", "value": "cod", "type": "text" },
+                { "key": "cod_amount", "value": "1000", "type": "text" },
                 { "key": "weight", "value": "{{weightGrams}}", "type": "text" },
                 { "key": "dropoff_location", "value": "{\"consignee_name\":\"Postman Test\",\"address\":\"Test address\",\"city\":\"Mumbai\",\"state\":\"Maharashtra\",\"zip\":\"{{destinationPincode}}\",\"phone\":\"9999999999\",\"email\":\"test@example.com\"}", "type": "text" },
                 { "key": "shipment_details", "value": "[{\"order_id\":\"POSTMAN-{{$timestamp}}\",\"box_count\":1,\"description\":\"Postman test shipment\",\"weight\":{{weightGrams}},\"waybills\":[],\"master\":true}]", "type": "text" },

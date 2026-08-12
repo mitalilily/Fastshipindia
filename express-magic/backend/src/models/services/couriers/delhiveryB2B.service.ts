@@ -455,6 +455,9 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
   if (!pickupName && !pickupId) {
     throw new HttpError(400, 'pickup_location_name or pickup_location_id is required')
   }
+  if (pickupName && pickupId) {
+    throw new HttpError(400, 'Pass only one of pickup_location_name or pickup_location_id')
+  }
 
   const paymentMode = clean(payload.payment_mode).toLowerCase()
   if (!['cod', 'prepaid'].includes(paymentMode)) {
@@ -462,7 +465,7 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
   }
 
   const dropoffStoreCode = clean(payload.dropoff_store_code)
-  const dropoffLocation = payload.dropoff_location
+  const dropoffLocation = !dropoffStoreCode && payload.dropoff_location
     ? normalizeManifestObject(payload.dropoff_location, 'dropoff_location')
     : undefined
   if (!dropoffStoreCode && !dropoffLocation) {
@@ -520,7 +523,6 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
   })
 
   const data: Record<string, unknown> = {
-    ...payload,
     payment_mode: paymentMode,
     weight: ensureNumber(payload.weight, 'weight', 0.01),
     shipment_details: shipmentDetails,
@@ -580,8 +582,17 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
     )
   }
 
-  for (const field of ['return_address', 'callback']) {
-    if (payload[field] !== undefined) data[field] = normalizeManifestObject(payload[field], field)
+  if (payload.return_address !== undefined) {
+    const returnAddress = normalizeManifestObject(payload.return_address, 'return_address')
+    if (returnAddress.zip !== undefined) {
+      returnAddress.zip = ensurePincode(returnAddress.zip, 'return_address.zip')
+    }
+    data.return_address = returnAddress
+  }
+  if (payload.callback !== undefined) {
+    data.callback = normalizeDocumentCallback(
+      normalizeManifestObject(payload.callback, 'callback'),
+    )
   }
   if (payload.billing_address !== undefined) {
     const billing = normalizeManifestObject(payload.billing_address, 'billing_address')

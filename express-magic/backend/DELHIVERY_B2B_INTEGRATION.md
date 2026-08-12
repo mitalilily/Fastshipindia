@@ -46,6 +46,13 @@ Warehouse updates preserve the exact `cl_warehouse_name`, validate and allow-lis
 `update_dict`, and normalize schedule aliases to `business_hours`. FastShip first calls the
 HTTPS environment endpoint `/client-warehouse/update/`; if Delhivery returns 404 or 405, it
 retries the conflicting cURL path `/client-warehouses/update` once.
+Shipment creation sends validated multipart data to `POST /manifest`. Exactly one pickup name or
+ID is required; either a drop-off store code or address is required, with the store code taking
+priority when both are supplied. COD requires an amount, invoice QR or number/amount rules are
+enforced, and weights/dimensions use grams/centimetres. Optional callbacks and return pincodes are
+validated. Invoice uploads allow up to 10 PNG/JPG/JPEG/PDF/BMP files with a 20 MB aggregate limit
+and require one matching `doc_data` entry per file. The async job ID is used by manifest status to
+retrieve the generated LR and box AWBs after a bounded processing delay.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password

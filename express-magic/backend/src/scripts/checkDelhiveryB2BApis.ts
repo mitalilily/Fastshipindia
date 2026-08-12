@@ -529,10 +529,33 @@ const run = async () => {
     invoices: JSON.stringify([
       { ewaybill: '', inv_num: 'I22331030453', inv_amt: 59729.67, inv_qr_code: '' },
     ]),
+    return_address: JSON.stringify({
+      name: 'Returns',
+      address: 'Return address',
+      city: 'Gurugram',
+      state: 'Haryana',
+      zip: '122001',
+      phone: '9999999999',
+    }),
     rov_insurance: 'true',
     enable_paperless_movement: 'true',
     freight_mode: 'fop',
     fm_pickup: 'false',
+    billing_address: JSON.stringify({
+      name: 'Billing Contact',
+      company: 'FastShip',
+      consignor: 'FastShip',
+      address: 'Billing address',
+      city: 'Gurugram',
+      state: 'Haryana',
+      pin: '122001',
+      phone: '9999999999',
+      pan_number: 'ABCDE1234F',
+    }),
+    callback: JSON.stringify({
+      uri: 'https://example.com/delhivery/manifest',
+      method: 'POST',
+    }),
     doc_data: JSON.stringify([
       { doc_type: 'INVOICE_COPY', doc_meta: { invoice_num: ['I22331030453'] } },
     ]),
@@ -541,6 +564,7 @@ const run = async () => {
       mimetype: 'application/pdf',
       originalname: 'invoice.pdf',
     },
+    ignored: 'do-not-forward',
   }
   await service.manifestShipment(manifestPayload)
   const manifest = lastRequest('POST', '/manifest')
@@ -550,6 +574,7 @@ const run = async () => {
   assert.equal((manifest.data as FormData).get('weight'), '1000')
   assert.equal((manifest.data as FormData).get('rov_insurance'), 'true')
   assert.equal((manifest.data as FormData).get('fm_pickup'), 'false')
+  assert.equal((manifest.data as FormData).get('ignored'), null)
   assert.equal(
     JSON.parse(String((manifest.data as FormData).get('shipment_details')))[0].order_id,
     'ORDER-1',
@@ -557,6 +582,14 @@ const run = async () => {
   assert.equal(
     JSON.parse(String((manifest.data as FormData).get('invoices')))[0].inv_num,
     'I22331030453',
+  )
+  assert.equal(
+    JSON.parse(String((manifest.data as FormData).get('callback'))).uri,
+    'https://example.com/delhivery/manifest',
+  )
+  assert.equal(
+    JSON.parse(String((manifest.data as FormData).get('billing_address'))).pan_number,
+    'ABCDE1234F',
   )
   assert.equal(((manifest.data as FormData).get('doc_file') as File).name, 'invoice.pdf')
   assert.equal(manifest.headers?.Authorization, 'Bearer test-jwt')
@@ -566,6 +599,30 @@ const run = async () => {
     () => service.manifestShipment({ ...manifestPayload, payment_mode: 'cod' }),
     /cod_amount/,
   )
+  await service.manifestShipment({
+    ...manifestPayload,
+    pickup_location_name: undefined,
+    pickup_location_id: 'warehouse-id',
+    payment_mode: 'cod',
+    cod_amount: 122,
+    dropoff_store_code: 'STORE-1',
+    dropoff_location: 'ignored because store code has priority',
+    invoices: JSON.stringify([{ ewaybill: '', inv_qr_code: 'SIGNED-INVOICE-QR' }]),
+    doc_file: undefined,
+    doc_data: undefined,
+  })
+  const codManifest = lastRequest('POST', '/manifest')
+  assert.equal((codManifest.data as FormData).get('pickup_location_id'), 'warehouse-id')
+  assert.equal((codManifest.data as FormData).get('pickup_location_name'), null)
+  assert.equal((codManifest.data as FormData).get('payment_mode'), 'cod')
+  assert.equal((codManifest.data as FormData).get('cod_amount'), '122')
+  assert.equal((codManifest.data as FormData).get('dropoff_store_code'), 'STORE-1')
+  assert.equal((codManifest.data as FormData).get('dropoff_location'), null)
+  assert.equal(
+    JSON.parse(String((codManifest.data as FormData).get('invoices')))[0].inv_qr_code,
+    'SIGNED-INVOICE-QR',
+  )
+
   assert.throws(
     () =>
       service.manifestShipment({
@@ -574,6 +631,39 @@ const run = async () => {
         pickup_location_id: undefined,
       }),
     /pickup_location_name or pickup_location_id/,
+  )
+  assert.throws(
+    () =>
+      service.manifestShipment({
+        ...manifestPayload,
+        pickup_location_id: 'warehouse-id',
+      }),
+    /only one of pickup_location_name or pickup_location_id/,
+  )
+  assert.throws(
+    () =>
+      service.manifestShipment({
+        ...manifestPayload,
+        callback: JSON.stringify({ uri: 'ftp://example.com/callback', method: 'POST' }),
+      }),
+    /callback\.uri must be a valid HTTP\(S\) URL/,
+  )
+  assert.throws(
+    () =>
+      service.manifestShipment({
+        ...manifestPayload,
+        billing_address: JSON.stringify({
+          name: 'Billing Contact',
+          company: 'FastShip',
+          consignor: 'FastShip',
+          address: 'Billing address',
+          city: 'Gurugram',
+          state: 'Haryana',
+          pin: '122001',
+          phone: '9999999999',
+        }),
+      }),
+    /pan_number or gst_number/,
   )
   assert.throws(
     () => service.manifestShipment({ ...manifestPayload, doc_data: undefined }),
@@ -586,6 +676,17 @@ const run = async () => {
         doc_file: { ...manifestPayload.doc_file, originalname: 'invoice.exe' },
       }),
     /Unsupported doc_file format/,
+  )
+  assert.throws(
+    () =>
+      service.manifestShipment({
+        ...manifestPayload,
+        doc_file: Array.from({ length: 11 }, (_, index) => ({
+          ...manifestPayload.doc_file,
+          originalname: `invoice-${index}.pdf`,
+        })),
+      }),
+    /at most 10 valid files/,
   )
   const largeDocumentBuffer = Buffer.alloc(10 * 1024 * 1024 + 1)
   assert.throws(
