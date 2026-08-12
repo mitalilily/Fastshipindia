@@ -94,6 +94,65 @@ export const getDelhiveryB2BTatDays = (response: any): number | null => {
   return null
 }
 
+const findDelhiveryB2BValue = (value: unknown, keys: string[]): unknown => {
+  if (!value || typeof value !== 'object') return undefined
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const found = findDelhiveryB2BValue(entry, keys)
+      if (found !== undefined && found !== null && found !== '') return found
+    }
+    return undefined
+  }
+
+  const record = value as Record<string, unknown>
+  for (const key of keys) {
+    if (record[key] !== undefined && record[key] !== null && record[key] !== '') {
+      return record[key]
+    }
+  }
+  for (const nested of Object.values(record)) {
+    const found = findDelhiveryB2BValue(nested, keys)
+    if (found !== undefined && found !== null && found !== '') return found
+  }
+  return undefined
+}
+
+const normalizeDelhiveryB2BAwbs = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.flatMap(normalizeDelhiveryB2BAwbs)
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    const identifier = findDelhiveryB2BValue(record, [
+      'awb_number',
+      'awb',
+      'waybill_number',
+      'waybill',
+      'wbn',
+    ])
+    return identifier === undefined ? [] : normalizeDelhiveryB2BAwbs(identifier)
+  }
+  return clean(value)
+    .split(',')
+    .map(clean)
+    .filter(Boolean)
+}
+
+export const getDelhiveryB2BManifestIdentifiers = (response: unknown) => {
+  const lrn = clean(
+    findDelhiveryB2BValue(response, ['lrn', 'lrnum', 'lr_number', 'lr_number_id']),
+  )
+  const awbValue = findDelhiveryB2BValue(response, [
+    'waybills',
+    'awb_numbers',
+    'awbs',
+    'awb_number',
+    'awb',
+  ])
+  return {
+    lrn: lrn || null,
+    awbs: [...new Set(normalizeDelhiveryB2BAwbs(awbValue))],
+  }
+}
+
 const loginFailureCooldownMs = () => {
   const configured = Number(process.env.DELHIVERY_B2B_LOGIN_FAILURE_COOLDOWN_MS || 10 * 60 * 1000)
   return Number.isFinite(configured) && configured > 0 ? configured : 10 * 60 * 1000

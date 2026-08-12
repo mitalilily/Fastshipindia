@@ -396,7 +396,20 @@
               "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "var body = pm.response.json(); var data = body.data || {}; var lrn = data.lrn || data.lrnum || (data.data || {}).lrn; if (lrn) pm.environment.set('lrn', lrn);"
+            "var body = pm.response.json();",
+            "var provider = body.data || {};",
+            "var data = provider.data || provider;",
+            "var lrn = data.lrn || data.lrnum || data.lr_number;",
+            "var awbs = data.waybills || data.awb_numbers || data.awbs || data.awb_number || data.awb || [];",
+            "if (!Array.isArray(awbs)) awbs = String(awbs).split(',').map(function (value) { return value.trim(); }).filter(Boolean);",
+            "if (lrn) pm.environment.set('lrn', lrn);",
+            "pm.test('manifest status returns the LR number', function () {",
+            "  pm.expect(lrn).to.be.a('string').and.not.empty;",
+            "});",
+            "pm.test('all box and optional document AWBs are retained', function () {",
+            "  pm.expect(awbs).to.be.an('array').and.not.empty;",
+            "  pm.expect(new Set(awbs).size).to.eql(awbs.length);",
+            "});"
           ] } }],
           "request": {
             "method": "GET",

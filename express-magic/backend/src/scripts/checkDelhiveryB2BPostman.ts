@@ -65,7 +65,10 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     [
       'GET',
       /^\/api\/delhivery\/b2b\/shipments\/manifest\/[^/]+$/,
-      success({ lrn: 'mock-lrn' }),
+      success({
+        lrn: 'mock-lrn',
+        waybills: ['mock-box-awb', 'mock-document-awb'],
+      }),
     ],
     [
       'PUT',

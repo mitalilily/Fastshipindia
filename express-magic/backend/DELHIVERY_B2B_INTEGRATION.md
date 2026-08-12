@@ -53,6 +53,10 @@ enforced, and weights/dimensions use grams/centimetres. Optional callbacks and r
 validated. Invoice uploads allow up to 10 PNG/JPG/JPEG/PDF/BMP files with a 20 MB aggregate limit
 and require one matching `doc_data` entry per file. The async job ID is used by manifest status to
 retrieve the generated LR and box AWBs after a bounded processing delay.
+Manifest status sends the trimmed creation `job_id` as a query parameter on `GET /manifest`.
+FastShip normalizes nested LR and AWB response shapes, retains every unique box/document AWB, and
+does not enforce a fixed AWB count because physical-document shipments return n+1 AWBs while
+paperless shipments return n.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password

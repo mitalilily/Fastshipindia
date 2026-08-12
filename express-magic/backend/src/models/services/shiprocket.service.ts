@@ -107,6 +107,7 @@ import {
 import { DelhiveryService } from './couriers/delhivery.service'
 import {
   DelhiveryB2BService,
+  getDelhiveryB2BManifestIdentifiers,
   isDelhiveryB2BServiceableResponse,
   mapDelhiveryB2BTrackingStatus,
 } from './couriers/delhiveryB2B.service'
@@ -9400,9 +9401,7 @@ const waitForDelhiveryB2BManifest = async (
     : 1500
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const lrn = String(
-      findProviderValue(response, ['lrn', 'lrnum', 'lr_number', 'lr_number_id']) || '',
-    ).trim()
+    const lrn = getDelhiveryB2BManifestIdentifiers(response).lrn || ''
     if (lrn) return { response, jobId, lrn }
     if (delhiveryB2BManifestFailed(response)) {
       throw new HttpError(422, 'Delhivery B2B rejected the shipment manifestation')
@@ -9861,18 +9860,7 @@ export const createB2BShipmentService = async (
 
       const initialManifest = await delhivery.manifestShipment(manifestPayload)
       const manifest = await waitForDelhiveryB2BManifest(delhivery, initialManifest)
-      const waybillValue = findProviderValue(manifest.response, [
-        'waybills',
-        'awb_numbers',
-        'awb_number',
-        'awb',
-      ])
-      const waybills = Array.isArray(waybillValue)
-        ? waybillValue.map((value) => String(value)).filter(Boolean)
-        : String(waybillValue || '')
-            .split(',')
-            .map((value) => value.trim())
-            .filter(Boolean)
+      const waybills = getDelhiveryB2BManifestIdentifiers(manifest.response).awbs
       const primaryAwb = waybills[0] || manifest.lrn
 
       await db

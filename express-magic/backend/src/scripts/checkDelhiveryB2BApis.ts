@@ -29,6 +29,7 @@ const run = async () => {
   process.env.DATABASE_URL ||= 'postgresql://test:test@127.0.0.1:5432/test'
   const {
     DelhiveryB2BService,
+    getDelhiveryB2BManifestIdentifiers,
     getDelhiveryB2BTatDays,
     isDelhiveryB2BServiceableResponse,
     mapDelhiveryB2BTrackingStatus,
@@ -56,6 +57,29 @@ const run = async () => {
   assert.equal(getDelhiveryB2BTatDays({ tat: '4' }), 4)
   assert.equal(getDelhiveryB2BTatDays({ data: {} }), null)
   assert.equal(getDelhiveryB2BTatDays({ days: -1 }), null)
+  assert.deepEqual(
+    getDelhiveryB2BManifestIdentifiers({
+      success: true,
+      data: {
+        lrn: '220029522',
+        waybills: ['BOX-AWB-1', { awb_number: 'BOX-AWB-2' }, 'DOCUMENT-AWB'],
+      },
+    }),
+    {
+      lrn: '220029522',
+      awbs: ['BOX-AWB-1', 'BOX-AWB-2', 'DOCUMENT-AWB'],
+    },
+  )
+  assert.deepEqual(
+    getDelhiveryB2BManifestIdentifiers({
+      data: { lrnum: '220029523', awb_numbers: 'BOX-AWB-1, BOX-AWB-2,BOX-AWB-1' },
+    }),
+    { lrn: '220029523', awbs: ['BOX-AWB-1', 'BOX-AWB-2'] },
+  )
+  assert.deepEqual(getDelhiveryB2BManifestIdentifiers({ status: 'processing' }), {
+    lrn: null,
+    awbs: [],
+  })
 
   assert.deepEqual(
     {
@@ -705,7 +729,7 @@ const run = async () => {
     /aggregate size.*20 MB/,
   )
 
-  await service.getManifestStatus('manifest-job')
+  await service.getManifestStatus(' manifest-job ')
   const manifestStatus = lastRequest('GET', '/manifest')
   assert.equal(manifestStatus.params?.job_id, 'manifest-job')
   assert.equal(manifestStatus.headers?.Authorization, 'Bearer test-jwt')
