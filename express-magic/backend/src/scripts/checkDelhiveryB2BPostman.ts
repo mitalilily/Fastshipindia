@@ -182,6 +182,8 @@ const run = async () => {
           '--env-var',
           'lrn=mock-lrn',
           '--env-var',
+          'freightLrns=mock-lrn-1,mock-lrn-2',
+          '--env-var',
           'mwn=mock-mwn',
           '--reporters',
           'cli',

@@ -218,13 +218,25 @@
         },
         {
           "name": "Freight Charge Breakup",
-          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
-            "var value = String(pm.environment.get('lrn') || '').trim();",
-            "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
-          ] } }],
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "var value = String(pm.environment.get('freightLrns') || '').trim();",
+              "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "var body = pm.response.json();",
+              "var lrns = String(pm.variables.replaceIn('{{freightLrns}}')).split(',').map(function (value) { return value.trim(); }).filter(Boolean);",
+              "pm.test('freight breakup request contains between 1 and 25 LRNs', function () {",
+              "  pm.expect(lrns.length).to.be.within(1, 25);",
+              "});",
+              "pm.test('freight charge breakup payload is returned', function () {",
+              "  pm.expect(body.data).to.be.an('object');",
+              "});"
+            ] } }
+          ],
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/api/delhivery/b2b/freight/charges?lrns={{lrn}}",
+            "url": "{{baseUrl}}/api/delhivery/b2b/freight/charges?lrns={{freightLrns}}",
             "description": "Returns the applicable charge breakdown for one or more comma-separated LRNs. FastShip trims the list, enforces Delhivery's maximum of 25 LRNs, percent-encodes the comma-separated path value, and forwards it with the cached bearer token."
           }
         }

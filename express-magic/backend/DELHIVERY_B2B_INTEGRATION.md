@@ -33,6 +33,9 @@ weight in grams, six-digit source and consignee pincodes, an invoice amount, and
 `prepaid` or `cod` payment mode. `cod_amount` is mandatory for COD. B2BR requests always send
 the configured `fop` or `fod` freight mode, while cheque payment and carrier-risk insurance
 remain optional booleans. The returned charge is an estimate and may differ after pickup.
+Freight charge breakup accepts one comma-separated LRN string containing at most 25 values.
+FastShip trims each value, rejects an empty or oversized list, percent-encodes the normalized
+comma-separated value, and forwards it with the cached Delhivery bearer token.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password

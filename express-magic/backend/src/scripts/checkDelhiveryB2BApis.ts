@@ -283,19 +283,47 @@ const run = async () => {
     /cheque_payment.*boolean/,
   )
 
-  await service.getFreightCharges(' 220029522, 220029147 ,220029160 ')
+  const suppliedFreightLrns = [
+    '220029522',
+    '220029147',
+    '220029160',
+    '220029922',
+    '123123',
+    '220030275',
+    '220030054',
+    '220028714',
+    '220028626',
+    '220028853',
+    '220030336',
+    '220030431',
+    '220030363',
+    '220031362',
+    '220030469',
+  ]
+  await service.getFreightCharges(` ${suppliedFreightLrns.join(', ')} `)
   const freightCharges = lastRequest(
     'GET',
-    '/lrn/freight-breakup/lrns=220029522%2C220029147%2C220029160',
+    `/lrn/freight-breakup/lrns=${encodeURIComponent(suppliedFreightLrns.join(','))}`,
   )
   assert.equal(freightCharges.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(typeof freightCharges.headers?.['X-Request-Id'], 'string')
 
   const maximumLrns = Array.from({ length: 25 }, (_, index) => String(220000000 + index))
   await service.getFreightCharges(maximumLrns)
-  lastRequest('GET', `/lrn/freight-breakup/lrns=${encodeURIComponent(maximumLrns.join(','))}`)
+  const maximumLrnsRequest = lastRequest(
+    'GET',
+    `/lrn/freight-breakup/lrns=${encodeURIComponent(maximumLrns.join(','))}`,
+  )
+  assert.notEqual(
+    maximumLrnsRequest.headers?.['X-Request-Id'],
+    freightCharges.headers?.['X-Request-Id'],
+  )
 
   assert.throws(() => service.getFreightCharges(' , , '), /lrns is required/i)
+  assert.throws(
+    () => service.getFreightCharges(Array.from({ length: 26 }, (_, index) => String(index))),
+    /maximum of 25 LRNs/i,
+  )
 
   const warehousePayload = {
     pin_code: '400059',
@@ -933,11 +961,6 @@ const run = async () => {
     'Rejected credentials must not trigger another Delhivery login during its 10-minute lock window',
   )
   DelhiveryB2BService.clearTokenCache()
-
-  assert.throws(
-    () => service.getFreightCharges(Array.from({ length: 26 }, (_, index) => String(index))),
-    /maximum of 25 LRNs/i,
-  )
 
   console.log(`Delhivery B2B API contract checks passed (${requests.length} requests).`)
 }
