@@ -13,6 +13,7 @@ import {
   findUserById,
   findUserByPhone,
   handleEmailVerificationRequest,
+  ensureUserOperationalDefaults,
   markEmailVerified,
   saveRefreshToken,
   syncUserProfileIdentity,
@@ -31,7 +32,7 @@ import { db } from '../models/client'
 import { changeAdminPassword, loginAdmin } from '../models/services/adminAuth.service'
 import { getProfileByUserId } from '../models/services/userProfile.service'
 import { sendAccountActivatedEmail } from '../models/services/eventEmail.service'
-import { employees, userProfiles, users, wallets } from '../schema/schema'
+import { employees } from '../schema/schema'
 import { sendVerificationEmail } from '../utils/emailSender'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt'
 
@@ -49,15 +50,37 @@ const buildAuthenticatedUserPayload = async (user: {
   role?: string | null
 }) => {
   const profile = await getProfileByUserId(user.id)
+  const companyInfo = (profile?.companyInfo ?? null) as Record<string, unknown> | null
+  const hasText = (value: unknown) => typeof value === 'string' && value.trim().length > 0
+  const hasCompanyIdentity = Boolean(
+    companyInfo &&
+      [
+        companyInfo.businessName,
+        companyInfo.brandName,
+      ].some(hasText) &&
+      [
+        companyInfo.contactEmail,
+        companyInfo.companyEmail,
+        companyInfo.contactNumber,
+        companyInfo.companyContactNumber,
+      ].some(hasText) &&
+      [
+        companyInfo.city,
+        companyInfo.state,
+        companyInfo.pincode,
+      ].some(hasText),
+  )
+  const profileComplete = Boolean(profile?.profileComplete || profile?.onboardingComplete || hasCompanyIdentity)
+  const onboardingComplete = Boolean(profile?.onboardingComplete || profileComplete)
 
   return {
     id: user.id,
     role: profile?.role ?? user.role ?? 'customer',
-    onboardingComplete: Boolean(profile?.onboardingComplete),
+    onboardingComplete,
     onboardingStep: profile?.onboardingStep ?? 0,
-    profileComplete: Boolean(profile?.profileComplete),
+    profileComplete,
     approved: Boolean(profile?.approved),
-    companyInfo: profile?.companyInfo ?? null,
+    companyInfo,
     employeeId: profile?.employeeId ?? null,
     employeeRole: profile?.employeeRole ?? null,
     employeeIsActive: profile?.employeeIsActive ?? null,
@@ -82,72 +105,20 @@ const createOtpLoginUser = async (params: {
   passwordHash?: string
   userType?: 'individual' | 'business'
 }) => {
-  const [user] = await db
-    .insert(users)
-    .values({
-      email: params.email,
-      phone: params.phone,
-      passwordHash: params.passwordHash,
-      otp: params.otp,
-      otpExpiresAt: params.otpExpiresAt,
-      emailVerified: false,
-      phoneVerified: false,
-      accountVerified: false,
-      role: 'customer',
-    })
-    .returning()
-
-  await db
-    .insert(wallets)
-    .values({
-      userId: user.id,
-      balance: '0.00',
-      currency: 'INR',
-    })
-    .onConflictDoNothing()
-    .catch((error) => {
-      console.warn('Default wallet creation skipped during OTP signup:', error?.message || error)
-    })
-
-  await db
-    .insert(userProfiles)
-    .values({
-      userId: user.id,
-      onboardingStep: 0,
-      monthlyOrderCount: '0-100',
-      salesChannels: {},
-      companyInfo: {
-        businessName: params.name ?? '',
-        brandName: params.userType === 'business' ? params.name ?? '' : '',
-        city: '',
-        companyContactNumber: params.phone ?? '',
-        pincode: '',
-        state: '',
-        profilePicture: '',
-        POCEmailVerified: false,
-        POCPhoneVerified: false,
-        companyAddress: '',
-        contactPerson: params.name ?? '',
-        contactNumber: params.phone ?? '',
-        contactEmail: params.email,
-        companyEmail: params.email,
-        companyLogoUrl: '',
-        website: '',
-      },
-      domesticKyc: { status: 'pending', updatedAt: null },
-      bankDetails: null,
-      gstDetails: null,
-      businessType: [],
-      approved: false,
-      onboardingComplete: false,
-      profileComplete: false,
-    })
-    .onConflictDoNothing()
-    .catch((error) => {
-      console.warn('Default profile creation skipped during OTP signup:', error?.message || error)
-    })
-
-  return user
+  return createUserWithWallet({
+    email: params.email,
+    phone: params.phone,
+    passwordHash: params.passwordHash,
+    otp: params.otp,
+    otpExpiresAt: params.otpExpiresAt,
+    emailVerified: false,
+    phoneVerified: false,
+    accountVerified: false,
+    role: 'customer',
+    firstName: params.name,
+    onboardingStep: 0,
+    onboardingComplete: false,
+  })
 }
 
 const sendSmsViaTwilio = async (phone: string, message: string) => {
@@ -495,6 +466,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     }).catch((err) => {
       console.error('Failed to send account activation email after OTP verification:', err)
     })
+    await ensureUserOperationalDefaults(user.id)
     const accessToken = signAccessToken(user.id, user.role ?? 'customer')
 
     const { token: refreshToken } = signRefreshToken(user.id, user.role ?? 'customer')
@@ -567,6 +539,7 @@ export const requestEmailVerification = async (req: Request, res: Response): Pro
 
     // ── If the flow returned a user (authenticated / verified)
     if (user) {
+      await ensureUserOperationalDefaults(user.id)
       const accessToken = signAccessToken(user.id, user.role ?? 'customer')
       const { token: refreshToken } = signRefreshToken(user.id, user.role ?? 'customer')
 

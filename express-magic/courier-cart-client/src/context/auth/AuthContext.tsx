@@ -64,7 +64,13 @@ const cacheAuthUser = (user: IUserProfileDB) => {
       brandName: user.companyInfo?.brandName || '',
       contactPerson: user.companyInfo?.contactPerson || '',
       contactEmail: user.companyInfo?.contactEmail || '',
+      contactNumber: user.companyInfo?.contactNumber || '',
       companyEmail: user.companyInfo?.companyEmail || '',
+      companyContactNumber: user.companyInfo?.companyContactNumber || '',
+      companyAddress: user.companyInfo?.companyAddress || '',
+      city: user.companyInfo?.city || '',
+      state: user.companyInfo?.state || '',
+      pincode: user.companyInfo?.pincode || '',
       companyLogoUrl: user.companyInfo?.companyLogoUrl || '',
     },
     domesticKyc: user.domesticKyc

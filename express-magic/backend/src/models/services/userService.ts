@@ -872,6 +872,132 @@ export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) 
   })
 }
 
+export async function ensureUserOperationalDefaults(userId: string) {
+  return db.transaction(async (tx) => {
+    const [wallet] = await tx
+      .select({ id: schema.wallets.id })
+      .from(schema.wallets)
+      .where(eq(schema.wallets.userId, userId))
+      .limit(1)
+
+    if (!wallet) {
+      await tx.insert(schema.wallets).values({
+        userId,
+        balance: sql`0`,
+      })
+    }
+
+    const [userPlan] = await tx
+      .select({ id: schema.userPlans.id })
+      .from(schema.userPlans)
+      .where(eq(schema.userPlans.userId, userId))
+      .limit(1)
+
+    if (!userPlan) {
+      const [basicPlan] = await tx
+        .select({ id: schema.plans.id })
+        .from(schema.plans)
+        .where(eq(schema.plans.name, 'Basic'))
+        .limit(1)
+
+      if (basicPlan) {
+        await tx.insert(schema.userPlans).values({
+          userId,
+          plan_id: basicPlan.id,
+          is_active: true,
+        })
+      } else {
+        console.warn(`⚠️ Basic plan not found for user ${userId}. Plan assignment skipped.`)
+      }
+    }
+
+    const [billingPreference] = await tx
+      .select({ id: schema.billingPreferences.id })
+      .from(schema.billingPreferences)
+      .where(eq(schema.billingPreferences.userId, userId))
+      .limit(1)
+
+    if (!billingPreference) {
+      await tx.insert(schema.billingPreferences).values({
+        userId,
+        frequency: 'monthly',
+        autoGenerate: true,
+        customFrequencyDays: null,
+      })
+    }
+
+    const [labelPreference] = await tx
+      .select({ id: schema.labelPreferences.id })
+      .from(schema.labelPreferences)
+      .where(eq(schema.labelPreferences.user_id, userId))
+      .limit(1)
+
+    if (!labelPreference) {
+      await tx.insert(schema.labelPreferences).values({
+        user_id: userId,
+        printer_type: 'thermal',
+        char_limit: 25,
+        max_items: 3,
+        powered_by: 'Shiplifi',
+        order_info: {
+          orderId: true,
+          invoiceNumber: true,
+          orderDate: false,
+          invoiceDate: false,
+          orderBarcode: true,
+          invoiceBarcode: true,
+          customerPhone: true,
+          rtoRoutingCode: true,
+          declaredValue: true,
+          cod: true,
+          awb: true,
+          terms: true,
+        },
+        shipper_info: {
+          shipperPhone: true,
+          gstin: true,
+          shipperAddress: true,
+          rtoAddress: false,
+          sellerBrandName: true,
+          brandLogo: true,
+        },
+        product_info: {
+          itemName: true,
+          productCost: true,
+          productQuantity: true,
+          skuCode: true,
+          dimension: false,
+          deadWeight: false,
+          otherCharges: true,
+        },
+        brand_logo: null,
+      })
+    }
+
+    const [invoicePreference] = await tx
+      .select({ id: schema.invoicePreferences.id })
+      .from(schema.invoicePreferences)
+      .where(eq(schema.invoicePreferences.userId, userId))
+      .limit(1)
+
+    if (!invoicePreference) {
+      await tx.execute(sql`
+        insert into invoice_preferences (
+          user_id,
+          prefix,
+          suffix,
+          template,
+          include_logo,
+          include_signature,
+          logo_file,
+          signature_file
+        )
+        values (${userId}, 'INV', '', 'classic', true, true, null, null)
+      `)
+    }
+  })
+}
+
 type GetUsersParams = {
   page: number
   perPage: number
