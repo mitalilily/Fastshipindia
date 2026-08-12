@@ -341,14 +341,49 @@ const run = async () => {
     pick_up_days: ['TUE'],
     business_days: ['TUE'],
     ret_address: { pin: '721657', address: 'test' },
+    billing_details: { address: 'Billing address', pin: '400059' },
     same_as_fwd_add: false,
+    tin_number: 'TIN123',
+    cst_number: 'CST123',
+    warehouse_type: 'pickup',
+    accessibility_id: 'ACCESS-1',
+    incoming_center: 'IN-CENTER',
+    rto_center: 'RTO-CENTER',
+    store_type: 'standard',
+    tag: 'primary',
     consignee_gst: '22AAAAA0000A1Z5',
+    is_warehouse: true,
+    use_client_state: false,
+    active: true,
+    qr_enabled: true,
+    qr_data: 'warehouse-qr-data',
+    ignored: 'do-not-forward',
   }
   await service.createWarehouse(warehousePayload)
   const createWarehouse = lastRequest('POST', '/client-warehouse/create/')
-  assert.deepEqual(createWarehouse.data, warehousePayload)
+  const { ignored: _ignoredWarehouseField, ...expectedWarehousePayload } = warehousePayload
+  assert.deepEqual(createWarehouse.data, expectedWarehousePayload)
   assert.equal((createWarehouse.data as any).name, 'Delhivery 142')
   assert.equal(createWarehouse.headers?.['Content-Type'], 'application/json')
+
+  await service.createWarehouse({
+    pin_code: '400059',
+    address_details: warehousePayload.address_details,
+    name: 'Case Sensitive Warehouse',
+    same_as_fwd_add: true,
+    ret_address: { pin: '721657', address: 'must not be forwarded' },
+    buisness_hours: { tue: { start_time: '07:00', close_time: '08:30' } },
+    buisness_days: ['tue'],
+  })
+  const aliasWarehouse = lastRequest('POST', '/client-warehouse/create/')
+  assert.deepEqual(aliasWarehouse.data, {
+    pin_code: '400059',
+    address_details: warehousePayload.address_details,
+    name: 'Case Sensitive Warehouse',
+    same_as_fwd_add: true,
+    business_hours: { TUE: { start_time: '07:00', close_time: '08:30' } },
+    business_days: ['TUE'],
+  })
 
   assert.throws(
     () => service.createWarehouse({ ...warehousePayload, name: '' }),
@@ -365,6 +400,22 @@ const run = async () => {
   assert.throws(
     () => service.createWarehouse({ ...warehousePayload, consignee_gst: 'invalid' }),
     /15 alphanumeric/,
+  )
+  assert.throws(
+    () =>
+      service.createWarehouse({
+        ...warehousePayload,
+        address_details: { address: 'Gurgaon', contact_person: '', phone_number: '9186676788' },
+      }),
+    /address_details\.contact_person.*non-empty string/,
+  )
+  assert.throws(
+    () =>
+      service.createWarehouse({
+        ...warehousePayload,
+        business_hours: { TUE: { start_time: '7:00', close_time: '08:30' } },
+      }),
+    /business_hours\.TUE\.start_time.*HH:mm/,
   )
 
   const warehouseUpdatePayload = {

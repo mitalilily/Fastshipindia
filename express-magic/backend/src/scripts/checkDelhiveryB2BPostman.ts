@@ -184,6 +184,8 @@ const run = async () => {
           '--env-var',
           'freightLrns=mock-lrn-1,mock-lrn-2',
           '--env-var',
+          'warehouseName=Postman Warehouse 01',
+          '--env-var',
           'mwn=mock-mwn',
           '--reporters',
           'cli',

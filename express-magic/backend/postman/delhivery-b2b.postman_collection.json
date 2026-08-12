@@ -247,12 +247,35 @@
       "item": [
         {
           "name": "Create Warehouse (mutating)",
-          "event": [{
-            "listen": "prerequest",
-            "script": { "type": "text/javascript", "exec": [
-              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
-            ] }
-          }],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "type": "text/javascript", "exec": [
+                "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+              ] }
+            },
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "var body = pm.response.json();",
+                "var request = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                "pm.test('warehouse name case and spacing are preserved', function () {",
+                "  pm.expect(request.name).to.eql(pm.variables.replaceIn('{{warehouseName}}'));",
+                "});",
+                "pm.test('warehouse address and schedules match Delhivery contract', function () {",
+                "  pm.expect(request.pin_code).to.match(/^\\d{6}$/);",
+                "  pm.expect(request.address_details.address).to.be.a('string').and.not.empty;",
+                "  pm.expect(request.address_details.contact_person).to.be.a('string').and.not.empty;",
+                "  pm.expect(request.address_details.phone_number).to.be.a('string').and.not.empty;",
+                "  pm.expect(request.business_hours.TUE.start_time).to.match(/^\\d{2}:\\d{2}$/);",
+                "  pm.expect(request.pick_up_days).to.include('TUE');",
+                "});",
+                "pm.test('created warehouse payload is returned', function () {",
+                "  pm.expect(body.data).to.be.an('object');",
+                "});"
+              ] }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],

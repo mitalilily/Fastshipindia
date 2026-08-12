@@ -36,6 +36,12 @@ remain optional booleans. The returned charge is an estimate and may differ afte
 Freight charge breakup accepts one comma-separated LRN string containing at most 25 values.
 FastShip trims each value, rejects an empty or oversized list, percent-encodes the normalized
 comma-separated value, and forwards it with the cached Delhivery bearer token.
+Warehouse creation preserves the exact case and spacing of `name`, because the same value must
+be used during manifestation. It validates the required pincode and address, weekday schedules,
+optional booleans, and the 15-character alphanumeric GST value. The portal's misspelled
+`buisness_hours`/`buisness_days` names are accepted as input aliases and sent using the
+`business_hours`/`business_days` keys shown in Delhivery's cURL example. When
+`same_as_fwd_add=true`, it takes precedence and a conflicting `ret_address` is not forwarded.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password

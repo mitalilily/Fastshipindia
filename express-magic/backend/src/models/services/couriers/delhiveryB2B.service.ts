@@ -282,7 +282,6 @@ const normalizeWarehousePayload = (payload: Record<string, unknown>) => {
   }
 
   const data: Record<string, unknown> = {
-    ...payload,
     name,
     pin_code: ensurePincode(payload.pin_code, 'pin_code'),
     address_details: { ...addressDetails },
@@ -294,14 +293,27 @@ const normalizeWarehousePayload = (payload: Record<string, unknown>) => {
   for (const field of WAREHOUSE_BOOLEAN_FIELDS) {
     if (payload[field] !== undefined) data[field] = ensureBoolean(payload[field], field)
   }
-  for (const field of ['ret_address', 'billing_details']) {
-    if (payload[field] !== undefined) data[field] = { ...ensureObject(payload[field], field) }
+  if (payload.billing_details !== undefined) {
+    data.billing_details = { ...ensureObject(payload.billing_details, 'billing_details') }
   }
-  for (const field of ['business_hours', 'buisness_hours', 'pick_up_hours']) {
-    if (payload[field] !== undefined) data[field] = normalizeWarehouseHours(payload[field], field)
+  if (data.same_as_fwd_add !== true && payload.ret_address !== undefined) {
+    data.ret_address = { ...ensureObject(payload.ret_address, 'ret_address') }
   }
-  for (const field of ['business_days', 'buisness_days', 'pick_up_days']) {
-    if (payload[field] !== undefined) data[field] = normalizeWarehouseDays(payload[field], field)
+
+  const businessHours = payload.business_hours ?? payload.buisness_hours
+  if (businessHours !== undefined) {
+    data.business_hours = normalizeWarehouseHours(businessHours, 'business_hours')
+  }
+  if (payload.pick_up_hours !== undefined) {
+    data.pick_up_hours = normalizeWarehouseHours(payload.pick_up_hours, 'pick_up_hours')
+  }
+
+  const businessDays = payload.business_days ?? payload.buisness_days
+  if (businessDays !== undefined) {
+    data.business_days = normalizeWarehouseDays(businessDays, 'business_days')
+  }
+  if (payload.pick_up_days !== undefined) {
+    data.pick_up_days = normalizeWarehouseDays(payload.pick_up_days, 'pick_up_days')
   }
 
   if (payload.consignee_gst !== undefined) {
