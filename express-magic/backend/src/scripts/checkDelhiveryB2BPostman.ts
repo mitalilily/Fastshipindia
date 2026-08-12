@@ -123,7 +123,7 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     [
       'GET',
       /^\/api\/delhivery\/b2b\/documents\/(shipping_label|lr_copy)\/[^/]+$/,
-      success({ url: 'https://example.com/mock-document.pdf' }),
+      success({ s3_url: 'https://example.com/mock-document.pdf', status: 'COMPLETED' }),
     ],
     ['GET', /^\/api\/delhivery\/b2b\/documents$/, success({ documents: [] })],
   ]

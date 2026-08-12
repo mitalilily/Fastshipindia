@@ -147,6 +147,10 @@ POST callback, require `size` for shipping labels, and use optional
 `lr_copy_type` lists for LR copies. Delhivery later pushes the PDF link to the
 callback URL.
 
+Document generation status forwards `GET /generate/{doc_type}/status/{job_id}`
+for the job returned by the async generate call. The response is expected to
+contain the S3/document PDF link once generation is complete.
+
 ## Verification
 
 Run both automated layers from `backend`:

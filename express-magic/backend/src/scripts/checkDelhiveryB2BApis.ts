@@ -1149,11 +1149,16 @@ const run = async () => {
     'GET',
     '/generate/shipping_label/status/390927a3-1eaf-4df5-8aa7-87027ac46e48',
   )
+  assert.equal(shippingLabelStatus.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(shippingLabelStatus.headers?.Accept, 'application/json')
+  assert.equal(typeof shippingLabelStatus.headers?.['X-Request-Id'], 'string')
   assert.equal(shippingLabelStatus.data, undefined)
 
   await service.getGenerateDocumentStatus('LR_COPY', 'lr-copy-document-job')
-  lastRequest('GET', '/generate/lr_copy/status/lr-copy-document-job')
+  const lrCopyStatus = lastRequest('GET', '/generate/lr_copy/status/lr-copy-document-job')
+  assert.equal(lrCopyStatus.headers?.Authorization, 'Bearer test-jwt')
+  assert.equal(lrCopyStatus.headers?.Accept, 'application/json')
+  assert.equal(typeof lrCopyStatus.headers?.['X-Request-Id'], 'string')
   assert.throws(
     () => service.getGenerateDocumentStatus('invoice', 'document-job'),
     /doc_type must be shipping_label or lr_copy/,
