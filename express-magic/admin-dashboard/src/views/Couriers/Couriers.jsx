@@ -63,6 +63,13 @@ const fallbackCouriers = [
     isEnabled: true,
   },
   {
+    id: "dlv-b2b-ltl",
+    name: "Delhivery B2B (LTL)",
+    serviceProvider: "Delhivery",
+    businessType: ["b2b"],
+    isEnabled: true,
+  },
+  {
     id: "ekart-sfc",
     name: "Ekart Surface",
     serviceProvider: "Ekart",
@@ -146,6 +153,7 @@ const Couriers = () => {
   const { data: couriers = [], isLoading, error } = useCouriers({
     search: debouncedSearch || undefined,
     serviceProvider: filters.serviceProvider || undefined,
+    businessType: filters.businessType || undefined,
   });
   const createCourier = useCreateCourier();
   const deleteCourier = useDeleteCourier();
@@ -154,13 +162,21 @@ const Couriers = () => {
 
   const rows = useMemo(() => {
     const source = couriers.length ? couriers : fallbackCouriers;
-    return source.map((courier) => ({
-      ...courier,
-      serviceProvider: normalizeProvider(courier.serviceProvider),
-      type: courier.type || "Delivery",
-      businessType: courier.businessType || courier.business_type || ["b2c"],
-    }));
-  }, [couriers]);
+    return source
+      .map((courier) => ({
+        ...courier,
+        serviceProvider: normalizeProvider(courier.serviceProvider),
+        type: courier.type || "Delivery",
+        businessType: courier.businessType || courier.business_type || ["b2c"],
+      }))
+      .filter((courier) => !filters.type || courier.type.toLowerCase() === filters.type)
+      .filter((courier) => {
+        if (!filters.status) return true;
+        return filters.status === "enabled"
+          ? courier.isEnabled !== false
+          : courier.isEnabled === false;
+      });
+  }, [couriers, filters.status, filters.type]);
 
   const stats = {
     total: rows.length || 36,
@@ -312,7 +328,7 @@ const Couriers = () => {
                 maxW="213px"
               >
                 <option value="">All providers</option>
-                <option value="deliveryone">Delhivery</option>
+                <option value="delhivery">Delhivery</option>
               </AdminSelect>
             </Box>
             <Box>

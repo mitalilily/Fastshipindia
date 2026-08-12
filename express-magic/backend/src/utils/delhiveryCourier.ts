@@ -3,6 +3,11 @@ export const DELHIVERY_COURIER_IDS = {
   SURFACE: 100,
 } as const
 
+// Delhivery's LTL/B2B integration does not expose the B2C Air/Surface service
+// identifiers. Keep a separate local ID so B2B can be enabled, priced, and
+// displayed independently from the two B2C services.
+export const DELHIVERY_B2B_COURIER_ID = 101
+
 export type DelhiveryShippingMode = 'Express' | 'Surface'
 
 const DELHIVERY_LEGACY_MODE_BY_ID: Record<number, DelhiveryShippingMode> = {
