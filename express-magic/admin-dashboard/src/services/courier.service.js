@@ -55,14 +55,14 @@ export const createCourier = async (payload) => {
 }
 export const deleteCourier = async ({ id, serviceProvider }) => {
   const { data } = await api.delete(`/couriers/delete/${id}`, {
-    data: { serviceProvider },
+    data: { serviceProvider: String(serviceProvider || '').trim().toLowerCase() },
   })
   return data
 }
 
 export const updateCourierStatus = async ({ id, serviceProvider, isEnabled, businessType }) => {
   const { data } = await api.patch(`/couriers/status/${id}`, {
-    serviceProvider,
+    serviceProvider: String(serviceProvider || '').trim().toLowerCase(),
     isEnabled,
     businessType, // Optional: array of ['b2c'], ['b2b'], or ['b2c', 'b2b']
   })

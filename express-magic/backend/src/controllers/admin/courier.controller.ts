@@ -21,7 +21,10 @@ import { fetchAvailableCouriersWithRatesAdmin } from '../../models/services/ship
 import { courier_credentials } from '../../models/schema/courierCredentials'
 import { couriers } from '../../models/schema/couriers'
 import { getAllZones } from '../../models/services/zone.service'
-import { DELHIVERY_COURIER_IDS } from '../../utils/delhiveryCourier'
+import {
+  DELHIVERY_B2B_COURIER_ID,
+  DELHIVERY_COURIER_IDS,
+} from '../../utils/delhiveryCourier'
 import { EkartService } from '../../models/services/couriers/ekart.service'
 import { XpressbeesService } from '../../models/services/couriers/xpressbees.service'
 import { ShadowfaxService } from '../../models/services/couriers/shadowfax.service'
@@ -341,8 +344,8 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
     }
 
     // A fresh installation may have credentials but no courier rows yet. Provision the
-    // two canonical Delhivery services when the admin enables the provider so the toggle
-    // works without requiring a separate seed command.
+    // canonical B2C services and the independent B2B/LTL service when the admin enables
+    // the provider so each business type can be managed separately.
     if (isEnabled) {
       await db
         .insert(couriers)
@@ -352,17 +355,32 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
             name: 'Delhivery Express',
             serviceProvider: normalizedProvider,
             isEnabled: true,
-            businessType: ['b2c', 'b2b'],
+            businessType: ['b2c'],
           },
           {
             id: DELHIVERY_COURIER_IDS.SURFACE,
             name: 'Delhivery Surface',
             serviceProvider: normalizedProvider,
             isEnabled: true,
-            businessType: ['b2c', 'b2b'],
+            businessType: ['b2c'],
+          },
+          {
+            id: DELHIVERY_B2B_COURIER_ID,
+            name: 'Delhivery B2B (LTL)',
+            serviceProvider: normalizedProvider,
+            isEnabled: true,
+            businessType: ['b2b'],
           },
         ])
-        .onConflictDoNothing({ target: [couriers.id, couriers.serviceProvider] })
+        .onConflictDoUpdate({
+          target: [couriers.id, couriers.serviceProvider],
+          set: {
+            name: sql`excluded.name`,
+            isEnabled: true,
+            businessType: sql`excluded.business_type`,
+            updatedAt: new Date(),
+          },
+        })
     }
 
     const updated = await db
