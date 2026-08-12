@@ -276,7 +276,20 @@ export const determineB2CZone = (origin: LocationInfo, destination: LocationInfo
   const hasTag = (loc: LocationInfo, tag: string) =>
     loc.tags?.map((t) => t.toLowerCase()).includes(tag.toLowerCase())
 
-  // 1. Special Zone (highest priority)
+  const isKashmir = (loc: LocationInfo) => {
+    const state = String(loc.state || '')
+      .trim()
+      .toLowerCase()
+      .replace(/&/g, 'and')
+    return state === 'jammu and kashmir' || state === 'jammu kashmir' || state === 'ladakh'
+  }
+
+  // 1. Kashmir has a dedicated contracted tariff.
+  if (isKashmir(origin) || isKashmir(destination)) {
+    return 'KASHMIR'
+  }
+
+  // 2. Special Zone
   if (hasTag(origin, 'special_zones') || hasTag(destination, 'special_zones')) {
     return 'SPECIAL_ZONE'
   }

@@ -2937,6 +2937,14 @@ const fetchLocationByPincode = async (pincode: string): Promise<LocRow | null> =
 const hasTag = (loc: LocRow | null, tag: string) =>
   !!loc && Array.isArray(loc.tags) && loc.tags.includes(tag.toLowerCase())
 
+const isKashmirLocation = (loc: LocRow | null) => {
+  const state = String(loc?.state || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+  return state === 'jammu and kashmir' || state === 'jammu kashmir' || state === 'ladakh'
+}
+
 /**
  * Determine B2C zone classification for a shipment
  *
@@ -2955,7 +2963,12 @@ const determineB2CZoneKey = (
   if (!origin || !destination) {
     return { key: 'ROI', reason: 'origin or destination missing' }
   }
-  // 1. Special Zones (always override)
+  // 1. Dedicated Kashmir tariff (always override generic special-zone tags)
+  if (isKashmirLocation(origin) || isKashmirLocation(destination)) {
+    return { key: 'KASHMIR', reason: 'Jammu and Kashmir or Ladakh lane' }
+  }
+
+  // 2. Special Zones
   if (
     hasTag(origin, 'special_zones') ||
     hasTag(origin, 'special_zone') ||
@@ -3015,6 +3028,7 @@ const determineB2CZoneKey = (
  * Adjust the right-hand values if your zones.code uses different wording.
  */
 const ZONE_KEY_TO_DB_CODE: Record<string, string> = {
+  KASHMIR: 'KASHMIR',
   METRO_TO_METRO: 'METRO_TO_METRO',
   ROI: 'ROI',
   SPECIAL_ZONE: 'SPECIAL_ZONE',
@@ -3024,6 +3038,7 @@ const ZONE_KEY_TO_DB_CODE: Record<string, string> = {
 }
 
 const B2C_ZONE_KEY_FALLBACK_CODES: Record<string, string[]> = {
+  KASHMIR: ['KASHMIR'],
   METRO_TO_METRO: ['A_B2C', 'A', 'ZONE_A', 'ZONE A', 'ZONE A (B2C)'],
   WITHIN_CITY: ['A_B2C', 'A', 'ZONE_A', 'ZONE A', 'ZONE A (B2C)'],
   WITHIN_STATE: ['B_B2C', 'B', 'ZONE_B', 'ZONE B', 'ZONE B (B2C)'],

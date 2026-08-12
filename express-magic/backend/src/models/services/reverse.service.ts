@@ -151,7 +151,16 @@ async function fetchLocationByPincode(pincode: string): Promise<LocRow | null> {
 const hasTag = (loc: LocRow | null, tag: string) =>
   !!loc && Array.isArray(loc.tags) && loc.tags.includes(tag.toLowerCase())
 
+const isKashmirLocation = (loc: LocRow | null) => {
+  const state = String(loc?.state || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+  return state === 'jammu and kashmir' || state === 'jammu kashmir' || state === 'ladakh'
+}
+
 const ZONE_KEY_TO_DB_CODE: Record<string, string> = {
+  KASHMIR: 'KASHMIR',
   METRO_TO_METRO: 'METRO_TO_METRO',
   ROI: 'ROI',
   SPECIAL_ZONE: 'SPECIAL_ZONE',
@@ -166,6 +175,9 @@ function determineB2CZoneKey(
 ): { key: string; reason: string } {
   if (!origin || !destination) {
     return { key: 'ROI', reason: 'origin or destination missing' }
+  }
+  if (isKashmirLocation(origin) || isKashmirLocation(destination)) {
+    return { key: 'KASHMIR', reason: 'Jammu and Kashmir or Ladakh lane' }
   }
   if (
     hasTag(origin, 'special_zones') ||

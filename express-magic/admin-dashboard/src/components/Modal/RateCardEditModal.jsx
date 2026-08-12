@@ -27,8 +27,8 @@ const normalizeMode = (value) => {
 }
 const getDeliveryOneModeByCourierId = (courierId) => {
   const id = Number(courierId)
-  if (id === 99) return 'surface'
-  if (id === 100) return 'air'
+  if (id === 99) return 'air'
+  if (id === 100) return 'surface'
   return ''
 }
 const getCourierDefaultMode = (courier) =>

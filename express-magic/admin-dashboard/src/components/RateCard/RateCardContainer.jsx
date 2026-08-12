@@ -244,9 +244,10 @@ export const RateCardContainer = ({ forceBusinessType = null, embedded = false }
   // Update selectedPlanId when plans load - default to first plan
   useEffect(() => {
     if (plans?.length > 0) {
-      // Always set to first plan if not set, or if current selection is invalid
+      // Prefer the default Basic tariff instead of whichever plan was created last.
       if (!selectedPlanId || !plans.find((p) => String(p.id) === String(selectedPlanId))) {
-        setSelectedPlanId(plans[0].id)
+        const defaultPlan = plans.find((plan) => String(plan.name || '').trim().toLowerCase() === 'basic')
+        setSelectedPlanId((defaultPlan || plans[0]).id)
       }
     }
   }, [plans, selectedPlanId])

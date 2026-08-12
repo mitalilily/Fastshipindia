@@ -84,6 +84,7 @@ const normalizeHeaderKey = (value: unknown) =>
     .replace(/[^a-z0-9]+/g, '')
 
 const zoneHeaderAliases: Record<string, string[]> = {
+  KASHMIR: ['KASHMIR', 'Kashmir'],
   METRO_TO_METRO: ['METRO TO METRO', 'Metro to Metro'],
   ROI: ['ROI', 'Rest of India'],
   SPECIAL_ZONE: ['SPECIAL ZONE', 'Special Zone'],

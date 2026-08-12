@@ -206,6 +206,23 @@ export const getShippingRates = async (filters: ShippingRateFilters = {}) => {
         service_provider: serviceProvider, // Always include service_provider
         rates,
         zone_slabs: {},
+        cod_slabs:
+          businessType === 'b2c' && serviceProvider === 'delhivery'
+            ? [
+                {
+                  amount_from: 0,
+                  amount_to: 2000,
+                  charge_type: 'flat',
+                  charge_value: Number(row.rate.cod_charges || 0),
+                },
+                {
+                  amount_from: 2000,
+                  amount_to: null,
+                  charge_type: 'percent',
+                  charge_value: Number(row.rate.cod_percent || 0),
+                },
+              ]
+            : [],
       }
 
       // Debug log for first item
