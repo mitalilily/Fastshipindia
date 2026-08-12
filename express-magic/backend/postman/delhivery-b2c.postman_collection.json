@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a67c41e7-3d7e-45e9-b2c-delhivery",
     "name": "FastShip - Delhivery B2C (Express)",
-    "description": "Focused checks for the admin-only FastShip Delhivery B2C proxy. The collection signs in to FastShip before calling Delhivery B2C serviceability.",
+    "description": "Focused checks for the admin-only FastShip Delhivery B2C proxy. The collection signs in to FastShip before calling Delhivery B2C serviceability APIs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -82,6 +82,31 @@
                   "pm.test('Delhivery delivery code list is returned', function () {",
                   "  var data = body.data || {};",
                   "  pm.expect(data.delivery_codes).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Heavy Product Type Pincode Serviceability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/heavy-serviceability/{{heavyPincode}}",
+            "description": "Checks one Heavy product-type pincode with Delhivery B2C GET /api/dc/fetch/serviceability/pincode?product_type=Heavy&pincode={pincode}. NSZ means non-serviceable; payment_type indicates serviceability by payment mode."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Heavy B2C serviceability proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Heavy serviceable flag is boolean', function () { pm.expect(body.serviceable).to.be.a('boolean'); });",
+                  "pm.test('Heavy response exposes payment_type signal', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.payment_type).to.exist;",
                   "});"
                 ]
               }

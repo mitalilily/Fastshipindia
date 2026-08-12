@@ -9,14 +9,30 @@ type CapturedRequest = {
 
 const run = async () => {
   process.env.DATABASE_URL ||= 'postgres://fastship:fastship@localhost:5432/fastship_check'
-  const { DelhiveryService, isDelhiveryB2CPincodeServiceable } = await import(
-    '../models/services/couriers/delhivery.service'
-  )
+  const {
+    DelhiveryService,
+    isDelhiveryB2CHeavyPincodeServiceable,
+    isDelhiveryB2CPincodeServiceable,
+  } = await import('../models/services/couriers/delhivery.service')
   const requests: Array<{ method: string; url: string; headers?: any; params?: any }> = []
   const originalGet = axios.get
 
   ;(axios as any).get = async (url: string, config?: CapturedRequest) => {
     requests.push({ method: 'GET', url, headers: config?.headers, params: config?.params })
+    if (String(url).endsWith('/api/dc/fetch/serviceability/pincode')) {
+      return {
+        status: 200,
+        data: {
+          pincode: '400086',
+          product_type: 'Heavy',
+          payment_type: {
+            prepaid: true,
+            cod: true,
+          },
+        },
+      }
+    }
+
     return {
       status: 200,
       data: {
@@ -61,6 +77,31 @@ const run = async () => {
 
     await assert.rejects(() => service.checkServiceability('19410'), /valid 6-digit pincode/)
     await assert.rejects(() => service.checkServiceability('19410A'), /valid 6-digit pincode/)
+
+    const heavyResponse = await service.checkHeavyProductTypeServiceability('400086')
+    assert.equal(isDelhiveryB2CHeavyPincodeServiceable(heavyResponse), true)
+
+    const heavyRequest = requests.at(-1)
+    assert.equal(heavyRequest?.method, 'GET')
+    assert.equal(
+      heavyRequest?.url,
+      'https://staging-express.delhivery.com/api/dc/fetch/serviceability/pincode',
+    )
+    assert.deepEqual(heavyRequest?.params, { product_type: 'Heavy', pincode: '400086' })
+    assert.equal(heavyRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(heavyRequest?.headers?.Accept, 'application/json')
+
+    assert.equal(isDelhiveryB2CHeavyPincodeServiceable({ status: 'NSZ' }), false)
+    assert.equal(isDelhiveryB2CHeavyPincodeServiceable({ payment_type: { prepaid: false } }), false)
+
+    await assert.rejects(
+      () => service.checkHeavyProductTypeServiceability('40008'),
+      /valid 6-digit pincode/,
+    )
+    await assert.rejects(
+      () => service.checkHeavyProductTypeServiceability('40008A'),
+      /valid 6-digit pincode/,
+    )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
   } finally {

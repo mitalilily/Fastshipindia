@@ -60,10 +60,12 @@ Import:
 - `delhivery-b2c.local.postman_environment.json`
 
 The collection signs in as a FastShip admin and checks the Delhivery B2C
-pincode serviceability proxy. Local Newman verification:
+pincode serviceability and Heavy product type pincode serviceability proxies.
+Local Newman verification:
 
 ```bash
 npm run check:delhivery-b2c-postman
 ```
 
-See `DELHIVERY_B2B_INTEGRATION.md` for the complete provider-to-FastShip route matrix.
+See `DELHIVERY_B2B_INTEGRATION.md` and `DELHIVERY_B2C_INTEGRATION.md` for the
+complete provider-to-FastShip route matrices.

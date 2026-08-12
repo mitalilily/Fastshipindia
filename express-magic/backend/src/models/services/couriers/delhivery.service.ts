@@ -96,6 +96,73 @@ export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
   })
 }
 
+export const isDelhiveryB2CHeavyPincodeServiceable = (response: unknown) => {
+  const payload = response as any
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.serviceability)
+        ? payload.serviceability
+        : Array.isArray(payload?.pincode_serviceability_data)
+          ? payload.pincode_serviceability_data
+          : Array.isArray(payload?.serviceability_data)
+            ? payload.serviceability_data
+            : []
+
+  const stringify = (value: unknown) => {
+    try {
+      return JSON.stringify(value || {}).toLowerCase()
+    } catch {
+      return String(value || '').toLowerCase()
+    }
+  }
+
+  const candidates = rows.length ? rows : payload ? [payload] : []
+
+  return candidates.some((row: any) => {
+    const details = row?.postal_code || row?.pincode || row
+    const responseText = stringify(details)
+    if (
+      responseText.includes('nsz') ||
+      responseText.includes('non serviceable') ||
+      responseText.includes('non-serviceable')
+    ) {
+      return false
+    }
+
+    const serviceable =
+      details?.serviceable ?? details?.is_serviceable ?? details?.isServiceable ?? details?.active
+    if (typeof serviceable === 'boolean') return serviceable
+
+    const status = String(
+      details?.status ?? details?.serviceability_status ?? details?.serviceability ?? '',
+    )
+      .trim()
+      .toLowerCase()
+    if (['nsz', 'non_serviceable', 'non-serviceable', 'not_serviceable'].includes(status)) {
+      return false
+    }
+    if (['serviceable', 'sz', 'active', 'true'].includes(status)) return true
+
+    const paymentType = details?.payment_type ?? details?.payment_types ?? details?.paymentMode
+    if (Array.isArray(paymentType)) return paymentType.length > 0
+    if (paymentType && typeof paymentType === 'object') {
+      return Object.values(paymentType).some((value) => {
+        if (typeof value === 'boolean') return value
+        const normalized = String(value || '').trim().toLowerCase()
+        return Boolean(normalized) && !['false', 'no', 'nsz', 'non-serviceable'].includes(normalized)
+      })
+    }
+    if (paymentType !== undefined && paymentType !== null) {
+      const normalized = String(paymentType).trim().toLowerCase()
+      return Boolean(normalized) && !['false', 'no', 'nsz', 'non-serviceable'].includes(normalized)
+    }
+
+    return Object.keys(details || {}).length > 0
+  })
+}
+
 const delhiveryCancellationResponseText = (value: unknown) => {
   try {
     return JSON.stringify(value || {}).toLowerCase()
@@ -255,6 +322,34 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to fetch Delhivery serviceability')
+    }
+  }
+
+  async checkHeavyProductTypeServiceability(pincode: string) {
+    try {
+      const normalizedPincode = normalizeDelhiveryPincode(pincode)
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/dc/fetch/serviceability/pincode`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          Accept: 'application/json',
+        },
+        params: {
+          product_type: 'Heavy',
+          pincode: normalizedPincode,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery Heavy serviceability error:', {
+        pincode,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery Heavy serviceability')
     }
   }
 

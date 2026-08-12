@@ -38,6 +38,24 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     }
   }
 
+  if (
+    method === 'GET' &&
+    /^\/api\/delhivery\/b2c\/heavy-serviceability\/\d{6}$/.test(pathname)
+  ) {
+    return {
+      success: true,
+      serviceable: true,
+      data: {
+        pincode: '400086',
+        product_type: 'Heavy',
+        payment_type: {
+          prepaid: true,
+          cod: true,
+        },
+      },
+    }
+  }
+
   return null
 }
 
