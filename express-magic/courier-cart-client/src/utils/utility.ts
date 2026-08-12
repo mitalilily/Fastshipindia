@@ -10,6 +10,7 @@ export const initialFormData: UserInfoData = {
     state: "",
     city: "",
     phone: "",
+    companyAddress: "",
     personalWebsite: "",
   },
   businessLegal: {

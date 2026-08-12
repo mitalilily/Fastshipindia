@@ -215,6 +215,21 @@ export default function StepOneForm({ formData, onChange, errors, setFormData, s
         />
       </Box>
 
+      <Box sx={fieldCardSx}>
+        <CustomInput
+          label="Business Address"
+          name="companyAddress"
+          value={formData?.basicInfo?.companyAddress}
+          onChange={(e) => onChange(e, 'basicInfo')}
+          required
+          multiline
+          minRows={2}
+          error={!!errors.basicInfo.companyAddress}
+          helperText={errors.basicInfo.companyAddress}
+          prefix={<MdLocationPin color={DE_BLUE} />}
+        />
+      </Box>
+
       {loadingPincode && (
         <Chip
           label="Validating pincode..."

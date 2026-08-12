@@ -98,12 +98,19 @@ export const completeRegistration = async (req: any, res: Response): Promise<any
           companyInfo: {
             contactPerson: `${data?.basicInfo?.firstName} ${data?.basicInfo?.lastName}`,
             contactEmail: emailLower || user.email,
+            companyEmail: emailLower || user.email,
             contactNumber: phoneDigits || user.phone,
+            companyContactNumber: phoneDigits || user.phone,
             pincode: data?.basicInfo?.pincode,
             state: data?.basicInfo?.state,
             POCEmailVerified: user?.emailVerified,
             POCPhoneVerified: user?.phoneVerified,
             businessName: data?.basicInfo?.companyName,
+            companyAddress:
+              data?.basicInfo?.companyAddress ||
+              [data?.basicInfo?.city, data?.basicInfo?.state, data?.basicInfo?.pincode]
+                .filter(Boolean)
+                .join(', '),
             city: data?.basicInfo?.city,
             profilePicture: user?.profilePicture,
           },

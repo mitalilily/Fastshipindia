@@ -18,6 +18,7 @@ export interface UserBasicInfo {
   state?: string;
   city?: string;
   phone: string;
+  companyAddress?: string;
   personalWebsite?: string;
 }
 

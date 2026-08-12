@@ -9,6 +9,9 @@ export const emptyErrors: FormErrors = {
     companyName: "",
     email: "",
     pincode: "",
+    phone: "",
+    companyAddress: "",
+    personalWebsite: "",
   },
   businessLegal: {
     brandName: "",
@@ -39,6 +42,7 @@ export const validateOnboardingFields = (
       email,
       pincode,
       phone,
+      companyAddress,
     } = fields.basicInfo;
 
     if (!firstName?.trim())
@@ -55,8 +59,14 @@ export const validateOnboardingFields = (
       errors.basicInfo.email = "Enter a valid email";
     }
 
-    if (pincode && !/^\d{6}$/.test(pincode)) {
+    if (!pincode?.trim()) {
+      errors.basicInfo.pincode = "Pincode is required";
+    } else if (!/^\d{6}$/.test(pincode)) {
       errors.basicInfo.pincode = "Pincode must be 6 digits";
+    }
+
+    if (!companyAddress?.trim()) {
+      errors.basicInfo.companyAddress = "Business address is required";
     }
 
     if (!phone?.trim()) {

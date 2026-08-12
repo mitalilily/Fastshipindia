@@ -8,15 +8,12 @@ import earlyCodImage from '../../assets/quick-actions/early-cod.png'
 import rateCalculatorImage from '../../assets/quick-actions/rate-calculator.png'
 import rechargeWalletImage from '../../assets/quick-actions/recharge-wallet.png'
 import transporterIdImage from '../../assets/quick-actions/transporter-id.png'
-import { useAuth } from '../../context/auth/AuthContext'
 import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
-import AddMoneyDialog from '../AddMoneyDialog'
 
 type QuickAction = {
   name: string
   image: string
   path?: string
-  action?: 'recharge'
   requiresMerchantReady?: boolean
 }
 
@@ -34,7 +31,7 @@ const actions: QuickAction[] = [
   {
     name: 'Recharge Wallet',
     image: rechargeWalletImage,
-    action: 'recharge',
+    path: '/billing/wallet_transactions',
   },
   {
     name: 'Early COD',
@@ -57,10 +54,8 @@ const actions: QuickAction[] = [
 export default function QuickActions() {
   const theme = useTheme()
   const navigate = useNavigate()
-  const { walletBalance } = useAuth()
   const { isReady, firstIncompleteStep } = useMerchantReadiness()
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const [walletOpen, setWalletOpen] = useState(false)
   const open = Boolean(anchorEl)
   const isDark = theme.palette.mode === 'dark'
   const ink = isDark ? '#f8fafc' : '#172033'
@@ -76,11 +71,6 @@ export default function QuickActions() {
 
   const handleAction = (action: QuickAction) => {
     setAnchorEl(null)
-
-    if (action.action === 'recharge') {
-      setWalletOpen(true)
-      return
-    }
 
     if (!action.path) return
 
@@ -242,11 +232,6 @@ export default function QuickActions() {
         </Box>
       </Popover>
 
-      <AddMoneyDialog
-        currentBalance={walletBalance ?? 0}
-        open={walletOpen}
-        setOpen={setWalletOpen}
-      />
     </>
   )
 }
