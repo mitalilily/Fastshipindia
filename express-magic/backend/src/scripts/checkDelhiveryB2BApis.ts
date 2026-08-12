@@ -191,7 +191,9 @@ const run = async () => {
   )
 
   await service.estimateFreight({
-    dimensions: [{ length_cm: 11, width_cm: 1.1, height_cm: 11, box_count: 1 }],
+    dimensions: [
+      { length_cm: 11, width_cm: 1.1, height_cm: 11, box_count: 1, ignored: true },
+    ],
     weight_g: 100000,
     cheque_payment: false,
     source_pin: '400069',
@@ -199,6 +201,7 @@ const run = async () => {
     payment_mode: 'prepaid',
     inv_amount: 123,
     rov_insurance: true,
+    ignored: true,
   })
   const freightEstimate = lastRequest('POST', '/freight/estimate')
   assert.deepEqual(freightEstimate.data, {
@@ -213,6 +216,29 @@ const run = async () => {
     freight_mode: 'fop',
   })
   assert.equal(freightEstimate.headers?.['Content-Type'], 'application/json')
+  assert.equal(freightEstimate.headers?.Authorization, 'Bearer test-jwt')
+
+  await service.estimateFreight({
+    dimensions: [{ length_cm: 20, width_cm: 15, height_cm: 10, box_count: 2 }],
+    weight_g: 2500,
+    source_pin: '400069',
+    consignee_pin: '122001',
+    payment_mode: 'cod',
+    cod_amount: 750,
+    inv_amount: 1000,
+    freight_mode: 'fod',
+  })
+  const codFreightEstimate = lastRequest('POST', '/freight/estimate')
+  assert.deepEqual(codFreightEstimate.data, {
+    dimensions: [{ length_cm: 20, width_cm: 15, height_cm: 10, box_count: 2 }],
+    weight_g: 2500,
+    source_pin: '400069',
+    consignee_pin: '122001',
+    payment_mode: 'cod',
+    inv_amount: 1000,
+    freight_mode: 'fod',
+    cod_amount: 750,
+  })
 
   await assert.rejects(
     () =>
@@ -230,6 +256,31 @@ const run = async () => {
   await assert.rejects(
     () => service.estimateFreight({ payment_mode: 'prepaid' }),
     /dimensions/,
+  )
+  await assert.rejects(
+    () =>
+      service.estimateFreight({
+        dimensions: [{ length_cm: 11, width_cm: 1.1, height_cm: 11, box_count: 1.5 }],
+        weight_g: 100000,
+        source_pin: '400069',
+        consignee_pin: '400069',
+        payment_mode: 'prepaid',
+        inv_amount: 123,
+      }),
+    /box_count.*integer/,
+  )
+  await assert.rejects(
+    () =>
+      service.estimateFreight({
+        dimensions: [{ length_cm: 11, width_cm: 1.1, height_cm: 11, box_count: 1 }],
+        weight_g: 100000,
+        cheque_payment: 'false',
+        source_pin: '400069',
+        consignee_pin: '400069',
+        payment_mode: 'prepaid',
+        inv_amount: 123,
+      }),
+    /cheque_payment.*boolean/,
   )
 
   await service.getFreightCharges(' 220029522, 220029147 ,220029160 ')

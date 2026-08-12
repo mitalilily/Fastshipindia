@@ -198,7 +198,6 @@ const normalizeFreightDimensions = (value: unknown) => {
       throw new HttpError(400, `dimensions[${index}].box_count must be an integer`)
     }
     return {
-      ...entry,
       length_cm: ensureNumber(entry.length_cm, `dimensions[${index}].length_cm`, 0.01),
       width_cm: ensureNumber(entry.width_cm, `dimensions[${index}].width_cm`, 0.01),
       height_cm: ensureNumber(entry.height_cm, `dimensions[${index}].height_cm`, 0.01),
@@ -1258,7 +1257,6 @@ export class DelhiveryB2BService {
     const freightMode = requestedFreightMode || (await this.credentials()).freightMode
 
     const data: Record<string, unknown> = {
-      ...payload,
       dimensions: normalizeFreightDimensions(payload.dimensions),
       weight_g: ensureNumber(payload.weight_g, 'weight_g', 0.01),
       source_pin: ensurePincode(payload.source_pin, 'source_pin'),

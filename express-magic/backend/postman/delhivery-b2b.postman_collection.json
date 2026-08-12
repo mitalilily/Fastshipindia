@@ -169,12 +169,51 @@
         },
         {
           "name": "Freight Estimate",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "var request = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+            "pm.test('prepaid freight request uses Delhivery units and enums', function () {",
+            "  pm.expect(request.dimensions).to.be.an('array').and.not.empty;",
+            "  pm.expect(request.dimensions[0].length_cm).to.be.above(0);",
+            "  pm.expect(request.dimensions[0].width_cm).to.be.above(0);",
+            "  pm.expect(request.dimensions[0].height_cm).to.be.above(0);",
+            "  pm.expect(request.dimensions[0].box_count).to.be.above(0);",
+            "  pm.expect(request.weight_g).to.be.above(0);",
+            "  pm.expect(request.payment_mode).to.eql('prepaid');",
+            "  pm.expect(['fop', 'fod']).to.include(request.freight_mode);",
+            "});",
+            "pm.test('freight estimate payload is returned', function () {",
+            "  pm.expect(body.data).to.be.an('object');",
+            "});"
+          ] } }],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/delhivery/b2b/freight/estimate",
             "description": "Estimates Delhivery B2B freight using centimetre dimensions and shipment weight in grams. Required values are validated before forwarding; cod_amount is required for COD, and the configured B2BR fop/fod mode is used when freight_mode is omitted.",
             "body": { "mode": "raw", "raw": "{\n  \"dimensions\": [{\"length_cm\": 10, \"width_cm\": 10, \"height_cm\": 10, \"box_count\": 1}],\n  \"weight_g\": {{weightGrams}},\n  \"cheque_payment\": false,\n  \"source_pin\": \"{{originPincode}}\",\n  \"consignee_pin\": \"{{destinationPincode}}\",\n  \"payment_mode\": \"prepaid\",\n  \"inv_amount\": 1000,\n  \"freight_mode\": \"fop\",\n  \"rov_insurance\": false\n}" }
+          }
+        },
+        {
+          "name": "Freight Estimate (COD)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "var request = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+            "pm.test('COD freight request includes a valid COD amount', function () {",
+            "  pm.expect(request.payment_mode).to.eql('cod');",
+            "  pm.expect(request.cod_amount).to.be.at.least(0);",
+            "  pm.expect(['fop', 'fod']).to.include(request.freight_mode);",
+            "});",
+            "pm.test('COD freight estimate payload is returned', function () {",
+            "  pm.expect(body.data).to.be.an('object');",
+            "});"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2b/freight/estimate",
+            "description": "Verifies Delhivery's conditional COD contract: payment_mode=cod requires cod_amount. The amount returned remains an estimate and can differ from the final LR charge after pickup.",
+            "body": { "mode": "raw", "raw": "{\n  \"dimensions\": [{\"length_cm\": 11, \"width_cm\": 1.1, \"height_cm\": 11, \"box_count\": 1}],\n  \"weight_g\": {{weightGrams}},\n  \"cheque_payment\": false,\n  \"source_pin\": \"{{originPincode}}\",\n  \"consignee_pin\": \"{{destinationPincode}}\",\n  \"payment_mode\": \"cod\",\n  \"cod_amount\": 500,\n  \"inv_amount\": 1000,\n  \"freight_mode\": \"fod\",\n  \"rov_insurance\": true\n}" }
           }
         },
         {

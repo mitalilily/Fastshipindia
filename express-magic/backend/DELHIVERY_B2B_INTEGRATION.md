@@ -28,6 +28,11 @@ serviceability response fails closed and prevents the provider booking request.
 Expected TAT requires valid six-digit origin and destination pincodes. FastShip attaches the
 cached UMS bearer token and a new UUID `X-Request-Id` to every call; Delhivery's non-negative
 network estimate is returned in days without being treated as a contractual delivery promise.
+Freight estimates require positive package dimensions in centimetres, a positive shipment
+weight in grams, six-digit source and consignee pincodes, an invoice amount, and either
+`prepaid` or `cod` payment mode. `cod_amount` is mandatory for COD. B2BR requests always send
+the configured `fop` or `fod` freight mode, while cheque payment and carrier-risk insurance
+remain optional booleans. The returned charge is an estimate and may differ after pickup.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password
