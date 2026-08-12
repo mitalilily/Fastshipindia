@@ -18,6 +18,8 @@ import {
 import { alpha, useTheme } from '@mui/material/styles'
 import React, { useState } from 'react'
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa'
+import { useSearchParams } from 'react-router-dom'
+import AddMoneyDialog from '../../components/AddMoneyDialog'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
 import PageHeading from '../../components/UI/heading/PageHeading'
 import { useWalletTransactions } from '../../hooks/useWalletBalance'
@@ -46,6 +48,20 @@ const WalletTransactions = () => {
   const isDark = theme.palette.mode === 'dark'
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<WalletFilter>({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rechargeDialogOpen = searchParams.get('recharge') === 'true'
+
+  const setRechargeDialogOpen = (open: boolean) => {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (open) {
+      nextParams.set('recharge', 'true')
+    } else {
+      nextParams.delete('recharge')
+    }
+
+    setSearchParams(nextParams, { replace: true })
+  }
 
   const { data, isLoading, isError } = useWalletTransactions({
     limit: 10,
@@ -86,7 +102,8 @@ const WalletTransactions = () => {
   ]
 
   return (
-    <Stack gap={3} p={4}>
+    <>
+      <Stack gap={3} p={4}>
       <PageHeading
         eyebrow="Billing Panel"
         title="Wallet Transactions"
@@ -120,6 +137,14 @@ const WalletTransactions = () => {
           )}
         </CardContent>
       </Card>
+
+      <Button
+        variant="contained"
+        onClick={() => setRechargeDialogOpen(true)}
+        sx={{ alignSelf: 'flex-start', textTransform: 'none', fontWeight: 700 }}
+      >
+        Recharge Wallet
+      </Button>
 
       {/* FilterBar */}
 
@@ -244,7 +269,13 @@ const WalletTransactions = () => {
           Next
         </Button>
       </Stack>
-    </Stack>
+      </Stack>
+      <AddMoneyDialog
+        open={rechargeDialogOpen}
+        setOpen={setRechargeDialogOpen}
+        currentBalance={Number(data?.wallet?.balance ?? 0)}
+      />
+    </>
   )
 }
 

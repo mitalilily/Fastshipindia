@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
-import { useState, type Dispatch, type SetStateAction } from 'react'
+import { useState } from 'react'
 import { FiX } from 'react-icons/fi'
 import { useAuth } from '../context/auth/AuthContext'
 import { useUserProfile } from '../hooks/User/useUserProfile'
@@ -26,7 +26,7 @@ const WALLET_MUTED = '#6F7480'
 
 interface AddMoneyDialogProps {
   open: boolean
-  setOpen: Dispatch<SetStateAction<boolean>>
+  setOpen: (open: boolean) => void
   currentBalance: number
 }
 
