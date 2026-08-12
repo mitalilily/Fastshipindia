@@ -64,6 +64,14 @@ async function bootstrapDatabase() {
     // available if an older database needs manual schema repair.
     console.warn('Delhivery B2C rate-card seed failed during startup; continuing.', error)
   }
+
+  try {
+    run(process.execPath, [path.join(backendRoot, 'dist/scripts/seedB2BZones.js')])
+  } catch (error) {
+    // Zone catalog entries can still be managed from the admin panel. Do not
+    // keep the API offline when an older database needs manual schema repair.
+    console.warn('B2B zone catalog seed failed during startup; continuing.', error)
+  }
 }
 
 bootstrapDatabase()
