@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   expectedTatController,
+  fetchSingleWaybillController,
   fetchWaybillsController,
   heavyProductServiceabilityController,
   serviceabilityController,
@@ -15,5 +16,6 @@ router.get('/serviceability/:pincode', serviceabilityController)
 router.get('/heavy-serviceability/:pincode', heavyProductServiceabilityController)
 router.get('/tat', expectedTatController)
 router.get('/waybills', fetchWaybillsController)
+router.get('/waybill', fetchSingleWaybillController)
 
 export default router

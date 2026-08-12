@@ -51,6 +51,14 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/waybill/api/fetch/json/')) {
+      return {
+        status: 200,
+        data: {
+          waybill: 'WB-SINGLE-000001',
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -207,6 +215,21 @@ const run = async () => {
     await assert.rejects(() => service.fetchB2CBulkWaybills(0), /count must be an integer/)
     await assert.rejects(() => service.fetchB2CBulkWaybills(10001), /count must be an integer/)
     await assert.rejects(() => service.fetchB2CBulkWaybills(1.5), /count must be an integer/)
+
+    const singleWaybillResponse = await service.fetchB2CSingleWaybill()
+    assert.equal((singleWaybillResponse as any)?.waybill, 'WB-SINGLE-000001')
+
+    const singleWaybillRequest = requests.at(-1)
+    assert.equal(singleWaybillRequest?.method, 'GET')
+    assert.equal(
+      singleWaybillRequest?.url,
+      'https://staging-express.delhivery.com/waybill/api/fetch/json/',
+    )
+    assert.deepEqual(singleWaybillRequest?.params, {
+      token: 'test-delhivery-token',
+    })
+    assert.equal(singleWaybillRequest?.headers?.Accept, 'application/json')
+    assert.equal(singleWaybillRequest?.headers?.Authorization, undefined)
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
   } finally {

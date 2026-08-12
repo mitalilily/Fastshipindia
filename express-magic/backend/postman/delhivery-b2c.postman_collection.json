@@ -169,6 +169,35 @@
               }
             }
           ]
+        },
+        {
+          "name": "Fetch Single WayBill",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/waybill",
+            "description": "Fetches one Delhivery B2C waybill using GET /waybill/api/fetch/json/?token={token}. Delhivery generates one waybill every time this API is hit."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Fetch Single WayBill proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Single waybill data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.waybill || data).to.exist;",
+                  "});",
+                  "pm.test('Single waybill is a string or provider payload', function () {",
+                  "  var data = body.data || {};",
+                  "  var waybill = data.waybill || data;",
+                  "  pm.expect(typeof waybill === 'string' || typeof waybill === 'object').to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

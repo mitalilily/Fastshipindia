@@ -68,3 +68,6 @@ export const expectedTatController = (req: Request, res: Response) =>
 
 export const fetchWaybillsController = (req: Request, res: Response) =>
   sendDataResult(res, service.fetchB2CBulkWaybills(req.query.count))
+
+export const fetchSingleWaybillController = (_req: Request, res: Response) =>
+  sendDataResult(res, service.fetchB2CSingleWaybill())

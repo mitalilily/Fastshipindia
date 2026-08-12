@@ -501,6 +501,29 @@ export class DelhiveryService {
     }
   }
 
+  async fetchB2CSingleWaybill() {
+    try {
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/waybill/api/fetch/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+        params: {
+          token: this.token,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      console.error('❌ Delhivery B2C single waybill error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C single waybill')
+    }
+  }
+
   // 🔹 4. Create Shipment (Manifestation)
   async createShipment(params: ShipmentParams, waybill?: string) {
     try {

@@ -8,6 +8,7 @@
 | Heavy product type pincode serviceability | `GET /api/dc/fetch/serviceability/pincode?product_type=Heavy&pincode={pincode}` | `GET /api/delhivery/b2c/heavy-serviceability/{pincode}` |
 | Expected TAT | `GET /api/dc/expected_tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` | `GET /api/delhivery/b2c/tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` |
 | Fetch WayBill | `GET /waybill/api/bulk/json/?token={token}&count={count}` | `GET /api/delhivery/b2c/waybills?count={count}` |
+| Fetch Single WayBill | `GET /waybill/api/fetch/json/?token={token}` | `GET /api/delhivery/b2c/waybill` |
 
 FastShip validates a single six-digit pincode, forwards it as `filter_codes`,
 and authenticates with Delhivery's `Authorization: Token ...` header. An empty
@@ -29,6 +30,10 @@ forwards Delhivery's token in the provider query string, and returns the bulk
 waybill response unchanged under `data`. Delhivery generates these in backend
 batches, so callers should store the fetched waybills and use them later during
 manifest creation.
+
+For Fetch Single WayBill, FastShip forwards Delhivery's token in the provider
+query string and returns the single generated waybill response unchanged under
+`data`.
 
 ## Verification
 
