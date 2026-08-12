@@ -89,7 +89,7 @@ const B2BAdditionalCharges = ({
     onSuccess: () => {
       queryClient.invalidateQueries(['b2b-additional-charges'])
       toast({
-        title: 'Overhead charges saved',
+        title: 'Additional charges saved',
         status: 'success',
         duration: 3000,
       })

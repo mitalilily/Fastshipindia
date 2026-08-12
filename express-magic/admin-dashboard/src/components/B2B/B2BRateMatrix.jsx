@@ -286,12 +286,13 @@ const B2BRateMatrix = ({ planId }) => {
   const handleSave = (formData) => {
     // Handle both edit (from cell click) and add (from add modal) scenarios
     const payload = {
-      id: selectedCell?.rate?.id,
+      id: formData.originZoneId ? undefined : selectedCell?.rate?.id,
       originZoneId: formData.originZoneId || selectedCell?.originZone?.id,
       destinationZoneId: formData.destinationZoneId || selectedCell?.destZone?.id,
       ratePerKg: formData.ratePerKg, // Only rate per kg needed
       courier_id: formData.courier_id || courierId || undefined,
       service_provider: formData.service_provider || serviceProvider || undefined,
+      plan_id: planId || undefined,
     }
 
     updateRateMutation.mutate(payload)
@@ -700,6 +701,8 @@ const RateCellModal = ({
           <FormControl isRequired>
             <FormLabel>Rate per Kg (₹)</FormLabel>
             <NumberInput
+              min={0.01}
+              precision={2}
               value={formData.ratePerKg}
               onChange={(_, value) => setFormData({ ...formData, ratePerKg: value })}
             >
@@ -714,7 +717,14 @@ const RateCellModal = ({
           <Button variant="ghost" mr={3} onClick={onClose}>
             Cancel
           </Button>
-          <Button colorScheme="blue" onClick={handleSubmit} isLoading={isLoading}>
+          <Button
+            colorScheme="blue"
+            onClick={handleSubmit}
+            isLoading={isLoading}
+            isDisabled={
+              !Number.isFinite(Number(formData.ratePerKg)) || Number(formData.ratePerKg) <= 0
+            }
+          >
             Save
           </Button>
         </ModalFooter>
@@ -916,6 +926,8 @@ const AddRateModal = ({ isOpen, onClose, zones, couriers, onSave, isLoading }) =
               <FormControl isRequired>
                 <FormLabel fontSize="sm">Rate per Kg (₹)</FormLabel>
                 <NumberInput
+                  min={0.01}
+                  precision={2}
                   value={formData.ratePerKg}
                   onChange={(_, value) => setFormData({ ...formData, ratePerKg: value })}
                 >
