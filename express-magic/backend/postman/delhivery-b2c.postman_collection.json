@@ -292,6 +292,52 @@
           ]
         },
         {
+          "name": "Pickup Request Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Pickup Request Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Pickup request response is returned', function () {",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Pickup request carries pickup id or status signal', function () {",
+                  "  pm.expect(data.pickup_id !== undefined || data.pr_id !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/pickup-requests",
+            "description": "Creates a Delhivery B2C pickup request via POST /fm/request/new/. The request is raised against a registered pickup location/warehouse, not an individual waybill. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_time\": \"{{pickupRequestTime}}\",\n  \"pickup_date\": \"{{pickupRequestDate}}\",\n  \"pickup_location\": \"{{pickupLocationName}}\",\n  \"expected_package_count\": {{pickupExpectedPackageCount}}\n}"
+            }
+          }
+        },
+        {
           "name": "Shipment Creation (mutating)",
           "event": [
             {

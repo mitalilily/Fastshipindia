@@ -118,6 +118,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/pickup-requests') {
+    return success({
+      success: true,
+      pickup_id: 'PU-B2C-000001',
+      message: 'Pickup request created',
+    })
+  }
+
   if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments') {
     return success({
       success: true,

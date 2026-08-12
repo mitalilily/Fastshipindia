@@ -260,6 +260,39 @@ const normalizeDelhiveryB2CShippingLabelParams = (params: {
   }
 }
 
+const normalizeDelhiveryPickupDate = (value: unknown) => {
+  const pickupDate = String(value ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate)) {
+    throw new HttpError(400, 'pickup_date must be in YYYY-MM-DD format')
+  }
+  return pickupDate
+}
+
+const normalizeDelhiveryPickupTime = (value: unknown) => {
+  const pickupTime = String(value ?? '').trim()
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(pickupTime)) {
+    throw new HttpError(400, 'pickup_time must be in HH:mm:ss format')
+  }
+  return pickupTime
+}
+
+const normalizeDelhiveryB2CPickupRequestPayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Pickup request payload is required')
+  }
+
+  return {
+    pickup_time: normalizeDelhiveryPickupTime(input.pickup_time),
+    pickup_date: normalizeDelhiveryPickupDate(input.pickup_date),
+    pickup_location: requiredManifestText(input.pickup_location, 'pickup_location'),
+    expected_package_count: normalizeRequiredPositiveInteger(
+      input.expected_package_count,
+      'expected_package_count',
+    ),
+  }
+}
+
 const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
   const normalized = String(value ?? '').trim().toLowerCase()
   const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
@@ -979,6 +1012,29 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to generate Delhivery B2C shipping label')
+    }
+  }
+
+  async createB2CPickupRequest(payload: unknown) {
+    try {
+      const pickupRequest = normalizeDelhiveryB2CPickupRequestPayload(payload)
+
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(`${this.apiBase}/fm/request/new/`, pickupRequest, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C pickup request creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C pickup request')
     }
   }
 

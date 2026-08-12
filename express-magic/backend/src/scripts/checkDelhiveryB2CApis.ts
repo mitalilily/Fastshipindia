@@ -127,6 +127,17 @@ const run = async () => {
 
   ;(axios as any).post = async (url: string, data?: unknown, config?: CapturedRequest) => {
     requests.push({ method: 'POST', url, data, headers: config?.headers, params: config?.params })
+    if (String(url).endsWith('/fm/request/new/')) {
+      return {
+        status: 200,
+        data: {
+          success: true,
+          pickup_id: 'PU-B2C-000001',
+          message: 'Pickup request created',
+        },
+      }
+    }
+
     return {
       status: 200,
       data: {
@@ -827,6 +838,71 @@ const run = async () => {
           pdf_size: 'STD',
         }),
       /pdf_size must be/,
+    )
+
+    const pickupRequestResponse = await service.createB2CPickupRequest({
+      pickup_time: '11:00:00',
+      pickup_date: '2023-12-29',
+      pickup_location: 'warehouse_name',
+      expected_package_count: '1',
+    })
+    assert.equal((pickupRequestResponse as any)?.pickup_id, 'PU-B2C-000001')
+
+    const pickupRequest = requests.at(-1)
+    assert.equal(pickupRequest?.method, 'POST')
+    assert.equal(pickupRequest?.url, 'https://staging-express.delhivery.com/fm/request/new/')
+    assert.equal(pickupRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(pickupRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(pickupRequest?.data, {
+      pickup_time: '11:00:00',
+      pickup_date: '2023-12-29',
+      pickup_location: 'warehouse_name',
+      expected_package_count: 1,
+    })
+
+    await assert.rejects(
+      () => service.createB2CPickupRequest({}),
+      /pickup_time must be in HH:mm:ss format/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CPickupRequest({
+          pickup_time: '25:00:00',
+          pickup_date: '2023-12-29',
+          pickup_location: 'warehouse_name',
+          expected_package_count: 1,
+        }),
+      /pickup_time must be in HH:mm:ss format/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CPickupRequest({
+          pickup_time: '11:00:00',
+          pickup_date: '29-12-2023',
+          pickup_location: 'warehouse_name',
+          expected_package_count: 1,
+        }),
+      /pickup_date must be in YYYY-MM-DD format/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CPickupRequest({
+          pickup_time: '11:00:00',
+          pickup_date: '2023-12-29',
+          pickup_location: '',
+          expected_package_count: 1,
+        }),
+      /pickup_location is required/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CPickupRequest({
+          pickup_time: '11:00:00',
+          pickup_date: '2023-12-29',
+          pickup_location: 'warehouse_name',
+          expected_package_count: 0,
+        }),
+      /expected_package_count must be a positive integer/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)

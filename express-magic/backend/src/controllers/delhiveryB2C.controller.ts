@@ -108,6 +108,9 @@ export const generateShippingLabelController = (req: Request, res: Response) =>
     }),
   )
 
+export const createPickupRequestController = (req: Request, res: Response) =>
+  sendDataResult(res, service.createB2CPickupRequest(req.body))
+
 export const createShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CShipmentManifest(req.body))
 
