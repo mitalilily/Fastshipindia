@@ -286,18 +286,41 @@
         },
         {
           "name": "Update Warehouse (mutating)",
-          "event": [{
-            "listen": "prerequest",
-            "script": { "type": "text/javascript", "exec": [
-              "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
-            ] }
-          }],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "type": "text/javascript", "exec": [
+                "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+              ] }
+            },
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "var body = pm.response.json();",
+                "var request = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                "pm.test('warehouse update preserves the exact warehouse name', function () {",
+                "  pm.expect(request.cl_warehouse_name).to.eql(pm.variables.replaceIn('{{warehouseName}}'));",
+                "});",
+                "pm.test('warehouse update dictionary follows Delhivery contract', function () {",
+                "  pm.expect(request.update_dict.address_details.address).to.be.a('string').and.not.empty;",
+                "  pm.expect(request.update_dict.ret_address.pin).to.match(/^\\d{6}$/);",
+                "  pm.expect(request.update_dict.business_hours.TUE.start_time).to.match(/^\\d{2}:\\d{2}$/);",
+                "  pm.expect(request.update_dict.pick_up_days).to.include('TUE');",
+                "  pm.expect(request.update_dict.drop_days).to.include('WED');",
+                "  pm.expect(request.update_dict.qr_enabled).to.be.a('boolean');",
+                "});",
+                "pm.test('updated warehouse payload is returned', function () {",
+                "  pm.expect(body.data).to.be.an('object');",
+                "});"
+              ] }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/delhivery/b2b/warehouses",
-            "description": "Updates a warehouse identified by its exact case/space-sensitive name. Nested address, return address, billing, schedule, weekday, QR, and appointment fields are validated. FastShip uses Delhivery's cURL path first and retries the alternate documented environment path only for 404/405 responses.",
-            "body": { "mode": "raw", "raw": "{\n  \"cl_warehouse_name\": \"{{warehouseName}}\",\n  \"update_dict\": {\n    \"city\": \"Faridabad\",\n    \"state\": \"Maharashtra\",\n    \"country\": \"India\",\n    \"address_details\": {\"address\": \"Updated warehouse address\", \"contact_person\": \"Operations Team\", \"phone_number\": \"9999999999\", \"email\": \"operations@example.com\", \"company\": \"FastShip\"},\n    \"ret_address\": {\"address\": \"Return address\", \"city\": \"Gurugram\", \"state\": \"Haryana\", \"pin\": \"122001\", \"country\": \"INDIA\"}\n  }\n}" }
+            "description": "Updates a warehouse identified by its exact case/space-sensitive name. Nested address, return address, billing, schedule, weekday, QR, and appointment fields are validated. FastShip uses Delhivery's HTTPS environment path first and retries the conflicting cURL path only for 404/405 responses.",
+            "body": { "mode": "raw", "raw": "{\n  \"cl_warehouse_name\": \"{{warehouseName}}\",\n  \"update_dict\": {\n    \"city\": \"Faridabad\",\n    \"state\": \"Maharashtra\",\n    \"country\": \"India\",\n    \"address_details\": {\"address\": \"Updated warehouse address\", \"contact_person\": \"Operations Team\", \"phone_number\": \"9999999999\", \"email\": \"operations@example.com\", \"company\": \"FastShip\"},\n    \"ret_address\": {\"address\": \"Return address\", \"city\": \"Gurugram\", \"state\": \"Haryana\", \"pin\": \"122001\", \"country\": \"INDIA\"},\n    \"billing_details\": {\"address\": \"Billing address\", \"pin\": \"122001\"},\n    \"business_hours\": {\"TUE\": {\"start_time\": \"07:00\", \"close_time\": \"08:30\"}},\n    \"pick_up_days\": [\"TUE\"],\n    \"drop_days\": [\"WED\"],\n    \"drop_hours\": {\"WED\": {\"start_time\": \"09:00\", \"close_time\": \"17:30\"}},\n    \"tin_number\": \"TIN123\",\n    \"cst_number\": \"CST123\",\n    \"qr_enabled\": true,\n    \"appointment_required\": \"false\"\n  }\n}" }
           }
         }
       ]

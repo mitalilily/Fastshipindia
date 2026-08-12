@@ -13,7 +13,7 @@ const originalPost = axios.post
 const originalGet = axios.get
 const originalRequest = axios.request
 const requests: CapturedRequest[] = []
-let failLegacyWarehouseUpdateOnce = false
+let failPrimaryWarehouseUpdateOnce = false
 
 const lastRequest = (method: string, url: string) => {
   const request = requests[requests.length - 1]
@@ -106,11 +106,11 @@ const run = async () => {
   ;(axios as any).request = async (config: CapturedRequest) => {
     requests.push(config)
     if (
-      failLegacyWarehouseUpdateOnce &&
+      failPrimaryWarehouseUpdateOnce &&
       config.method === 'PATCH' &&
-      config.url === '/client-warehouses/update'
+      config.url === '/client-warehouse/update/'
     ) {
-      failLegacyWarehouseUpdateOnce = false
+      failPrimaryWarehouseUpdateOnce = false
       const error: any = new Error('Not found')
       error.response = { status: 404, data: { message: 'Not found' } }
       throw error
@@ -441,19 +441,45 @@ const run = async () => {
       pick_up_days: ['MON', 'TUE'],
       drop_days: ['WED'],
       drop_hours: { WED: { start_time: '09:00', close_time: '17:30' } },
+      business_hours: { TUE: { start_time: '07:00', close_time: '08:30' } },
+      billing_details: { address: 'Billing address', pin: '122001' },
+      tin_number: 'TIN123',
+      cst_number: 'CST123',
       qr_enabled: true,
+      appointment_required: 'false',
+      ignored: 'do-not-forward',
     },
+    ignored: 'do-not-forward',
   }
   await service.updateWarehouse(warehouseUpdatePayload)
-  const updateWarehouse = lastRequest('PATCH', '/client-warehouses/update')
-  assert.deepEqual(updateWarehouse.data, warehouseUpdatePayload)
+  const updateWarehouse = lastRequest('PATCH', '/client-warehouse/update/')
+  const { ignored: _ignoredUpdateField, ...expectedWarehouseUpdateFields } =
+    warehouseUpdatePayload.update_dict
+  assert.deepEqual(updateWarehouse.data, {
+    cl_warehouse_name: warehouseUpdatePayload.cl_warehouse_name,
+    update_dict: expectedWarehouseUpdateFields,
+  })
   assert.equal((updateWarehouse.data as any).cl_warehouse_name, 'Test Warehouse')
   assert.equal(updateWarehouse.headers?.['Content-Type'], 'application/json')
 
-  failLegacyWarehouseUpdateOnce = true
+  failPrimaryWarehouseUpdateOnce = true
   await service.updateWarehouse(warehouseUpdatePayload)
-  assert.equal(requests.at(-2)?.url, '/client-warehouses/update')
-  lastRequest('PATCH', '/client-warehouse/update/')
+  assert.equal(requests.at(-2)?.url, '/client-warehouse/update/')
+  lastRequest('PATCH', '/client-warehouses/update')
+
+  await service.updateWarehouse({
+    cl_warehouse_name: 'Case Sensitive Warehouse',
+    update_dict: {
+      buisness_hours: { tue: { start_time: '07:00', close_time: '08:30' } },
+    },
+  })
+  const aliasWarehouseUpdate = lastRequest('PATCH', '/client-warehouse/update/')
+  assert.deepEqual(aliasWarehouseUpdate.data, {
+    cl_warehouse_name: 'Case Sensitive Warehouse',
+    update_dict: {
+      business_hours: { TUE: { start_time: '07:00', close_time: '08:30' } },
+    },
+  })
 
   await assert.rejects(
     () => service.updateWarehouse({ ...warehouseUpdatePayload, cl_warehouse_name: '' }),
@@ -466,6 +492,14 @@ const run = async () => {
         update_dict: { drop_days: ['WEDNESDAY'] },
       }),
     /valid weekday/,
+  )
+  await assert.rejects(
+    () =>
+      service.updateWarehouse({
+        ...warehouseUpdatePayload,
+        update_dict: { qr_enabled: 'true' },
+      }),
+    /qr_enabled.*boolean/,
   )
 
   const manifestPayload = {

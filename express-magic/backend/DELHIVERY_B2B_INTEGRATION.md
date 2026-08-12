@@ -42,6 +42,10 @@ optional booleans, and the 15-character alphanumeric GST value. The portal's mis
 `buisness_hours`/`buisness_days` names are accepted as input aliases and sent using the
 `business_hours`/`business_days` keys shown in Delhivery's cURL example. When
 `same_as_fwd_add=true`, it takes precedence and a conflicting `ret_address` is not forwarded.
+Warehouse updates preserve the exact `cl_warehouse_name`, validate and allow-list fields inside
+`update_dict`, and normalize schedule aliases to `business_hours`. FastShip first calls the
+HTTPS environment endpoint `/client-warehouse/update/`; if Delhivery returns 404 or 405, it
+retries the conflicting cURL path `/client-warehouses/update` once.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password
@@ -59,7 +63,7 @@ created through Delhivery's forgot-password flow, not an unrelated Delhivery One
 | Freight estimate | `POST /freight/estimate` | `POST /api/delhivery/b2b/freight/estimate` |
 | Freight charge breakup | `GET /lrn/freight-breakup/lrns={lrns}` | `GET /api/delhivery/b2b/freight/charges` |
 | Warehouse creation | `POST /client-warehouse/create/` | `POST /api/delhivery/b2b/warehouses` |
-| Warehouse update | `PATCH /client-warehouses/update` | `PATCH /api/delhivery/b2b/warehouses` |
+| Warehouse update | `PATCH /client-warehouse/update/` (legacy fallback: `/client-warehouses/update`) | `PATCH /api/delhivery/b2b/warehouses` |
 | Shipment manifestation | `POST /manifest` | `POST /api/delhivery/b2b/shipments/manifest` |
 | Manifest status | `GET /manifest?job_id=...` | `GET /api/delhivery/b2b/shipments/manifest/{jobId}` |
 | Shipment update | `PUT /lrn/update/{lrn}` | `PUT /api/delhivery/b2b/shipments/{lrn}` |

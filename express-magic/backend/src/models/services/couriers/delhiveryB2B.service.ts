@@ -329,7 +329,7 @@ const normalizeWarehousePayload = (payload: Record<string, unknown>) => {
 const normalizeWarehouseUpdatePayload = (payload: Record<string, unknown>) => {
   const updateDict =
     payload.update_dict === undefined ? {} : ensureObject(payload.update_dict, 'update_dict')
-  const normalizedUpdate: Record<string, unknown> = { ...updateDict }
+  const normalizedUpdate: Record<string, unknown> = {}
 
   for (const field of [
     'city',
@@ -376,10 +376,18 @@ const normalizeWarehouseUpdatePayload = (payload: Record<string, unknown>) => {
       ...ensureObject(updateDict.billing_details, 'update_dict.billing_details'),
     }
   }
-  for (const field of ['business_hours', 'buisness_hours', 'drop_hours']) {
-    if (updateDict[field] !== undefined) {
-      normalizedUpdate[field] = normalizeWarehouseHours(updateDict[field], `update_dict.${field}`)
-    }
+  const businessHours = updateDict.business_hours ?? updateDict.buisness_hours
+  if (businessHours !== undefined) {
+    normalizedUpdate.business_hours = normalizeWarehouseHours(
+      businessHours,
+      'update_dict.business_hours',
+    )
+  }
+  if (updateDict.drop_hours !== undefined) {
+    normalizedUpdate.drop_hours = normalizeWarehouseHours(
+      updateDict.drop_hours,
+      'update_dict.drop_hours',
+    )
   }
   for (const field of ['pick_up_days', 'drop_days']) {
     if (updateDict[field] !== undefined) {
@@ -388,7 +396,6 @@ const normalizeWarehouseUpdatePayload = (payload: Record<string, unknown>) => {
   }
 
   return {
-    ...payload,
     cl_warehouse_name: ensureText(payload.cl_warehouse_name, 'cl_warehouse_name'),
     update_dict: normalizedUpdate,
   }
@@ -1320,14 +1327,14 @@ export class DelhiveryB2BService {
     try {
       return await this.authorizedRequest({
         method: 'PATCH',
-        url: '/client-warehouses/update',
+        url: '/client-warehouse/update/',
         data,
       })
     } catch (error) {
       if (!(error instanceof HttpError) || ![404, 405].includes(error.statusCode)) throw error
       return this.authorizedRequest({
         method: 'PATCH',
-        url: '/client-warehouse/update/',
+        url: '/client-warehouses/update',
         data,
       })
     }
