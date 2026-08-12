@@ -424,7 +424,24 @@
               "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
             ] } },
             { "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "var body = pm.response.json(); var data = body.data || {}; var id = data.job_id || data.request_id || (data.data || {}).job_id; if (id) pm.environment.set('updateJobId', id);"
+            "var body = pm.response.json();",
+            "var data = body.data || {};",
+            "var id = data.job_id || data.request_id || (data.data || {}).job_id;",
+            "if (id) pm.environment.set('updateJobId', id);",
+            "var fields = {};",
+            "pm.request.body.formdata.each(function (field) { if (!field.disabled) fields[field.key] = pm.variables.replaceIn(String(field.value || '')); });",
+            "pm.test('shipment update returns an asynchronous job ID', function () {",
+            "  pm.expect(id).to.be.a('string').and.not.empty;",
+            "});",
+            "pm.test('COD LR update fields follow Delhivery contract', function () {",
+            "  pm.expect(fields.payment_mode).to.eql('cod');",
+            "  pm.expect(Number(fields.cod_amount)).to.be.at.least(0);",
+            "  pm.expect(fields.consignee_pincode).to.match(/^\\d{6}$/);",
+            "  pm.expect(Number(fields.weight_g)).to.be.above(0);",
+            "  pm.expect(JSON.parse(fields.dimensions)).to.be.an('array').and.not.empty;",
+            "  pm.expect(JSON.parse(fields.invoices)).to.be.an('array').and.not.empty;",
+            "  pm.expect(JSON.parse(fields.callback).method).to.eql('POST');",
+            "});"
           ] } }],
           "request": {
             "method": "PUT",

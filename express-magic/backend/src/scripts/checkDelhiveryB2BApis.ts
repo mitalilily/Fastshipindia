@@ -745,14 +745,22 @@ const run = async () => {
     consignee_phone: '9999999999',
     weight_g: '30',
     invoices: JSON.stringify([
-      { inv_number: 'I22331030453', inv_amount: 59729.67, qr_code: '', ewaybill: '' },
+      {
+        inv_number: 'I22331030453',
+        inv_amount: 59729.67,
+        qr_code: '',
+        ewaybill: '',
+        ignored: 'do-not-forward',
+      },
     ]),
     callback: JSON.stringify({
       uri: 'https://btob-api-dev.delhivery.com/docket/upload_callback',
-      method: 'POST',
+      method: 'post',
       authorization: 'Bearer Token',
     }),
-    dimensions: JSON.stringify([{ width_cm: 5, height_cm: 4, length_cm: 3, box_count: 1 }]),
+    dimensions: JSON.stringify([
+      { width_cm: 5, height_cm: 4, length_cm: 3, box_count: 1, ignored: true },
+    ]),
     invoice_files_meta: JSON.stringify([{ invoices: ['I22331030453'] }]),
     invoice_file: [
       {
@@ -761,6 +769,7 @@ const run = async () => {
         originalname: 'updated-invoice.pdf',
       },
     ],
+    ignored: 'do-not-forward',
   }
   await service.updateShipment('220110457', shipmentUpdatePayload)
   const update = lastRequest('PUT', '/lrn/update/220110457')
@@ -768,14 +777,26 @@ const run = async () => {
   assert.equal((update.data as FormData).get('payment_mode'), 'cod')
   assert.equal((update.data as FormData).get('cod_amount'), '0')
   assert.equal((update.data as FormData).get('consignee_pincode'), '844120')
+  assert.equal((update.data as FormData).get('ignored'), null)
   assert.equal(
     JSON.parse(String((update.data as FormData).get('invoices')))[0].inv_number,
     'I22331030453',
   )
   assert.equal(
+    JSON.parse(String((update.data as FormData).get('invoices')))[0].ignored,
+    undefined,
+  )
+  assert.deepEqual(JSON.parse(String((update.data as FormData).get('dimensions')))[0], {
+    width_cm: 5,
+    height_cm: 4,
+    length_cm: 3,
+    box_count: 1,
+  })
+  assert.equal(
     JSON.parse(String((update.data as FormData).get('cb'))).uri,
     'https://btob-api-dev.delhivery.com/docket/upload_callback',
   )
+  assert.equal(JSON.parse(String((update.data as FormData).get('cb'))).method, 'POST')
   assert.equal(((update.data as FormData).get('invoice_file') as File).name, 'updated-invoice.pdf')
   assert.equal(update.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(typeof update.headers?.['X-Request-Id'], 'string')
@@ -787,6 +808,20 @@ const run = async () => {
   assert.throws(
     () => service.updateShipment('220110457', { payment_mode: 'cod' }),
     /cod_amount/,
+  )
+  await service.updateShipment('220110457', {
+    invoices: JSON.stringify([{ qr_code: 'SIGNED-INVOICE-QR', ewaybill: '' }]),
+  })
+  const qrInvoiceUpdate = lastRequest('PUT', '/lrn/update/220110457')
+  assert.deepEqual(JSON.parse(String((qrInvoiceUpdate.data as FormData).get('invoices'))), [
+    { ewaybill: '', qr_code: 'SIGNED-INVOICE-QR' },
+  ])
+  assert.throws(
+    () =>
+      service.updateShipment('220110457', {
+        callback: JSON.stringify({ uri: 'ftp://example.com/callback', method: 'POST' }),
+      }),
+    /callback\.uri must be a valid HTTP\(S\) URL/,
   )
   assert.throws(
     () =>
@@ -810,6 +845,32 @@ const run = async () => {
   assert.throws(
     () => service.updateShipment('', { consignee_name: 'Consignee' }),
     /lrn is required/,
+  )
+  assert.throws(
+    () =>
+      service.updateShipment('220110457', {
+        invoices: shipmentUpdatePayload.invoices,
+        invoice_file: [
+          {
+            ...shipmentUpdatePayload.invoice_file[0],
+            originalname: 'invoice.exe',
+          },
+        ],
+        invoice_files_meta: shipmentUpdatePayload.invoice_files_meta,
+      }),
+    /Unsupported invoice_file format/,
+  )
+  assert.throws(
+    () =>
+      service.updateShipment('220110457', {
+        invoices: shipmentUpdatePayload.invoices,
+        invoice_file: Array.from({ length: 11 }, (_, index) => ({
+          ...shipmentUpdatePayload.invoice_file[0],
+          originalname: `invoice-${index}.pdf`,
+        })),
+        invoice_files_meta: shipmentUpdatePayload.invoice_files_meta,
+      }),
+    /at most 10 valid files/,
   )
   assert.throws(
     () => service.updateShipment('220110457', { invoice_file: [] }),

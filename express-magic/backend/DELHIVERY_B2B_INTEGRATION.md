@@ -57,6 +57,13 @@ Manifest status sends the trimmed creation `job_id` as a query parameter on `GET
 FastShip normalizes nested LR and AWB response shapes, retains every unique box/document AWB, and
 does not enforce a fixed AWB count because physical-document shipments return n+1 AWBs while
 paperless shipments return n.
+Shipment updates send allow-listed multipart fields to `PUT /lrn/update/{lrn}` and reject an
+explicit prepaid mode. COD mode requires `cod_amount`; dimensions, consignee pincode, invoices,
+and HTTP(S) POST callbacks are validated. Invoice files are accepted only with invoices and one
+same-order metadata entry per file, using the same 10-file, allowed-format, and 20 MB aggregate
+limits as manifestation. Delhivery remains authoritative for first-mile, terminal-state,
+last-mile-dispatch, and existing paperless-LR restrictions because those states are not part of
+the update request.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password
