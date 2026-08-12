@@ -635,6 +635,12 @@ export const listZoneToZoneRates = async (params: {
       if (scopedCondition) {
         filters.push(scopedCondition)
       }
+    } else {
+      // An empty courier selection represents the global matrix. Keep it
+      // isolated from courier-specific rows so "All Couriers (Global)" never
+      // displays a rate configured for an individual courier/provider.
+      filters.push(isNull(b2bZoneToZoneRates.courier_id))
+      filters.push(isNull(b2bZoneToZoneRates.service_provider))
     }
 
     const condition = filters.length ? and(...filters) : undefined
@@ -724,6 +730,9 @@ export const listZoneToZoneRates = async (params: {
           if (scopedCondition) {
             filtersWithoutPlan.push(scopedCondition)
           }
+        } else {
+          filtersWithoutPlan.push(isNull(b2bZoneToZoneRates.courier_id))
+          filtersWithoutPlan.push(isNull(b2bZoneToZoneRates.service_provider))
         }
         const conditionWithoutPlan =
           filtersWithoutPlan.length > 0 ? and(...filtersWithoutPlan) : undefined
