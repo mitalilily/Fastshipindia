@@ -10,7 +10,9 @@ import {
   fetchAvailableCouriers,
   fetchServiceProviders,
   fetchShippingRates,
-  updateDeliveryOneCredentials,
+  testDelhiveryB2BCredentials,
+  updateDelhiveryB2BCredentials,
+  updateDelhiveryCredentials,
   updateCourierStatus,
   updateServiceProviderStatus,
   updateShippingRate,
@@ -119,16 +121,30 @@ export const useCourierCredentials = () => {
   })
 }
 
-export const useUpdateDeliveryOneCredentials = () => {
+export const useUpdateDelhiveryCredentials = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: updateDeliveryOneCredentials,
+    mutationFn: updateDelhiveryCredentials,
     onSuccess: () => {
       queryClient.invalidateQueries(['courierCredentials'])
     },
   })
 }
+
+export const useUpdateDelhiveryB2BCredentials = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateDelhiveryB2BCredentials,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['courierCredentials'])
+    },
+  })
+}
+
+export const useTestDelhiveryB2BCredentials = () =>
+  useMutation({ mutationFn: testDelhiveryB2BCredentials })
 
 export const useShippingRates = (filters = {}) => {
   return useQuery({

@@ -1,0 +1,813 @@
+{
+  "info": {
+    "_postman_id": "a67c41e7-3d7e-45e9-b2c-delhivery",
+    "name": "FastShip - Delhivery B2C (Express)",
+    "description": "Focused checks for the admin-only FastShip Delhivery B2C proxy. The collection signs in to FastShip before calling Delhivery B2C APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "var token = pm.environment.get('adminToken');",
+          "if (token) pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + token });"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('HTTP status is successful', function () {",
+          "  pm.expect(pm.response.code).to.be.within(200, 299);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "FastShip Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var token = body.token || body.accessToken || (body.data || {}).token;",
+                  "pm.test('FastShip admin token is returned', function () { pm.expect(token).to.be.a('string').and.not.empty; });",
+                  "pm.environment.set('adminToken', token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/admin/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Serviceability",
+      "item": [
+        {
+          "name": "Pincode Serviceability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/serviceability/{{pincode}}",
+            "description": "Checks one consignee pincode with Delhivery B2C GET /c/api/pin-codes/json/?filter_codes={pincode}. Empty delivery_codes means NSZ; remark Embargo means temporary NSZ; blank remark means serviceable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('B2C serviceability proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('serviceable flag follows Delhivery pincode remarks', function () { pm.expect(body.serviceable).to.be.a('boolean'); });",
+                  "pm.test('Delhivery delivery code list is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.delivery_codes).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Heavy Product Type Pincode Serviceability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/heavy-serviceability/{{heavyPincode}}",
+            "description": "Checks one Heavy product-type pincode with Delhivery B2C GET /api/dc/fetch/serviceability/pincode?product_type=Heavy&pincode={pincode}. NSZ means non-serviceable; payment_type indicates serviceability by payment mode."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Heavy B2C serviceability proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Heavy serviceable flag is boolean', function () { pm.expect(body.serviceable).to.be.a('boolean'); });",
+                  "pm.test('Heavy response exposes payment_type signal', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.payment_type).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expected TAT",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/tat?origin_pin={{originPincode}}&destination_pin={{destinationPincode}}&mot={{mot}}&pdt={{pdt}}&expected_pickup_date={{expectedPickupDate}}",
+            "description": "Returns Delhivery's current expected TAT for origin/destination pincodes via GET /api/dc/expected_tat. MOT supports S, E, and N. PDT is optional and defaults to B2C when omitted by Delhivery."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Expected TAT proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Expected TAT data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.data || data).to.be.an('object');",
+                  "});",
+                  "pm.test('Expected TAT contains tat or delivery date signal', function () {",
+                  "  var data = (body.data || {}).data || body.data || {};",
+                  "  pm.expect(data.tat !== undefined || data.expected_delivery_date !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fetch WayBill",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/waybills?count={{waybillCount}}",
+            "description": "Fetches Delhivery B2C bulk waybills using GET /waybill/api/bulk/json/?token={token}&count={count}. Count is mandatory and must be between 1 and 10000."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Fetch WayBill proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Waybill data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.waybills || data.waybill || data).to.exist;",
+                  "});",
+                  "pm.test('Waybill list contains requested batch data', function () {",
+                  "  var data = body.data || {};",
+                  "  var waybills = data.waybills || data.waybill || data;",
+                  "  pm.expect(Array.isArray(waybills) || typeof waybills === 'string').to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fetch Single WayBill",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/waybill",
+            "description": "Fetches one Delhivery B2C waybill using GET /waybill/api/fetch/json/?token={token}. Delhivery generates one waybill every time this API is hit."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Fetch Single WayBill proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Single waybill data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.waybill || data).to.exist;",
+                  "});",
+                  "pm.test('Single waybill is a string or provider payload', function () {",
+                  "  var data = body.data || {};",
+                  "  var waybill = data.waybill || data;",
+                  "  pm.expect(typeof waybill === 'string' || typeof waybill === 'object').to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Shipment Tracking",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/track?waybill={{trackingWaybill}}&ref_ids={{trackingRefIds}}",
+            "description": "Tracks up to 50 comma-separated Delhivery B2C waybills, or a shipment by optional order ID, using GET /api/v1/packages/json/?waybill={waybill}&ref_ids={order_id}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Shipment Tracking proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Tracking data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.ShipmentData || data).to.exist;",
+                  "});",
+                  "pm.test('Tracking contains status or scan signal', function () {",
+                  "  var data = body.data || {};",
+                  "  var shipment = (data.ShipmentData || [])[0] || data;",
+                  "  var details = shipment.Shipment || shipment;",
+                  "  pm.expect(details.Status !== undefined || details.Scans !== undefined || details.status !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Calculate Shipping Cost",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipping-cost?md={{shippingMode}}&ss={{shipmentStatus}}&d_pin={{shippingDestinationPincode}}&o_pin={{shippingOriginPincode}}&cgm={{chargeableWeightGrams}}&pt={{shippingPaymentType}}&l={{shipmentLength}}&b={{shipmentBreadth}}&h={{shipmentHeight}}&ipkg_type={{packageType}}",
+            "description": "Calculates estimated Delhivery B2C shipping charges using GET /api/kinko/v1/invoice/charges/.json. Required params are md, cgm, o_pin, d_pin, ss, and pt; dimensions and package type are optional."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Calculate Shipping Cost proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Shipping cost data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Shipping cost contains amount or charge signal', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.total_amount !== undefined || data.amount !== undefined || data.charges !== undefined || data.chargeable_weight !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Shipping Label",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/label?waybill={{labelWaybill}}&pdf={{labelPdf}}&pdf_size={{labelPdfSize}}",
+            "description": "Generates a Delhivery B2C shipping label using GET /api/p/packing_slip?wbns={waybill}&pdf={true|false}&pdf_size={A4|4R}. pdf=true returns a PDF/S3 link; pdf=false returns JSON for custom label rendering."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Generate Shipping Label proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Shipping label data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.packages || data).to.exist;",
+                  "});",
+                  "pm.test('Shipping label contains link, package, or label signal', function () {",
+                  "  var data = body.data || {};",
+                  "  var firstPackage = (data.packages || [])[0] || data;",
+                  "  pm.expect(firstPackage.label !== undefined || firstPackage.wbn !== undefined || firstPackage.url !== undefined || firstPackage.pdf_download_link !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download Document",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/documents/download?doc_type={{documentType}}&waybill={{documentWaybill}}",
+            "description": "Downloads/fetches Delhivery B2C shipment documents using GET /api/rest/fetch/pkg/document/?doc_type={doc_type}&waybill={waybill}. Allowed doc types: SIGNATURE_URL, RVP_QC_IMAGE, EPOD, SELLER_RETURN_IMAGE."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Download Document proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Document data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Document response carries url, document, or status signal', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.document_url !== undefined || data.url !== undefined || data.doc_url !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pickup Request Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Pickup Request Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Pickup request response is returned', function () {",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Pickup request carries pickup id or status signal', function () {",
+                  "  pm.expect(data.pickup_id !== undefined || data.pr_id !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/pickup-requests",
+            "description": "Creates a Delhivery B2C pickup request via POST /fm/request/new/. The request is raised against a registered pickup location/warehouse, not an individual waybill. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_time\": \"{{pickupRequestTime}}\",\n  \"pickup_date\": \"{{pickupRequestDate}}\",\n  \"pickup_location\": \"{{pickupLocationName}}\",\n  \"expected_package_count\": {{pickupExpectedPackageCount}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Client Warehouse Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Client Warehouse Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Warehouse creation response is returned', function () {",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Warehouse response carries name or status signal', function () {",
+                  "  pm.expect(data.name !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/warehouses",
+            "description": "Creates/registers a Delhivery B2C client warehouse via POST /api/backend/clientwarehouse/create/. Warehouse name is case-sensitive and must match order creation pickup_location.name. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{warehousePhone}}\",\n  \"city\": \"{{warehouseCity}}\",\n  \"name\": \"{{pickupLocationName}}\",\n  \"pin\": \"{{warehousePincode}}\",\n  \"address\": \"{{warehouseAddress}}\",\n  \"country\": \"{{warehouseCountry}}\",\n  \"email\": \"{{warehouseEmail}}\",\n  \"registered_name\": \"{{warehouseRegisteredName}}\",\n  \"return_address\": \"{{warehouseReturnAddress}}\",\n  \"return_pin\": \"{{warehouseReturnPincode}}\",\n  \"return_city\": \"{{warehouseReturnCity}}\",\n  \"return_state\": \"{{warehouseReturnState}}\",\n  \"return_country\": \"{{warehouseReturnCountry}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Client Warehouse Updation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Client Warehouse Updation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Warehouse update response is returned', function () {",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Warehouse update response carries name or status signal', function () {",
+                  "  pm.expect(data.name !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/warehouses/update",
+            "description": "Updates an existing Delhivery B2C client warehouse via POST /api/backend/clientwarehouse/edit/. Warehouse name cannot be updated; pass name plus one or more editable fields. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{warehouseUpdateName}}\",\n  \"phone\": \"{{warehouseUpdatePhone}}\",\n  \"address\": \"{{warehouseUpdateAddress}}\",\n  \"pin\": \"{{warehouseUpdatePincode}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Shipment Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Shipment Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Delhivery shipment creation response is returned', function () {",
+                  "  pm.expect(data.upload_wbn || data.packages || data.success).to.exist;",
+                  "});",
+                  "pm.test('Shipment packages or upload id are available', function () {",
+                  "  pm.expect(Boolean(data.upload_wbn) || Array.isArray(data.packages)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments",
+            "description": "Creates a Delhivery B2C shipment via POST /api/cmu/create.json. FastShip accepts JSON, validates the required fields, and forwards it to Delhivery as URL-encoded format=json&data={...}. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipments\": [\n    {\n      \"name\": \"Consignee name\",\n      \"add\": \"Huda Market, Haryana\",\n      \"pin\": \"110042\",\n      \"city\": \"Gurugram\",\n      \"state\": \"Haryana\",\n      \"country\": \"India\",\n      \"phone\": \"9999999999\",\n      \"order\": \"POSTMAN-B2C-{{$timestamp}}\",\n      \"payment_mode\": \"Prepaid\",\n      \"return_pin\": \"\",\n      \"return_city\": \"\",\n      \"return_phone\": \"\",\n      \"return_add\": \"\",\n      \"return_state\": \"\",\n      \"return_country\": \"\",\n      \"products_desc\": \"Postman test product\",\n      \"hsn_code\": \"\",\n      \"cod_amount\": \"\",\n      \"order_date\": null,\n      \"total_amount\": \"\",\n      \"seller_add\": \"\",\n      \"seller_name\": \"\",\n      \"seller_inv\": \"\",\n      \"quantity\": \"\",\n      \"waybill\": \"\",\n      \"shipment_width\": \"100\",\n      \"shipment_height\": \"100\",\n      \"weight\": \"\",\n      \"shipping_mode\": \"Surface\",\n      \"address_type\": \"\"\n    }\n  ],\n  \"pickup_location\": {\n    \"name\": \"{{pickupLocationName}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "MPS Manifestation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('MPS Manifestation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('MPS manifestation response is returned', function () {",
+                  "  pm.expect(data.upload_wbn || data.packages || data.success).to.exist;",
+                  "});",
+                  "pm.test('MPS response includes package/waybill signal', function () {",
+                  "  pm.expect(Boolean(data.upload_wbn) || Array.isArray(data.packages)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/mps",
+            "description": "Creates a Delhivery B2C Multi-Package Shipment via POST /api/cmu/create.json. Prefetched waybills are mandatory; every box includes shipment_type=MPS, mps_amount, mps_children, master_id, and waybill. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_location\": {\n    \"name\": \"{{pickupLocationName}}\"\n  },\n  \"shipments\": [\n    {\n      \"order\": \"POSTMAN-MPS-{{$timestamp}}\",\n      \"weight\": \"100\",\n      \"mps_amount\": \"0\",\n      \"mps_children\": \"2\",\n      \"pin\": \"122002\",\n      \"products_desc\": \"Toys, ToyCar\",\n      \"add\": \"Test Address\",\n      \"shipment_type\": \"MPS\",\n      \"state\": \"TAMIL NADU\",\n      \"master_id\": \"WB-MASTER-000001\",\n      \"city\": \"CHENNAI\",\n      \"waybill\": \"WB-MASTER-000001\",\n      \"phone\": \"9999888800\",\n      \"payment_mode\": \"Prepaid\",\n      \"name\": \"Test Name\",\n      \"total_amount\": \"4250\",\n      \"country\": \"India\"\n    },\n    {\n      \"order\": \"POSTMAN-MPS-{{$timestamp}}\",\n      \"weight\": \"100\",\n      \"mps_amount\": \"0\",\n      \"mps_children\": \"2\",\n      \"pin\": \"600063\",\n      \"products_desc\": \"Toy box 2\",\n      \"add\": \"Consignee Address\",\n      \"shipment_type\": \"MPS\",\n      \"state\": \"TAMIL NADU\",\n      \"master_id\": \"WB-MASTER-000001\",\n      \"city\": \"CHENNAI\",\n      \"waybill\": \"WB-CHILD-000002\",\n      \"phone\": \"9999888800\",\n      \"payment_mode\": \"Prepaid\",\n      \"name\": \"Consignee Name\",\n      \"total_amount\": \"4250\",\n      \"country\": \"India\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "RVP QC 3.0 Shipment Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('RVP QC Shipment Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('RVP QC response is returned', function () { pm.expect(data).to.be.an('object'); });",
+                  "pm.test('RVP QC response carries upload or package signal', function () {",
+                  "  pm.expect(data.upload_wbn !== undefined || data.packages !== undefined || data.success !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/rvp-qc",
+            "description": "Creates a Delhivery B2C RVP QC 3.0 shipment via POST /api/cmu/create.json with qc_type=param and custom_qc question data. Supports up to 2 QC items and 6 questions per item. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_location\": {\n    \"name\": \"{{pickupLocationName}}\"\n  },\n  \"shipments\": [\n    {\n      \"client\": \"{{warehouseRegisteredName}}\",\n      \"return_name\": \"test_designs\",\n      \"order\": \"{{rvpQcOrderId}}\",\n      \"return_country\": \"India\",\n      \"weight\": \"150.0 gm\",\n      \"city\": \"Meerjapuram\",\n      \"pin\": \"521111\",\n      \"return_state\": \"Gujarat\",\n      \"products_desc\": \"NEW EI PIKOK\",\n      \"shipping_mode\": \"Express\",\n      \"state\": \"Andhra Pradesh\",\n      \"quantity\": 1,\n      \"waybill\": \"{{rvpQcWaybill}}\",\n      \"phone\": \"1234567890\",\n      \"add\": \"7 106 abc road, 2020 building\",\n      \"payment_mode\": \"Pickup\",\n      \"order_date\": \"29-06-2023\",\n      \"seller_gst_tin\": \"ABCD1234F\",\n      \"name\": \"Jitendra Singh\",\n      \"return_add\": \"SHOP NO 218, ABC Road, Mumbai\",\n      \"total_amount\": 749,\n      \"seller_name\": \"ABC Design\",\n      \"return_city\": \"SURAT\",\n      \"country\": \"India\",\n      \"return_pin\": \"394101\",\n      \"return_phone\": \"1234567890\",\n      \"custom_qc\": [\n        {\n          \"item\": \"mobile\",\n          \"description\": \"Mi note 1 pro\",\n          \"images\": [\n            \"https://example.com/mobile-1.jpg\"\n          ],\n          \"return_reason\": \"Damaged\",\n          \"quantity\": 1,\n          \"brand\": \"Mi\",\n          \"product_category\": \"mobile\",\n          \"questions\": [\n            {\n              \"questions_id\": \"{{rvpQcQuestionId1}}\",\n              \"options\": [\n                \"\"\n              ],\n              \"value\": [\n                \"123456543\"\n              ],\n              \"required\": true,\n              \"type\": \"varchar\",\n              \"ques_images\": [\n                \"https://example.com/qc-1.jpg\"\n              ]\n            }\n          ]\n        },\n        {\n          \"item\": \"mobile\",\n          \"description\": \"Mi note 2 pro\",\n          \"images\": [\n            \"https://example.com/mobile-2.jpg\"\n          ],\n          \"return_reason\": \"Damaged\",\n          \"quantity\": 2,\n          \"brand\": \"Mi\",\n          \"product_category\": \"apparel\",\n          \"questions\": [\n            {\n              \"questions_id\": \"{{rvpQcQuestionId2}}\",\n              \"options\": [\n                \"Black\",\n                \"other\"\n              ],\n              \"value\": [\n                \"Black\"\n              ],\n              \"required\": true,\n              \"type\": \"multi\",\n              \"ques_images\": [\n                \"https://example.com/qc-2.jpg\"\n              ]\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Shipment Updation/Edit (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Shipment Edit proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Shipment Edit response is returned', function () {",
+                  "  pm.expect(data.success || data.message || data.waybill).to.exist;",
+                  "});",
+                  "pm.test('Shipment Edit carries waybill or status signal', function () {",
+                  "  pm.expect(Boolean(data.waybill) || Boolean(data.success) || Boolean(data.message)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/edit",
+            "description": "Edits allowed B2C shipment fields via Delhivery POST /api/p/edit. The waybill is required. Payment mode updates support COD and Pre-paid; COD edits require cod amount. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"waybill\": \"{{editWaybill}}\",\n  \"pt\": \"COD\",\n  \"cod\": 100,\n  \"shipment_height\": 40.2,\n  \"shipment_width\": 20,\n  \"shipment_length\": 10,\n  \"gm\": 100.2,\n  \"name\": \"Edited Consignee\",\n  \"phone\": [\"9999999999\"],\n  \"add\": \"Edited Address\",\n  \"products_desc\": \"Edited Product\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Shipment Cancellation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Shipment Cancellation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Cancellation response is returned', function () {",
+                  "  pm.expect(data.success || data.message || data.awb_number).to.exist;",
+                  "});",
+                  "pm.test('Cancellation carries waybill/status signal', function () {",
+                  "  pm.expect(Boolean(data.awb_number) || Boolean(data.success) || Boolean(data.message)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/cancel",
+            "description": "Cancels a Delhivery B2C shipment via POST /api/p/edit with cancellation=true. Cancellation availability depends on the current package status in Delhivery. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"waybill\": \"{{cancelWaybill}}\",\n  \"cancellation\": \"true\"\n}"
+            }
+          }
+        },
+        {
+          "name": "NDR Action (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "var uplId = data.upl_id || data.upl || data.UPL || data.upload_id;",
+                  "pm.test('NDR Action proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('NDR action returns an asynchronous UPL ID', function () { pm.expect(uplId).to.exist; });",
+                  "if (uplId) pm.environment.set('ndrUplId', String(uplId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/ndr/actions",
+            "description": "Submits the asynchronous Delhivery B2C NDR action via POST /api/p/update. Supported actions are RE-ATTEMPT and PICKUP_RESCHEDULE. Verify current NSL and attempt count before use; Delhivery recommends applying after 9 PM. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": [\n    {\n      \"waybill\": \"{{ndrWaybill}}\",\n      \"act\": \"{{ndrAction}}\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "NDR UPL Status",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('NDR UPL Status proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('NDR UPL status response is returned', function () { pm.expect(data).to.be.an('object'); });",
+                  "pm.test('NDR UPL status carries processing state', function () { pm.expect(data.status || data.success || data.upl_id || data.UPL).to.exist; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/delhivery/b2c/ndr/{{ndrUplId}}/status?verbose={{ndrVerbose}}",
+            "description": "Polls Delhivery's asynchronous NDR processing result with the UPL ID returned by NDR Action. This request is skipped with the mutation workflow unless allowMutations=true."
+          }
+        },
+        {
+          "name": "Ewaybill Update (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Ewaybill Update proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Ewaybill update response is returned', function () {",
+                  "  pm.expect(data.success || data.updated || data.waybill).to.exist;",
+                  "});",
+                  "pm.test('Ewaybill update carries waybill/status signal', function () {",
+                  "  pm.expect(Boolean(data.waybill) || Boolean(data.success) || Boolean(data.updated)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/{{ewaybillWaybill}}/ewaybill",
+            "description": "Updates a Delhivery B2C shipment e-waybill via PUT /api/rest/ewaybill/{waybill}/ with data entries containing dcn and ewbn. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": [\n    {\n      \"dcn\": \"{{invoiceNumber}}\",\n      \"ewbn\": \"{{ewaybillNumber}}\"\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

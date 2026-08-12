@@ -56,6 +56,14 @@ async function bootstrapDatabase() {
     // failed. Admin login can repair the configured seed account on demand.
     console.warn('Admin seed failed during startup; continuing with API startup.', error)
   }
+
+  try {
+    run(process.execPath, [path.join(backendRoot, 'dist/scripts/seedDelhiveryB2CRatecard.js')])
+  } catch (error) {
+    // Rate-card provisioning is recoverable through the admin UI. Keep the API
+    // available if an older database needs manual schema repair.
+    console.warn('Delhivery B2C rate-card seed failed during startup; continuing.', error)
+  }
 }
 
 bootstrapDatabase()

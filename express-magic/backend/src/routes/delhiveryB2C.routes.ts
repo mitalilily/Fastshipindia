@@ -1,0 +1,51 @@
+import { Router } from 'express'
+import {
+  calculateShippingCostController,
+  cancelShipmentController,
+  createClientWarehouseController,
+  createMpsShipmentController,
+  createPickupRequestController,
+  createRvpQcShipmentController,
+  createShipmentController,
+  downloadDocumentController,
+  editShipmentController,
+  expectedTatController,
+  fetchSingleWaybillController,
+  fetchWaybillsController,
+  generateShippingLabelController,
+  getNdrStatusController,
+  heavyProductServiceabilityController,
+  serviceabilityController,
+  submitNdrActionsController,
+  trackShipmentController,
+  updateClientWarehouseController,
+  updateEwaybillController,
+} from '../controllers/delhiveryB2C.controller'
+import { isAdminMiddleware } from '../middlewares/isAdmin'
+import { requireAuth } from '../middlewares/requireAuth'
+
+const router = Router()
+
+router.use(requireAuth, isAdminMiddleware)
+router.get('/serviceability/:pincode', serviceabilityController)
+router.get('/heavy-serviceability/:pincode', heavyProductServiceabilityController)
+router.get('/tat', expectedTatController)
+router.get('/waybills', fetchWaybillsController)
+router.get('/waybill', fetchSingleWaybillController)
+router.get('/shipments/track', trackShipmentController)
+router.get('/shipping-cost', calculateShippingCostController)
+router.get('/shipments/label', generateShippingLabelController)
+router.get('/documents/download', downloadDocumentController)
+router.post('/pickup-requests', createPickupRequestController)
+router.post('/warehouses', createClientWarehouseController)
+router.post('/warehouses/update', updateClientWarehouseController)
+router.post('/shipments', createShipmentController)
+router.post('/shipments/mps', createMpsShipmentController)
+router.post('/shipments/rvp-qc', createRvpQcShipmentController)
+router.post('/shipments/edit', editShipmentController)
+router.post('/shipments/cancel', cancelShipmentController)
+router.put('/shipments/:waybill/ewaybill', updateEwaybillController)
+router.post('/ndr/actions', submitNdrActionsController)
+router.get('/ndr/:uplId/status', getNdrStatusController)
+
+export default router

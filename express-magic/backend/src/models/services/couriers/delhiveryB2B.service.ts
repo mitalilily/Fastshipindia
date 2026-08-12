@@ -31,6 +31,12 @@ type InFlightLogin = {
   promise: Promise<LoginResult>
 }
 
+type FailedLogin = {
+  credentialKey: string
+  message: string
+  retryAt: number
+}
+
 const DELHIVERY_B2B_TRACKING_STATUS_MAP: Record<string, string> = {
   MANIFESTED: 'shipment_created',
   PICKED_UP: 'pickup_initiated',
@@ -58,11 +64,98 @@ export const mapDelhiveryB2BTrackingStatus = (value: unknown) => {
 
 let cachedToken: CachedToken | null = null
 let loginInFlight: InFlightLogin | null = null
+let failedLogin: FailedLogin | null = null
 
 const clean = (value: unknown) => String(value ?? '').trim()
 const timeoutMs = () => {
   const configured = Number(process.env.DELHIVERY_B2B_REQUEST_TIMEOUT_MS || 30000)
   return Number.isFinite(configured) && configured > 0 ? configured : 30000
+}
+
+export const isDelhiveryB2BServiceableResponse = (response: any) => {
+  if (response?.success === false) return false
+  const rows = response?.data?.pincode_serviceability_data || response?.pincode_serviceability_data
+  return Array.isArray(rows) && rows.length > 0
+}
+
+export const getDelhiveryB2BTatDays = (response: any): number | null => {
+  const candidates = [
+    response?.data?.tat_days,
+    response?.data?.tat,
+    response?.data?.days,
+    response?.tat_days,
+    response?.tat,
+    response?.days,
+  ]
+  for (const value of candidates) {
+    const days = Number(value)
+    if (Number.isFinite(days) && days >= 0) return days
+  }
+  return null
+}
+
+const findDelhiveryB2BValue = (value: unknown, keys: string[]): unknown => {
+  if (!value || typeof value !== 'object') return undefined
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const found = findDelhiveryB2BValue(entry, keys)
+      if (found !== undefined && found !== null && found !== '') return found
+    }
+    return undefined
+  }
+
+  const record = value as Record<string, unknown>
+  for (const key of keys) {
+    if (record[key] !== undefined && record[key] !== null && record[key] !== '') {
+      return record[key]
+    }
+  }
+  for (const nested of Object.values(record)) {
+    const found = findDelhiveryB2BValue(nested, keys)
+    if (found !== undefined && found !== null && found !== '') return found
+  }
+  return undefined
+}
+
+const normalizeDelhiveryB2BAwbs = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.flatMap(normalizeDelhiveryB2BAwbs)
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    const identifier = findDelhiveryB2BValue(record, [
+      'awb_number',
+      'awb',
+      'waybill_number',
+      'waybill',
+      'wbn',
+    ])
+    return identifier === undefined ? [] : normalizeDelhiveryB2BAwbs(identifier)
+  }
+  return clean(value)
+    .split(',')
+    .map(clean)
+    .filter(Boolean)
+}
+
+export const getDelhiveryB2BManifestIdentifiers = (response: unknown) => {
+  const lrn = clean(
+    findDelhiveryB2BValue(response, ['lrn', 'lrnum', 'lr_number', 'lr_number_id']),
+  )
+  const awbValue = findDelhiveryB2BValue(response, [
+    'waybills',
+    'awb_numbers',
+    'awbs',
+    'awb_number',
+    'awb',
+  ])
+  return {
+    lrn: lrn || null,
+    awbs: [...new Set(normalizeDelhiveryB2BAwbs(awbValue))],
+  }
+}
+
+const loginFailureCooldownMs = () => {
+  const configured = Number(process.env.DELHIVERY_B2B_LOGIN_FAILURE_COOLDOWN_MS || 10 * 60 * 1000)
+  return Number.isFinite(configured) && configured > 0 ? configured : 10 * 60 * 1000
 }
 
 const trimBaseUrl = (value: string) => value.replace(/\/+$/, '')
@@ -91,9 +184,9 @@ const parseJwtExpiry = (token: string) => {
   try {
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
     const expiresAt = Number(payload?.exp || 0) * 1000
-    return expiresAt > Date.now() ? expiresAt : Date.now() + 23 * 60 * 60 * 1000
+    return expiresAt > Date.now() ? expiresAt : Date.now() + 24 * 60 * 60 * 1000
   } catch {
-    return Date.now() + 23 * 60 * 60 * 1000
+    return Date.now() + 24 * 60 * 60 * 1000
   }
 }
 
@@ -164,7 +257,6 @@ const normalizeFreightDimensions = (value: unknown) => {
       throw new HttpError(400, `dimensions[${index}].box_count must be an integer`)
     }
     return {
-      ...entry,
       length_cm: ensureNumber(entry.length_cm, `dimensions[${index}].length_cm`, 0.01),
       width_cm: ensureNumber(entry.width_cm, `dimensions[${index}].width_cm`, 0.01),
       height_cm: ensureNumber(entry.height_cm, `dimensions[${index}].height_cm`, 0.01),
@@ -249,7 +341,6 @@ const normalizeWarehousePayload = (payload: Record<string, unknown>) => {
   }
 
   const data: Record<string, unknown> = {
-    ...payload,
     name,
     pin_code: ensurePincode(payload.pin_code, 'pin_code'),
     address_details: { ...addressDetails },
@@ -261,14 +352,27 @@ const normalizeWarehousePayload = (payload: Record<string, unknown>) => {
   for (const field of WAREHOUSE_BOOLEAN_FIELDS) {
     if (payload[field] !== undefined) data[field] = ensureBoolean(payload[field], field)
   }
-  for (const field of ['ret_address', 'billing_details']) {
-    if (payload[field] !== undefined) data[field] = { ...ensureObject(payload[field], field) }
+  if (payload.billing_details !== undefined) {
+    data.billing_details = { ...ensureObject(payload.billing_details, 'billing_details') }
   }
-  for (const field of ['business_hours', 'buisness_hours', 'pick_up_hours']) {
-    if (payload[field] !== undefined) data[field] = normalizeWarehouseHours(payload[field], field)
+  if (data.same_as_fwd_add !== true && payload.ret_address !== undefined) {
+    data.ret_address = { ...ensureObject(payload.ret_address, 'ret_address') }
   }
-  for (const field of ['business_days', 'buisness_days', 'pick_up_days']) {
-    if (payload[field] !== undefined) data[field] = normalizeWarehouseDays(payload[field], field)
+
+  const businessHours = payload.business_hours ?? payload.buisness_hours
+  if (businessHours !== undefined) {
+    data.business_hours = normalizeWarehouseHours(businessHours, 'business_hours')
+  }
+  if (payload.pick_up_hours !== undefined) {
+    data.pick_up_hours = normalizeWarehouseHours(payload.pick_up_hours, 'pick_up_hours')
+  }
+
+  const businessDays = payload.business_days ?? payload.buisness_days
+  if (businessDays !== undefined) {
+    data.business_days = normalizeWarehouseDays(businessDays, 'business_days')
+  }
+  if (payload.pick_up_days !== undefined) {
+    data.pick_up_days = normalizeWarehouseDays(payload.pick_up_days, 'pick_up_days')
   }
 
   if (payload.consignee_gst !== undefined) {
@@ -284,7 +388,7 @@ const normalizeWarehousePayload = (payload: Record<string, unknown>) => {
 const normalizeWarehouseUpdatePayload = (payload: Record<string, unknown>) => {
   const updateDict =
     payload.update_dict === undefined ? {} : ensureObject(payload.update_dict, 'update_dict')
-  const normalizedUpdate: Record<string, unknown> = { ...updateDict }
+  const normalizedUpdate: Record<string, unknown> = {}
 
   for (const field of [
     'city',
@@ -331,10 +435,18 @@ const normalizeWarehouseUpdatePayload = (payload: Record<string, unknown>) => {
       ...ensureObject(updateDict.billing_details, 'update_dict.billing_details'),
     }
   }
-  for (const field of ['business_hours', 'buisness_hours', 'drop_hours']) {
-    if (updateDict[field] !== undefined) {
-      normalizedUpdate[field] = normalizeWarehouseHours(updateDict[field], `update_dict.${field}`)
-    }
+  const businessHours = updateDict.business_hours ?? updateDict.buisness_hours
+  if (businessHours !== undefined) {
+    normalizedUpdate.business_hours = normalizeWarehouseHours(
+      businessHours,
+      'update_dict.business_hours',
+    )
+  }
+  if (updateDict.drop_hours !== undefined) {
+    normalizedUpdate.drop_hours = normalizeWarehouseHours(
+      updateDict.drop_hours,
+      'update_dict.drop_hours',
+    )
   }
   for (const field of ['pick_up_days', 'drop_days']) {
     if (updateDict[field] !== undefined) {
@@ -343,7 +455,6 @@ const normalizeWarehouseUpdatePayload = (payload: Record<string, unknown>) => {
   }
 
   return {
-    ...payload,
     cl_warehouse_name: ensureText(payload.cl_warehouse_name, 'cl_warehouse_name'),
     update_dict: normalizedUpdate,
   }
@@ -403,6 +514,9 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
   if (!pickupName && !pickupId) {
     throw new HttpError(400, 'pickup_location_name or pickup_location_id is required')
   }
+  if (pickupName && pickupId) {
+    throw new HttpError(400, 'Pass only one of pickup_location_name or pickup_location_id')
+  }
 
   const paymentMode = clean(payload.payment_mode).toLowerCase()
   if (!['cod', 'prepaid'].includes(paymentMode)) {
@@ -410,7 +524,7 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
   }
 
   const dropoffStoreCode = clean(payload.dropoff_store_code)
-  const dropoffLocation = payload.dropoff_location
+  const dropoffLocation = !dropoffStoreCode && payload.dropoff_location
     ? normalizeManifestObject(payload.dropoff_location, 'dropoff_location')
     : undefined
   if (!dropoffStoreCode && !dropoffLocation) {
@@ -468,7 +582,6 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
   })
 
   const data: Record<string, unknown> = {
-    ...payload,
     payment_mode: paymentMode,
     weight: ensureNumber(payload.weight, 'weight', 0.01),
     shipment_details: shipmentDetails,
@@ -528,8 +641,17 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
     )
   }
 
-  for (const field of ['return_address', 'callback']) {
-    if (payload[field] !== undefined) data[field] = normalizeManifestObject(payload[field], field)
+  if (payload.return_address !== undefined) {
+    const returnAddress = normalizeManifestObject(payload.return_address, 'return_address')
+    if (returnAddress.zip !== undefined) {
+      returnAddress.zip = ensurePincode(returnAddress.zip, 'return_address.zip')
+    }
+    data.return_address = returnAddress
+  }
+  if (payload.callback !== undefined) {
+    data.callback = normalizeDocumentCallback(
+      normalizeManifestObject(payload.callback, 'callback'),
+    )
   }
   if (payload.billing_address !== undefined) {
     const billing = normalizeManifestObject(payload.billing_address, 'billing_address')
@@ -590,7 +712,7 @@ const normalizeShipmentUpdatePayload = (payload: Record<string, unknown>) => {
     throw new HttpError(400, 'At least one supported LR update field is required')
   }
 
-  const data: Record<string, unknown> = { ...payload }
+  const data: Record<string, unknown> = {}
   if (payload.payment_mode !== undefined) {
     const paymentMode = clean(payload.payment_mode).toLowerCase()
     if (!['cod', 'prepaid'].includes(paymentMode)) {
@@ -628,7 +750,6 @@ const normalizeShipmentUpdatePayload = (payload: Record<string, unknown>) => {
           throw new HttpError(400, `dimensions[${index}].box_count must be an integer`)
         }
         return {
-          ...entry,
           width_cm: ensureNumber(entry.width_cm, `dimensions[${index}].width_cm`, 0.01),
           height_cm: ensureNumber(entry.height_cm, `dimensions[${index}].height_cm`, 0.01),
           length_cm: ensureNumber(entry.length_cm, `dimensions[${index}].length_cm`, 0.01),
@@ -640,11 +761,7 @@ const normalizeShipmentUpdatePayload = (payload: Record<string, unknown>) => {
 
   const callbackValue = payload.cb ?? payload.callback
   if (callbackValue !== undefined) {
-    const callback = normalizeManifestObject(callbackValue, 'callback')
-    ensureText(callback.uri, 'callback.uri')
-    ensureText(callback.method, 'callback.method')
-    data.cb = callback
-    delete data.callback
+    data.cb = normalizeDocumentCallback(normalizeManifestObject(callbackValue, 'callback'))
   }
 
   let invoices: Record<string, unknown>[] | undefined
@@ -652,7 +769,8 @@ const normalizeShipmentUpdatePayload = (payload: Record<string, unknown>) => {
     invoices = normalizeManifestList(payload.invoices, 'invoices').map((invoice, index) => {
       const entry = ensureObject(invoice, `invoices[${index}]`)
       const qrCode = clean(entry.qr_code)
-      const normalized: Record<string, unknown> = { ...entry }
+      const normalized: Record<string, unknown> = {}
+      if (entry.ewaybill !== undefined) normalized.ewaybill = clean(entry.ewaybill)
       if (!qrCode) {
         normalized.inv_number = ensureText(entry.inv_number, `invoices[${index}].inv_number`)
         normalized.inv_amount = ensureNumber(entry.inv_amount, `invoices[${index}].inv_amount`)
@@ -985,6 +1103,7 @@ export class DelhiveryB2BService {
   static clearTokenCache() {
     cachedToken = null
     loginInFlight = null
+    failedLogin = null
   }
 
   async getOperationalDefaults() {
@@ -1042,6 +1161,17 @@ export class DelhiveryB2BService {
     const password = ensureRequired(credentials.password, 'password')
     const credentialKey = makeCredentialKey(credentials)
 
+    if (failedLogin) {
+      if (failedLogin.credentialKey !== credentialKey || failedLogin.retryAt <= Date.now()) {
+        failedLogin = null
+      } else {
+        throw new HttpError(
+          429,
+          `Delhivery B2B login is paused after rejected credentials (${failedLogin.message}). Retry after ${new Date(failedLogin.retryAt).toISOString()}`,
+        )
+      }
+    }
+
     if (
       !force &&
       cachedToken?.credentialKey === credentialKey &&
@@ -1065,9 +1195,21 @@ export class DelhiveryB2BService {
         if (!token) throw new HttpError(502, 'Delhivery B2B login response did not contain a JWT')
         const expiresAt = parseJwtExpiry(token)
         cachedToken = { credentialKey, token, expiresAt }
+        failedLogin = null
         return { token, expiresAt, cached: false }
       } catch (error) {
         if (error instanceof HttpError) throw error
+        const statusCode = Number((error as any)?.response?.status || 502)
+        if ([400, 401, 403].includes(statusCode)) {
+          failedLogin = {
+            credentialKey,
+            message:
+              extractMessage((error as any)?.response?.data) ||
+              clean((error as any)?.message) ||
+              'Delhivery B2B rejected the configured credentials',
+            retryAt: Date.now() + loginFailureCooldownMs(),
+          }
+        }
         this.providerError(error, 'Delhivery B2B login failed')
       }
     })()
@@ -1200,7 +1342,6 @@ export class DelhiveryB2BService {
     const freightMode = requestedFreightMode || (await this.credentials()).freightMode
 
     const data: Record<string, unknown> = {
-      ...payload,
       dimensions: normalizeFreightDimensions(payload.dimensions),
       weight_g: ensureNumber(payload.weight_g, 'weight_g', 0.01),
       source_pin: ensurePincode(payload.source_pin, 'source_pin'),
@@ -1252,14 +1393,14 @@ export class DelhiveryB2BService {
     try {
       return await this.authorizedRequest({
         method: 'PATCH',
-        url: '/client-warehouses/update',
+        url: '/client-warehouse/update/',
         data,
       })
     } catch (error) {
       if (!(error instanceof HttpError) || ![404, 405].includes(error.statusCode)) throw error
       return this.authorizedRequest({
         method: 'PATCH',
-        url: '/client-warehouse/update/',
+        url: '/client-warehouses/update',
         data,
       })
     }

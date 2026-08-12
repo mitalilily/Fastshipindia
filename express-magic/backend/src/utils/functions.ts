@@ -90,7 +90,18 @@ export function buildPatch<T extends Record<string, unknown>>(existing: T, merge
   return patch
 }
 
-export const getBucketName = () => {
+export class StorageConfigurationError extends Error {
+  readonly code = 'STORAGE_NOT_CONFIGURED'
+  readonly missingKeys: string[]
+
+  constructor(missingKeys: string[]) {
+    super(`Object storage is not configured. Missing: ${missingKeys.join(', ')}`)
+    this.name = 'StorageConfigurationError'
+    this.missingKeys = missingKeys
+  }
+}
+
+const resolveBucketName = () => {
   const envBucket =
     process.env.NODE_ENV === 'production'
       ? process.env.PROD_BUCKET
@@ -103,10 +114,50 @@ export const getBucketName = () => {
 
   const bucket = envBucket || fallbackBucket
 
-  if (!bucket) {
-    throw new Error(
-      'R2 bucket is not configured. Set PROD_BUCKET/DEV_BUCKET/STAGING_BUCKET or R2_BUCKET_NAME.',
+  return String(bucket || '').trim()
+}
+
+export const getMissingStorageConfiguration = () => {
+  const missing: string[] = []
+  if (!String(process.env.R2_ENDPOINT || '').trim()) missing.push('R2_ENDPOINT')
+  if (!String(process.env.R2_ACCESS_KEY_ID || '').trim()) missing.push('R2_ACCESS_KEY_ID')
+  if (!String(process.env.R2_SECRET_ACCESS_KEY || '').trim()) {
+    missing.push('R2_SECRET_ACCESS_KEY')
+  }
+  if (!resolveBucketName()) {
+    missing.push(
+      process.env.NODE_ENV === 'production'
+        ? 'PROD_BUCKET (or R2_BUCKET_NAME)'
+        : process.env.NODE_ENV === 'staging'
+          ? 'STAGING_BUCKET (or R2_BUCKET_NAME)'
+          : 'DEV_BUCKET (or R2_BUCKET_NAME)',
     )
+  }
+  return missing
+}
+
+export const assertStorageConfigured = () => {
+  const missing = getMissingStorageConfiguration()
+  if (missing.length) throw new StorageConfigurationError(missing)
+}
+
+export const isStorageConfigurationError = (
+  error: unknown,
+): error is StorageConfigurationError =>
+  error instanceof StorageConfigurationError ||
+  (error instanceof Error && (error as Error & { code?: string }).code === 'STORAGE_NOT_CONFIGURED')
+
+export const getBucketName = () => {
+  const bucket = resolveBucketName()
+
+  if (!bucket) {
+    throw new StorageConfigurationError([
+      process.env.NODE_ENV === 'production'
+        ? 'PROD_BUCKET (or R2_BUCKET_NAME)'
+        : process.env.NODE_ENV === 'staging'
+          ? 'STAGING_BUCKET (or R2_BUCKET_NAME)'
+          : 'DEV_BUCKET (or R2_BUCKET_NAME)',
+    ])
   }
 
   return bucket
@@ -225,7 +276,20 @@ export const determineB2CZone = (origin: LocationInfo, destination: LocationInfo
   const hasTag = (loc: LocationInfo, tag: string) =>
     loc.tags?.map((t) => t.toLowerCase()).includes(tag.toLowerCase())
 
-  // 1. Special Zone (highest priority)
+  const isKashmir = (loc: LocationInfo) => {
+    const state = String(loc.state || '')
+      .trim()
+      .toLowerCase()
+      .replace(/&/g, 'and')
+    return state === 'jammu and kashmir' || state === 'jammu kashmir' || state === 'ladakh'
+  }
+
+  // 1. Kashmir has a dedicated contracted tariff.
+  if (isKashmir(origin) || isKashmir(destination)) {
+    return 'KASHMIR'
+  }
+
+  // 2. Special Zone
   if (hasTag(origin, 'special_zones') || hasTag(destination, 'special_zones')) {
     return 'SPECIAL_ZONE'
   }

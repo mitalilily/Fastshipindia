@@ -16,8 +16,8 @@ const isDeliveryOneValue = (value) => {
   )
 }
 
-const DELIVERY_ONE_SURFACE_ID = 99
-const DELIVERY_ONE_EXPRESS_ID = 100
+const DELIVERY_ONE_EXPRESS_ID = 99
+const DELIVERY_ONE_SURFACE_ID = 100
 
 const getCourierValues = (courierOrName) => {
   if (typeof courierOrName === 'string') return [courierOrName]

@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   Divider,
   Drawer,
   IconButton,
@@ -9,7 +10,7 @@ import {
   useTheme,
 } from '@mui/material'
 import React from 'react'
-import { IoCloseCircleOutline } from 'react-icons/io5'
+import { IoArrowBack, IoCloseCircleOutline } from 'react-icons/io5'
 
 interface GlassDrawerProps {
   open: boolean
@@ -17,6 +18,8 @@ interface GlassDrawerProps {
   title?: string
   width?: number | string
   anchor?: 'left' | 'right'
+  showBackButton?: boolean
+  backLabel?: string
   children: React.ReactNode
 }
 
@@ -26,6 +29,8 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
   title,
   width = 420,
   anchor = 'right',
+  showBackButton = false,
+  backLabel = 'Back',
   children,
 }) => {
   const theme = useTheme()
@@ -36,6 +41,7 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
       anchor={anchor}
       open={open}
       onClose={onClose}
+      sx={{ zIndex: theme.zIndex.modal }}
       slotProps={{
         paper: {
           sx: {
@@ -91,8 +97,27 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
           }}
         />
 
-        <Box display="flex" alignItems="center" justifyContent="space-between" position="relative" zIndex={1}>
-          <Box>
+        <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2} position="relative" zIndex={1}>
+          <Box sx={{ minWidth: 0 }}>
+            {showBackButton && (
+              <Button
+                type="button"
+                size="small"
+                startIcon={<IoArrowBack />}
+                onClick={onClose}
+                sx={{
+                  minWidth: 0,
+                  px: 0,
+                  mb: 1,
+                  color: theme.palette.primary.main,
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  '&:hover': { bgcolor: 'transparent', color: theme.palette.primary.dark },
+                }}
+              >
+                {backLabel}
+              </Button>
+            )}
             <Typography
               sx={{
                 fontSize: '0.74rem',

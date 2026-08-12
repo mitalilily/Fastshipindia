@@ -21,6 +21,7 @@ import { fetchAvailableCouriersWithRatesAdmin } from '../../models/services/ship
 import { courier_credentials } from '../../models/schema/courierCredentials'
 import { couriers } from '../../models/schema/couriers'
 import { getAllZones } from '../../models/services/zone.service'
+import { DELHIVERY_COURIER_IDS } from '../../utils/delhiveryCourier'
 import { EkartService } from '../../models/services/couriers/ekart.service'
 import { XpressbeesService } from '../../models/services/couriers/xpressbees.service'
 import { ShadowfaxService } from '../../models/services/couriers/shadowfax.service'
@@ -276,8 +277,8 @@ export const updateCourierStatusController = async (req: Request, res: Response)
 
 export const getServiceProvidersController = async (req: Request, res: Response) => {
   try {
-    // Only expose the main integrated service providers in the enable/disable UI
-    const allowedProviders = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon']
+    // Delhivery is the only provider currently exposed through the admin integration UI.
+    const allowedProviders = ['delhivery']
 
     const rows = await db
       .select({
@@ -323,19 +324,45 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
   const { isEnabled } = req.body
 
   try {
-    const allowedProviders = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon']
+    const allowedProviders = ['delhivery']
+    const normalizedProvider = String(serviceProvider || '').trim().toLowerCase()
 
-    if (!serviceProvider || typeof isEnabled !== 'boolean') {
+    if (!normalizedProvider || typeof isEnabled !== 'boolean') {
       return res.status(400).json({
         success: false,
         message: 'serviceProvider (param) and boolean isEnabled (body) are required',
       })
     }
-    if (!allowedProviders.includes(String(serviceProvider).toLowerCase())) {
+    if (!allowedProviders.includes(normalizedProvider)) {
       return res.status(400).json({
         success: false,
         message: `Only these providers are supported: ${allowedProviders.join(', ')}`,
       })
+    }
+
+    // A fresh installation may have credentials but no courier rows yet. Provision the
+    // two canonical Delhivery services when the admin enables the provider so the toggle
+    // works without requiring a separate seed command.
+    if (isEnabled) {
+      await db
+        .insert(couriers)
+        .values([
+          {
+            id: DELHIVERY_COURIER_IDS.EXPRESS,
+            name: 'Delhivery Express',
+            serviceProvider: normalizedProvider,
+            isEnabled: true,
+            businessType: ['b2c', 'b2b'],
+          },
+          {
+            id: DELHIVERY_COURIER_IDS.SURFACE,
+            name: 'Delhivery Surface',
+            serviceProvider: normalizedProvider,
+            isEnabled: true,
+            businessType: ['b2c', 'b2b'],
+          },
+        ])
+        .onConflictDoNothing({ target: [couriers.id, couriers.serviceProvider] })
     }
 
     const updated = await db
@@ -344,7 +371,7 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
         isEnabled,
         updatedAt: new Date(),
       })
-      .where(eq(couriers.serviceProvider, serviceProvider))
+      .where(eq(couriers.serviceProvider, normalizedProvider))
       .returning()
 
     if (!updated.length) {
@@ -354,7 +381,7 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
     res.json({
       success: true,
       data: {
-        serviceProvider,
+        serviceProvider: normalizedProvider,
         isEnabled,
         affectedCouriers: updated.length,
       },

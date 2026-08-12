@@ -139,7 +139,7 @@ export default function Home() {
         icon: <TbWallet />,
         color: PURPLE,
         action: 'Recharge wallet',
-        path: '/billing/wallet_transactions',
+        path: '/billing/wallet_transactions?recharge=true',
       },
     ],
     [dashboardStats, formattedWalletBalance],

@@ -8,7 +8,7 @@ import {
   shouldProxyBrowserUpload,
   verifyDirectUploadToken,
 } from "../models/services/upload.service";
-import { getBucketName } from "../utils/functions";
+import { isStorageConfigurationError } from "../utils/functions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2 } from "../config/r2Client";
@@ -66,6 +66,12 @@ export const createPresignedUrl = async (
     return res.status(200).json(data);
   } catch (err) {
     console.error("Presign error:", err);
+    if (isStorageConfigurationError(err)) {
+      return res.status(503).json({
+        message: "File storage is temporarily unavailable. Please contact support.",
+        code: err.code,
+      });
+    }
     return res.status(500).json({ message: "Failed to presign URL" });
   }
 };
@@ -141,6 +147,12 @@ export const uploadFileThroughBackend = async (
     });
   } catch (err) {
     console.error('Backend file upload failed:', err);
+    if (isStorageConfigurationError(err)) {
+      return res.status(503).json({
+        message: 'File storage is temporarily unavailable. Please contact support.',
+        code: err.code,
+      });
+    }
     return res.status(500).json({ message: 'Failed to upload file' });
   }
 };

@@ -36,40 +36,11 @@ const providerLabels = {
 
 const fallbackProviders = [
   {
-    serviceProvider: "deliveryone",
+    serviceProvider: "delhivery",
     name: "Delhivery",
-    totalCouriers: 2,
-    enabledCouriers: 2,
-    isEnabled: true,
-  },
-  {
-    serviceProvider: "dp-world",
-    name: "DP World",
     totalCouriers: 0,
     enabledCouriers: 0,
-    isEnabled: true,
-  },
-  {
-    serviceProvider: "ekart",
-    name: "Ekart",
-    totalCouriers: 1,
-    enabledCouriers: 1,
-    isEnabled: true,
-  },
-  {
-    serviceProvider: "shipex",
-    name: "Shipex India",
-    totalCouriers: 31,
-    enabledCouriers: 31,
-    isEnabled: true,
-    b2b: false,
-  },
-  {
-    serviceProvider: "xpressbees",
-    name: "Xpressbees",
-    totalCouriers: 2,
-    enabledCouriers: 2,
-    isEnabled: true,
+    isEnabled: false,
   },
 ];
 
@@ -128,8 +99,12 @@ const ServiceProviders = () => {
   const updateStatus = useUpdateServiceProviderStatus();
   const toast = useToast();
 
-  const rows = providers.length
-    ? providers.map((provider) => ({
+  const delhiveryProviders = providers.filter(
+    (provider) => provider.serviceProvider?.toLowerCase() === "delhivery"
+  );
+
+  const rows = delhiveryProviders.length
+    ? delhiveryProviders.map((provider) => ({
         ...provider,
         name:
           providerLabels[provider.serviceProvider] ||
@@ -153,9 +128,11 @@ const ServiceProviders = () => {
             status: "success",
           });
         },
-        onError: () => {
+        onError: (toggleError) => {
           toast({
             title: "Failed to update provider status",
+            description:
+              toggleError?.response?.data?.message || toggleError?.message,
             status: "error",
           });
         },

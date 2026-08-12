@@ -134,8 +134,20 @@ export const fetchCourierCredentials = async () => {
   return data.data
 }
 
-export const updateDeliveryOneCredentials = async (payload) => {
-  const { data } = await api.put('/admin/couriers/credentials/delivery-one', payload)
+export const updateDelhiveryCredentials = async (payload) => {
+  const { data } = await api.put('/admin/couriers/credentials/delhivery', payload)
   if (!data?.success) throw new Error('Failed to update Delhivery credentials')
+  return data.data
+}
+
+export const updateDelhiveryB2BCredentials = async (payload) => {
+  const { data } = await api.put('/admin/couriers/credentials/delhivery-b2b', payload)
+  if (!data?.success) throw new Error('Failed to update Delhivery B2B credentials')
+  return data.data
+}
+
+export const testDelhiveryB2BCredentials = async () => {
+  const { data } = await api.post('/admin/couriers/credentials/delhivery-b2b/test')
+  if (!data?.success) throw new Error('Delhivery B2B authentication failed')
   return data.data
 }

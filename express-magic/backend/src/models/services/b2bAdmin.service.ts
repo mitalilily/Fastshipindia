@@ -231,13 +231,46 @@ export const createPincode = async (payload: {
   flags?: PincodeFlags
 }) => {
   const { courierId, serviceProvider } = normalizeCourierScope(payload.courierScope)
+  const pincode = String(payload.pincode || '').trim()
+  const city = String(payload.city || '').trim()
+  const state = String(payload.state || '').trim()
+
+  if (!/^\d{6}$/.test(pincode)) throw new Error('Pincode must contain exactly 6 digits')
+  if (!city) throw new Error('City is required')
+  if (!state) throw new Error('State is required')
+  if (!payload.zoneId) throw new Error('B2B zone is required')
+
+  const [zone] = await db
+    .select({ id: zones.id })
+    .from(zones)
+    .where(and(eq(zones.id, payload.zoneId), eq(zones.business_type, 'B2B')))
+    .limit(1)
+  if (!zone) throw new Error('Selected B2B zone was not found')
+
+  const duplicateConditions: SQLWrapper[] = [eq(b2bPincodes.pincode, pincode) as SQLWrapper]
+  duplicateConditions.push(
+    courierId
+      ? (eq(b2bPincodes.courier_id, courierId) as SQLWrapper)
+      : (isNull(b2bPincodes.courier_id) as SQLWrapper),
+  )
+  duplicateConditions.push(
+    serviceProvider
+      ? (eq(b2bPincodes.service_provider, serviceProvider) as SQLWrapper)
+      : (isNull(b2bPincodes.service_provider) as SQLWrapper),
+  )
+  const [duplicate] = await db
+    .select({ id: b2bPincodes.id })
+    .from(b2bPincodes)
+    .where(and(...duplicateConditions))
+    .limit(1)
+  if (duplicate) throw new Error(`Pincode ${pincode} is already configured`)
 
   const [record] = await db
     .insert(b2bPincodes)
     .values({
-      pincode: payload.pincode.trim(),
-      city: payload.city.trim(),
-      state: payload.state.trim(),
+      pincode,
+      city,
+      state,
       zone_id: payload.zoneId,
       courier_id: courierId ?? null,
       service_provider: serviceProvider ?? null,
@@ -398,6 +431,7 @@ export const importPincodesFromCsv = async (
 
     const key = (row.zone_code ?? '').trim().toUpperCase()
     if (!key && options.defaultZoneId) return options.defaultZoneId
+    if (!key && options.zoneId) return options.zoneId
 
     if (!key) throw new Error('Zone code missing for pincode row')
 
@@ -443,11 +477,6 @@ export const importPincodesFromCsv = async (
         whereConditions.push(isNull(b2bPincodes.service_provider))
       }
 
-      // Add zone filter if provided
-      if (options.zoneId) {
-        whereConditions.push(eq(b2bPincodes.zone_id, options.zoneId))
-      }
-
       const [existing] = await db
         .select({
           id: b2bPincodes.id,
@@ -480,14 +509,36 @@ export const importPincodesFromCsv = async (
           updateData.state = row.state.trim()
         }
 
+        if (row.zone_id || row.zone_code || options.defaultZoneId || options.zoneId) {
+          updateData.zone_id = await resolveZoneId(row)
+        }
+
         await db.update(b2bPincodes).set(updateData).where(eq(b2bPincodes.id, existing.id))
         updated += 1
       } else {
-        // Skip new pincodes - only update existing ones
-        skipped.push({
-          row,
-          error: `Pincode ${pincode} not found. Only existing pincodes can be updated.`,
+        if (!/^\d{6}$/.test(pincode)) {
+          throw new Error(`Pincode ${pincode} must contain exactly 6 digits`)
+        }
+        if (!row.city?.trim() || !row.state?.trim()) {
+          throw new Error(`City and state are required to add pincode ${pincode}`)
+        }
+
+        const zoneId = await resolveZoneId(row)
+        await db.insert(b2bPincodes).values({
+          pincode,
+          city: row.city.trim(),
+          state: row.state.trim(),
+          zone_id: zoneId,
+          courier_id: courierId ?? null,
+          service_provider: serviceProvider ?? null,
+          is_oda: truthy(row.is_oda),
+          is_remote: truthy(row.is_remote),
+          is_mall: truthy(row.is_mall),
+          is_sez: truthy(row.is_sez),
+          is_airport: truthy(row.is_airport),
+          is_high_security: truthy(row.is_high_security),
         })
+        inserted += 1
       }
     } catch (err: any) {
       skipped.push({ row, error: err.message })

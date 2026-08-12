@@ -111,7 +111,7 @@ export const useMerchantReadiness = () => {
         title: 'Wallet Balance Ready',
         description: `Keep at least Rs ${requiredWalletBalance.toLocaleString('en-IN')} available for first-order charges.`,
         done: walletBalance >= requiredWalletBalance,
-        path: '/billing/wallet_transactions',
+        path: '/billing/wallet_transactions?recharge=true',
         actionLabel: 'Recharge Wallet',
       },
     ],

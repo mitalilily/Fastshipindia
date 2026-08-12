@@ -7,6 +7,7 @@ import { locations } from '../schema/locations'
 import { b2bPincodes, zoneMappings, zones } from '../schema/zones'
 
 const CANONICAL_B2C_ZONE_CODES = new Set([
+  'KASHMIR',
   'METRO_TO_METRO',
   'ROI',
   'SPECIAL_ZONE',

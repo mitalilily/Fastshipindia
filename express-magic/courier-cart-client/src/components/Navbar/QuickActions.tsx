@@ -31,7 +31,7 @@ const actions: QuickAction[] = [
   {
     name: 'Recharge Wallet',
     image: rechargeWalletImage,
-    path: '/billing/wallet_transactions',
+    path: '/billing/wallet_transactions?recharge=true',
   },
   {
     name: 'Early COD',

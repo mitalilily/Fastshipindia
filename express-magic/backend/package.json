@@ -10,6 +10,12 @@
     "check:rate-apis": "node -r ts-node/register src/scripts/checkRateCalculatorApis.ts",
     "check:amazon-shipping-apis": "node -r ts-node/register src/scripts/checkAmazonShippingApis.ts",
     "check:delhivery-b2b-apis": "node -r ts-node/register src/scripts/checkDelhiveryB2BApis.ts",
+    "check:delhivery-b2b-postman": "node -r ts-node/register src/scripts/checkDelhiveryB2BPostman.ts",
+    "check:delhivery-b2b": "npm run check:delhivery-b2b-apis && npm run check:delhivery-b2b-postman",
+    "check:delhivery-b2c-apis": "node -r ts-node/register src/scripts/checkDelhiveryB2CApis.ts",
+    "check:delhivery-b2c-postman": "node -r ts-node/register src/scripts/checkDelhiveryB2CPostman.ts",
+    "check:delhivery-b2c": "npm run check:delhivery-b2c-apis && npm run check:delhivery-b2c-postman",
+    "check:upload-config": "node -r ts-node/register src/scripts/checkUploadStorageConfiguration.ts",
     "check:ekart-apis": "node -r ts-node/register src/scripts/checkEkartApis.ts",
     "check:shopify-apis": "node -r ts-node/register src/scripts/checkShopifyApis.ts",
     "check:woocommerce-apis": "node -r ts-node/register src/scripts/checkWooCommerceApis.ts",
@@ -98,6 +104,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/dotenv": "^6.1.1",
+    "newman": "^6.2.2",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.4"

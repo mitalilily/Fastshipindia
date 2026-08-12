@@ -107,6 +107,8 @@ import {
 import { DelhiveryService } from './couriers/delhivery.service'
 import {
   DelhiveryB2BService,
+  getDelhiveryB2BManifestIdentifiers,
+  isDelhiveryB2BServiceableResponse,
   mapDelhiveryB2BTrackingStatus,
 } from './couriers/delhiveryB2B.service'
 import { EkartService } from './couriers/ekart.service'
@@ -2935,6 +2937,14 @@ const fetchLocationByPincode = async (pincode: string): Promise<LocRow | null> =
 const hasTag = (loc: LocRow | null, tag: string) =>
   !!loc && Array.isArray(loc.tags) && loc.tags.includes(tag.toLowerCase())
 
+const isKashmirLocation = (loc: LocRow | null) => {
+  const state = String(loc?.state || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+  return state === 'jammu and kashmir' || state === 'jammu kashmir' || state === 'ladakh'
+}
+
 /**
  * Determine B2C zone classification for a shipment
  *
@@ -2953,7 +2963,12 @@ const determineB2CZoneKey = (
   if (!origin || !destination) {
     return { key: 'ROI', reason: 'origin or destination missing' }
   }
-  // 1. Special Zones (always override)
+  // 1. Dedicated Kashmir tariff (always override generic special-zone tags)
+  if (isKashmirLocation(origin) || isKashmirLocation(destination)) {
+    return { key: 'KASHMIR', reason: 'Jammu and Kashmir or Ladakh lane' }
+  }
+
+  // 2. Special Zones
   if (
     hasTag(origin, 'special_zones') ||
     hasTag(origin, 'special_zone') ||
@@ -3013,6 +3028,7 @@ const determineB2CZoneKey = (
  * Adjust the right-hand values if your zones.code uses different wording.
  */
 const ZONE_KEY_TO_DB_CODE: Record<string, string> = {
+  KASHMIR: 'KASHMIR',
   METRO_TO_METRO: 'METRO_TO_METRO',
   ROI: 'ROI',
   SPECIAL_ZONE: 'SPECIAL_ZONE',
@@ -3022,6 +3038,7 @@ const ZONE_KEY_TO_DB_CODE: Record<string, string> = {
 }
 
 const B2C_ZONE_KEY_FALLBACK_CODES: Record<string, string[]> = {
+  KASHMIR: ['KASHMIR'],
   METRO_TO_METRO: ['A_B2C', 'A', 'ZONE_A', 'ZONE A', 'ZONE A (B2C)'],
   WITHIN_CITY: ['A_B2C', 'A', 'ZONE_A', 'ZONE A', 'ZONE A (B2C)'],
   WITHIN_STATE: ['B_B2C', 'B', 'ZONE_B', 'ZONE B', 'ZONE B (B2C)'],
@@ -9377,17 +9394,6 @@ const findProviderValue = (value: unknown, keys: string[]): unknown => {
   return undefined
 }
 
-const delhiveryB2BServiceable = (response: any) => {
-  if (response?.success === false) return false
-  const rows =
-    response?.data?.pincode_serviceability_data ||
-    response?.pincode_serviceability_data ||
-    response?.data ||
-    []
-  if (!Array.isArray(rows)) return Boolean(rows)
-  return rows.length > 0
-}
-
 const delhiveryB2BManifestFailed = (response: any) => {
   if (response?.success === false) return true
   const status = String(
@@ -9410,9 +9416,7 @@ const waitForDelhiveryB2BManifest = async (
     : 1500
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const lrn = String(
-      findProviderValue(response, ['lrn', 'lrnum', 'lr_number', 'lr_number_id']) || '',
-    ).trim()
+    const lrn = getDelhiveryB2BManifestIdentifiers(response).lrn || ''
     if (lrn) return { response, jobId, lrn }
     if (delhiveryB2BManifestFailed(response)) {
       throw new HttpError(422, 'Delhivery B2B rejected the shipment manifestation')
@@ -9783,10 +9787,10 @@ export const createB2BShipmentService = async (
         delhivery.getOperationalDefaults(),
       ])
 
-      if (!delhiveryB2BServiceable(originServiceability)) {
+      if (!isDelhiveryB2BServiceableResponse(originServiceability)) {
         throw new HttpError(400, `Delhivery B2B does not service origin pincode ${originPincode}`)
       }
-      if (!delhiveryB2BServiceable(destinationServiceability)) {
+      if (!isDelhiveryB2BServiceableResponse(destinationServiceability)) {
         throw new HttpError(
           400,
           `Delhivery B2B does not service destination pincode ${destinationPincode}`,
@@ -9871,18 +9875,7 @@ export const createB2BShipmentService = async (
 
       const initialManifest = await delhivery.manifestShipment(manifestPayload)
       const manifest = await waitForDelhiveryB2BManifest(delhivery, initialManifest)
-      const waybillValue = findProviderValue(manifest.response, [
-        'waybills',
-        'awb_numbers',
-        'awb_number',
-        'awb',
-      ])
-      const waybills = Array.isArray(waybillValue)
-        ? waybillValue.map((value) => String(value)).filter(Boolean)
-        : String(waybillValue || '')
-            .split(',')
-            .map((value) => value.trim())
-            .filter(Boolean)
+      const waybills = getDelhiveryB2BManifestIdentifiers(manifest.response).awbs
       const primaryAwb = waybills[0] || manifest.lrn
 
       await db

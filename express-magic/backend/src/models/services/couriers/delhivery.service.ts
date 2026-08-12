@@ -72,6 +72,812 @@ const normalizeDelhiveryWeightGrams = (value: unknown, fallbackGrams = 500) => {
   return numericValue > 50 ? Math.round(numericValue) : Math.round(numericValue * 1000)
 }
 
+const normalizeDelhiveryPincode = (value: unknown, field = 'pincode') => {
+  const pincode = String(value ?? '').trim()
+  if (!/^\d{6}$/.test(pincode)) {
+    throw new HttpError(400, `${field} must be a valid 6-digit pincode`)
+  }
+  return pincode
+}
+
+const normalizeDelhiveryMot = (value: unknown) => {
+  const mot = String(value || 'S')
+    .trim()
+    .toUpperCase()
+  if (!['S', 'E', 'N'].includes(mot)) {
+    throw new HttpError(400, "mot must be one of 'S', 'E', or 'N'")
+  }
+  return mot as 'S' | 'E' | 'N'
+}
+
+const normalizeDelhiveryProductType = (value: unknown) => {
+  const pdt = String(value ?? 'B2C')
+    .trim()
+    .toUpperCase()
+  if (!pdt) return undefined
+  if (!['B2B', 'B2C'].includes(pdt)) {
+    throw new HttpError(400, "pdt must be 'B2B', 'B2C', or empty")
+  }
+  return pdt as 'B2B' | 'B2C'
+}
+
+const normalizeDelhiveryExpectedPickupDate = (value: unknown) => {
+  const expectedPickupDate = String(value ?? '').trim()
+  if (!expectedPickupDate) return undefined
+  if (!/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/.test(expectedPickupDate)) {
+    throw new HttpError(400, 'expected_pickup_date must be in YYYY-MM-DD or YYYY-MM-DD HH:mm format')
+  }
+  return expectedPickupDate
+}
+
+const normalizeDelhiveryWaybillCount = (value: unknown) => {
+  const count = Number(value)
+  if (!Number.isInteger(count) || count < 1 || count > 10000) {
+    throw new HttpError(400, 'count must be an integer between 1 and 10000')
+  }
+  return count
+}
+
+const DELHIVERY_B2C_NDR_ACTIONS = ['RE-ATTEMPT', 'PICKUP_RESCHEDULE'] as const
+
+type DelhiveryB2CNdrAction = (typeof DELHIVERY_B2C_NDR_ACTIONS)[number]
+
+const normalizeDelhiveryB2CNdrPayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'NDR payload is required')
+  }
+  if (!Array.isArray(input.data) || input.data.length === 0) {
+    throw new HttpError(400, 'data must be a non-empty array')
+  }
+  if (input.data.length > 1000) {
+    throw new HttpError(400, 'data supports a maximum of 1000 shipments')
+  }
+
+  return {
+    data: input.data.map((entry: unknown, index: number) => {
+      const action = entry as any
+      if (!action || typeof action !== 'object' || Array.isArray(action)) {
+        throw new HttpError(400, `data[${index}] must be an object`)
+      }
+
+      const waybill = String(action.waybill ?? '').trim()
+      if (!waybill) throw new HttpError(400, `data[${index}].waybill is required`)
+
+      const act = String(action.act ?? '').trim().toUpperCase() as DelhiveryB2CNdrAction
+      if (!DELHIVERY_B2C_NDR_ACTIONS.includes(act)) {
+        throw new HttpError(
+          400,
+          `data[${index}].act must be 'RE-ATTEMPT' or 'PICKUP_RESCHEDULE'`,
+        )
+      }
+
+      return { waybill, act }
+    }),
+  }
+}
+
+const normalizeDelhiveryB2CNdrUplId = (value: unknown) => {
+  const uplId = String(value ?? '').trim()
+  if (!uplId) throw new HttpError(400, 'uplId is required')
+  if (uplId.length > 200 || /[/?#]/.test(uplId)) {
+    throw new HttpError(400, 'uplId is invalid')
+  }
+  return uplId
+}
+
+const normalizeDelhiveryB2CNdrVerbose = (value: unknown) => {
+  if (value === undefined || value === null || value === '') return true
+  const normalized = String(value).trim().toLowerCase()
+  if (normalized === 'true') return true
+  if (normalized === 'false') return false
+  throw new HttpError(400, 'verbose must be true or false')
+}
+
+const normalizeDelhiveryB2CTrackingWaybills = (value: unknown) => {
+  const rawWaybill = String(value ?? '').trim()
+  if (!rawWaybill) throw new HttpError(400, 'waybill is required')
+
+  const waybills = rawWaybill
+    .split(',')
+    .map((waybill) => waybill.trim())
+    .filter(Boolean)
+
+  if (waybills.length === 0) throw new HttpError(400, 'waybill is required')
+  if (waybills.length > 50) {
+    throw new HttpError(400, 'waybill supports up to 50 comma-separated values')
+  }
+
+  return waybills.join(',')
+}
+
+const normalizeOptionalDelhiveryText = (value: unknown) => {
+  if (value === undefined || value === null) return undefined
+  return String(value).trim()
+}
+
+const normalizeDelhiveryB2CShippingMode = (value: unknown) => {
+  const mode = String(value ?? '')
+    .trim()
+    .toUpperCase()
+  if (!['E', 'S'].includes(mode)) {
+    throw new HttpError(400, "md must be one of 'E' or 'S'")
+  }
+  return mode as 'E' | 'S'
+}
+
+const normalizeDelhiveryB2CShipmentStatus = (value: unknown) => {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  const map: Record<string, 'Delivered' | 'RTO' | 'DTO'> = {
+    delivered: 'Delivered',
+    rto: 'RTO',
+    dto: 'DTO',
+  }
+  const status = map[normalized]
+  if (!status) {
+    throw new HttpError(400, "ss must be one of 'Delivered', 'RTO', or 'DTO'")
+  }
+  return status
+}
+
+const normalizeDelhiveryB2CShippingCostPaymentType = (value: unknown) => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '')
+  const map: Record<string, 'Pre-paid' | 'COD'> = {
+    prepaid: 'Pre-paid',
+    prepaidmode: 'Pre-paid',
+    cod: 'COD',
+  }
+  const paymentType = map[normalized]
+  if (!paymentType) {
+    throw new HttpError(400, "pt must be 'Pre-paid' or 'COD'")
+  }
+  return paymentType
+}
+
+const normalizeRequiredPositiveInteger = (value: unknown, field: string) => {
+  const numericValue = Number(value)
+  if (!Number.isInteger(numericValue) || numericValue <= 0) {
+    throw new HttpError(400, `${field} must be a positive integer`)
+  }
+  return numericValue
+}
+
+const normalizeOptionalPositiveInteger = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  return normalizeRequiredPositiveInteger(value, field)
+}
+
+const normalizeDelhiveryB2CShippingCostParams = (params: {
+  md: unknown
+  cgm: unknown
+  o_pin: unknown
+  d_pin: unknown
+  ss: unknown
+  pt: unknown
+  l?: unknown
+  b?: unknown
+  h?: unknown
+  ipkg_type?: unknown
+}) => {
+  const optionalPackageType = normalizeOptionalDelhiveryText(params.ipkg_type)
+  const length = normalizeOptionalPositiveInteger(params.l, 'l')
+  const breadth = normalizeOptionalPositiveInteger(params.b, 'b')
+  const height = normalizeOptionalPositiveInteger(params.h, 'h')
+
+  return {
+    md: normalizeDelhiveryB2CShippingMode(params.md),
+    cgm: normalizeRequiredPositiveInteger(params.cgm, 'cgm'),
+    o_pin: normalizeDelhiveryPincode(params.o_pin, 'o_pin'),
+    d_pin: normalizeDelhiveryPincode(params.d_pin, 'd_pin'),
+    ss: normalizeDelhiveryB2CShipmentStatus(params.ss),
+    pt: normalizeDelhiveryB2CShippingCostPaymentType(params.pt),
+    ...(length !== undefined ? { l: length } : {}),
+    ...(breadth !== undefined ? { b: breadth } : {}),
+    ...(height !== undefined ? { h: height } : {}),
+    ...(optionalPackageType ? { ipkg_type: optionalPackageType } : {}),
+  }
+}
+
+const normalizeOptionalDelhiveryBooleanText = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const normalized = String(value).trim().toLowerCase()
+  if (normalized === 'true') return 'true'
+  if (normalized === 'false') return 'false'
+  throw new HttpError(400, `${field} must be true or false`)
+}
+
+const normalizeOptionalDelhiveryB2CLabelPdfSize = (value: unknown) => {
+  const pdfSize = String(value ?? '')
+    .trim()
+    .toUpperCase()
+  if (!pdfSize) return undefined
+  if (!['A4', '4R'].includes(pdfSize)) {
+    throw new HttpError(400, "pdf_size must be 'A4' or '4R'")
+  }
+  return pdfSize as 'A4' | '4R'
+}
+
+const normalizeDelhiveryB2CShippingLabelParams = (params: {
+  waybill: unknown
+  pdf?: unknown
+  pdf_size?: unknown
+}) => {
+  const waybill = requiredManifestText(params.waybill, 'waybill')
+  const pdf = normalizeOptionalDelhiveryBooleanText(params.pdf, 'pdf')
+  const pdfSize = normalizeOptionalDelhiveryB2CLabelPdfSize(params.pdf_size)
+
+  return {
+    wbns: waybill,
+    ...(pdf !== undefined ? { pdf } : {}),
+    ...(pdfSize ? { pdf_size: pdfSize } : {}),
+  }
+}
+
+const normalizeDelhiveryPickupDate = (value: unknown) => {
+  const pickupDate = String(value ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate)) {
+    throw new HttpError(400, 'pickup_date must be in YYYY-MM-DD format')
+  }
+  return pickupDate
+}
+
+const normalizeDelhiveryPickupTime = (value: unknown) => {
+  const pickupTime = String(value ?? '').trim()
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(pickupTime)) {
+    throw new HttpError(400, 'pickup_time must be in HH:mm:ss format')
+  }
+  return pickupTime
+}
+
+const normalizeDelhiveryB2CPickupRequestPayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Pickup request payload is required')
+  }
+
+  return {
+    pickup_time: normalizeDelhiveryPickupTime(input.pickup_time),
+    pickup_date: normalizeDelhiveryPickupDate(input.pickup_date),
+    pickup_location: requiredManifestText(input.pickup_location, 'pickup_location'),
+    expected_package_count: normalizeRequiredPositiveInteger(
+      input.expected_package_count,
+      'expected_package_count',
+    ),
+  }
+}
+
+const normalizeOptionalDelhiveryPincode = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  return normalizeDelhiveryPincode(value, field)
+}
+
+const normalizeDelhiveryB2CClientWarehousePayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Client warehouse payload is required')
+  }
+
+  const normalized: Record<string, unknown> = {
+    name: requiredManifestText(input.name, 'name'),
+    phone: requiredManifestText(input.phone, 'phone'),
+    pin: normalizeDelhiveryPincode(input.pin, 'pin'),
+    return_address: requiredManifestText(input.return_address, 'return_address'),
+  }
+
+  const copyTextField = (field: string) => {
+    if (input[field] === undefined || input[field] === null) return
+    const value = String(input[field]).trim()
+    if (value) normalized[field] = value
+  }
+
+  for (const field of [
+    'registered_name',
+    'email',
+    'address',
+    'city',
+    'country',
+    'return_city',
+    'return_state',
+    'return_country',
+  ]) {
+    copyTextField(field)
+  }
+
+  const returnPin = normalizeOptionalDelhiveryPincode(input.return_pin, 'return_pin')
+  if (returnPin) normalized.return_pin = returnPin
+
+  return normalized
+}
+
+const normalizeDelhiveryB2CClientWarehouseUpdatePayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Client warehouse update payload is required')
+  }
+
+  const normalized: Record<string, unknown> = {
+    name: requiredManifestText(input.name, 'name'),
+  }
+
+  if (input.pin !== undefined && input.pin !== null && String(input.pin).trim()) {
+    normalized.pin = normalizeDelhiveryPincode(input.pin, 'pin')
+  }
+
+  for (const field of ['address', 'phone']) {
+    if (input[field] === undefined || input[field] === null) continue
+    const value = String(input[field]).trim()
+    if (value) normalized[field] = value
+  }
+
+  if (Object.keys(normalized).length === 1) {
+    throw new HttpError(400, 'At least one warehouse update field is required')
+  }
+
+  return normalized
+}
+
+const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
+    pickup: 'Pickup',
+    cod: 'COD',
+    prepaid: 'Prepaid',
+    repl: 'REPL',
+  }
+  const paymentMode = map[normalized]
+  if (!paymentMode) {
+    throw new HttpError(400, "payment_mode must be one of 'Pickup', 'COD', 'Prepaid', or 'REPL'")
+  }
+  return paymentMode
+}
+
+const normalizeDelhiveryB2CEditPaymentMode = (value: unknown) => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '')
+  const map: Record<string, 'COD' | 'Pre-paid'> = {
+    cod: 'COD',
+    prepaid: 'Pre-paid',
+    prepaidmode: 'Pre-paid',
+  }
+  const paymentMode = map[normalized]
+  if (!paymentMode) {
+    throw new HttpError(400, "pt must be 'COD' or 'Pre-paid'")
+  }
+  return paymentMode
+}
+
+const normalizeOptionalPositiveNumber = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    throw new HttpError(400, `${field} must be a positive number`)
+  }
+  return numericValue
+}
+
+const normalizeOptionalNonNegativeNumber = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    throw new HttpError(400, `${field} must be a non-negative number`)
+  }
+  return numericValue
+}
+
+const normalizeDelhiveryB2CEditPayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Shipment edit payload is required')
+  }
+
+  const normalized: Record<string, unknown> = {
+    waybill: requiredManifestText(input.waybill, 'waybill'),
+  }
+
+  const copyTextField = (sourceKey: string, targetKey = sourceKey) => {
+    if (input[sourceKey] === undefined || input[sourceKey] === null) return
+    const value = String(input[sourceKey]).trim()
+    if (value) normalized[targetKey] = value
+  }
+
+  copyTextField('name')
+  copyTextField('add')
+  copyTextField('products_desc')
+
+  if (input.phone !== undefined && input.phone !== null) {
+    const phones = Array.isArray(input.phone) ? input.phone : [input.phone]
+    const normalizedPhones = phones.map((phone: unknown) => String(phone).trim()).filter(Boolean)
+    if (normalizedPhones.length) normalized.phone = normalizedPhones
+  }
+
+  if (input.pt !== undefined && input.pt !== null && String(input.pt).trim()) {
+    normalized.pt = normalizeDelhiveryB2CEditPaymentMode(input.pt)
+  }
+
+  for (const field of ['gm', 'shipment_height', 'shipment_width', 'shipment_length']) {
+    const value = normalizeOptionalPositiveNumber(input[field], field)
+    if (value !== undefined) normalized[field] = value
+  }
+
+  const cod = normalizeOptionalNonNegativeNumber(input.cod, 'cod')
+  if (cod !== undefined) normalized.cod = cod
+  if (normalized.pt === 'COD' && normalized.cod === undefined) {
+    throw new HttpError(400, 'cod is required when pt is COD')
+  }
+
+  if (Object.keys(normalized).length === 1) {
+    throw new HttpError(400, 'At least one editable shipment field is required')
+  }
+
+  return normalized
+}
+
+const normalizeDelhiveryB2CEwaybillUpdatePayload = (waybill: unknown, payload: unknown) => {
+  const normalizedWaybill = requiredManifestText(waybill, 'waybill')
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Ewaybill update payload is required')
+  }
+
+  const sourceRows = Array.isArray(input.data) ? input.data : [input]
+  if (sourceRows.length === 0) {
+    throw new HttpError(400, 'data must contain at least one ewaybill entry')
+  }
+
+  const data = sourceRows.map((entry: any, index: number) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new HttpError(400, `data[${index}] must be an object`)
+    }
+    return {
+      dcn: requiredManifestText(entry.dcn, `data[${index}].dcn`),
+      ewbn: requiredManifestText(entry.ewbn, `data[${index}].ewbn`),
+    }
+  })
+
+  return { waybill: normalizedWaybill, payload: { data } }
+}
+
+const requiredManifestText = (value: unknown, field: string) => {
+  const text = String(value ?? '').trim()
+  if (!text) throw new HttpError(400, `${field} is required`)
+  return text
+}
+
+const normalizeDelhiveryPositiveIntegerText = (value: unknown, field: string) => {
+  const text = requiredManifestText(value, field)
+  const numericValue = Number(text)
+  if (!Number.isInteger(numericValue) || numericValue < 1) {
+    throw new HttpError(400, `${field} must be a positive integer`)
+  }
+  return text
+}
+
+const normalizeDelhiveryNonNegativeIntegerText = (value: unknown, field: string) => {
+  const text = requiredManifestText(value, field)
+  const numericValue = Number(text)
+  if (!Number.isInteger(numericValue) || numericValue < 0) {
+    throw new HttpError(400, `${field} must be a non-negative integer`)
+  }
+  return text
+}
+
+const normalizeDelhiveryB2CShipmentManifest = (
+  payload: unknown,
+  options: { requireMps?: boolean } = {},
+) => {
+  const manifest = payload as any
+  if (!manifest || typeof manifest !== 'object') {
+    throw new HttpError(400, 'Shipment manifest payload is required')
+  }
+  if (!Array.isArray(manifest.shipments) || manifest.shipments.length === 0) {
+    throw new HttpError(400, 'shipments must be a non-empty array')
+  }
+  if (options.requireMps && manifest.shipments.length < 2) {
+    throw new HttpError(400, 'MPS shipments must include at least two boxes in shipments')
+  }
+
+  const pickupName = requiredManifestText(manifest.pickup_location?.name, 'pickup_location.name')
+  const shipments = manifest.shipments.map((shipment: any, index: number) => {
+    if (!shipment || typeof shipment !== 'object') {
+      throw new HttpError(400, `shipments[${index}] must be an object`)
+    }
+
+    const normalizedShipment = {
+      ...shipment,
+      name: requiredManifestText(shipment.name, `shipments[${index}].name`),
+      order: requiredManifestText(shipment.order, `shipments[${index}].order`),
+      phone: requiredManifestText(shipment.phone, `shipments[${index}].phone`),
+      add: requiredManifestText(shipment.add, `shipments[${index}].add`),
+      pin: normalizeDelhiveryPincode(shipment.pin, `shipments[${index}].pin`),
+      payment_mode: normalizeDelhiveryB2CPaymentMode(shipment.payment_mode),
+    }
+
+    if (!options.requireMps) return normalizedShipment
+
+    return {
+      ...normalizedShipment,
+      shipment_type: 'MPS',
+      mps_amount: normalizeDelhiveryNonNegativeIntegerText(
+        shipment.mps_amount,
+        `shipments[${index}].mps_amount`,
+      ),
+      mps_children: normalizeDelhiveryPositiveIntegerText(
+        shipment.mps_children,
+        `shipments[${index}].mps_children`,
+      ),
+      master_id: requiredManifestText(shipment.master_id, `shipments[${index}].master_id`),
+      waybill: requiredManifestText(shipment.waybill, `shipments[${index}].waybill`),
+    }
+  })
+
+  if (options.requireMps) {
+    const expectedChildren = shipments.length
+    const masterId = String(shipments[0].master_id)
+    shipments.forEach((shipment: any, index: number) => {
+      if (Number(shipment.mps_children) !== expectedChildren) {
+        throw new HttpError(
+          400,
+          `shipments[${index}].mps_children must equal total shipments count ${expectedChildren}`,
+        )
+      }
+      if (String(shipment.master_id) !== masterId) {
+        throw new HttpError(400, `shipments[${index}].master_id must match the master waybill`)
+      }
+    })
+  }
+
+  return {
+    ...manifest,
+    shipments,
+    pickup_location: {
+      ...manifest.pickup_location,
+      name: pickupName,
+    },
+  }
+}
+
+const normalizeDelimitedStringList = (
+  value: unknown,
+  field: string,
+  options: { allowEmptyString?: boolean } = {},
+) => {
+  const values = Array.isArray(value)
+    ? value
+    : String(value ?? '')
+        .split(',')
+        .map((entry) => entry.trim())
+
+  const normalized = values
+    .map((entry: unknown) => String(entry).trim())
+    .filter((entry) => options.allowEmptyString || entry.length > 0)
+  if (normalized.length === 0) {
+    throw new HttpError(400, `${field} must be a non-empty array`)
+  }
+  return normalized
+}
+
+const normalizeRequiredBoolean = (value: unknown, field: string) => {
+  if (typeof value === 'boolean') return value
+  const normalized = String(value ?? '').trim().toLowerCase()
+  if (normalized === 'true') return true
+  if (normalized === 'false') return false
+  throw new HttpError(400, `${field} must be a boolean`)
+}
+
+const normalizeDelhiveryRvpQcQuestion = (question: any, itemIndex: number, questionIndex: number) => {
+  if (!question || typeof question !== 'object' || Array.isArray(question)) {
+    throw new HttpError(400, `custom_qc[${itemIndex}].questions[${questionIndex}] must be an object`)
+  }
+
+  const type = String(question.type ?? '')
+    .trim()
+    .toLowerCase()
+  if (!['varchar', 'multi'].includes(type)) {
+    throw new HttpError(
+      400,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].type must be 'varchar' or 'multi'`,
+    )
+  }
+
+  const normalizedQuestion: Record<string, unknown> = {
+    questions_id: requiredManifestText(
+      question.questions_id,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].questions_id`,
+    ),
+    options: normalizeDelimitedStringList(
+      question.options,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].options`,
+      { allowEmptyString: true },
+    ),
+    value: normalizeDelimitedStringList(
+      question.value,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].value`,
+    ),
+    required: normalizeRequiredBoolean(
+      question.required,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].required`,
+    ),
+    type,
+  }
+
+  if (question.ques_images !== undefined && question.ques_images !== null) {
+    normalizedQuestion.ques_images = normalizeDelimitedStringList(
+      question.ques_images,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].ques_images`,
+    )
+  }
+
+  return normalizedQuestion
+}
+
+const normalizeDelhiveryRvpQcItem = (item: any, index: number) => {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    throw new HttpError(400, `custom_qc[${index}] must be an object`)
+  }
+  if (!Array.isArray(item.questions) || item.questions.length === 0) {
+    throw new HttpError(400, `custom_qc[${index}].questions must be a non-empty array`)
+  }
+  if (item.questions.length > 6) {
+    throw new HttpError(400, `custom_qc[${index}].questions supports up to 6 questions`)
+  }
+
+  const normalizedItem: Record<string, unknown> = {
+    ...item,
+    description: requiredManifestText(item.description, `custom_qc[${index}].description`),
+    images: normalizeDelimitedStringList(item.images, `custom_qc[${index}].images`),
+    quantity:
+      item.quantity === undefined || item.quantity === null || item.quantity === ''
+        ? 1
+        : normalizeRequiredPositiveInteger(item.quantity, `custom_qc[${index}].quantity`),
+    questions: item.questions.map((question: any, questionIndex: number) =>
+      normalizeDelhiveryRvpQcQuestion(question, index, questionIndex),
+    ),
+  }
+
+  for (const field of ['item', 'return_reason', 'brand', 'product_category']) {
+    if (item[field] === undefined || item[field] === null) continue
+    const value = String(item[field]).trim()
+    if (value) normalizedItem[field] = value
+  }
+
+  return normalizedItem
+}
+
+const normalizeDelhiveryB2CRvpQcShipmentManifest = (payload: unknown) => {
+  const manifest = normalizeDelhiveryB2CShipmentManifest(payload)
+  const shipments = (manifest.shipments as any[]).map((shipment: any, shipmentIndex: number) => {
+    if (!Array.isArray(shipment.custom_qc) || shipment.custom_qc.length === 0) {
+      throw new HttpError(400, `shipments[${shipmentIndex}].custom_qc must be a non-empty array`)
+    }
+    if (shipment.custom_qc.length > 2) {
+      throw new HttpError(400, `shipments[${shipmentIndex}].custom_qc supports up to 2 items`)
+    }
+
+    return {
+      ...shipment,
+      payment_mode: 'Pickup',
+      qc_type: 'param',
+      custom_qc: shipment.custom_qc.map((item: any, index: number) =>
+        normalizeDelhiveryRvpQcItem(item, index),
+      ),
+    }
+  })
+
+  return {
+    ...manifest,
+    shipments,
+  }
+}
+
+const normalizeDelhiveryB2CDocumentType = (value: unknown) => {
+  const docType = String(value ?? '')
+    .trim()
+    .toUpperCase()
+  if (!['SIGNATURE_URL', 'RVP_QC_IMAGE', 'EPOD', 'SELLER_RETURN_IMAGE'].includes(docType)) {
+    throw new HttpError(
+      400,
+      "doc_type must be one of 'SIGNATURE_URL', 'RVP_QC_IMAGE', 'EPOD', or 'SELLER_RETURN_IMAGE'",
+    )
+  }
+  return docType as 'SIGNATURE_URL' | 'RVP_QC_IMAGE' | 'EPOD' | 'SELLER_RETURN_IMAGE'
+}
+
+const normalizeDelhiveryB2CDocumentWaybill = (value: unknown) => {
+  const waybill = String(value ?? '').trim()
+  if (!/^\d+$/.test(waybill)) {
+    throw new HttpError(400, 'waybill must be a numeric Delhivery waybill')
+  }
+  return waybill
+}
+
+export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
+  const payload = response as any
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.delivery_codes)
+      ? payload.delivery_codes
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : []
+
+  return rows.some((row: any) => {
+    const details = row?.postal_code || row
+    return String(details?.remarks ?? details?.remark ?? '').trim().toLowerCase() !== 'embargo'
+  })
+}
+
+export const isDelhiveryB2CHeavyPincodeServiceable = (response: unknown) => {
+  const payload = response as any
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.serviceability)
+        ? payload.serviceability
+        : Array.isArray(payload?.pincode_serviceability_data)
+          ? payload.pincode_serviceability_data
+          : Array.isArray(payload?.serviceability_data)
+            ? payload.serviceability_data
+            : []
+
+  const stringify = (value: unknown) => {
+    try {
+      return JSON.stringify(value || {}).toLowerCase()
+    } catch {
+      return String(value || '').toLowerCase()
+    }
+  }
+
+  const candidates = rows.length ? rows : payload ? [payload] : []
+
+  return candidates.some((row: any) => {
+    const details = row?.postal_code || row?.pincode || row
+    const responseText = stringify(details)
+    if (
+      responseText.includes('nsz') ||
+      responseText.includes('non serviceable') ||
+      responseText.includes('non-serviceable')
+    ) {
+      return false
+    }
+
+    const serviceable =
+      details?.serviceable ?? details?.is_serviceable ?? details?.isServiceable ?? details?.active
+    if (typeof serviceable === 'boolean') return serviceable
+
+    const status = String(
+      details?.status ?? details?.serviceability_status ?? details?.serviceability ?? '',
+    )
+      .trim()
+      .toLowerCase()
+    if (['nsz', 'non_serviceable', 'non-serviceable', 'not_serviceable'].includes(status)) {
+      return false
+    }
+    if (['serviceable', 'sz', 'active', 'true'].includes(status)) return true
+
+    const paymentType = details?.payment_type ?? details?.payment_types ?? details?.paymentMode
+    if (Array.isArray(paymentType)) return paymentType.length > 0
+    if (paymentType && typeof paymentType === 'object') {
+      return Object.values(paymentType).some((value) => {
+        if (typeof value === 'boolean') return value
+        const normalized = String(value || '').trim().toLowerCase()
+        return Boolean(normalized) && !['false', 'no', 'nsz', 'non-serviceable'].includes(normalized)
+      })
+    }
+    if (paymentType !== undefined && paymentType !== null) {
+      const normalized = String(paymentType).trim().toLowerCase()
+      return Boolean(normalized) && !['false', 'no', 'nsz', 'non-serviceable'].includes(normalized)
+    }
+
+    return Object.keys(details || {}).length > 0
+  })
+}
+
 const delhiveryCancellationResponseText = (value: unknown) => {
   try {
     return JSON.stringify(value || {}).toLowerCase()
@@ -214,22 +1020,16 @@ export class DelhiveryService {
   // 🔹 1. Check Serviceability
   async checkServiceability(pincode: string) {
     try {
+      const normalizedPincode = normalizeDelhiveryPincode(pincode)
       await this.ensureCredentials()
-      const url = `${this.apiBase}/c/api/pin-codes/json/?filter_codes=${pincode}`
-      const res = await this.getWithTimeout(url, { headers: this.headers })
-
-      // Log the full response structure
-      console.log('📦 Delhivery Serviceability API Response:', {
-        url,
-        status: res.status,
-        data: JSON.stringify(res.data, null, 2),
-        dataType: typeof res.data,
-        isArray: Array.isArray(res.data),
-        keys: res.data ? Object.keys(res.data) : [],
+      const url = `${this.apiBase}/c/api/pin-codes/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: this.headers,
+        params: { filter_codes: normalizedPincode },
       })
-
       return res.data
     } catch (err: any) {
+      if (err instanceof HttpError) throw err
       console.error('❌ Delhivery serviceability error:', {
         pincode,
         status: err.response?.status,
@@ -237,6 +1037,34 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to fetch Delhivery serviceability')
+    }
+  }
+
+  async checkHeavyProductTypeServiceability(pincode: string) {
+    try {
+      const normalizedPincode = normalizeDelhiveryPincode(pincode)
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/dc/fetch/serviceability/pincode`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          Accept: 'application/json',
+        },
+        params: {
+          product_type: 'Heavy',
+          pincode: normalizedPincode,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery Heavy serviceability error:', {
+        pincode,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery Heavy serviceability')
     }
   }
 
@@ -259,6 +1087,49 @@ export class DelhiveryService {
     }
   }
 
+  async getB2CExpectedTAT(params: {
+    origin_pin: unknown
+    destination_pin: unknown
+    mot: unknown
+    pdt?: unknown
+    expected_pickup_date?: unknown
+  }) {
+    try {
+      const originPin = normalizeDelhiveryPincode(params.origin_pin, 'origin_pin')
+      const destinationPin = normalizeDelhiveryPincode(params.destination_pin, 'destination_pin')
+      const mot = normalizeDelhiveryMot(params.mot)
+      const pdt = normalizeDelhiveryProductType(params.pdt)
+      const expectedPickupDate = normalizeDelhiveryExpectedPickupDate(params.expected_pickup_date)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/dc/expected_tat`
+      const res = await this.getWithTimeout(url, {
+        headers: this.headers,
+        params: {
+          origin_pin: originPin,
+          destination_pin: destinationPin,
+          mot,
+          ...(pdt ? { pdt } : {}),
+          ...(expectedPickupDate ? { expected_pickup_date: expectedPickupDate } : {}),
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C Expected TAT error:', {
+        origin_pin: params.origin_pin,
+        destination_pin: params.destination_pin,
+        mot: params.mot,
+        pdt: params.pdt,
+        expected_pickup_date: params.expected_pickup_date,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C Expected TAT')
+    }
+  }
+
   // 🔹 3. Fetch Waybills
   async fetchWaybills(count: number = 10) {
     try {
@@ -277,6 +1148,408 @@ export class DelhiveryService {
     } catch (err: any) {
       console.error('Delhivery waybill fetch error:', err.response?.data || err.message)
       throw new Error('Failed to fetch Delhivery waybill')
+    }
+  }
+
+  async fetchB2CBulkWaybills(count: unknown) {
+    try {
+      const normalizedCount = normalizeDelhiveryWaybillCount(count)
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/waybill/api/bulk/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+        params: {
+          token: this.token,
+          count: normalizedCount,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C bulk waybill error:', {
+        count,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C bulk waybills')
+    }
+  }
+
+  async fetchB2CSingleWaybill() {
+    try {
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/waybill/api/fetch/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+        params: {
+          token: this.token,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      console.error('❌ Delhivery B2C single waybill error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C single waybill')
+    }
+  }
+
+  async trackB2CShipment(params: { waybill: unknown; ref_ids?: unknown }) {
+    try {
+      const waybill = normalizeDelhiveryB2CTrackingWaybills(params.waybill)
+      const refIds = normalizeOptionalDelhiveryText(params.ref_ids)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/v1/packages/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        params: {
+          waybill,
+          ref_ids: refIds ?? '',
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C shipment tracking error:', {
+        waybill: params.waybill,
+        ref_ids: params.ref_ids,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to fetch Delhivery B2C shipment tracking')
+    }
+  }
+
+  async calculateB2CShippingCost(params: {
+    md: unknown
+    cgm: unknown
+    o_pin: unknown
+    d_pin: unknown
+    ss: unknown
+    pt: unknown
+    l?: unknown
+    b?: unknown
+    h?: unknown
+    ipkg_type?: unknown
+  }) {
+    try {
+      const normalizedParams = normalizeDelhiveryB2CShippingCostParams(params)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/kinko/v1/invoice/charges/.json`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        params: normalizedParams,
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C shipping cost error:', {
+        params,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to calculate Delhivery B2C shipping cost')
+    }
+  }
+
+  async generateB2CShippingLabel(params: { waybill: unknown; pdf?: unknown; pdf_size?: unknown }) {
+    try {
+      const normalizedParams = normalizeDelhiveryB2CShippingLabelParams(params)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/p/packing_slip`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        params: normalizedParams,
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C shipping label error:', {
+        params,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to generate Delhivery B2C shipping label')
+    }
+  }
+
+  async downloadB2CDocument(params: { doc_type: unknown; waybill: unknown }) {
+    try {
+      const docType = normalizeDelhiveryB2CDocumentType(params.doc_type)
+      const waybill = normalizeDelhiveryB2CDocumentWaybill(params.waybill)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/rest/fetch/pkg/document/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+        },
+        params: {
+          doc_type: docType,
+          waybill,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C document download error:', {
+        params,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to download Delhivery B2C document')
+    }
+  }
+
+  async createB2CPickupRequest(payload: unknown) {
+    try {
+      const pickupRequest = normalizeDelhiveryB2CPickupRequestPayload(payload)
+
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(`${this.apiBase}/fm/request/new/`, pickupRequest, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C pickup request creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C pickup request')
+    }
+  }
+
+  async createB2CClientWarehouse(payload: unknown) {
+    try {
+      const warehouse = normalizeDelhiveryB2CClientWarehousePayload(payload)
+
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(
+        `${this.apiBase}/api/backend/clientwarehouse/create/`,
+        warehouse,
+        {
+          headers: {
+            Authorization: `Token ${this.token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C client warehouse creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C client warehouse')
+    }
+  }
+
+  async updateB2CClientWarehouse(payload: unknown) {
+    try {
+      const warehouse = normalizeDelhiveryB2CClientWarehouseUpdatePayload(payload)
+
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(
+        `${this.apiBase}/api/backend/clientwarehouse/edit/`,
+        warehouse,
+        {
+          headers: {
+            Authorization: `Token ${this.token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C client warehouse update error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to update Delhivery B2C client warehouse')
+    }
+  }
+
+  async createB2CShipmentManifest(payload: unknown) {
+    try {
+      const manifest = normalizeDelhiveryB2CShipmentManifest(payload)
+      const res = await this.postFormEncoded('/api/cmu/create.json', manifest)
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C shipment creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C shipment')
+    }
+  }
+
+  async createB2CMpsShipmentManifest(payload: unknown) {
+    try {
+      const manifest = normalizeDelhiveryB2CShipmentManifest(payload, { requireMps: true })
+      const res = await this.postFormEncoded('/api/cmu/create.json', manifest)
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C MPS shipment creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C MPS shipment')
+    }
+  }
+
+  async createB2CRvpQcShipmentManifest(payload: unknown) {
+    try {
+      const manifest = normalizeDelhiveryB2CRvpQcShipmentManifest(payload)
+      const res = await this.postFormEncoded('/api/cmu/create.json', manifest)
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C RVP QC shipment creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C RVP QC shipment')
+    }
+  }
+
+  async editB2CShipment(payload: unknown) {
+    try {
+      const editPayload = normalizeDelhiveryB2CEditPayload(payload)
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(`${this.apiBase}/api/p/edit`, editPayload, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C shipment edit error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to edit Delhivery B2C shipment')
+    }
+  }
+
+  async updateB2CEwaybill(waybill: unknown, payload: unknown) {
+    try {
+      const normalized = normalizeDelhiveryB2CEwaybillUpdatePayload(waybill, payload)
+      await this.ensureCredentials()
+      const res = await axios.put(
+        `${this.apiBase}/api/rest/ewaybill/${encodeURIComponent(normalized.waybill)}/`,
+        normalized.payload,
+        {
+          headers: {
+            Authorization: `Token ${this.token}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: this.requestTimeoutMs,
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C ewaybill update error:', {
+        waybill,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to update Delhivery B2C ewaybill')
+    }
+  }
+
+  async submitB2CNdrActions(payload: unknown) {
+    try {
+      const normalizedPayload = normalizeDelhiveryB2CNdrPayload(payload)
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(
+        `${this.apiBase}/api/p/update`,
+        normalizedPayload,
+        { headers: this.headers },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('Delhivery B2C NDR action error:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      })
+      throw new Error(
+        extractProviderErrorMessage(err.response?.data) ||
+          'Failed to submit Delhivery B2C NDR action',
+      )
+    }
+  }
+
+  async getB2CNdrStatus(uplId: unknown, verbose: unknown = true) {
+    try {
+      const normalizedUplId = normalizeDelhiveryB2CNdrUplId(uplId)
+      const normalizedVerbose = normalizeDelhiveryB2CNdrVerbose(verbose)
+      await this.ensureCredentials()
+      const res = await this.getWithTimeout(
+        `${this.apiBase}/api/cmu/get_bulk_upl/${encodeURIComponent(normalizedUplId)}`,
+        {
+          headers: this.headers,
+          params: { verbose: normalizedVerbose ? 'true' : 'false' },
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('Delhivery B2C NDR status error:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      })
+      throw new Error(
+        extractProviderErrorMessage(err.response?.data) ||
+          'Failed to fetch Delhivery B2C NDR status',
+      )
     }
   }
 
