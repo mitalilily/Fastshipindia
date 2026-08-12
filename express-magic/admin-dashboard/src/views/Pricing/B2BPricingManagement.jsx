@@ -1,164 +1,87 @@
-import { Box, Flex, HStack, IconButton, Switch, Text } from "@chakra-ui/react";
-import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
-import {
-  AdminCard,
-  AdminSelect,
-  AdminStack,
-  DataTable,
-  PrimaryButton,
-  SearchInput,
-  adminUi,
-} from "components/AdminUI/AdminPage";
-import { useState } from "react";
+import { Box, HStack, Select, Stack, Text } from '@chakra-ui/react'
+import { useQuery } from '@tanstack/react-query'
+import { AdminCard, AdminStack, adminUi } from 'components/AdminUI/AdminPage'
+import B2BAdditionalCharges from 'components/B2B/B2BAdditionalCharges'
+import B2BPincodeManagement from 'components/B2B/B2BPincodeManagement'
+import B2BQuoteCalculator from 'components/B2B/B2BQuoteCalculator'
+import B2BRateMatrix from 'components/B2B/B2BRateMatrix'
+import { useEffect, useState } from 'react'
+import { PlansService } from 'services/plan.service'
+import ZonesManagement from 'views/Zones/ZonesManagement'
 
-const tabs = [
-  "Zones",
-  "Pincodes",
-  "Rate Matrix",
-  "Additional Charges",
-  "Quote Calculator",
-];
-
-const zoneRows = [
-  {
-    code: "A",
-    name: "Zone A - Metro / Direct",
-    description: "Direct delivery, metros and major hubs",
-  },
-  {
-    code: "B",
-    name: "Zone B - EDL1 / Tier 1",
-    description: "Extra delivery level 1 - Tier 1 cities",
-  },
-  {
-    code: "C",
-    name: "Zone C - EDL2 / Tier 2",
-    description: "Extra delivery level 2 - Tier 2 cities",
-  },
-  { code: "CRG_AMD", name: "Ahmedabad", description: "Ahmedabad / Gujarat" },
-  { code: "CRG_BLR", name: "Bangalore", description: "Bangalore / Karnataka" },
-  { code: "CRG_BOM", name: "Mumbai", description: "Mumbai" },
-  { code: "CRG_CCU", name: "Kolkata", description: "Kolkata / West Bengal" },
-  { code: "CRG_CHD", name: "Chandigarh", description: "Chandigarh / Punjab" },
-];
+const tabs = ['Zones', 'Pincodes', 'Rate Matrix', 'Additional Charges', 'Quote Calculator']
 
 const B2BPricingManagement = () => {
-  const [activeTab, setActiveTab] = useState("Zones");
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [activeTab, setActiveTab] = useState('Zones')
+  const [selectedPlanId, setSelectedPlanId] = useState('')
+  const { data: plans = [] } = useQuery({ queryKey: ['plans'], queryFn: PlansService.getPlans })
 
-  const columns = [
-    { key: "code", label: "Code", w: "190px" },
-    { key: "name", label: "Name", w: "220px" },
-    { key: "description", label: "Description" },
-    {
-      key: "active",
-      label: "Active",
-      align: "center",
-      render: () => <Switch colorScheme="purple" isChecked />,
-    },
-  ];
+  useEffect(() => {
+    if (!plans.length || plans.some((plan) => String(plan.id) === String(selectedPlanId))) return
+    const basicPlan = plans.find((plan) => String(plan.name || '').trim().toLowerCase() === 'basic')
+    setSelectedPlanId((basicPlan || plans[0]).id)
+  }, [plans, selectedPlanId])
+
+  const renderTabContent = () => {
+    if (activeTab === 'Zones') return <ZonesManagement defaultBusinessType="B2B" />
+    if (activeTab === 'Pincodes') return <B2BPincodeManagement />
+    if (activeTab === 'Rate Matrix') return <B2BRateMatrix planId={selectedPlanId} />
+    if (activeTab === 'Additional Charges') {
+      return <B2BAdditionalCharges planId={selectedPlanId} />
+    }
+    return <B2BQuoteCalculator planId={selectedPlanId} />
+  }
+
+  const planRequired = ['Rate Matrix', 'Additional Charges', 'Quote Calculator'].includes(activeTab)
 
   return (
     <AdminStack spacing="20px">
-      <AdminCard p="25px">
-        <Text fontSize="26px" fontWeight="800" color={adminUi.text} mb="28px">
-          B2B Pricing Management
-        </Text>
-
-        <HStack
-          spacing="22px"
-          borderBottom="1px solid"
-          borderColor={adminUi.border}
-          mb="26px"
-          wrap="wrap"
-        >
-          {tabs.map((tab) => (
-            <Box
-              key={tab}
-              pb="11px"
-              borderBottom="3px solid"
-              borderColor={activeTab === tab ? adminUi.purple : "transparent"}
-              color={activeTab === tab ? adminUi.purple : "#333333"}
-              cursor="pointer"
-              onClick={() => setActiveTab(tab)}
-            >
-              <Text fontSize="19px" fontWeight="500">
-                {tab}
+      <AdminCard p={{ base: '18px', lg: '25px' }}>
+        <Stack spacing={5}>
+          <HStack justify="space-between" align="center" gap={4} wrap="wrap">
+            <Box>
+              <Text fontSize={{ base: '22px', md: '26px' }} fontWeight="800" color={adminUi.text}>
+                B2B Pricing Management
+              </Text>
+              <Text mt={1} fontSize="sm" color={adminUi.muted}>
+                Configure zones, pincode coverage, rates and shipment charges.
               </Text>
             </Box>
-          ))}
-        </HStack>
-
-        {activeTab === "Zones" ? (
-          <>
-            <Flex
-              justify="space-between"
-              align="center"
-              mb="20px"
-              gap="14px"
-              wrap="wrap"
-            >
-              <HStack spacing="14px" wrap="wrap">
-                <SearchInput
-                  value={search}
-                  onChange={setSearch}
-                  placeholder="Search code, name or descriptio..."
-                  maxW="360px"
-                />
-                <AdminSelect value={status} onChange={setStatus} maxW="160px">
-                  <option value="">Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </AdminSelect>
+            {planRequired && plans.length ? (
+              <HStack>
+                <Text fontSize="sm" fontWeight="700" color={adminUi.muted}>Plan</Text>
+                <Select value={selectedPlanId} onChange={(event) => setSelectedPlanId(event.target.value)} minW="180px" bg="white">
+                  {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
+                </Select>
               </HStack>
-              <PrimaryButton leftIcon={<IconPlus size={18} />}>
-                Add Zone
-              </PrimaryButton>
-            </Flex>
+            ) : null}
+          </HStack>
 
-            <DataTable
-              columns={columns}
-              rows={zoneRows}
-              rowKey="code"
-              minW="1040px"
-              actions={() => (
-                <HStack spacing="10px" justify="flex-end">
-                  <IconButton
-                    aria-label="Edit zone"
-                    icon={<IconEdit size={18} />}
-                    size="sm"
-                    variant="outline"
-                    borderColor="#D6DEE9"
-                    bg="#FFFFFF"
-                  />
-                  <IconButton
-                    aria-label="Delete zone"
-                    icon={<IconTrash size={18} />}
-                    size="sm"
-                    variant="outline"
-                    borderColor="#FFB5B5"
-                    color="#FF3D3D"
-                    bg="#FFFFFF"
-                  />
-                </HStack>
-              )}
-            />
-          </>
-        ) : (
-          <Flex
-            minH="420px"
-            align="center"
-            justify="center"
-            color={adminUi.muted}
-            fontSize="18px"
-          >
-            {activeTab} configuration will appear here.
-          </Flex>
-        )}
+          <HStack spacing={{ base: 4, md: 6 }} borderBottom="1px solid" borderColor={adminUi.border} overflowX="auto" align="flex-end">
+            {tabs.map((tab) => (
+              <Box
+                key={tab}
+                as="button"
+                type="button"
+                pb="11px"
+                flexShrink={0}
+                borderBottom="3px solid"
+                borderColor={activeTab === tab ? adminUi.purple : 'transparent'}
+                color={activeTab === tab ? adminUi.purple : adminUi.text}
+                onClick={() => setActiveTab(tab)}
+              >
+                <Text fontSize={{ base: '15px', md: '18px' }} fontWeight={activeTab === tab ? '700' : '500'}>
+                  {tab}
+                </Text>
+              </Box>
+            ))}
+          </HStack>
+
+          <Box minW={0}>{renderTabContent()}</Box>
+        </Stack>
       </AdminCard>
     </AdminStack>
-  );
-};
+  )
+}
 
-export default B2BPricingManagement;
+export default B2BPricingManagement
