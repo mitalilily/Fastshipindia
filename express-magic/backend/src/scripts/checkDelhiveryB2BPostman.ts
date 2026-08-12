@@ -52,7 +52,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
   if (exact) return exact
 
   const routeMatchers: Array<[string, RegExp, MockPayload]> = [
-    ['GET', /^\/api\/delhivery\/b2b\/serviceability\/\d{6}$/, success({ serviceable: true })],
+    [
+      'GET',
+      /^\/api\/delhivery\/b2b\/serviceability\/\d{6}$/,
+      success({
+        success: true,
+        data: { pincode_serviceability_data: [{ pincode: '400093', fm_serviceable: true }] },
+      }),
+    ],
     ['GET', /^\/api\/delhivery\/b2b\/tat$/, success({ tat_days: 2 })],
     ['GET', /^\/api\/delhivery\/b2b\/freight\/charges$/, success({ charges: [] })],
     [

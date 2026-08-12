@@ -22,6 +22,9 @@ in-flight login across concurrent requests. If Delhivery rejects credentials wit
 to avoid extending Delhivery's account lock. Saving corrected credentials clears the cache.
 Logout is optional. FastShip sends Delhivery's required bearer token on `GET /ums/logout`
 and invalidates the cached JWT only after Delhivery accepts the logout.
+Before B2B manifestation, FastShip checks both origin and consignee pincodes with the
+expected shipment weight in grams. An empty, malformed, or explicitly unsuccessful
+serviceability response fails closed and prevents the provider booking request.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password

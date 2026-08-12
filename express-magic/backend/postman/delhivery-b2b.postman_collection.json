@@ -116,10 +116,38 @@
       "item": [
         {
           "name": "Pincode Serviceability",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "var provider = body.data || {};",
+            "var providerData = provider.data || provider;",
+            "var rows = providerData.pincode_serviceability_data;",
+            "pm.test('Delhivery serviceability rows are returned', function () {",
+            "  pm.expect(rows).to.be.an('array');",
+            "});",
+            "pm.test('weight is sent in grams', function () {",
+            "  pm.expect(Number(pm.variables.replaceIn('{{weightGrams}}'))).to.be.at.least(0);",
+            "});"
+          ] } }],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/delhivery/b2b/serviceability/{{destinationPincode}}?weight={{weightGrams}}",
             "description": "Checks a six-digit pincode before any shipment operation. Weight is optional and expressed in grams. FastShip checks both origin and consignee pincodes before B2B manifestation."
+          }
+        },
+        {
+          "name": "Pincode Serviceability (weight omitted)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "var provider = body.data || {};",
+            "var providerData = provider.data || provider;",
+            "pm.test('Delhivery accepts serviceability without optional weight', function () {",
+            "  pm.expect(providerData.pincode_serviceability_data).to.be.an('array');",
+            "});"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2b/serviceability/{{destinationPincode}}",
+            "description": "Checks the consignee pincode without the optional shipment weight query parameter."
           }
         },
         {

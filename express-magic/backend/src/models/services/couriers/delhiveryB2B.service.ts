@@ -72,6 +72,12 @@ const timeoutMs = () => {
   return Number.isFinite(configured) && configured > 0 ? configured : 30000
 }
 
+export const isDelhiveryB2BServiceableResponse = (response: any) => {
+  if (response?.success === false) return false
+  const rows = response?.data?.pincode_serviceability_data || response?.pincode_serviceability_data
+  return Array.isArray(rows) && rows.length > 0
+}
+
 const loginFailureCooldownMs = () => {
   const configured = Number(process.env.DELHIVERY_B2B_LOGIN_FAILURE_COOLDOWN_MS || 10 * 60 * 1000)
   return Number.isFinite(configured) && configured > 0 ? configured : 10 * 60 * 1000

@@ -107,6 +107,7 @@ import {
 import { DelhiveryService } from './couriers/delhivery.service'
 import {
   DelhiveryB2BService,
+  isDelhiveryB2BServiceableResponse,
   mapDelhiveryB2BTrackingStatus,
 } from './couriers/delhiveryB2B.service'
 import { EkartService } from './couriers/ekart.service'
@@ -9377,17 +9378,6 @@ const findProviderValue = (value: unknown, keys: string[]): unknown => {
   return undefined
 }
 
-const delhiveryB2BServiceable = (response: any) => {
-  if (response?.success === false) return false
-  const rows =
-    response?.data?.pincode_serviceability_data ||
-    response?.pincode_serviceability_data ||
-    response?.data ||
-    []
-  if (!Array.isArray(rows)) return Boolean(rows)
-  return rows.length > 0
-}
-
 const delhiveryB2BManifestFailed = (response: any) => {
   if (response?.success === false) return true
   const status = String(
@@ -9783,10 +9773,10 @@ export const createB2BShipmentService = async (
         delhivery.getOperationalDefaults(),
       ])
 
-      if (!delhiveryB2BServiceable(originServiceability)) {
+      if (!isDelhiveryB2BServiceableResponse(originServiceability)) {
         throw new HttpError(400, `Delhivery B2B does not service origin pincode ${originPincode}`)
       }
-      if (!delhiveryB2BServiceable(destinationServiceability)) {
+      if (!isDelhiveryB2BServiceableResponse(destinationServiceability)) {
         throw new HttpError(
           400,
           `Delhivery B2B does not service destination pincode ${destinationPincode}`,

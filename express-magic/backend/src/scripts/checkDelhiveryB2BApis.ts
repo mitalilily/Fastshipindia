@@ -27,9 +27,30 @@ const lastRequest = (method: string, url: string) => {
 
 const run = async () => {
   process.env.DATABASE_URL ||= 'postgresql://test:test@127.0.0.1:5432/test'
-  const { DelhiveryB2BService, mapDelhiveryB2BTrackingStatus } = await import(
+  const {
+    DelhiveryB2BService,
+    isDelhiveryB2BServiceableResponse,
+    mapDelhiveryB2BTrackingStatus,
+  } = await import(
     '../models/services/couriers/delhiveryB2B.service'
   )
+
+  assert.equal(
+    isDelhiveryB2BServiceableResponse({
+      success: true,
+      data: { pincode_serviceability_data: [{ pincode: '122001' }] },
+    }),
+    true,
+  )
+  assert.equal(
+    isDelhiveryB2BServiceableResponse({
+      success: true,
+      data: { pincode_serviceability_data: [] },
+    }),
+    false,
+  )
+  assert.equal(isDelhiveryB2BServiceableResponse({ success: false }), false)
+  assert.equal(isDelhiveryB2BServiceableResponse({ success: true, data: {} }), false)
 
   assert.deepEqual(
     {
@@ -130,9 +151,9 @@ const run = async () => {
     'Tokens without a readable JWT expiry should use Delhivery\'s documented 24-hour validity',
   )
 
-  await service.checkServiceability('122001', 1000)
+  await service.checkServiceability('122001', 1.25)
   const serviceabilityRequest = lastRequest('GET', '/pincode-service/122001')
-  assert.equal(serviceabilityRequest.params?.weight, 1000)
+  assert.equal(serviceabilityRequest.params?.weight, 1.25)
   assert.equal(serviceabilityRequest.headers?.['Content-Type'], 'application/json')
 
   await service.checkServiceability('122001')
