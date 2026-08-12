@@ -225,6 +225,41 @@ const normalizeDelhiveryB2CShippingCostParams = (params: {
   }
 }
 
+const normalizeOptionalDelhiveryBooleanText = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const normalized = String(value).trim().toLowerCase()
+  if (normalized === 'true') return 'true'
+  if (normalized === 'false') return 'false'
+  throw new HttpError(400, `${field} must be true or false`)
+}
+
+const normalizeOptionalDelhiveryB2CLabelPdfSize = (value: unknown) => {
+  const pdfSize = String(value ?? '')
+    .trim()
+    .toUpperCase()
+  if (!pdfSize) return undefined
+  if (!['A4', '4R'].includes(pdfSize)) {
+    throw new HttpError(400, "pdf_size must be 'A4' or '4R'")
+  }
+  return pdfSize as 'A4' | '4R'
+}
+
+const normalizeDelhiveryB2CShippingLabelParams = (params: {
+  waybill: unknown
+  pdf?: unknown
+  pdf_size?: unknown
+}) => {
+  const waybill = requiredManifestText(params.waybill, 'waybill')
+  const pdf = normalizeOptionalDelhiveryBooleanText(params.pdf, 'pdf')
+  const pdfSize = normalizeOptionalDelhiveryB2CLabelPdfSize(params.pdf_size)
+
+  return {
+    wbns: waybill,
+    ...(pdf !== undefined ? { pdf } : {}),
+    ...(pdfSize ? { pdf_size: pdfSize } : {}),
+  }
+}
+
 const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
   const normalized = String(value ?? '').trim().toLowerCase()
   const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
@@ -918,6 +953,32 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to calculate Delhivery B2C shipping cost')
+    }
+  }
+
+  async generateB2CShippingLabel(params: { waybill: unknown; pdf?: unknown; pdf_size?: unknown }) {
+    try {
+      const normalizedParams = normalizeDelhiveryB2CShippingLabelParams(params)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/p/packing_slip`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        params: normalizedParams,
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C shipping label error:', {
+        params,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to generate Delhivery B2C shipping label')
     }
   }
 

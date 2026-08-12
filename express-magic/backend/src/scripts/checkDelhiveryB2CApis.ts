@@ -96,6 +96,19 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/api/p/packing_slip')) {
+      return {
+        status: 200,
+        data: {
+          packages: [
+            {
+              wbn: '703500000001',
+              label: 'https://example.com/label-703500000001.pdf',
+            },
+          ],
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -770,6 +783,50 @@ const run = async () => {
           pt: 'Pickup',
         }),
       /pt must be/,
+    )
+
+    const labelResponse = await service.generateB2CShippingLabel({
+      waybill: '703500000001',
+      pdf: 'true',
+      pdf_size: '4r',
+    })
+    assert.equal((labelResponse as any)?.packages?.[0]?.wbn, '703500000001')
+
+    const labelRequest = requests.at(-1)
+    assert.equal(labelRequest?.method, 'GET')
+    assert.equal(labelRequest?.url, 'https://staging-express.delhivery.com/api/p/packing_slip')
+    assert.equal(labelRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(labelRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(labelRequest?.params, {
+      wbns: '703500000001',
+      pdf: 'true',
+      pdf_size: '4R',
+    })
+
+    await service.generateB2CShippingLabel({
+      waybill: '703500000002',
+      pdf: false,
+    })
+    assert.deepEqual(requests.at(-1)?.params, {
+      wbns: '703500000002',
+      pdf: 'false',
+    })
+
+    await assert.rejects(
+      () => service.generateB2CShippingLabel({ waybill: '' }),
+      /waybill is required/,
+    )
+    await assert.rejects(
+      () => service.generateB2CShippingLabel({ waybill: '703500000003', pdf: 'yes' }),
+      /pdf must be true or false/,
+    )
+    await assert.rejects(
+      () =>
+        service.generateB2CShippingLabel({
+          waybill: '703500000004',
+          pdf_size: 'STD',
+        }),
+      /pdf_size must be/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)

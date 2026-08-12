@@ -8,6 +8,7 @@ import {
   expectedTatController,
   fetchSingleWaybillController,
   fetchWaybillsController,
+  generateShippingLabelController,
   heavyProductServiceabilityController,
   serviceabilityController,
   trackShipmentController,
@@ -26,6 +27,7 @@ router.get('/waybills', fetchWaybillsController)
 router.get('/waybill', fetchSingleWaybillController)
 router.get('/shipments/track', trackShipmentController)
 router.get('/shipping-cost', calculateShippingCostController)
+router.get('/shipments/label', generateShippingLabelController)
 router.post('/shipments', createShipmentController)
 router.post('/shipments/mps', createMpsShipmentController)
 router.post('/shipments/edit', editShipmentController)

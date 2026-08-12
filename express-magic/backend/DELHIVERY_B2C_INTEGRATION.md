@@ -11,6 +11,7 @@
 | Fetch Single WayBill | `GET /waybill/api/fetch/json/?token={token}` | `GET /api/delhivery/b2c/waybill` |
 | Shipment Tracking | `GET /api/v1/packages/json/?waybill={waybill}&ref_ids={order_id}` | `GET /api/delhivery/b2c/shipments/track?waybill={waybill}&ref_ids={order_id}` |
 | Calculate Shipping Cost | `GET /api/kinko/v1/invoice/charges/.json?md={md}&ss={ss}&d_pin={d_pin}&o_pin={o_pin}&cgm={cgm}&pt={pt}` | `GET /api/delhivery/b2c/shipping-cost?md={md}&ss={ss}&d_pin={d_pin}&o_pin={o_pin}&cgm={cgm}&pt={pt}` |
+| Generate Shipping Label | `GET /api/p/packing_slip?wbns={waybill}&pdf={pdf}&pdf_size={pdf_size}` | `GET /api/delhivery/b2c/shipments/label?waybill={waybill}&pdf={pdf}&pdf_size={pdf_size}` |
 | Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
 | MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
@@ -51,6 +52,11 @@ grams, six-digit `o_pin` and `d_pin`, `ss` (`Delivered`, `RTO`, or `DTO`), and
 `pt` (`Pre-paid` or `COD`). Optional `l`, `b`, `h`, and `ipkg_type` are
 forwarded when present. The estimated provider charges are returned unchanged
 under `data`.
+
+For Generate Shipping Label, FastShip requires `waybill` and forwards it to
+Delhivery as `wbns`. Optional `pdf` accepts `true` or `false`; optional
+`pdf_size` accepts `A4` or `4R`. `pdf=true` can return a PDF/S3 link, while
+`pdf=false` can return JSON for custom label rendering.
 
 For Shipment Creation, FastShip accepts the documented JSON manifest, validates
 required shipment fields plus `pickup_location.name`, canonicalizes

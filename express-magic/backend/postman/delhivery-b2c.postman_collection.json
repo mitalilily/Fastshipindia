@@ -263,6 +263,35 @@
           ]
         },
         {
+          "name": "Generate Shipping Label",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/label?waybill={{labelWaybill}}&pdf={{labelPdf}}&pdf_size={{labelPdfSize}}",
+            "description": "Generates a Delhivery B2C shipping label using GET /api/p/packing_slip?wbns={waybill}&pdf={true|false}&pdf_size={A4|4R}. pdf=true returns a PDF/S3 link; pdf=false returns JSON for custom label rendering."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Generate Shipping Label proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Shipping label data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.packages || data).to.exist;",
+                  "});",
+                  "pm.test('Shipping label contains link, package, or label signal', function () {",
+                  "  var data = body.data || {};",
+                  "  var firstPackage = (data.packages || [])[0] || data;",
+                  "  pm.expect(firstPackage.label !== undefined || firstPackage.wbn !== undefined || firstPackage.url !== undefined || firstPackage.pdf_download_link !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Shipment Creation (mutating)",
           "event": [
             {

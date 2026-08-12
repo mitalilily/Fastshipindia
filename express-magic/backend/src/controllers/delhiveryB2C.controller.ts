@@ -98,6 +98,16 @@ export const calculateShippingCostController = (req: Request, res: Response) =>
     }),
   )
 
+export const generateShippingLabelController = (req: Request, res: Response) =>
+  sendDataResult(
+    res,
+    service.generateB2CShippingLabel({
+      waybill: req.query.waybill,
+      pdf: req.query.pdf,
+      pdf_size: req.query.pdf_size,
+    }),
+  )
+
 export const createShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CShipmentManifest(req.body))
 

@@ -107,6 +107,17 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'GET' && pathname === '/api/delhivery/b2c/shipments/label') {
+    return success({
+      packages: [
+        {
+          wbn: '703500000001',
+          label: 'https://example.com/label-703500000001.pdf',
+        },
+      ],
+    })
+  }
+
   if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments') {
     return success({
       success: true,
