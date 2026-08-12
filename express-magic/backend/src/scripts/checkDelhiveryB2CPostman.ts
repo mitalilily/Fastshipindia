@@ -118,6 +118,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'GET' && pathname === '/api/delhivery/b2c/documents/download') {
+    return success({
+      doc_type: 'EPOD',
+      waybill: '1234567890',
+      document_url: 'https://example.com/epod-1234567890.jpg',
+    })
+  }
+
   if (method === 'POST' && pathname === '/api/delhivery/b2c/pickup-requests') {
     return success({
       success: true,

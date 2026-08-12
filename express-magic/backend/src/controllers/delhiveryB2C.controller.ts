@@ -108,6 +108,15 @@ export const generateShippingLabelController = (req: Request, res: Response) =>
     }),
   )
 
+export const downloadDocumentController = (req: Request, res: Response) =>
+  sendDataResult(
+    res,
+    service.downloadB2CDocument({
+      doc_type: req.query.doc_type,
+      waybill: req.query.waybill,
+    }),
+  )
+
 export const createPickupRequestController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CPickupRequest(req.body))
 

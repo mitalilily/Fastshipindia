@@ -7,6 +7,7 @@ import {
   createPickupRequestController,
   createRvpQcShipmentController,
   createShipmentController,
+  downloadDocumentController,
   editShipmentController,
   expectedTatController,
   fetchSingleWaybillController,
@@ -32,6 +33,7 @@ router.get('/waybill', fetchSingleWaybillController)
 router.get('/shipments/track', trackShipmentController)
 router.get('/shipping-cost', calculateShippingCostController)
 router.get('/shipments/label', generateShippingLabelController)
+router.get('/documents/download', downloadDocumentController)
 router.post('/pickup-requests', createPickupRequestController)
 router.post('/warehouses', createClientWarehouseController)
 router.post('/warehouses/update', updateClientWarehouseController)

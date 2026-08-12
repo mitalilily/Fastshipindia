@@ -292,6 +292,34 @@
           ]
         },
         {
+          "name": "Download Document",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/documents/download?doc_type={{documentType}}&waybill={{documentWaybill}}",
+            "description": "Downloads/fetches Delhivery B2C shipment documents using GET /api/rest/fetch/pkg/document/?doc_type={doc_type}&waybill={waybill}. Allowed doc types: SIGNATURE_URL, RVP_QC_IMAGE, EPOD, SELLER_RETURN_IMAGE."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Download Document proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Document data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Document response carries url, document, or status signal', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.document_url !== undefined || data.url !== undefined || data.doc_url !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Pickup Request Creation (mutating)",
           "event": [
             {

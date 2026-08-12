@@ -718,6 +718,27 @@ const normalizeDelhiveryB2CRvpQcShipmentManifest = (payload: unknown) => {
   }
 }
 
+const normalizeDelhiveryB2CDocumentType = (value: unknown) => {
+  const docType = String(value ?? '')
+    .trim()
+    .toUpperCase()
+  if (!['SIGNATURE_URL', 'RVP_QC_IMAGE', 'EPOD', 'SELLER_RETURN_IMAGE'].includes(docType)) {
+    throw new HttpError(
+      400,
+      "doc_type must be one of 'SIGNATURE_URL', 'RVP_QC_IMAGE', 'EPOD', or 'SELLER_RETURN_IMAGE'",
+    )
+  }
+  return docType as 'SIGNATURE_URL' | 'RVP_QC_IMAGE' | 'EPOD' | 'SELLER_RETURN_IMAGE'
+}
+
+const normalizeDelhiveryB2CDocumentWaybill = (value: unknown) => {
+  const waybill = String(value ?? '').trim()
+  if (!/^\d+$/.test(waybill)) {
+    throw new HttpError(400, 'waybill must be a numeric Delhivery waybill')
+  }
+  return waybill
+}
+
 export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
   const payload = response as any
   const rows = Array.isArray(payload)
@@ -1215,6 +1236,35 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to generate Delhivery B2C shipping label')
+    }
+  }
+
+  async downloadB2CDocument(params: { doc_type: unknown; waybill: unknown }) {
+    try {
+      const docType = normalizeDelhiveryB2CDocumentType(params.doc_type)
+      const waybill = normalizeDelhiveryB2CDocumentWaybill(params.waybill)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/rest/fetch/pkg/document/`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+        },
+        params: {
+          doc_type: docType,
+          waybill,
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C document download error:', {
+        params,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to download Delhivery B2C document')
     }
   }
 

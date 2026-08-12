@@ -109,6 +109,16 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/api/rest/fetch/pkg/document/')) {
+      return {
+        status: 200,
+        data: {
+          doc_type: 'EPOD',
+          waybill: '1234567890',
+          document_url: 'https://example.com/epod-1234567890.jpg',
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -1020,6 +1030,42 @@ const run = async () => {
           pdf_size: 'STD',
         }),
       /pdf_size must be/,
+    )
+
+    const documentResponse = await service.downloadB2CDocument({
+      doc_type: 'epod',
+      waybill: '1234567890',
+    })
+    assert.equal((documentResponse as any)?.document_url, 'https://example.com/epod-1234567890.jpg')
+
+    const documentRequest = requests.at(-1)
+    assert.equal(documentRequest?.method, 'GET')
+    assert.equal(
+      documentRequest?.url,
+      'https://staging-express.delhivery.com/api/rest/fetch/pkg/document/',
+    )
+    assert.equal(documentRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.deepEqual(documentRequest?.params, {
+      doc_type: 'EPOD',
+      waybill: '1234567890',
+    })
+
+    await service.downloadB2CDocument({
+      doc_type: 'RVP_QC_IMAGE',
+      waybill: 1234567891,
+    })
+    assert.deepEqual(requests.at(-1)?.params, {
+      doc_type: 'RVP_QC_IMAGE',
+      waybill: '1234567891',
+    })
+
+    await assert.rejects(
+      () => service.downloadB2CDocument({ doc_type: 'invoice', waybill: '1234567890' }),
+      /doc_type must be one of/,
+    )
+    await assert.rejects(
+      () => service.downloadB2CDocument({ doc_type: 'EPOD', waybill: 'WB123' }),
+      /waybill must be a numeric Delhivery waybill/,
     )
 
     const pickupRequestResponse = await service.createB2CPickupRequest({
