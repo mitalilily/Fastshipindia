@@ -193,6 +193,24 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/ndr/actions') {
+    return success({
+      upl_id: 'UPL-B2C-NDR-000001',
+      message: 'NDR action accepted',
+    })
+  }
+
+  if (
+    method === 'GET' &&
+    /^\/api\/delhivery\/b2c\/ndr\/[^/]+\/status$/.test(pathname)
+  ) {
+    return success({
+      upl_id: pathname.split('/')[5],
+      status: 'Completed',
+      processed: 1,
+    })
+  }
+
   if (
     method === 'PUT' &&
     /^\/api\/delhivery\/b2c\/shipments\/[^/]+\/ewaybill$/.test(pathname)

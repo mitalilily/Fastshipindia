@@ -686,6 +686,82 @@
           }
         },
         {
+          "name": "NDR Action (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "var uplId = data.upl_id || data.upl || data.UPL || data.upload_id;",
+                  "pm.test('NDR Action proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('NDR action returns an asynchronous UPL ID', function () { pm.expect(uplId).to.exist; });",
+                  "if (uplId) pm.environment.set('ndrUplId', String(uplId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/ndr/actions",
+            "description": "Submits the asynchronous Delhivery B2C NDR action via POST /api/p/update. Supported actions are RE-ATTEMPT and PICKUP_RESCHEDULE. Verify current NSL and attempt count before use; Delhivery recommends applying after 9 PM. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": [\n    {\n      \"waybill\": \"{{ndrWaybill}}\",\n      \"act\": \"{{ndrAction}}\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "NDR UPL Status",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('NDR UPL Status proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('NDR UPL status response is returned', function () { pm.expect(data).to.be.an('object'); });",
+                  "pm.test('NDR UPL status carries processing state', function () { pm.expect(data.status || data.success || data.upl_id || data.UPL).to.exist; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/delhivery/b2c/ndr/{{ndrUplId}}/status?verbose={{ndrVerbose}}",
+            "description": "Polls Delhivery's asynchronous NDR processing result with the UPL ID returned by NDR Action. This request is skipped with the mutation workflow unless allowMutations=true."
+          }
+        },
+        {
           "name": "Ewaybill Update (mutating)",
           "event": [
             {

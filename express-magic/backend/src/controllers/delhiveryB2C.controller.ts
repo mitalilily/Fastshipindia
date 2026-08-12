@@ -143,3 +143,9 @@ export const cancelShipmentController = (req: Request, res: Response) =>
 
 export const updateEwaybillController = (req: Request, res: Response) =>
   sendDataResult(res, service.updateB2CEwaybill(req.params.waybill, req.body))
+
+export const submitNdrActionsController = (req: Request, res: Response) =>
+  sendDataResult(res, service.submitB2CNdrActions(req.body))
+
+export const getNdrStatusController = (req: Request, res: Response) =>
+  sendDataResult(res, service.getB2CNdrStatus(req.params.uplId, req.query.verbose))

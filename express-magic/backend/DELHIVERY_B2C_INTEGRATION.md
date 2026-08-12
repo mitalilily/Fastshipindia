@@ -22,6 +22,8 @@
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
 | Shipment Cancellation | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/cancel` |
 | Ewaybill Update | `PUT /api/rest/ewaybill/{waybill}/` | `PUT /api/delhivery/b2c/shipments/{waybill}/ewaybill` |
+| NDR Action | `POST /api/p/update` | `POST /api/delhivery/b2c/ndr/actions` |
+| NDR UPL Status | `GET /api/cmu/get_bulk_upl/{upl_id}?verbose={boolean}` | `GET /api/delhivery/b2c/ndr/{upl_id}/status?verbose={boolean}` |
 
 FastShip validates a single six-digit pincode, forwards it as `filter_codes`,
 and authenticates with Delhivery's `Authorization: Token ...` header. An empty
@@ -112,6 +114,23 @@ whether cancellation is allowed based on the package status and payment mode.
 For Ewaybill Update, FastShip requires the route `waybill` plus one or more
 `data` entries containing `dcn` invoice number and `ewbn` e-waybill number, then
 forwards the payload to Delhivery's ewaybill endpoint.
+
+For NDR Action, FastShip requires a non-empty `data` array with no more than
+1000 entries. Every entry requires `waybill` and `act`; the only accepted action
+values are `RE-ATTEMPT` and `PICKUP_RESCHEDULE`. The request is asynchronous and
+the Delhivery response contains the UPL ID used for status polling. FastShip
+forwards `PICKUP_RESCHEDULE` unchanged. Apply either action only after verifying
+the current NSL and an attempt count of 1 or 2; Delhivery recommends applying
+the actions after 9 PM when facility dispatches are closed.
+
+`RE-ATTEMPT` is eligible only for current NSL codes `EOD-74`, `EOD-15`,
+`EOD-104`, `EOD-43`, `EOD-86`, `EOD-11`, `EOD-69`, or `EOD-6`.
+`PICKUP_RESCHEDULE` is eligible only for a non-OTP-cancelled pickup whose current
+NSL code is `EOD-777` or `EOD-21`.
+
+For NDR UPL Status, FastShip requires the UPL ID returned by NDR Action and
+accepts optional `verbose=true|false` (default `true`). It returns Delhivery's
+asynchronous processing result unchanged under `data`.
 
 ## Verification
 

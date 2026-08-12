@@ -13,8 +13,10 @@ import {
   fetchSingleWaybillController,
   fetchWaybillsController,
   generateShippingLabelController,
+  getNdrStatusController,
   heavyProductServiceabilityController,
   serviceabilityController,
+  submitNdrActionsController,
   trackShipmentController,
   updateClientWarehouseController,
   updateEwaybillController,
@@ -43,5 +45,7 @@ router.post('/shipments/rvp-qc', createRvpQcShipmentController)
 router.post('/shipments/edit', editShipmentController)
 router.post('/shipments/cancel', cancelShipmentController)
 router.put('/shipments/:waybill/ewaybill', updateEwaybillController)
+router.post('/ndr/actions', submitNdrActionsController)
+router.get('/ndr/:uplId/status', getNdrStatusController)
 
 export default router

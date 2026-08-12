@@ -119,6 +119,16 @@ const run = async () => {
         },
       }
     }
+    if (String(url).includes('/api/cmu/get_bulk_upl/')) {
+      return {
+        status: 200,
+        data: {
+          upl_id: 'UPL-B2C-NDR-000001',
+          status: 'Completed',
+          processed: 2,
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -164,6 +174,15 @@ const run = async () => {
           success: true,
           name: 'registered_wh_name',
           message: 'Warehouse updated',
+        },
+      }
+    }
+    if (String(url).endsWith('/api/p/update')) {
+      return {
+        status: 202,
+        data: {
+          upl_id: 'UPL-B2C-NDR-000001',
+          message: 'NDR action accepted',
         },
       }
     }
@@ -1250,6 +1269,67 @@ const run = async () => {
           pin: '11004A',
         }),
       /pin must be a valid 6-digit pincode/,
+    )
+
+    const ndrResponse = await service.submitB2CNdrActions({
+      data: [
+        { waybill: '13163116000001', act: 'RE-ATTEMPT' },
+        { waybill: '13163116000002', act: 'PICKUP_RESCHEDULE' },
+      ],
+    })
+    assert.equal((ndrResponse as any)?.upl_id, 'UPL-B2C-NDR-000001')
+
+    const ndrRequest = requests.at(-1)
+    assert.equal(ndrRequest?.method, 'POST')
+    assert.equal(ndrRequest?.url, 'https://staging-express.delhivery.com/api/p/update')
+    assert.equal(ndrRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(ndrRequest?.headers?.Accept, 'application/json')
+    assert.equal(ndrRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(ndrRequest?.data, {
+      data: [
+        { waybill: '13163116000001', act: 'RE-ATTEMPT' },
+        { waybill: '13163116000002', act: 'PICKUP_RESCHEDULE' },
+      ],
+    })
+
+    await assert.rejects(() => service.submitB2CNdrActions({}), /data must be a non-empty array/)
+    await assert.rejects(
+      () => service.submitB2CNdrActions({ data: [{ waybill: '', act: 'RE-ATTEMPT' }] }),
+      /data\[0\]\.waybill is required/,
+    )
+    await assert.rejects(
+      () =>
+        service.submitB2CNdrActions({
+          data: [{ waybill: '13163116000001', act: 'DEFER_DLV' }],
+        }),
+      /must be 'RE-ATTEMPT' or 'PICKUP_RESCHEDULE'/,
+    )
+    await assert.rejects(
+      () =>
+        service.submitB2CNdrActions({
+          data: Array.from({ length: 1001 }, (_, index) => ({
+            waybill: String(13163116000000 + index),
+            act: 'RE-ATTEMPT',
+          })),
+        }),
+      /maximum of 1000 shipments/,
+    )
+
+    const ndrStatus = await service.getB2CNdrStatus('UPL-B2C-NDR-000001', false)
+    assert.equal((ndrStatus as any)?.status, 'Completed')
+    const ndrStatusRequest = requests.at(-1)
+    assert.equal(ndrStatusRequest?.method, 'GET')
+    assert.equal(
+      ndrStatusRequest?.url,
+      'https://staging-express.delhivery.com/api/cmu/get_bulk_upl/UPL-B2C-NDR-000001',
+    )
+    assert.equal(ndrStatusRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.deepEqual(ndrStatusRequest?.params, { verbose: 'false' })
+
+    await assert.rejects(() => service.getB2CNdrStatus('', true), /uplId is required/)
+    await assert.rejects(
+      () => service.getB2CNdrStatus('UPL-B2C-NDR-000001', 'yes'),
+      /verbose must be true or false/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)

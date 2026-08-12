@@ -65,12 +65,12 @@ Fetch WayBill, Fetch Single WayBill, Shipment Tracking, Calculate Shipping Cost,
 Generate Shipping Label, Download Document, Pickup Request Creation, Client
 Warehouse Creation, Client Warehouse Updation, Shipment Creation, MPS
 Manifestation, RVP QC 3.0 Shipment Creation, Shipment Updation/Edit, Shipment
-Cancellation, and Ewaybill Update proxies. Pickup Request Creation, Client
-Warehouse Creation, Client Warehouse Updation, Shipment Creation, MPS
-Manifestation, RVP QC 3.0 Shipment Creation, Shipment Updation/Edit, Shipment
-Cancellation, and Ewaybill Update are state-changing and skipped by default; set
-`allowMutations=true` only when the mutation is intended. Local Newman
-verification:
+Cancellation, Ewaybill Update, NDR Action, and NDR UPL Status proxies. Pickup
+Request Creation, Client Warehouse Creation, Client Warehouse Updation,
+Shipment Creation, MPS Manifestation, RVP QC 3.0 Shipment Creation, Shipment
+Updation/Edit, Shipment Cancellation, Ewaybill Update, and the NDR action/status
+workflow are skipped by default; set `allowMutations=true` only when the
+mutation is intended. Local Newman verification:
 
 ```bash
 npm run check:delhivery-b2c-postman

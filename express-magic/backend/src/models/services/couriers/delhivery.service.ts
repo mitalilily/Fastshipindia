@@ -118,6 +118,62 @@ const normalizeDelhiveryWaybillCount = (value: unknown) => {
   return count
 }
 
+const DELHIVERY_B2C_NDR_ACTIONS = ['RE-ATTEMPT', 'PICKUP_RESCHEDULE'] as const
+
+type DelhiveryB2CNdrAction = (typeof DELHIVERY_B2C_NDR_ACTIONS)[number]
+
+const normalizeDelhiveryB2CNdrPayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'NDR payload is required')
+  }
+  if (!Array.isArray(input.data) || input.data.length === 0) {
+    throw new HttpError(400, 'data must be a non-empty array')
+  }
+  if (input.data.length > 1000) {
+    throw new HttpError(400, 'data supports a maximum of 1000 shipments')
+  }
+
+  return {
+    data: input.data.map((entry: unknown, index: number) => {
+      const action = entry as any
+      if (!action || typeof action !== 'object' || Array.isArray(action)) {
+        throw new HttpError(400, `data[${index}] must be an object`)
+      }
+
+      const waybill = String(action.waybill ?? '').trim()
+      if (!waybill) throw new HttpError(400, `data[${index}].waybill is required`)
+
+      const act = String(action.act ?? '').trim().toUpperCase() as DelhiveryB2CNdrAction
+      if (!DELHIVERY_B2C_NDR_ACTIONS.includes(act)) {
+        throw new HttpError(
+          400,
+          `data[${index}].act must be 'RE-ATTEMPT' or 'PICKUP_RESCHEDULE'`,
+        )
+      }
+
+      return { waybill, act }
+    }),
+  }
+}
+
+const normalizeDelhiveryB2CNdrUplId = (value: unknown) => {
+  const uplId = String(value ?? '').trim()
+  if (!uplId) throw new HttpError(400, 'uplId is required')
+  if (uplId.length > 200 || /[/?#]/.test(uplId)) {
+    throw new HttpError(400, 'uplId is invalid')
+  }
+  return uplId
+}
+
+const normalizeDelhiveryB2CNdrVerbose = (value: unknown) => {
+  if (value === undefined || value === null || value === '') return true
+  const normalized = String(value).trim().toLowerCase()
+  if (normalized === 'true') return true
+  if (normalized === 'false') return false
+  throw new HttpError(400, 'verbose must be true or false')
+}
+
 const normalizeDelhiveryB2CTrackingWaybills = (value: unknown) => {
   const rawWaybill = String(value ?? '').trim()
   if (!rawWaybill) throw new HttpError(400, 'waybill is required')
@@ -1443,6 +1499,57 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to update Delhivery B2C ewaybill')
+    }
+  }
+
+  async submitB2CNdrActions(payload: unknown) {
+    try {
+      const normalizedPayload = normalizeDelhiveryB2CNdrPayload(payload)
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(
+        `${this.apiBase}/api/p/update`,
+        normalizedPayload,
+        { headers: this.headers },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('Delhivery B2C NDR action error:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      })
+      throw new Error(
+        extractProviderErrorMessage(err.response?.data) ||
+          'Failed to submit Delhivery B2C NDR action',
+      )
+    }
+  }
+
+  async getB2CNdrStatus(uplId: unknown, verbose: unknown = true) {
+    try {
+      const normalizedUplId = normalizeDelhiveryB2CNdrUplId(uplId)
+      const normalizedVerbose = normalizeDelhiveryB2CNdrVerbose(verbose)
+      await this.ensureCredentials()
+      const res = await this.getWithTimeout(
+        `${this.apiBase}/api/cmu/get_bulk_upl/${encodeURIComponent(normalizedUplId)}`,
+        {
+          headers: this.headers,
+          params: { verbose: normalizedVerbose ? 'true' : 'false' },
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('Delhivery B2C NDR status error:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      })
+      throw new Error(
+        extractProviderErrorMessage(err.response?.data) ||
+          'Failed to fetch Delhivery B2C NDR status',
+      )
     }
   }
 
