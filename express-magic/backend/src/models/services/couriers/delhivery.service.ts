@@ -72,6 +72,30 @@ const normalizeDelhiveryWeightGrams = (value: unknown, fallbackGrams = 500) => {
   return numericValue > 50 ? Math.round(numericValue) : Math.round(numericValue * 1000)
 }
 
+const normalizeDelhiveryPincode = (value: unknown, field = 'pincode') => {
+  const pincode = String(value ?? '').trim()
+  if (!/^\d{6}$/.test(pincode)) {
+    throw new HttpError(400, `${field} must be a valid 6-digit pincode`)
+  }
+  return pincode
+}
+
+export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
+  const payload = response as any
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.delivery_codes)
+      ? payload.delivery_codes
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : []
+
+  return rows.some((row: any) => {
+    const details = row?.postal_code || row
+    return String(details?.remarks ?? details?.remark ?? '').trim().toLowerCase() !== 'embargo'
+  })
+}
+
 const delhiveryCancellationResponseText = (value: unknown) => {
   try {
     return JSON.stringify(value || {}).toLowerCase()
@@ -214,22 +238,16 @@ export class DelhiveryService {
   // 🔹 1. Check Serviceability
   async checkServiceability(pincode: string) {
     try {
+      const normalizedPincode = normalizeDelhiveryPincode(pincode)
       await this.ensureCredentials()
-      const url = `${this.apiBase}/c/api/pin-codes/json/?filter_codes=${pincode}`
-      const res = await this.getWithTimeout(url, { headers: this.headers })
-
-      // Log the full response structure
-      console.log('📦 Delhivery Serviceability API Response:', {
-        url,
-        status: res.status,
-        data: JSON.stringify(res.data, null, 2),
-        dataType: typeof res.data,
-        isArray: Array.isArray(res.data),
-        keys: res.data ? Object.keys(res.data) : [],
+      const url = `${this.apiBase}/c/api/pin-codes/json/`
+      const res = await this.getWithTimeout(url, {
+        headers: this.headers,
+        params: { filter_codes: normalizedPincode },
       })
-
       return res.data
     } catch (err: any) {
+      if (err instanceof HttpError) throw err
       console.error('❌ Delhivery serviceability error:', {
         pincode,
         status: err.response?.status,

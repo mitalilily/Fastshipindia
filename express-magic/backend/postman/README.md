@@ -52,4 +52,18 @@ Run the Postman collection automatically through Newman with an isolated mock se
 npm run check:delhivery-b2b-postman
 ```
 
+## Delhivery B2C (Express)
+
+Import:
+
+- `delhivery-b2c.postman_collection.json`
+- `delhivery-b2c.local.postman_environment.json`
+
+The collection signs in as a FastShip admin and checks the Delhivery B2C
+pincode serviceability proxy. Local Newman verification:
+
+```bash
+npm run check:delhivery-b2c-postman
+```
+
 See `DELHIVERY_B2B_INTEGRATION.md` for the complete provider-to-FastShip route matrix.

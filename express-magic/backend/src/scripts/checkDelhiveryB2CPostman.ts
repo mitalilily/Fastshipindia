@@ -1,0 +1,119 @@
+import { spawn } from 'child_process'
+import http, { IncomingMessage, ServerResponse } from 'http'
+import { AddressInfo } from 'net'
+import path from 'path'
+
+type MockPayload = Record<string, unknown>
+
+const json = (res: ServerResponse, statusCode: number, payload: MockPayload) => {
+  const body = JSON.stringify(payload)
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(body),
+  })
+  res.end(body)
+}
+
+const success = (data: MockPayload = {}) => ({ success: true, data })
+
+const resolveMockResponse = (method: string, pathname: string): MockPayload | null => {
+  if (method === 'POST' && pathname === '/api/auth/admin/login') {
+    return { message: 'Admin login successful', token: 'mock-admin-token' }
+  }
+
+  if (method === 'GET' && /^\/api\/delhivery\/b2c\/serviceability\/\d{6}$/.test(pathname)) {
+    return {
+      success: true,
+      serviceable: true,
+      data: {
+        delivery_codes: [
+          {
+            postal_code: {
+              pin: 194103,
+              remarks: '',
+            },
+          },
+        ],
+      },
+    }
+  }
+
+  return null
+}
+
+const handler = (req: IncomingMessage, res: ServerResponse) => {
+  req.on('error', () => json(res, 400, { success: false, message: 'Invalid mock request' }))
+  req.resume()
+  req.on('end', () => {
+    const method = String(req.method || 'GET').toUpperCase()
+    const pathname = new URL(req.url || '/', 'http://127.0.0.1').pathname
+    const isAdminLogin = method === 'POST' && pathname === '/api/auth/admin/login'
+    if (!isAdminLogin && req.headers.authorization !== 'Bearer mock-admin-token') {
+      return json(res, 401, { success: false, message: 'Missing FastShip admin token' })
+    }
+
+    const payload = resolveMockResponse(method, pathname)
+    if (!payload) {
+      return json(res, 404, {
+        success: false,
+        message: `Postman collection called an unrecognized route: ${method} ${pathname}`,
+      })
+    }
+    return json(res, 200, payload)
+  })
+}
+
+const run = async () => {
+  const server = http.createServer(handler)
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+
+  const address = server.address() as AddressInfo
+  const backendRoot = path.resolve(__dirname, '../..')
+  const collection = path.join(backendRoot, 'postman', 'delhivery-b2c.postman_collection.json')
+  const environment = path.join(
+    backendRoot,
+    'postman',
+    'delhivery-b2c.local.postman_environment.json',
+  )
+  const newmanCli = require.resolve('newman/bin/newman.js')
+
+  try {
+    const exitCode = await new Promise<number>((resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        [
+          newmanCli,
+          'run',
+          collection,
+          '--environment',
+          environment,
+          '--env-var',
+          `baseUrl=http://127.0.0.1:${address.port}`,
+          '--env-var',
+          'adminEmail=postman-admin@example.com',
+          '--env-var',
+          'adminPassword=mock-password',
+          '--reporters',
+          'cli',
+          '--color',
+          'off',
+          '--disable-unicode',
+        ],
+        { cwd: backendRoot, stdio: 'inherit' },
+      )
+      child.once('error', reject)
+      child.once('exit', (code) => resolve(code ?? 1))
+    })
+    if (exitCode !== 0) throw new Error(`Newman exited with code ${exitCode}`)
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+}
+
+run().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})

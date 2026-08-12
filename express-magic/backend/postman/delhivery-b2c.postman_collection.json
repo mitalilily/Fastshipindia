@@ -1,0 +1,94 @@
+{
+  "info": {
+    "_postman_id": "a67c41e7-3d7e-45e9-b2c-delhivery",
+    "name": "FastShip - Delhivery B2C (Express)",
+    "description": "Focused checks for the admin-only FastShip Delhivery B2C proxy. The collection signs in to FastShip before calling Delhivery B2C serviceability.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "var token = pm.environment.get('adminToken');",
+          "if (token) pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + token });"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('HTTP status is successful', function () {",
+          "  pm.expect(pm.response.code).to.be.within(200, 299);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "FastShip Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var token = body.token || body.accessToken || (body.data || {}).token;",
+                  "pm.test('FastShip admin token is returned', function () { pm.expect(token).to.be.a('string').and.not.empty; });",
+                  "pm.environment.set('adminToken', token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/admin/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Serviceability",
+      "item": [
+        {
+          "name": "Pincode Serviceability",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/serviceability/{{pincode}}",
+            "description": "Checks one consignee pincode with Delhivery B2C GET /c/api/pin-codes/json/?filter_codes={pincode}. Empty delivery_codes means NSZ; remark Embargo means temporary NSZ; blank remark means serviceable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('B2C serviceability proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('serviceable flag follows Delhivery pincode remarks', function () { pm.expect(body.serviceable).to.be.a('boolean'); });",
+                  "pm.test('Delhivery delivery code list is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.delivery_codes).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
