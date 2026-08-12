@@ -244,24 +244,31 @@ export async function searchSellers(req: any, res: Response) {
 export async function approveUser(req: any, res: Response) {
   try {
     const userId = req.params.id
-    console.log(userId)
+    const requestedApproved = typeof req.body?.approved === 'boolean' ? req.body.approved : true
+
     // Fetch user to verify existence
     const user = await findUserById(userId)
     if (!user) {
-      return res.status(200).json({ success: false, message: 'User not found' })
+      return res.status(404).json({ success: false, message: 'User not found' })
     }
 
-    if (user.approved) {
-      return res.status(400).json({ success: false, message: 'User is already approved' })
+    if (user.approved === requestedApproved) {
+      return res.status(200).json({
+        success: true,
+        message: requestedApproved ? 'User is already active' : 'User is already inactive',
+      })
     }
 
     // Update approval status
-    await updateUserApprovalStatus(userId, true)
+    await updateUserApprovalStatus(userId, requestedApproved)
 
-    return res.status(200).json({ success: true, message: 'User approved successfully' })
+    return res.status(200).json({
+      success: true,
+      message: requestedApproved ? 'User activated successfully' : 'User deactivated successfully',
+    })
   } catch (error) {
-    console.error('Error approving user:', error)
-    return res.status(500).json({ success: false, message: 'Server error approving user' })
+    console.error('Error updating user approval status:', error)
+    return res.status(500).json({ success: false, message: 'Server error updating user status' })
   }
 }
 
