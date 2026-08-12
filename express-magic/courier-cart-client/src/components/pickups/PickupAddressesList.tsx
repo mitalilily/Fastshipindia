@@ -470,6 +470,8 @@ const PickupAddressesList = ({
           setSelectedAddress(undefined)
         }}
         title={selectedAddress ? 'Edit Pickup Address' : 'Add New Pickup Address'}
+        showBackButton
+        backLabel="Back to addresses"
       >
         <AddPickupAddressForm
           key={selectedAddress?.id ?? 'new'}

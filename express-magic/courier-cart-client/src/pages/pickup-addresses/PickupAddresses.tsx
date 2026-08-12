@@ -382,6 +382,8 @@ const PickupAddresses = () => {
         }
         anchor={drawerType === 'filter' && isMobile ? 'left' : 'right'}
         title={drawerType === 'add' ? 'Add New Pickup Address' : 'Filter Pickup Addresses'}
+        showBackButton={drawerType === 'add'}
+        backLabel="Back to addresses"
       >
         {drawerType === 'add' ? (
           <AddPickupAddressForm setDrawer={setDrawerOpen} />

@@ -108,7 +108,7 @@ export const SupportTicketsPage = () => {
   ).length
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={{ xs: 2, md: 3 }} sx={{ width: '100%', minWidth: 0, pb: 2 }}>
       <PageHeading
         eyebrow="Support Panel"
         title="Support"
@@ -121,8 +121,12 @@ export const SupportTicketsPage = () => {
           counts={tickets?.statusCounts ?? { closed: 0, in_progress: 0, open: 0, resolved: 0 }}
         />
       )}
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        {' '}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        justifyContent="space-between"
+        gap={1.5}
+      >
         <FilterBar
           fields={supportTicketFilterFields}
           defaultValues={initialFilterValues}
@@ -134,7 +138,13 @@ export const SupportTicketsPage = () => {
           appliedCount={appliedCount}
         />
         <Button
-          sx={{ ml: !isMobile ? '50px' : 0 }}
+          sx={{
+            ml: !isMobile ? '50px' : 0,
+            flexShrink: 0,
+            alignSelf: { xs: 'stretch', sm: 'center' },
+            textTransform: 'none',
+            fontWeight: 700,
+          }}
           size="small"
           variant="contained"
           startIcon={<FiPlus size={18} />}
@@ -182,17 +192,18 @@ export const SupportTicketsPage = () => {
       <CustomDrawer
         title="Create Support Ticket"
         open={drawerOpen}
-        width={1100}
+        width="min(760px, calc(100vw - 24px))"
         onClose={() => setDrawerOpen(false)}
         anchor="right"
+        showBackButton
+        backLabel="Back to tickets"
       >
-        <Stack sx={{ color: '#fff', p: 2 }} gap={2}>
-          <SupportTicketForm
-            onSuccess={() => {
-              setDrawerOpen(false)
-            }}
-          />
-        </Stack>
+        <SupportTicketForm
+          onBack={() => setDrawerOpen(false)}
+          onSuccess={() => {
+            setDrawerOpen(false)
+          }}
+        />
       </CustomDrawer>
     </Stack>
   )

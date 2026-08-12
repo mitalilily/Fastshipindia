@@ -1,6 +1,7 @@
-import { Box, Button, Grid } from '@mui/material'
+import { Box, Button, Grid, Stack, Typography, alpha, useTheme } from '@mui/material'
 import { useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
+import { FiArrowLeft, FiSend } from 'react-icons/fi'
 import { useCreateTicket } from '../../hooks/User/useSupport'
 import { toast } from '../UI/Toast'
 import AutocompleteDropdown from '../UI/inputs/AutoCompleteDropdown'
@@ -17,6 +18,7 @@ interface FormValues {
 }
 
 interface SupportTicketFormProps {
+  onBack?: () => void
   onSuccess?: () => void
 }
 
@@ -115,7 +117,8 @@ export const supportCategories = [
   },
 ]
 
-export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({ onSuccess }) => {
+export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({ onBack, onSuccess }) => {
+  const theme = useTheme()
   const {
     control,
     handleSubmit,
@@ -183,8 +186,31 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({ onSuccess 
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-      <Grid container spacing={3}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{ width: '100%', maxWidth: 720, mx: 'auto', minWidth: 0 }}
+    >
+      <Box
+        sx={{
+          mb: { xs: 2, sm: 2.5 },
+          p: { xs: 1.75, sm: 2 },
+          borderRadius: 2.5,
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+          bgcolor: alpha(theme.palette.primary.main, 0.045),
+        }}
+      >
+        <Typography sx={{ fontSize: { xs: '1rem', sm: '1.08rem' }, fontWeight: 800 }}>
+          Tell us how we can help
+        </Typography>
+        <Typography
+          sx={{ mt: 0.55, color: 'text.secondary', fontSize: { xs: '0.8rem', sm: '0.86rem' } }}
+        >
+          Share the issue and relevant AWB details. Our support team will track it as a ticket.
+        </Typography>
+      </Box>
+
+      <Grid container spacing={{ xs: 2, sm: 2.5 }}>
         <Grid size={{ xs: 12 }}>
           <Controller
             name="subject"
@@ -210,25 +236,22 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({ onSuccess 
             name="category"
             control={control}
             rules={{ required: 'Category is required' }}
-            render={({ field, fieldState }) => {
-              console.log('field', field)
-              return (
-                <AutocompleteDropdown
-                  label="Category"
-                  required
-                  value={field.value}
-                  inputValue={supportCategories?.find((c) => c.key === field.value)?.label ?? ''}
-                  onInputChange={() => {}}
-                  onChange={(val) => field.onChange(val || '')}
-                  options={supportCategories.map((c) => ({
-                    key: c.key,
-                    label: c.label,
-                    description: c.description,
-                  }))}
-                  helperText={fieldState.error?.message}
-                />
-              )
-            }}
+            render={({ field, fieldState }) => (
+              <AutocompleteDropdown
+                label="Category"
+                required
+                value={field.value}
+                inputValue={supportCategories?.find((c) => c.key === field.value)?.label ?? ''}
+                onInputChange={() => {}}
+                onChange={(val) => field.onChange(val || '')}
+                options={supportCategories.map((c) => ({
+                  key: c.key,
+                  label: c.label,
+                  description: c.description,
+                }))}
+                helperText={fieldState.error?.message}
+              />
+            )}
           />
         </Grid>
 
@@ -317,6 +340,10 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({ onSuccess 
                 label="Attachments (Max 5 files, 2MB each)"
                 multiple
                 variant="dnd"
+                accept="image/*,.pdf"
+                maxSizeMb={2}
+                folderKey="support"
+                showAccept
                 onUploaded={(files) => {
                   field.onChange(files)
                 }}
@@ -326,14 +353,44 @@ export const SupportTicketForm: React.FC<SupportTicketFormProps> = ({ onSuccess 
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={isSubmitting || uploading}
+          <Stack
+            direction={{ xs: 'column-reverse', sm: 'row' }}
+            justifyContent="flex-end"
+            gap={1.25}
+            sx={{ pt: 0.5 }}
           >
-            {uploading ? 'Uploading...' : 'Submit Ticket'}
-          </Button>
+            <Button
+              type="button"
+              variant="outlined"
+              startIcon={<FiArrowLeft />}
+              onClick={onBack}
+              fullWidth
+              sx={{
+                maxWidth: { sm: 170 },
+                minHeight: 44,
+                textTransform: 'none',
+                fontWeight: 700,
+              }}
+            >
+              Back to tickets
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              endIcon={<FiSend />}
+              disabled={isSubmitting || uploading}
+              fullWidth
+              sx={{
+                maxWidth: { sm: 190 },
+                minHeight: 44,
+                textTransform: 'none',
+                fontWeight: 700,
+              }}
+            >
+              {uploading ? 'Submitting...' : 'Submit Ticket'}
+            </Button>
+          </Stack>
         </Grid>
       </Grid>
     </Box>
