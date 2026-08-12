@@ -126,6 +126,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/warehouses') {
+    return success({
+      success: true,
+      name: 'test_name',
+      message: 'Warehouse created',
+    })
+  }
+
   if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments') {
     return success({
       success: true,

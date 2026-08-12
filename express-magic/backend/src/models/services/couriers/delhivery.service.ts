@@ -293,6 +293,49 @@ const normalizeDelhiveryB2CPickupRequestPayload = (payload: unknown) => {
   }
 }
 
+const normalizeOptionalDelhiveryPincode = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  return normalizeDelhiveryPincode(value, field)
+}
+
+const normalizeDelhiveryB2CClientWarehousePayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Client warehouse payload is required')
+  }
+
+  const normalized: Record<string, unknown> = {
+    name: requiredManifestText(input.name, 'name'),
+    phone: requiredManifestText(input.phone, 'phone'),
+    pin: normalizeDelhiveryPincode(input.pin, 'pin'),
+    return_address: requiredManifestText(input.return_address, 'return_address'),
+  }
+
+  const copyTextField = (field: string) => {
+    if (input[field] === undefined || input[field] === null) return
+    const value = String(input[field]).trim()
+    if (value) normalized[field] = value
+  }
+
+  for (const field of [
+    'registered_name',
+    'email',
+    'address',
+    'city',
+    'country',
+    'return_city',
+    'return_state',
+    'return_country',
+  ]) {
+    copyTextField(field)
+  }
+
+  const returnPin = normalizeOptionalDelhiveryPincode(input.return_pin, 'return_pin')
+  if (returnPin) normalized.return_pin = returnPin
+
+  return normalized
+}
+
 const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
   const normalized = String(value ?? '').trim().toLowerCase()
   const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
@@ -1035,6 +1078,34 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to create Delhivery B2C pickup request')
+    }
+  }
+
+  async createB2CClientWarehouse(payload: unknown) {
+    try {
+      const warehouse = normalizeDelhiveryB2CClientWarehousePayload(payload)
+
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(
+        `${this.apiBase}/api/backend/clientwarehouse/create/`,
+        warehouse,
+        {
+          headers: {
+            Authorization: `Token ${this.token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C client warehouse creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C client warehouse')
     }
   }
 

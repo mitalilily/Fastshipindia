@@ -2,6 +2,7 @@ import { Router } from 'express'
 import {
   calculateShippingCostController,
   cancelShipmentController,
+  createClientWarehouseController,
   createMpsShipmentController,
   createPickupRequestController,
   createShipmentController,
@@ -30,6 +31,7 @@ router.get('/shipments/track', trackShipmentController)
 router.get('/shipping-cost', calculateShippingCostController)
 router.get('/shipments/label', generateShippingLabelController)
 router.post('/pickup-requests', createPickupRequestController)
+router.post('/warehouses', createClientWarehouseController)
 router.post('/shipments', createShipmentController)
 router.post('/shipments/mps', createMpsShipmentController)
 router.post('/shipments/edit', editShipmentController)

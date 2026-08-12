@@ -13,6 +13,7 @@
 | Calculate Shipping Cost | `GET /api/kinko/v1/invoice/charges/.json?md={md}&ss={ss}&d_pin={d_pin}&o_pin={o_pin}&cgm={cgm}&pt={pt}` | `GET /api/delhivery/b2c/shipping-cost?md={md}&ss={ss}&d_pin={d_pin}&o_pin={o_pin}&cgm={cgm}&pt={pt}` |
 | Generate Shipping Label | `GET /api/p/packing_slip?wbns={waybill}&pdf={pdf}&pdf_size={pdf_size}` | `GET /api/delhivery/b2c/shipments/label?waybill={waybill}&pdf={pdf}&pdf_size={pdf_size}` |
 | Pickup Request Creation | `POST /fm/request/new/` | `POST /api/delhivery/b2c/pickup-requests` |
+| Client Warehouse Creation | `POST /api/backend/clientwarehouse/create/` | `POST /api/delhivery/b2c/warehouses` |
 | Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
 | MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
@@ -63,6 +64,11 @@ For Pickup Request Creation, FastShip requires `pickup_time` in `HH:mm:ss`,
 `pickup_date` in `YYYY-MM-DD`, `pickup_location`, and positive integer
 `expected_package_count`, then forwards the JSON payload to Delhivery. This is
 a state-changing request against a warehouse/pickup location.
+
+For Client Warehouse Creation, FastShip requires `name`, `phone`, six-digit
+`pin`, and `return_address`, validates optional `return_pin` when present, and
+forwards supported warehouse and return-address fields to Delhivery. Warehouse
+names are case-sensitive and should match the value used during order creation.
 
 For Shipment Creation, FastShip accepts the documented JSON manifest, validates
 required shipment fields plus `pickup_location.name`, canonicalizes

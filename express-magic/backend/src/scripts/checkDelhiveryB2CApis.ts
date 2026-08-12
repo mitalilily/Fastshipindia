@@ -137,6 +137,16 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/api/backend/clientwarehouse/create/')) {
+      return {
+        status: 200,
+        data: {
+          success: true,
+          name: 'test_name',
+          message: 'Warehouse created',
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -903,6 +913,80 @@ const run = async () => {
           expected_package_count: 0,
         }),
       /expected_package_count must be a positive integer/,
+    )
+
+    const warehouseResponse = await service.createB2CClientWarehouse({
+      phone: '9999999999',
+      city: 'Kota',
+      name: 'test_name',
+      pin: '110042',
+      address: 'address',
+      country: 'India',
+      email: 'abc@gmail.com',
+      registered_name: 'registered_account_name',
+      return_address: 'return_address',
+      return_pin: '110042',
+      return_city: 'Kota',
+      return_state: 'Delhi',
+      return_country: 'India',
+    })
+    assert.equal((warehouseResponse as any)?.name, 'test_name')
+
+    const warehouseRequest = requests.at(-1)
+    assert.equal(warehouseRequest?.method, 'POST')
+    assert.equal(
+      warehouseRequest?.url,
+      'https://staging-express.delhivery.com/api/backend/clientwarehouse/create/',
+    )
+    assert.equal(warehouseRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(warehouseRequest?.headers?.Accept, 'application/json')
+    assert.equal(warehouseRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(warehouseRequest?.data, {
+      name: 'test_name',
+      phone: '9999999999',
+      pin: '110042',
+      return_address: 'return_address',
+      registered_name: 'registered_account_name',
+      email: 'abc@gmail.com',
+      address: 'address',
+      city: 'Kota',
+      country: 'India',
+      return_city: 'Kota',
+      return_state: 'Delhi',
+      return_country: 'India',
+      return_pin: '110042',
+    })
+
+    await assert.rejects(() => service.createB2CClientWarehouse({}), /name is required/)
+    await assert.rejects(
+      () =>
+        service.createB2CClientWarehouse({
+          name: 'test_name',
+          phone: '9999999999',
+          pin: '11004',
+          return_address: 'return_address',
+        }),
+      /pin must be a valid 6-digit pincode/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CClientWarehouse({
+          name: 'test_name',
+          phone: '9999999999',
+          pin: '110042',
+        }),
+      /return_address is required/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CClientWarehouse({
+          name: 'test_name',
+          phone: '9999999999',
+          pin: '110042',
+          return_address: 'return_address',
+          return_pin: '11004A',
+        }),
+      /return_pin must be a valid 6-digit pincode/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)

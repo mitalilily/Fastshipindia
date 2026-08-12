@@ -338,6 +338,52 @@
           }
         },
         {
+          "name": "Client Warehouse Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Client Warehouse Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Warehouse creation response is returned', function () {",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Warehouse response carries name or status signal', function () {",
+                  "  pm.expect(data.name !== undefined || data.success !== undefined || data.message !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/warehouses",
+            "description": "Creates/registers a Delhivery B2C client warehouse via POST /api/backend/clientwarehouse/create/. Warehouse name is case-sensitive and must match order creation pickup_location.name. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{warehousePhone}}\",\n  \"city\": \"{{warehouseCity}}\",\n  \"name\": \"{{pickupLocationName}}\",\n  \"pin\": \"{{warehousePincode}}\",\n  \"address\": \"{{warehouseAddress}}\",\n  \"country\": \"{{warehouseCountry}}\",\n  \"email\": \"{{warehouseEmail}}\",\n  \"registered_name\": \"{{warehouseRegisteredName}}\",\n  \"return_address\": \"{{warehouseReturnAddress}}\",\n  \"return_pin\": \"{{warehouseReturnPincode}}\",\n  \"return_city\": \"{{warehouseReturnCity}}\",\n  \"return_state\": \"{{warehouseReturnState}}\",\n  \"return_country\": \"{{warehouseReturnCountry}}\"\n}"
+            }
+          }
+        },
+        {
           "name": "Shipment Creation (mutating)",
           "event": [
             {
