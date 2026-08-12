@@ -115,6 +115,8 @@ services:
         sync: false
       - key: PROD_BUCKET
         sync: false
+      - key: R2_IR_BUCKET
+        sync: false
       - key: UPLOAD_PROXY_TOKEN_SECRET
         generateValue: true
       - key: ADMIN_SEED_EMAIL
