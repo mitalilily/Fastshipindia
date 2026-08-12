@@ -19,6 +19,7 @@ import { hasValidationErrors, validateOnboardingFields } from '../../utils/funct
 import { brand, brandGradients } from '../../theme/brand'
 import { initialFormData } from '../../utils/utility'
 import { isOnboardingComplete } from '../../utils/authRedirect'
+import { toast } from '../../components/UI/Toast'
 
 const DE_BLUE = brand.ink
 const DE_AMBER = brand.accent
@@ -30,6 +31,24 @@ export type FormErrors = {
 
 type UserContactFallback = {
   phone?: string
+}
+
+const findFirstError = (errors: FormErrors): { field: string; message: string } | null => {
+  for (const sectionValue of Object.values(errors)) {
+    if (typeof sectionValue === 'string' && sectionValue) {
+      return { field: '', message: sectionValue }
+    }
+
+    if (sectionValue && typeof sectionValue === 'object') {
+      for (const [field, message] of Object.entries(sectionValue as Record<string, unknown>)) {
+        if (typeof message === 'string' && message.trim()) {
+          return { field, message }
+        }
+      }
+    }
+  }
+
+  return null
 }
 
 const steps = [
@@ -144,7 +163,28 @@ export default function UserOnboarding() {
     const errors = validateOnboardingFields(formData, step)
     setFormErrors(errors)
 
-    if (hasValidationErrors(errors)) return
+    if (hasValidationErrors(errors)) {
+      const firstError = findFirstError(errors)
+      toast.open({
+        message: firstError?.message || 'Please complete the highlighted fields before continuing.',
+        severity: 'error',
+        position: { vertical: 'top', horizontal: 'center' },
+      })
+
+      window.requestAnimationFrame(() => {
+        const target = firstError?.field
+          ? document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+              `[name="${firstError.field}"]`,
+            )
+          : document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+              '[aria-invalid="true"]',
+            )
+
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        target?.focus({ preventScroll: true })
+      })
+      return
+    }
 
     const response = (await completeOnboarding({ step, data: formData })) as { user?: unknown }
 

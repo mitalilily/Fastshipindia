@@ -62,7 +62,11 @@ export const validateOnboardingFields = (
     if (!phone?.trim()) {
       errors.basicInfo.phone = "Phone number is required";
     } else if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) {
-      errors.basicInfo.phone = "Enter a valid 10-digit phone number";
+      const digits = phone.replace(/\D/g, "");
+      errors.basicInfo.phone =
+        digits.length > 0
+          ? `Enter a valid 10-digit phone number (${digits.length}/10 entered)`
+          : "Enter a valid 10-digit phone number";
     }
     // Pincode lookup is helpful, but it should not block onboarding when
     // the external postal API is slow or unavailable.
