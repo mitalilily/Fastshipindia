@@ -133,6 +133,89 @@ const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
   return paymentMode
 }
 
+const normalizeDelhiveryB2CEditPaymentMode = (value: unknown) => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '')
+  const map: Record<string, 'COD' | 'Pre-paid'> = {
+    cod: 'COD',
+    prepaid: 'Pre-paid',
+    prepaidmode: 'Pre-paid',
+  }
+  const paymentMode = map[normalized]
+  if (!paymentMode) {
+    throw new HttpError(400, "pt must be 'COD' or 'Pre-paid'")
+  }
+  return paymentMode
+}
+
+const normalizeOptionalPositiveNumber = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    throw new HttpError(400, `${field} must be a positive number`)
+  }
+  return numericValue
+}
+
+const normalizeOptionalNonNegativeNumber = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    throw new HttpError(400, `${field} must be a non-negative number`)
+  }
+  return numericValue
+}
+
+const normalizeDelhiveryB2CEditPayload = (payload: unknown) => {
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Shipment edit payload is required')
+  }
+
+  const normalized: Record<string, unknown> = {
+    waybill: requiredManifestText(input.waybill, 'waybill'),
+  }
+
+  const copyTextField = (sourceKey: string, targetKey = sourceKey) => {
+    if (input[sourceKey] === undefined || input[sourceKey] === null) return
+    const value = String(input[sourceKey]).trim()
+    if (value) normalized[targetKey] = value
+  }
+
+  copyTextField('name')
+  copyTextField('add')
+  copyTextField('products_desc')
+
+  if (input.phone !== undefined && input.phone !== null) {
+    const phones = Array.isArray(input.phone) ? input.phone : [input.phone]
+    const normalizedPhones = phones.map((phone: unknown) => String(phone).trim()).filter(Boolean)
+    if (normalizedPhones.length) normalized.phone = normalizedPhones
+  }
+
+  if (input.pt !== undefined && input.pt !== null && String(input.pt).trim()) {
+    normalized.pt = normalizeDelhiveryB2CEditPaymentMode(input.pt)
+  }
+
+  for (const field of ['gm', 'shipment_height', 'shipment_width', 'shipment_length']) {
+    const value = normalizeOptionalPositiveNumber(input[field], field)
+    if (value !== undefined) normalized[field] = value
+  }
+
+  const cod = normalizeOptionalNonNegativeNumber(input.cod, 'cod')
+  if (cod !== undefined) normalized.cod = cod
+  if (normalized.pt === 'COD' && normalized.cod === undefined) {
+    throw new HttpError(400, 'cod is required when pt is COD')
+  }
+
+  if (Object.keys(normalized).length === 1) {
+    throw new HttpError(400, 'At least one editable shipment field is required')
+  }
+
+  return normalized
+}
+
 const requiredManifestText = (value: unknown, field: string) => {
   const text = String(value ?? '').trim()
   if (!text) throw new HttpError(400, `${field} is required`)
@@ -667,6 +750,29 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to create Delhivery B2C MPS shipment')
+    }
+  }
+
+  async editB2CShipment(payload: unknown) {
+    try {
+      const editPayload = normalizeDelhiveryB2CEditPayload(payload)
+      await this.ensureCredentials()
+      const res = await this.postWithTimeout(`${this.apiBase}/api/p/edit`, editPayload, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C shipment edit error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to edit Delhivery B2C shipment')
     }
   }
 

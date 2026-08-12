@@ -464,6 +464,65 @@ const run = async () => {
       /payment_mode/,
     )
 
+    const editResponse = await service.editB2CShipment({
+      waybill: '843000000001',
+      pt: 'COD',
+      cod: 100,
+      shipment_height: 40.2,
+      shipment_width: 20,
+      shipment_length: 10,
+      gm: 100.2,
+      name: 'Edited Consignee',
+      phone: ['9999999999'],
+      add: 'Edited Address',
+      products_desc: 'Edited Product',
+    })
+    assert.equal((editResponse as any)?.success, true)
+
+    const editRequest = requests.at(-1)
+    assert.equal(editRequest?.method, 'POST')
+    assert.equal(editRequest?.url, 'https://staging-express.delhivery.com/api/p/edit')
+    assert.equal(editRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(editRequest?.headers?.Accept, 'application/json')
+    assert.equal(editRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(editRequest?.data, {
+      waybill: '843000000001',
+      name: 'Edited Consignee',
+      add: 'Edited Address',
+      products_desc: 'Edited Product',
+      phone: ['9999999999'],
+      pt: 'COD',
+      gm: 100.2,
+      shipment_height: 40.2,
+      shipment_width: 20,
+      shipment_length: 10,
+      cod: 100,
+    })
+
+    await service.editB2CShipment({ waybill: '843000000002', pt: 'Pre-paid' })
+    assert.deepEqual(requests.at(-1)?.data, {
+      waybill: '843000000002',
+      pt: 'Pre-paid',
+    })
+
+    await assert.rejects(() => service.editB2CShipment({}), /waybill is required/)
+    await assert.rejects(
+      () => service.editB2CShipment({ waybill: '843000000003' }),
+      /At least one editable shipment field/,
+    )
+    await assert.rejects(
+      () => service.editB2CShipment({ waybill: '843000000004', pt: 'COD' }),
+      /cod is required/,
+    )
+    await assert.rejects(
+      () => service.editB2CShipment({ waybill: '843000000005', pt: 'Pickup' }),
+      /pt must be/,
+    )
+    await assert.rejects(
+      () => service.editB2CShipment({ waybill: '843000000006', gm: -1 }),
+      /gm must be a positive number/,
+    )
+
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
   } finally {
     ;(axios as any).get = originalGet

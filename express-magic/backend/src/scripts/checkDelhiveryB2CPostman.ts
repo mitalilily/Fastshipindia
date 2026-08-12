@@ -96,6 +96,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments/edit') {
+    return success({
+      success: true,
+      waybill: '843000000001',
+      message: 'Shipment updated',
+    })
+  }
+
   return null
 }
 

@@ -77,3 +77,6 @@ export const createShipmentController = (req: Request, res: Response) =>
 
 export const createMpsShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CMpsShipmentManifest(req.body))
+
+export const editShipmentController = (req: Request, res: Response) =>
+  sendDataResult(res, service.editB2CShipment(req.body))

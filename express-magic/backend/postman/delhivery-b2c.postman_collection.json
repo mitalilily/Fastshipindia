@@ -280,6 +280,47 @@
               "raw": "{\n  \"pickup_location\": {\n    \"name\": \"{{pickupLocationName}}\"\n  },\n  \"shipments\": [\n    {\n      \"order\": \"POSTMAN-MPS-{{$timestamp}}\",\n      \"weight\": \"100\",\n      \"mps_amount\": \"0\",\n      \"mps_children\": \"2\",\n      \"pin\": \"122002\",\n      \"products_desc\": \"Toys, ToyCar\",\n      \"add\": \"Test Address\",\n      \"shipment_type\": \"MPS\",\n      \"state\": \"TAMIL NADU\",\n      \"master_id\": \"WB-MASTER-000001\",\n      \"city\": \"CHENNAI\",\n      \"waybill\": \"WB-MASTER-000001\",\n      \"phone\": \"9999888800\",\n      \"payment_mode\": \"Prepaid\",\n      \"name\": \"Test Name\",\n      \"total_amount\": \"4250\",\n      \"country\": \"India\"\n    },\n    {\n      \"order\": \"POSTMAN-MPS-{{$timestamp}}\",\n      \"weight\": \"100\",\n      \"mps_amount\": \"0\",\n      \"mps_children\": \"2\",\n      \"pin\": \"600063\",\n      \"products_desc\": \"Toy box 2\",\n      \"add\": \"Consignee Address\",\n      \"shipment_type\": \"MPS\",\n      \"state\": \"TAMIL NADU\",\n      \"master_id\": \"WB-MASTER-000001\",\n      \"city\": \"CHENNAI\",\n      \"waybill\": \"WB-CHILD-000002\",\n      \"phone\": \"9999888800\",\n      \"payment_mode\": \"Prepaid\",\n      \"name\": \"Consignee Name\",\n      \"total_amount\": \"4250\",\n      \"country\": \"India\"\n    }\n  ]\n}"
             }
           }
+        },
+        {
+          "name": "Shipment Updation/Edit (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Shipment Edit proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Shipment Edit response is returned', function () {",
+                  "  pm.expect(data.success || data.message || data.waybill).to.exist;",
+                  "});",
+                  "pm.test('Shipment Edit carries waybill or status signal', function () {",
+                  "  pm.expect(Boolean(data.waybill) || Boolean(data.success) || Boolean(data.message)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/edit",
+            "description": "Edits allowed B2C shipment fields via Delhivery POST /api/p/edit. The waybill is required. Payment mode updates support COD and Pre-paid; COD edits require cod amount. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"waybill\": \"{{editWaybill}}\",\n  \"pt\": \"COD\",\n  \"cod\": 100,\n  \"shipment_height\": 40.2,\n  \"shipment_width\": 20,\n  \"shipment_length\": 10,\n  \"gm\": 100.2,\n  \"name\": \"Edited Consignee\",\n  \"phone\": [\"9999999999\"],\n  \"add\": \"Edited Address\",\n  \"products_desc\": \"Edited Product\"\n}"
+            }
+          }
         }
       ]
     }

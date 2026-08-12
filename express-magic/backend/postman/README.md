@@ -60,11 +60,12 @@ Import:
 - `delhivery-b2c.local.postman_environment.json`
 
 The collection signs in as a FastShip admin and checks the Delhivery B2C
-pincode serviceability, Heavy product type pincode serviceability, and Expected
-TAT, Fetch WayBill, Fetch Single WayBill, and Shipment Creation proxies.
-Shipment Creation and MPS Manifestation are state-changing and skipped by default; set
-`allowMutations=true` only when creating a shipment is intended. Local Newman
-verification:
+pincode serviceability, Heavy product type pincode serviceability, Expected TAT,
+Fetch WayBill, Fetch Single WayBill, Shipment Creation, MPS Manifestation, and
+Shipment Updation/Edit proxies.
+Shipment Creation, MPS Manifestation, and Shipment Updation/Edit are
+state-changing and skipped by default; set `allowMutations=true` only when the
+mutation is intended. Local Newman verification:
 
 ```bash
 npm run check:delhivery-b2c-postman
