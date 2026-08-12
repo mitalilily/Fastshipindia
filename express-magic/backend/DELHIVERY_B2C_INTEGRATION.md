@@ -13,6 +13,7 @@
 | MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
 | Shipment Cancellation | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/cancel` |
+| Ewaybill Update | `PUT /api/rest/ewaybill/{waybill}/` | `PUT /api/delhivery/b2c/shipments/{waybill}/ewaybill` |
 
 FastShip validates a single six-digit pincode, forwards it as `filter_codes`,
 and authenticates with Delhivery's `Authorization: Token ...` header. An empty
@@ -59,6 +60,10 @@ Provider status restrictions still apply in Delhivery.
 For Shipment Cancellation, FastShip requires `waybill` and sends
 `cancellation=true` to Delhivery's edit endpoint. Delhivery still decides
 whether cancellation is allowed based on the package status and payment mode.
+
+For Ewaybill Update, FastShip requires the route `waybill` plus one or more
+`data` entries containing `dcn` invoice number and `ewbn` e-waybill number, then
+forwards the payload to Delhivery's ewaybill endpoint.
 
 ## Verification
 

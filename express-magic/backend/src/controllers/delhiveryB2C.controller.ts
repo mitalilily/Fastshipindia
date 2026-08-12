@@ -83,3 +83,6 @@ export const editShipmentController = (req: Request, res: Response) =>
 
 export const cancelShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.cancelShipment(req.body?.waybill))
+
+export const updateEwaybillController = (req: Request, res: Response) =>
+  sendDataResult(res, service.updateB2CEwaybill(req.params.waybill, req.body))

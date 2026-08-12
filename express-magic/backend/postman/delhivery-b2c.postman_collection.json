@@ -362,6 +362,47 @@
               "raw": "{\n  \"waybill\": \"{{cancelWaybill}}\",\n  \"cancellation\": \"true\"\n}"
             }
           }
+        },
+        {
+          "name": "Ewaybill Update (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Ewaybill Update proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Ewaybill update response is returned', function () {",
+                  "  pm.expect(data.success || data.updated || data.waybill).to.exist;",
+                  "});",
+                  "pm.test('Ewaybill update carries waybill/status signal', function () {",
+                  "  pm.expect(Boolean(data.waybill) || Boolean(data.success) || Boolean(data.updated)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/{{ewaybillWaybill}}/ewaybill",
+            "description": "Updates a Delhivery B2C shipment e-waybill via PUT /api/rest/ewaybill/{waybill}/ with data entries containing dcn and ewbn. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": [\n    {\n      \"dcn\": \"{{invoiceNumber}}\",\n      \"ewbn\": \"{{ewaybillNumber}}\"\n    }\n  ]\n}"
+            }
+          }
         }
       ]
     }

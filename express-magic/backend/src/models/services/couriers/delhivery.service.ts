@@ -216,6 +216,31 @@ const normalizeDelhiveryB2CEditPayload = (payload: unknown) => {
   return normalized
 }
 
+const normalizeDelhiveryB2CEwaybillUpdatePayload = (waybill: unknown, payload: unknown) => {
+  const normalizedWaybill = requiredManifestText(waybill, 'waybill')
+  const input = payload as any
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new HttpError(400, 'Ewaybill update payload is required')
+  }
+
+  const sourceRows = Array.isArray(input.data) ? input.data : [input]
+  if (sourceRows.length === 0) {
+    throw new HttpError(400, 'data must contain at least one ewaybill entry')
+  }
+
+  const data = sourceRows.map((entry: any, index: number) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new HttpError(400, `data[${index}] must be an object`)
+    }
+    return {
+      dcn: requiredManifestText(entry.dcn, `data[${index}].dcn`),
+      ewbn: requiredManifestText(entry.ewbn, `data[${index}].ewbn`),
+    }
+  })
+
+  return { waybill: normalizedWaybill, payload: { data } }
+}
+
 const requiredManifestText = (value: unknown, field: string) => {
   const text = String(value ?? '').trim()
   if (!text) throw new HttpError(400, `${field} is required`)
@@ -773,6 +798,34 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to edit Delhivery B2C shipment')
+    }
+  }
+
+  async updateB2CEwaybill(waybill: unknown, payload: unknown) {
+    try {
+      const normalized = normalizeDelhiveryB2CEwaybillUpdatePayload(waybill, payload)
+      await this.ensureCredentials()
+      const res = await axios.put(
+        `${this.apiBase}/api/rest/ewaybill/${encodeURIComponent(normalized.waybill)}/`,
+        normalized.payload,
+        {
+          headers: {
+            Authorization: `Token ${this.token}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: this.requestTimeoutMs,
+        },
+      )
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C ewaybill update error:', {
+        waybill,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to update Delhivery B2C ewaybill')
     }
   }
 

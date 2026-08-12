@@ -112,6 +112,17 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (
+    method === 'PUT' &&
+    /^\/api\/delhivery\/b2c\/shipments\/[^/]+\/ewaybill$/.test(pathname)
+  ) {
+    return success({
+      success: true,
+      waybill: pathname.split('/')[5],
+      updated: true,
+    })
+  }
+
   return null
 }
 

@@ -18,6 +18,7 @@ const run = async () => {
     []
   const originalGet = axios.get
   const originalPost = axios.post
+  const originalPut = axios.put
 
   ;(axios as any).get = async (url: string, config?: CapturedRequest) => {
     requests.push({ method: 'GET', url, headers: config?.headers, params: config?.params })
@@ -85,6 +86,18 @@ const run = async () => {
         success: true,
         upload_wbn: 'UPLOAD-B2C-000001',
         packages: [{ waybill: 'WB-SHIPMENT-000001', status: 'Success' }],
+      },
+    }
+  }
+
+  ;(axios as any).put = async (url: string, data?: unknown, config?: CapturedRequest) => {
+    requests.push({ method: 'PUT', url, data, headers: config?.headers, params: config?.params })
+    return {
+      status: 200,
+      data: {
+        success: true,
+        waybill: '843000000001',
+        updated: true,
       },
     }
   }
@@ -540,10 +553,46 @@ const run = async () => {
 
     await assert.rejects(() => service.cancelShipment('  '), /Delhivery AWB number is required/)
 
+    const ewaybillResponse = await service.updateB2CEwaybill('843000000001', {
+      data: [{ dcn: 'INV-001', ewbn: 'EWB-001' }],
+    })
+    assert.equal((ewaybillResponse as any)?.success, true)
+
+    const ewaybillRequest = requests.at(-1)
+    assert.equal(ewaybillRequest?.method, 'PUT')
+    assert.equal(
+      ewaybillRequest?.url,
+      'https://staging-express.delhivery.com/api/rest/ewaybill/843000000001/',
+    )
+    assert.equal(ewaybillRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(ewaybillRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(ewaybillRequest?.data, {
+      data: [{ dcn: 'INV-001', ewbn: 'EWB-001' }],
+    })
+
+    await service.updateB2CEwaybill('843000000002', { dcn: 'INV-002', ewbn: 'EWB-002' })
+    assert.deepEqual(requests.at(-1)?.data, {
+      data: [{ dcn: 'INV-002', ewbn: 'EWB-002' }],
+    })
+
+    await assert.rejects(
+      () => service.updateB2CEwaybill('', { dcn: 'INV-003', ewbn: 'EWB-003' }),
+      /waybill is required/,
+    )
+    await assert.rejects(
+      () => service.updateB2CEwaybill('843000000003', { ewbn: 'EWB-003' }),
+      /dcn is required/,
+    )
+    await assert.rejects(
+      () => service.updateB2CEwaybill('843000000004', { dcn: 'INV-004' }),
+      /ewbn is required/,
+    )
+
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
   } finally {
     ;(axios as any).get = originalGet
     ;(axios as any).post = originalPost
+    ;(axios as any).put = originalPut
   }
 }
 
