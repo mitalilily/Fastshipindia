@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  calculateShippingCostController,
   cancelShipmentController,
   createMpsShipmentController,
   createShipmentController,
@@ -24,6 +25,7 @@ router.get('/tat', expectedTatController)
 router.get('/waybills', fetchWaybillsController)
 router.get('/waybill', fetchSingleWaybillController)
 router.get('/shipments/track', trackShipmentController)
+router.get('/shipping-cost', calculateShippingCostController)
 router.post('/shipments', createShipmentController)
 router.post('/shipments/mps', createMpsShipmentController)
 router.post('/shipments/edit', editShipmentController)

@@ -86,6 +86,16 @@ const run = async () => {
         },
       }
     }
+    if (String(url).endsWith('/api/kinko/v1/invoice/charges/.json')) {
+      return {
+        status: 200,
+        data: {
+          total_amount: 55,
+          chargeable_weight: 10,
+          billing_mode: 'E',
+        },
+      }
+    }
 
     return {
       status: 200,
@@ -647,6 +657,119 @@ const run = async () => {
           waybill: Array.from({ length: 51 }, (_, index) => `WB${index + 1}`).join(','),
         }),
       /up to 50/,
+    )
+
+    const shippingCostResponse = await service.calculateB2CShippingCost({
+      md: 'E',
+      ss: 'Delivered',
+      d_pin: '110053',
+      o_pin: '110042',
+      cgm: '10',
+      pt: 'Pre-paid',
+      l: '12',
+      b: '10',
+      h: '8',
+      ipkg_type: 'box',
+    })
+    assert.equal((shippingCostResponse as any)?.total_amount, 55)
+
+    const shippingCostRequest = requests.at(-1)
+    assert.equal(shippingCostRequest?.method, 'GET')
+    assert.equal(
+      shippingCostRequest?.url,
+      'https://staging-express.delhivery.com/api/kinko/v1/invoice/charges/.json',
+    )
+    assert.equal(shippingCostRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(shippingCostRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(shippingCostRequest?.params, {
+      md: 'E',
+      cgm: 10,
+      o_pin: '110042',
+      d_pin: '110053',
+      ss: 'Delivered',
+      pt: 'Pre-paid',
+      l: 12,
+      b: 10,
+      h: 8,
+      ipkg_type: 'box',
+    })
+
+    await service.calculateB2CShippingCost({
+      md: 's',
+      ss: 'rto',
+      d_pin: '110053',
+      o_pin: '110042',
+      cgm: 10,
+      pt: 'cod',
+    })
+    assert.deepEqual(requests.at(-1)?.params, {
+      md: 'S',
+      cgm: 10,
+      o_pin: '110042',
+      d_pin: '110053',
+      ss: 'RTO',
+      pt: 'COD',
+    })
+
+    await assert.rejects(
+      () =>
+        service.calculateB2CShippingCost({
+          md: 'X',
+          ss: 'Delivered',
+          d_pin: '110053',
+          o_pin: '110042',
+          cgm: 10,
+          pt: 'Pre-paid',
+        }),
+      /md must be/,
+    )
+    await assert.rejects(
+      () =>
+        service.calculateB2CShippingCost({
+          md: 'E',
+          ss: 'Delivered',
+          d_pin: '11005',
+          o_pin: '110042',
+          cgm: 10,
+          pt: 'Pre-paid',
+        }),
+      /d_pin must be a valid 6-digit pincode/,
+    )
+    await assert.rejects(
+      () =>
+        service.calculateB2CShippingCost({
+          md: 'E',
+          ss: 'Delivered',
+          d_pin: '110053',
+          o_pin: '110042',
+          cgm: 0,
+          pt: 'Pre-paid',
+        }),
+      /cgm must be a positive integer/,
+    )
+    await assert.rejects(
+      () =>
+        service.calculateB2CShippingCost({
+          md: 'E',
+          ss: 'Lost',
+          d_pin: '110053',
+          o_pin: '110042',
+          cgm: 10,
+          pt: 'Pre-paid',
+        }),
+      /ss must be/,
+    )
+    await assert.rejects(
+      () =>
+        service.calculateB2CShippingCost({
+          md: 'E',
+          ss: 'Delivered',
+          d_pin: '110053',
+          o_pin: '110042',
+          cgm: 10,
+          pt: 'Pickup',
+        }),
+      /pt must be/,
     )
 
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)

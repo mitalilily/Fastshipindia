@@ -235,6 +235,34 @@
           ]
         },
         {
+          "name": "Calculate Shipping Cost",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipping-cost?md={{shippingMode}}&ss={{shipmentStatus}}&d_pin={{shippingDestinationPincode}}&o_pin={{shippingOriginPincode}}&cgm={{chargeableWeightGrams}}&pt={{shippingPaymentType}}&l={{shipmentLength}}&b={{shipmentBreadth}}&h={{shipmentHeight}}&ipkg_type={{packageType}}",
+            "description": "Calculates estimated Delhivery B2C shipping charges using GET /api/kinko/v1/invoice/charges/.json. Required params are md, cgm, o_pin, d_pin, ss, and pt; dimensions and package type are optional."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "pm.test('Calculate Shipping Cost proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Shipping cost data is returned', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data).to.be.an(\"object\");",
+                  "});",
+                  "pm.test('Shipping cost contains amount or charge signal', function () {",
+                  "  var data = body.data || {};",
+                  "  pm.expect(data.total_amount !== undefined || data.amount !== undefined || data.charges !== undefined || data.chargeable_weight !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Shipment Creation (mutating)",
           "event": [
             {

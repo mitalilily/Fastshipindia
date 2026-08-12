@@ -140,6 +140,91 @@ const normalizeOptionalDelhiveryText = (value: unknown) => {
   return String(value).trim()
 }
 
+const normalizeDelhiveryB2CShippingMode = (value: unknown) => {
+  const mode = String(value ?? '')
+    .trim()
+    .toUpperCase()
+  if (!['E', 'S'].includes(mode)) {
+    throw new HttpError(400, "md must be one of 'E' or 'S'")
+  }
+  return mode as 'E' | 'S'
+}
+
+const normalizeDelhiveryB2CShipmentStatus = (value: unknown) => {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  const map: Record<string, 'Delivered' | 'RTO' | 'DTO'> = {
+    delivered: 'Delivered',
+    rto: 'RTO',
+    dto: 'DTO',
+  }
+  const status = map[normalized]
+  if (!status) {
+    throw new HttpError(400, "ss must be one of 'Delivered', 'RTO', or 'DTO'")
+  }
+  return status
+}
+
+const normalizeDelhiveryB2CShippingCostPaymentType = (value: unknown) => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '')
+  const map: Record<string, 'Pre-paid' | 'COD'> = {
+    prepaid: 'Pre-paid',
+    prepaidmode: 'Pre-paid',
+    cod: 'COD',
+  }
+  const paymentType = map[normalized]
+  if (!paymentType) {
+    throw new HttpError(400, "pt must be 'Pre-paid' or 'COD'")
+  }
+  return paymentType
+}
+
+const normalizeRequiredPositiveInteger = (value: unknown, field: string) => {
+  const numericValue = Number(value)
+  if (!Number.isInteger(numericValue) || numericValue <= 0) {
+    throw new HttpError(400, `${field} must be a positive integer`)
+  }
+  return numericValue
+}
+
+const normalizeOptionalPositiveInteger = (value: unknown, field: string) => {
+  if (value === undefined || value === null || value === '') return undefined
+  return normalizeRequiredPositiveInteger(value, field)
+}
+
+const normalizeDelhiveryB2CShippingCostParams = (params: {
+  md: unknown
+  cgm: unknown
+  o_pin: unknown
+  d_pin: unknown
+  ss: unknown
+  pt: unknown
+  l?: unknown
+  b?: unknown
+  h?: unknown
+  ipkg_type?: unknown
+}) => {
+  const optionalPackageType = normalizeOptionalDelhiveryText(params.ipkg_type)
+  const length = normalizeOptionalPositiveInteger(params.l, 'l')
+  const breadth = normalizeOptionalPositiveInteger(params.b, 'b')
+  const height = normalizeOptionalPositiveInteger(params.h, 'h')
+
+  return {
+    md: normalizeDelhiveryB2CShippingMode(params.md),
+    cgm: normalizeRequiredPositiveInteger(params.cgm, 'cgm'),
+    o_pin: normalizeDelhiveryPincode(params.o_pin, 'o_pin'),
+    d_pin: normalizeDelhiveryPincode(params.d_pin, 'd_pin'),
+    ss: normalizeDelhiveryB2CShipmentStatus(params.ss),
+    pt: normalizeDelhiveryB2CShippingCostPaymentType(params.pt),
+    ...(length !== undefined ? { l: length } : {}),
+    ...(breadth !== undefined ? { b: breadth } : {}),
+    ...(height !== undefined ? { h: height } : {}),
+    ...(optionalPackageType ? { ipkg_type: optionalPackageType } : {}),
+  }
+}
+
 const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
   const normalized = String(value ?? '').trim().toLowerCase()
   const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
@@ -796,6 +881,43 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to fetch Delhivery B2C shipment tracking')
+    }
+  }
+
+  async calculateB2CShippingCost(params: {
+    md: unknown
+    cgm: unknown
+    o_pin: unknown
+    d_pin: unknown
+    ss: unknown
+    pt: unknown
+    l?: unknown
+    b?: unknown
+    h?: unknown
+    ipkg_type?: unknown
+  }) {
+    try {
+      const normalizedParams = normalizeDelhiveryB2CShippingCostParams(params)
+
+      await this.ensureCredentials()
+      const url = `${this.apiBase}/api/kinko/v1/invoice/charges/.json`
+      const res = await this.getWithTimeout(url, {
+        headers: {
+          Authorization: `Token ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        params: normalizedParams,
+      })
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C shipping cost error:', {
+        params,
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to calculate Delhivery B2C shipping cost')
     }
   }
 

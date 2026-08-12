@@ -81,6 +81,23 @@ export const trackShipmentController = (req: Request, res: Response) =>
     }),
   )
 
+export const calculateShippingCostController = (req: Request, res: Response) =>
+  sendDataResult(
+    res,
+    service.calculateB2CShippingCost({
+      md: req.query.md,
+      cgm: req.query.cgm,
+      o_pin: req.query.o_pin,
+      d_pin: req.query.d_pin,
+      ss: req.query.ss,
+      pt: req.query.pt,
+      l: req.query.l,
+      b: req.query.b,
+      h: req.query.h,
+      ipkg_type: req.query.ipkg_type,
+    }),
+  )
+
 export const createShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.createB2CShipmentManifest(req.body))
 

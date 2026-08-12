@@ -99,6 +99,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'GET' && pathname === '/api/delhivery/b2c/shipping-cost') {
+    return success({
+      total_amount: 55,
+      chargeable_weight: 10,
+      billing_mode: 'E',
+    })
+  }
+
   if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments') {
     return success({
       success: true,
