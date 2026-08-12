@@ -118,6 +118,63 @@ const normalizeDelhiveryWaybillCount = (value: unknown) => {
   return count
 }
 
+const normalizeDelhiveryB2CPaymentMode = (value: unknown) => {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  const map: Record<string, 'Pickup' | 'COD' | 'Prepaid' | 'REPL'> = {
+    pickup: 'Pickup',
+    cod: 'COD',
+    prepaid: 'Prepaid',
+    repl: 'REPL',
+  }
+  const paymentMode = map[normalized]
+  if (!paymentMode) {
+    throw new HttpError(400, "payment_mode must be one of 'Pickup', 'COD', 'Prepaid', or 'REPL'")
+  }
+  return paymentMode
+}
+
+const requiredManifestText = (value: unknown, field: string) => {
+  const text = String(value ?? '').trim()
+  if (!text) throw new HttpError(400, `${field} is required`)
+  return text
+}
+
+const normalizeDelhiveryB2CShipmentManifest = (payload: unknown) => {
+  const manifest = payload as any
+  if (!manifest || typeof manifest !== 'object') {
+    throw new HttpError(400, 'Shipment manifest payload is required')
+  }
+  if (!Array.isArray(manifest.shipments) || manifest.shipments.length === 0) {
+    throw new HttpError(400, 'shipments must be a non-empty array')
+  }
+
+  const pickupName = requiredManifestText(manifest.pickup_location?.name, 'pickup_location.name')
+  const shipments = manifest.shipments.map((shipment: any, index: number) => {
+    if (!shipment || typeof shipment !== 'object') {
+      throw new HttpError(400, `shipments[${index}] must be an object`)
+    }
+
+    return {
+      ...shipment,
+      name: requiredManifestText(shipment.name, `shipments[${index}].name`),
+      order: requiredManifestText(shipment.order, `shipments[${index}].order`),
+      phone: requiredManifestText(shipment.phone, `shipments[${index}].phone`),
+      add: requiredManifestText(shipment.add, `shipments[${index}].add`),
+      pin: normalizeDelhiveryPincode(shipment.pin, `shipments[${index}].pin`),
+      payment_mode: normalizeDelhiveryB2CPaymentMode(shipment.payment_mode),
+    }
+  })
+
+  return {
+    ...manifest,
+    shipments,
+    pickup_location: {
+      ...manifest.pickup_location,
+      name: pickupName,
+    },
+  }
+}
+
 export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
   const payload = response as any
   const rows = Array.isArray(payload)
@@ -521,6 +578,22 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to fetch Delhivery B2C single waybill')
+    }
+  }
+
+  async createB2CShipmentManifest(payload: unknown) {
+    try {
+      const manifest = normalizeDelhiveryB2CShipmentManifest(payload)
+      const res = await this.postFormEncoded('/api/cmu/create.json', manifest)
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('❌ Delhivery B2C shipment creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C shipment')
     }
   }
 

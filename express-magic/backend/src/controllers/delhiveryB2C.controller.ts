@@ -71,3 +71,6 @@ export const fetchWaybillsController = (req: Request, res: Response) =>
 
 export const fetchSingleWaybillController = (_req: Request, res: Response) =>
   sendDataResult(res, service.fetchB2CSingleWaybill())
+
+export const createShipmentController = (req: Request, res: Response) =>
+  sendDataResult(res, service.createB2CShipmentManifest(req.body))

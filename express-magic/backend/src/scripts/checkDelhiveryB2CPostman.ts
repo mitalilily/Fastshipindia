@@ -77,6 +77,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments') {
+    return success({
+      success: true,
+      upload_wbn: 'UPLOAD-B2C-000001',
+      packages: [{ waybill: 'WB-SHIPMENT-000001', status: 'Success' }],
+    })
+  }
+
   return null
 }
 
@@ -135,6 +143,8 @@ const run = async () => {
           'adminEmail=postman-admin@example.com',
           '--env-var',
           'adminPassword=mock-password',
+          '--env-var',
+          'allowMutations=true',
           '--reporters',
           'cli',
           '--color',

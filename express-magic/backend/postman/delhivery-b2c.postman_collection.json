@@ -198,6 +198,47 @@
               }
             }
           ]
+        },
+        {
+          "name": "Shipment Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('Shipment Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('Delhivery shipment creation response is returned', function () {",
+                  "  pm.expect(data.upload_wbn || data.packages || data.success).to.exist;",
+                  "});",
+                  "pm.test('Shipment packages or upload id are available', function () {",
+                  "  pm.expect(Boolean(data.upload_wbn) || Array.isArray(data.packages)).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments",
+            "description": "Creates a Delhivery B2C shipment via POST /api/cmu/create.json. FastShip accepts JSON, validates the required fields, and forwards it to Delhivery as URL-encoded format=json&data={...}. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipments\": [\n    {\n      \"name\": \"Consignee name\",\n      \"add\": \"Huda Market, Haryana\",\n      \"pin\": \"110042\",\n      \"city\": \"Gurugram\",\n      \"state\": \"Haryana\",\n      \"country\": \"India\",\n      \"phone\": \"9999999999\",\n      \"order\": \"POSTMAN-B2C-{{$timestamp}}\",\n      \"payment_mode\": \"Prepaid\",\n      \"return_pin\": \"\",\n      \"return_city\": \"\",\n      \"return_phone\": \"\",\n      \"return_add\": \"\",\n      \"return_state\": \"\",\n      \"return_country\": \"\",\n      \"products_desc\": \"Postman test product\",\n      \"hsn_code\": \"\",\n      \"cod_amount\": \"\",\n      \"order_date\": null,\n      \"total_amount\": \"\",\n      \"seller_add\": \"\",\n      \"seller_name\": \"\",\n      \"seller_inv\": \"\",\n      \"quantity\": \"\",\n      \"waybill\": \"\",\n      \"shipment_width\": \"100\",\n      \"shipment_height\": \"100\",\n      \"weight\": \"\",\n      \"shipping_mode\": \"Surface\",\n      \"address_type\": \"\"\n    }\n  ],\n  \"pickup_location\": {\n    \"name\": \"{{pickupLocationName}}\"\n  }\n}"
+            }
+          }
         }
       ]
     }

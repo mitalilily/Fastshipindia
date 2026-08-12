@@ -9,6 +9,7 @@
 | Expected TAT | `GET /api/dc/expected_tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` | `GET /api/delhivery/b2c/tat?origin_pin={origin_pin}&destination_pin={destination_pin}&mot={mot}` |
 | Fetch WayBill | `GET /waybill/api/bulk/json/?token={token}&count={count}` | `GET /api/delhivery/b2c/waybills?count={count}` |
 | Fetch Single WayBill | `GET /waybill/api/fetch/json/?token={token}` | `GET /api/delhivery/b2c/waybill` |
+| Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
 
 FastShip validates a single six-digit pincode, forwards it as `filter_codes`,
 and authenticates with Delhivery's `Authorization: Token ...` header. An empty
@@ -34,6 +35,13 @@ manifest creation.
 For Fetch Single WayBill, FastShip forwards Delhivery's token in the provider
 query string and returns the single generated waybill response unchanged under
 `data`.
+
+For Shipment Creation, FastShip accepts the documented JSON manifest, validates
+required shipment fields plus `pickup_location.name`, canonicalizes
+`payment_mode`, and forwards the provider request as URL-encoded
+`format=json&data={...}` to avoid Delhivery raw-JSON special-character issues.
+This is a state-changing request; only run it against an intended Delhivery
+account and warehouse.
 
 ## Verification
 

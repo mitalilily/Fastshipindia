@@ -61,7 +61,10 @@ Import:
 
 The collection signs in as a FastShip admin and checks the Delhivery B2C
 pincode serviceability, Heavy product type pincode serviceability, and Expected
-TAT, Fetch WayBill, and Fetch Single WayBill proxies. Local Newman verification:
+TAT, Fetch WayBill, Fetch Single WayBill, and Shipment Creation proxies.
+Shipment Creation is state-changing and is skipped by default; set
+`allowMutations=true` only when creating a shipment is intended. Local Newman
+verification:
 
 ```bash
 npm run check:delhivery-b2c-postman

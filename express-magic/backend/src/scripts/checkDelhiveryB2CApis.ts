@@ -14,8 +14,10 @@ const run = async () => {
     isDelhiveryB2CHeavyPincodeServiceable,
     isDelhiveryB2CPincodeServiceable,
   } = await import('../models/services/couriers/delhivery.service')
-  const requests: Array<{ method: string; url: string; headers?: any; params?: any }> = []
+  const requests: Array<{ method: string; url: string; headers?: any; params?: any; data?: any }> =
+    []
   const originalGet = axios.get
+  const originalPost = axios.post
 
   ;(axios as any).get = async (url: string, config?: CapturedRequest) => {
     requests.push({ method: 'GET', url, headers: config?.headers, params: config?.params })
@@ -71,6 +73,18 @@ const run = async () => {
             },
           },
         ],
+      },
+    }
+  }
+
+  ;(axios as any).post = async (url: string, data?: unknown, config?: CapturedRequest) => {
+    requests.push({ method: 'POST', url, data, headers: config?.headers, params: config?.params })
+    return {
+      status: 200,
+      data: {
+        success: true,
+        upload_wbn: 'UPLOAD-B2C-000001',
+        packages: [{ waybill: 'WB-SHIPMENT-000001', status: 'Success' }],
       },
     }
   }
@@ -231,9 +245,81 @@ const run = async () => {
     assert.equal(singleWaybillRequest?.headers?.Accept, 'application/json')
     assert.equal(singleWaybillRequest?.headers?.Authorization, undefined)
 
+    const shipmentResponse = await service.createB2CShipmentManifest({
+      shipments: [
+        {
+          name: 'Consignee name',
+          add: 'Huda Market, Haryana',
+          pin: '110042',
+          city: 'Gurugram',
+          state: 'Haryana',
+          country: 'India',
+          phone: '9999999999',
+          order: 'B2C-CONTRACT-ORDER-1',
+          payment_mode: 'prepaid',
+          products_desc: 'Test product',
+          shipment_width: '100',
+          shipment_height: '100',
+          shipping_mode: 'Surface',
+        },
+      ],
+      pickup_location: {
+        name: 'warehouse_name',
+      },
+    })
+    assert.equal((shipmentResponse as any)?.upload_wbn, 'UPLOAD-B2C-000001')
+
+    const shipmentRequest = requests.at(-1)
+    assert.equal(shipmentRequest?.method, 'POST')
+    assert.equal(
+      shipmentRequest?.url,
+      'https://staging-express.delhivery.com/api/cmu/create.json',
+    )
+    assert.equal(shipmentRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(shipmentRequest?.headers?.Accept, 'application/json')
+    assert.equal(shipmentRequest?.headers?.['Content-Type'], 'application/x-www-form-urlencoded')
+
+    const form = new URLSearchParams(String(shipmentRequest?.data || ''))
+    assert.equal(form.get('format'), 'json')
+    const manifest = JSON.parse(String(form.get('data') || '{}'))
+    assert.equal(manifest.pickup_location?.name, 'warehouse_name')
+    assert.equal(manifest.shipments?.[0]?.name, 'Consignee name')
+    assert.equal(manifest.shipments?.[0]?.order, 'B2C-CONTRACT-ORDER-1')
+    assert.equal(manifest.shipments?.[0]?.phone, '9999999999')
+    assert.equal(manifest.shipments?.[0]?.add, 'Huda Market, Haryana')
+    assert.equal(manifest.shipments?.[0]?.pin, '110042')
+    assert.equal(manifest.shipments?.[0]?.payment_mode, 'Prepaid')
+
+    await assert.rejects(() => service.createB2CShipmentManifest({}), /shipments/)
+    await assert.rejects(
+      () =>
+        service.createB2CShipmentManifest({
+          shipments: [{ order: 'missing-name', phone: '9999999999', add: 'Address', pin: '110042', payment_mode: 'Prepaid' }],
+          pickup_location: { name: 'warehouse_name' },
+        }),
+      /name is required/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CShipmentManifest({
+          shipments: [{ name: 'Name', order: 'bad-pin', phone: '9999999999', add: 'Address', pin: '11004', payment_mode: 'Prepaid' }],
+          pickup_location: { name: 'warehouse_name' },
+        }),
+      /valid 6-digit pincode/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CShipmentManifest({
+          shipments: [{ name: 'Name', order: 'bad-mode', phone: '9999999999', add: 'Address', pin: '110042', payment_mode: 'Card' }],
+          pickup_location: { name: 'warehouse_name' },
+        }),
+      /payment_mode/,
+    )
+
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
   } finally {
     ;(axios as any).get = originalGet
+    ;(axios as any).post = originalPost
   }
 }
 
