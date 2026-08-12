@@ -585,6 +585,139 @@ const normalizeDelhiveryB2CShipmentManifest = (
   }
 }
 
+const normalizeDelimitedStringList = (
+  value: unknown,
+  field: string,
+  options: { allowEmptyString?: boolean } = {},
+) => {
+  const values = Array.isArray(value)
+    ? value
+    : String(value ?? '')
+        .split(',')
+        .map((entry) => entry.trim())
+
+  const normalized = values
+    .map((entry: unknown) => String(entry).trim())
+    .filter((entry) => options.allowEmptyString || entry.length > 0)
+  if (normalized.length === 0) {
+    throw new HttpError(400, `${field} must be a non-empty array`)
+  }
+  return normalized
+}
+
+const normalizeRequiredBoolean = (value: unknown, field: string) => {
+  if (typeof value === 'boolean') return value
+  const normalized = String(value ?? '').trim().toLowerCase()
+  if (normalized === 'true') return true
+  if (normalized === 'false') return false
+  throw new HttpError(400, `${field} must be a boolean`)
+}
+
+const normalizeDelhiveryRvpQcQuestion = (question: any, itemIndex: number, questionIndex: number) => {
+  if (!question || typeof question !== 'object' || Array.isArray(question)) {
+    throw new HttpError(400, `custom_qc[${itemIndex}].questions[${questionIndex}] must be an object`)
+  }
+
+  const type = String(question.type ?? '')
+    .trim()
+    .toLowerCase()
+  if (!['varchar', 'multi'].includes(type)) {
+    throw new HttpError(
+      400,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].type must be 'varchar' or 'multi'`,
+    )
+  }
+
+  const normalizedQuestion: Record<string, unknown> = {
+    questions_id: requiredManifestText(
+      question.questions_id,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].questions_id`,
+    ),
+    options: normalizeDelimitedStringList(
+      question.options,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].options`,
+      { allowEmptyString: true },
+    ),
+    value: normalizeDelimitedStringList(
+      question.value,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].value`,
+    ),
+    required: normalizeRequiredBoolean(
+      question.required,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].required`,
+    ),
+    type,
+  }
+
+  if (question.ques_images !== undefined && question.ques_images !== null) {
+    normalizedQuestion.ques_images = normalizeDelimitedStringList(
+      question.ques_images,
+      `custom_qc[${itemIndex}].questions[${questionIndex}].ques_images`,
+    )
+  }
+
+  return normalizedQuestion
+}
+
+const normalizeDelhiveryRvpQcItem = (item: any, index: number) => {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    throw new HttpError(400, `custom_qc[${index}] must be an object`)
+  }
+  if (!Array.isArray(item.questions) || item.questions.length === 0) {
+    throw new HttpError(400, `custom_qc[${index}].questions must be a non-empty array`)
+  }
+  if (item.questions.length > 6) {
+    throw new HttpError(400, `custom_qc[${index}].questions supports up to 6 questions`)
+  }
+
+  const normalizedItem: Record<string, unknown> = {
+    ...item,
+    description: requiredManifestText(item.description, `custom_qc[${index}].description`),
+    images: normalizeDelimitedStringList(item.images, `custom_qc[${index}].images`),
+    quantity:
+      item.quantity === undefined || item.quantity === null || item.quantity === ''
+        ? 1
+        : normalizeRequiredPositiveInteger(item.quantity, `custom_qc[${index}].quantity`),
+    questions: item.questions.map((question: any, questionIndex: number) =>
+      normalizeDelhiveryRvpQcQuestion(question, index, questionIndex),
+    ),
+  }
+
+  for (const field of ['item', 'return_reason', 'brand', 'product_category']) {
+    if (item[field] === undefined || item[field] === null) continue
+    const value = String(item[field]).trim()
+    if (value) normalizedItem[field] = value
+  }
+
+  return normalizedItem
+}
+
+const normalizeDelhiveryB2CRvpQcShipmentManifest = (payload: unknown) => {
+  const manifest = normalizeDelhiveryB2CShipmentManifest(payload)
+  const shipments = (manifest.shipments as any[]).map((shipment: any, shipmentIndex: number) => {
+    if (!Array.isArray(shipment.custom_qc) || shipment.custom_qc.length === 0) {
+      throw new HttpError(400, `shipments[${shipmentIndex}].custom_qc must be a non-empty array`)
+    }
+    if (shipment.custom_qc.length > 2) {
+      throw new HttpError(400, `shipments[${shipmentIndex}].custom_qc supports up to 2 items`)
+    }
+
+    return {
+      ...shipment,
+      payment_mode: 'Pickup',
+      qc_type: 'param',
+      custom_qc: shipment.custom_qc.map((item: any, index: number) =>
+        normalizeDelhiveryRvpQcItem(item, index),
+      ),
+    }
+  })
+
+  return {
+    ...manifest,
+    shipments,
+  }
+}
+
 export const isDelhiveryB2CPincodeServiceable = (response: unknown) => {
   const payload = response as any
   const rows = Array.isArray(payload)
@@ -1193,6 +1326,22 @@ export class DelhiveryService {
         message: err.message,
       })
       throw new Error('Failed to create Delhivery B2C MPS shipment')
+    }
+  }
+
+  async createB2CRvpQcShipmentManifest(payload: unknown) {
+    try {
+      const manifest = normalizeDelhiveryB2CRvpQcShipmentManifest(payload)
+      const res = await this.postFormEncoded('/api/cmu/create.json', manifest)
+      return res.data
+    } catch (err: any) {
+      if (err instanceof HttpError) throw err
+      console.error('âŒ Delhivery B2C RVP QC shipment creation error:', {
+        status: err.response?.status,
+        data: JSON.stringify(err.response?.data, null, 2),
+        message: err.message,
+      })
+      throw new Error('Failed to create Delhivery B2C RVP QC shipment')
     }
   }
 

@@ -522,6 +522,50 @@
           }
         },
         {
+          "name": "RVP QC 3.0 Shipment Creation (mutating)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (String(pm.environment.get('allowMutations')).toLowerCase() !== 'true') pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var body = pm.response.json();",
+                  "var data = body.data || {};",
+                  "pm.test('RVP QC Shipment Creation proxy reports success', function () { pm.expect(body.success).to.eql(true); });",
+                  "pm.test('RVP QC response is returned', function () { pm.expect(data).to.be.an('object'); });",
+                  "pm.test('RVP QC response carries upload or package signal', function () {",
+                  "  pm.expect(data.upload_wbn !== undefined || data.packages !== undefined || data.success !== undefined).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/delhivery/b2c/shipments/rvp-qc",
+            "description": "Creates a Delhivery B2C RVP QC 3.0 shipment via POST /api/cmu/create.json with qc_type=param and custom_qc question data. Supports up to 2 QC items and 6 questions per item. This request is skipped unless allowMutations=true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_location\": {\n    \"name\": \"{{pickupLocationName}}\"\n  },\n  \"shipments\": [\n    {\n      \"client\": \"{{warehouseRegisteredName}}\",\n      \"return_name\": \"test_designs\",\n      \"order\": \"{{rvpQcOrderId}}\",\n      \"return_country\": \"India\",\n      \"weight\": \"150.0 gm\",\n      \"city\": \"Meerjapuram\",\n      \"pin\": \"521111\",\n      \"return_state\": \"Gujarat\",\n      \"products_desc\": \"NEW EI PIKOK\",\n      \"shipping_mode\": \"Express\",\n      \"state\": \"Andhra Pradesh\",\n      \"quantity\": 1,\n      \"waybill\": \"{{rvpQcWaybill}}\",\n      \"phone\": \"1234567890\",\n      \"add\": \"7 106 abc road, 2020 building\",\n      \"payment_mode\": \"Pickup\",\n      \"order_date\": \"29-06-2023\",\n      \"seller_gst_tin\": \"ABCD1234F\",\n      \"name\": \"Jitendra Singh\",\n      \"return_add\": \"SHOP NO 218, ABC Road, Mumbai\",\n      \"total_amount\": 749,\n      \"seller_name\": \"ABC Design\",\n      \"return_city\": \"SURAT\",\n      \"country\": \"India\",\n      \"return_pin\": \"394101\",\n      \"return_phone\": \"1234567890\",\n      \"custom_qc\": [\n        {\n          \"item\": \"mobile\",\n          \"description\": \"Mi note 1 pro\",\n          \"images\": [\n            \"https://example.com/mobile-1.jpg\"\n          ],\n          \"return_reason\": \"Damaged\",\n          \"quantity\": 1,\n          \"brand\": \"Mi\",\n          \"product_category\": \"mobile\",\n          \"questions\": [\n            {\n              \"questions_id\": \"{{rvpQcQuestionId1}}\",\n              \"options\": [\n                \"\"\n              ],\n              \"value\": [\n                \"123456543\"\n              ],\n              \"required\": true,\n              \"type\": \"varchar\",\n              \"ques_images\": [\n                \"https://example.com/qc-1.jpg\"\n              ]\n            }\n          ]\n        },\n        {\n          \"item\": \"mobile\",\n          \"description\": \"Mi note 2 pro\",\n          \"images\": [\n            \"https://example.com/mobile-2.jpg\"\n          ],\n          \"return_reason\": \"Damaged\",\n          \"quantity\": 2,\n          \"brand\": \"Mi\",\n          \"product_category\": \"apparel\",\n          \"questions\": [\n            {\n              \"questions_id\": \"{{rvpQcQuestionId2}}\",\n              \"options\": [\n                \"Black\",\n                \"other\"\n              ],\n              \"value\": [\n                \"Black\"\n              ],\n              \"required\": true,\n              \"type\": \"multi\",\n              \"ques_images\": [\n                \"https://example.com/qc-2.jpg\"\n              ]\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
           "name": "Shipment Updation/Edit (mutating)",
           "event": [
             {

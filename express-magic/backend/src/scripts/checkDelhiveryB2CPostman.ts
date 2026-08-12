@@ -161,6 +161,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments/rvp-qc') {
+    return success({
+      success: true,
+      upload_wbn: 'UPLOAD-B2C-RVP-QC-000001',
+      packages: [{ waybill: 'RVP-QC-WB-000001', status: 'Success' }],
+    })
+  }
+
   if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments/edit') {
     return success({
       success: true,

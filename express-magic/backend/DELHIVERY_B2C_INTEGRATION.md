@@ -17,6 +17,7 @@
 | Client Warehouse Updation | `POST /api/backend/clientwarehouse/edit/` | `POST /api/delhivery/b2c/warehouses/update` |
 | Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
 | MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
+| RVP QC 3.0 Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/rvp-qc` |
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
 | Shipment Cancellation | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/cancel` |
 | Ewaybill Update | `PUT /api/rest/ewaybill/{waybill}/` | `PUT /api/delhivery/b2c/shipments/{waybill}/ewaybill` |
@@ -86,6 +87,13 @@ For MPS Manifestation, FastShip enforces at least two boxes, prefetched waybills
 on every box, `shipment_type=MPS`, `mps_amount`, `mps_children`, and a shared
 `master_id` matching the master waybill. The payload is sent to Delhivery using
 the same URL-encoded manifestation API.
+
+For RVP QC 3.0 Shipment Creation, FastShip uses Delhivery's manifestation API
+with `payment_mode=Pickup`, `qc_type=param`, and the supplied `custom_qc`
+question model. FastShip validates up to two QC items per shipment and up to
+six questions per item, with question `type` as `varchar` or `multi`. Delhivery
+must configure client-question to Delhivery-question ID mapping before this
+flow is used live.
 
 For Shipment Updation/Edit, FastShip requires `waybill`, forwards only the
 documented editable fields, validates numeric weight/dimensions, and allows

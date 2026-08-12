@@ -5,6 +5,7 @@ import {
   createClientWarehouseController,
   createMpsShipmentController,
   createPickupRequestController,
+  createRvpQcShipmentController,
   createShipmentController,
   editShipmentController,
   expectedTatController,
@@ -36,6 +37,7 @@ router.post('/warehouses', createClientWarehouseController)
 router.post('/warehouses/update', updateClientWarehouseController)
 router.post('/shipments', createShipmentController)
 router.post('/shipments/mps', createMpsShipmentController)
+router.post('/shipments/rvp-qc', createRvpQcShipmentController)
 router.post('/shipments/edit', editShipmentController)
 router.post('/shipments/cancel', cancelShipmentController)
 router.put('/shipments/:waybill/ewaybill', updateEwaybillController)

@@ -555,6 +555,168 @@ const run = async () => {
       /payment_mode/,
     )
 
+    const rvpQcResponse = await service.createB2CRvpQcShipmentManifest({
+      pickup_location: { name: 'warehouse_name' },
+      shipments: [
+        {
+          client: 'Test Client',
+          return_name: 'test_designs',
+          order: 'RVP-QC-ORDER-1',
+          return_country: 'India',
+          weight: '150.0 gm',
+          city: 'Meerjapuram',
+          pin: '521111',
+          return_state: 'Gujarat',
+          products_desc: 'NEW EI PIKOK',
+          shipping_mode: 'Express',
+          state: 'Andhra Pradesh',
+          quantity: 1,
+          waybill: '123455678910',
+          phone: '1234567890',
+          add: '7 106 abc road, 2020 building',
+          payment_mode: 'Pickup',
+          order_date: '29-06-2023',
+          seller_gst_tin: 'ABCD1234F',
+          name: 'Jitendra Singh',
+          return_add: 'SHOP NO 218, ABC Road, Mumbai',
+          total_amount: 749,
+          seller_name: 'ABC Design',
+          return_city: 'SURAT',
+          country: 'India',
+          return_pin: '394101',
+          return_phone: '1234567890',
+          custom_qc: [
+            {
+              item: 'mobile',
+              description: 'Mi note 1 pro',
+              images: ['https://example.com/mobile-1.jpg'],
+              return_reason: 'Damaged',
+              quantity: 1,
+              brand: 'Mi',
+              product_category: 'mobile',
+              questions: [
+                {
+                  questions_id: 'client-question-1',
+                  options: [''],
+                  value: ['123456543'],
+                  required: true,
+                  type: 'varchar',
+                  ques_images: ['https://example.com/qc-1.jpg'],
+                },
+              ],
+            },
+            {
+              item: 'mobile',
+              description: 'Mi note 2 pro',
+              images: 'https://example.com/mobile-2.jpg',
+              return_reason: 'Damaged',
+              quantity: '2',
+              brand: 'Mi',
+              product_category: 'apparel',
+              questions: [
+                {
+                  questions_id: 'client-question-2',
+                  options: 'Black,other',
+                  value: ['Black'],
+                  required: 'true',
+                  type: 'multi',
+                  ques_images: 'https://example.com/qc-2.jpg',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    assert.equal((rvpQcResponse as any)?.upload_wbn, 'UPLOAD-B2C-000001')
+
+    const rvpQcRequest = requests.at(-1)
+    assert.equal(rvpQcRequest?.method, 'POST')
+    assert.equal(rvpQcRequest?.url, 'https://staging-express.delhivery.com/api/cmu/create.json')
+    assert.equal(rvpQcRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(rvpQcRequest?.headers?.Accept, 'application/json')
+    assert.equal(rvpQcRequest?.headers?.['Content-Type'], 'application/x-www-form-urlencoded')
+    const rvpQcForm = new URLSearchParams(String(rvpQcRequest?.data || ''))
+    assert.equal(rvpQcForm.get('format'), 'json')
+    const rvpQcManifest = JSON.parse(String(rvpQcForm.get('data') || '{}'))
+    assert.equal(rvpQcManifest.pickup_location?.name, 'warehouse_name')
+    assert.equal(rvpQcManifest.shipments?.[0]?.payment_mode, 'Pickup')
+    assert.equal(rvpQcManifest.shipments?.[0]?.qc_type, 'param')
+    assert.equal(rvpQcManifest.shipments?.[0]?.custom_qc?.length, 2)
+    assert.deepEqual(rvpQcManifest.shipments?.[0]?.custom_qc?.[1]?.images, [
+      'https://example.com/mobile-2.jpg',
+    ])
+    assert.deepEqual(rvpQcManifest.shipments?.[0]?.custom_qc?.[1]?.questions?.[0]?.options, [
+      'Black',
+      'other',
+    ])
+
+    await assert.rejects(
+      () =>
+        service.createB2CRvpQcShipmentManifest({
+          pickup_location: { name: 'warehouse_name' },
+          shipments: [
+            {
+              name: 'Name',
+              order: 'missing-qc',
+              phone: '9999999999',
+              add: 'Address',
+              pin: '110042',
+              payment_mode: 'Pickup',
+            },
+          ],
+        }),
+      /custom_qc must be a non-empty array/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CRvpQcShipmentManifest({
+          pickup_location: { name: 'warehouse_name' },
+          shipments: [
+            {
+              name: 'Name',
+              order: 'too-many-items',
+              phone: '9999999999',
+              add: 'Address',
+              pin: '110042',
+              payment_mode: 'Pickup',
+              custom_qc: [
+                { description: 'one', images: ['https://example.com/1.jpg'], questions: [{ questions_id: 'q1', options: ['yes'], value: ['yes'], required: true, type: 'multi' }] },
+                { description: 'two', images: ['https://example.com/2.jpg'], questions: [{ questions_id: 'q2', options: ['yes'], value: ['yes'], required: true, type: 'multi' }] },
+                { description: 'three', images: ['https://example.com/3.jpg'], questions: [{ questions_id: 'q3', options: ['yes'], value: ['yes'], required: true, type: 'multi' }] },
+              ],
+            },
+          ],
+        }),
+      /supports up to 2 items/,
+    )
+    await assert.rejects(
+      () =>
+        service.createB2CRvpQcShipmentManifest({
+          pickup_location: { name: 'warehouse_name' },
+          shipments: [
+            {
+              name: 'Name',
+              order: 'bad-question-type',
+              phone: '9999999999',
+              add: 'Address',
+              pin: '110042',
+              payment_mode: 'Pickup',
+              custom_qc: [
+                {
+                  description: 'item',
+                  images: ['https://example.com/item.jpg'],
+                  questions: [
+                    { questions_id: 'q1', options: ['yes'], value: ['yes'], required: true, type: 'single' },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      /type must be 'varchar' or 'multi'/,
+    )
+
     const editResponse = await service.editB2CShipment({
       waybill: '843000000001',
       pt: 'COD',
