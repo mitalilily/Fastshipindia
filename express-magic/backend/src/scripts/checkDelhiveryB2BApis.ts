@@ -805,16 +805,29 @@ const run = async () => {
     /letters, numbers, and underscores/,
   )
 
-  await service.logout()
-  assert.equal(requests.at(-1)?.url, 'https://ltl-clients-api-dev.delhivery.com/ums/logout')
-  assert.equal(requests.at(-1)?.method, 'GET')
-  assert.equal(requests.at(-1)?.headers?.Authorization, 'Bearer test-jwt')
-  assert.equal(requests.at(-1)?.headers?.['Content-Type'], 'application/json')
-
+  const loginCountBeforeLogout = requests.filter((request) =>
+    request.url?.endsWith('/ums/login'),
+  ).length
   assert.equal(
-    requests.filter((request) => request.url?.endsWith('/ums/login')).length,
+    loginCountBeforeLogout,
     1,
     'Expected the JWT to be reused instead of logging in for every API request',
+  )
+
+  await service.logout()
+  const logoutRequest = requests.at(-1)
+  assert.equal(logoutRequest?.url, 'https://ltl-clients-api-dev.delhivery.com/ums/logout')
+  assert.equal(logoutRequest?.method, 'GET')
+  assert.equal(logoutRequest?.headers?.Authorization, 'Bearer test-jwt')
+  assert.equal(logoutRequest?.headers?.['Content-Type'], 'application/json')
+  assert.equal(logoutRequest?.data, undefined)
+
+  const loginAfterLogout = await service.login()
+  assert.equal(loginAfterLogout.cached, false)
+  assert.equal(
+    requests.filter((request) => request.url?.endsWith('/ums/login')).length,
+    loginCountBeforeLogout + 1,
+    'A successful logout must invalidate the cached JWT',
   )
 
   DelhiveryB2BService.clearTokenCache()

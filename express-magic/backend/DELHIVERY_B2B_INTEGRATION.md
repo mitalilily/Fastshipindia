@@ -20,6 +20,8 @@ FastShip caches the returned JWT until one minute before its 24-hour expiry and 
 in-flight login across concurrent requests. If Delhivery rejects credentials with HTTP
 400/401/403, further login attempts for the same credentials are suppressed for 10 minutes
 to avoid extending Delhivery's account lock. Saving corrected credentials clears the cache.
+Logout is optional. FastShip sends Delhivery's required bearer token on `GET /ums/logout`
+and invalidates the cached JWT only after Delhivery accepts the logout.
 
 Use `https://ltl-clients-api-dev.delhivery.com` only for UAT and
 `https://ltl-clients-api.delhivery.com` for production. The password is the API password

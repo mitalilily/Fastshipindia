@@ -534,10 +534,18 @@
       "item": [
         {
           "name": "Logout (optional)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var body = pm.response.json();",
+            "pm.test('Delhivery session is logged out without exposing its JWT', function () {",
+            "  pm.expect(body.success).to.eql(true);",
+            "  pm.expect(body).not.to.have.property('token');",
+            "  pm.expect(body).not.to.have.property('jwt');",
+            "});"
+          ] } }],
           "request": {
             "method": "POST",
             "url": "{{baseUrl}}/api/delhivery/b2b/auth/logout",
-            "description": "Invalidates the cached Delhivery JWT. This API is optional and should run after the other B2B requests."
+            "description": "Calls Delhivery's optional GET /ums/logout with the cached JWT in the mandatory Authorization: Bearer header, then invalidates FastShip's cached token. Run this after the other B2B requests."
           }
         }
       ]
