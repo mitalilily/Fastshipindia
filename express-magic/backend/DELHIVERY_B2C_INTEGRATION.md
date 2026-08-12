@@ -12,6 +12,7 @@
 | Shipment Creation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments` |
 | MPS Manifestation | `POST /api/cmu/create.json` | `POST /api/delhivery/b2c/shipments/mps` |
 | Shipment Updation/Edit | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/edit` |
+| Shipment Cancellation | `POST /api/p/edit` | `POST /api/delhivery/b2c/shipments/cancel` |
 
 FastShip validates a single six-digit pincode, forwards it as `filter_codes`,
 and authenticates with Delhivery's `Authorization: Token ...` header. An empty
@@ -54,6 +55,10 @@ For Shipment Updation/Edit, FastShip requires `waybill`, forwards only the
 documented editable fields, validates numeric weight/dimensions, and allows
 `pt` as `COD` or `Pre-paid`. When changing `pt` to `COD`, `cod` is required.
 Provider status restrictions still apply in Delhivery.
+
+For Shipment Cancellation, FastShip requires `waybill` and sends
+`cancellation=true` to Delhivery's edit endpoint. Delhivery still decides
+whether cancellation is allowed based on the package status and payment mode.
 
 ## Verification
 

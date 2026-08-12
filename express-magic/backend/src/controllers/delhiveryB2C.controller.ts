@@ -80,3 +80,6 @@ export const createMpsShipmentController = (req: Request, res: Response) =>
 
 export const editShipmentController = (req: Request, res: Response) =>
   sendDataResult(res, service.editB2CShipment(req.body))
+
+export const cancelShipmentController = (req: Request, res: Response) =>
+  sendDataResult(res, service.cancelShipment(req.body?.waybill))

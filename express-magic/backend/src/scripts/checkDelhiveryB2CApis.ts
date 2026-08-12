@@ -523,6 +523,23 @@ const run = async () => {
       /gm must be a positive number/,
     )
 
+    const cancellationResponse = await service.cancelShipment('694500000001')
+    assert.equal((cancellationResponse as any)?.success, true)
+    assert.equal((cancellationResponse as any)?.awb_number, '694500000001')
+
+    const cancellationRequest = requests.at(-1)
+    assert.equal(cancellationRequest?.method, 'POST')
+    assert.equal(cancellationRequest?.url, 'https://staging-express.delhivery.com/api/p/edit')
+    assert.equal(cancellationRequest?.headers?.Authorization, 'Token test-delhivery-token')
+    assert.equal(cancellationRequest?.headers?.Accept, 'application/json')
+    assert.equal(cancellationRequest?.headers?.['Content-Type'], 'application/json')
+    assert.deepEqual(cancellationRequest?.data, {
+      waybill: '694500000001',
+      cancellation: 'true',
+    })
+
+    await assert.rejects(() => service.cancelShipment('  '), /Delhivery AWB number is required/)
+
     console.log(`Delhivery B2C API contract checks passed (${requests.length} requests).`)
   } finally {
     ;(axios as any).get = originalGet

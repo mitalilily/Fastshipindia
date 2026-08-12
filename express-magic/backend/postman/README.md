@@ -62,8 +62,8 @@ Import:
 The collection signs in as a FastShip admin and checks the Delhivery B2C
 pincode serviceability, Heavy product type pincode serviceability, Expected TAT,
 Fetch WayBill, Fetch Single WayBill, Shipment Creation, MPS Manifestation, and
-Shipment Updation/Edit proxies.
-Shipment Creation, MPS Manifestation, and Shipment Updation/Edit are
+Shipment Updation/Edit, and Shipment Cancellation proxies.
+Shipment Creation, MPS Manifestation, Shipment Updation/Edit, and Shipment Cancellation are
 state-changing and skipped by default; set `allowMutations=true` only when the
 mutation is intended. Local Newman verification:
 

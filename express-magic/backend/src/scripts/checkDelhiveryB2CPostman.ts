@@ -104,6 +104,14 @@ const resolveMockResponse = (method: string, pathname: string): MockPayload | nu
     })
   }
 
+  if (method === 'POST' && pathname === '/api/delhivery/b2c/shipments/cancel') {
+    return success({
+      success: true,
+      awb_number: '694500000001',
+      message: 'Delhivery cancellation accepted',
+    })
+  }
+
   return null
 }
 
