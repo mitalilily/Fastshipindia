@@ -490,6 +490,16 @@
           "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
             "var value = String(pm.environment.get('lrn') || '').trim();",
             "if (!value || value.indexOf('replace-with-') === 0) pm.execution.skipRequest();"
+          ] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Shipment tracking request succeeded', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(pm.response.json().success).to.eql(true);",
+            "});",
+            "pm.test('Latest LR tracking status is returned', function () {",
+            "  var data = pm.response.json().data || {};",
+            "  pm.expect(data).to.have.property('status');",
+            "  pm.expect(data.status).to.be.oneOf(['MANIFESTED','PICKED_UP','LEFT_ORIGIN','REACH_DESTINATION','UNDEL_REATTEMPT','PART_DEL','OFD','DELIVERED','RETURNED_INTRANSIT','RECEIVED_AT_RETURN_CENTER','RETURN_OFD','RETURN_DELIVERED','NOT_PICKED','LOST','IN_TRANSIT']);",
+            "});"
           ] } }],
           "request": {
             "method": "GET",

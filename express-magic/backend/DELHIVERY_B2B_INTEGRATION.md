@@ -112,6 +112,11 @@ authoritative for the allowed shipment stages: Manifested, In Transit, Pending,
 Open, and Scheduled. Successful prepaid or COD cancellations transition to
 Returned in Delhivery.
 
+Shipment tracking forwards `GET /lrn/track?lrnum=...` and includes
+`all_wbns=true` only when child waybill status is requested. Delhivery returns
+the latest LR status only, so FastShip maps the documented status set
+(`MANIFESTED` through `LOST`) without expecting historical scans.
+
 ## Verification
 
 Run both automated layers from `backend`:
