@@ -3,7 +3,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import axios from 'axios'
 import jwt from 'jsonwebtoken'
 import { r2 } from '../../config/r2Client'
-import { getBucketName, sanitizeFilename } from '../../utils/functions'
+import { assertStorageConfigured, getBucketName, sanitizeFilename } from '../../utils/functions'
 
 import * as dotenv from 'dotenv'
 import path from 'path'
@@ -67,9 +67,11 @@ const buildStorageTarget = ({
   userId: string
   folderKey?: string
 }): UploadStorageTarget => {
+  assertStorageConfigured()
   const bucket = resolveBucketForFolder(folderKey)
   const key = `${folderKey}/${userId}/${Date.now()}-${sanitizeFilename(filename)}`
-  const publicUrl = `${process.env.R2_ENDPOINT}/${bucket}/${key}`
+  const endpoint = String(process.env.R2_ENDPOINT).trim().replace(/\/+$/, '')
+  const publicUrl = `${endpoint}/${bucket}/${key}`
 
   return { bucket, key, publicUrl }
 }

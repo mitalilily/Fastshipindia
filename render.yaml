@@ -107,6 +107,16 @@ services:
         generateValue: true
       - key: COURIER_SECRET_KEY
         generateValue: true
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: PROD_BUCKET
+        sync: false
+      - key: UPLOAD_PROXY_TOKEN_SECRET
+        generateValue: true
       - key: ADMIN_SEED_EMAIL
         value: admin@fastship.in
       - key: ADMIN_FORCE_PASSWORD_RESET

@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 import * as dotenv from 'dotenv'
 import path from 'path'
 import { server } from './app'
+import { getMissingStorageConfiguration } from './utils/functions'
 
 const env = process.env.NODE_ENV || 'development'
 console.log('node env', env)
@@ -43,6 +44,13 @@ const startBackgroundJobs = () => {
 }
 
 function startServer() {
+  const missingStorageConfiguration = getMissingStorageConfiguration()
+  if (missingStorageConfiguration.length) {
+    console.warn(
+      `Object storage uploads are disabled until these environment variables are configured: ${missingStorageConfiguration.join(', ')}`,
+    )
+  }
+
   // Keep support for slower courier API calls without blocking server startup.
   server.timeout = 210000
 
