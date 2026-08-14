@@ -16,6 +16,7 @@
     "check:delhivery-b2c-postman": "node -r ts-node/register src/scripts/checkDelhiveryB2CPostman.ts",
     "check:delhivery-b2c": "npm run check:delhivery-b2c-apis && npm run check:delhivery-b2c-postman",
     "check:upload-config": "node -r ts-node/register src/scripts/checkUploadStorageConfiguration.ts",
+    "check:upload-fallback": "node -r ts-node/register src/scripts/checkDatabaseUploadFallback.ts",
     "check:ekart-apis": "node -r ts-node/register src/scripts/checkEkartApis.ts",
     "check:shopify-apis": "node -r ts-node/register src/scripts/checkShopifyApis.ts",
     "check:woocommerce-apis": "node -r ts-node/register src/scripts/checkWooCommerceApis.ts",

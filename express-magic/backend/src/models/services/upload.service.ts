@@ -4,6 +4,11 @@ import axios from 'axios'
 import jwt from 'jsonwebtoken'
 import { r2 } from '../../config/r2Client'
 import { assertStorageConfigured, getBucketName, sanitizeFilename } from '../../utils/functions'
+import {
+  createDatabaseUploadDownloadUrl,
+  databaseUploadExists,
+  isDatabaseUploadKey,
+} from './databaseUpload.service'
 
 import * as dotenv from 'dotenv'
 import path from 'path'
@@ -459,15 +464,20 @@ export const presignDownload = async (
   try {
     const now = Date.now()
 
-    if (typeof keyOrKeys === 'string') {
-      return buildPresignedDownloadUrl(resolveBucketForStoredValue(keyOrKeys), keyOrKeys, now, options)
+    const buildDownloadUrl = async (key: string) => {
+      if (isDatabaseUploadKey(key)) {
+        if (options?.checkExists && !(await databaseUploadExists(key))) return null
+        return createDatabaseUploadDownloadUrl(key, options)
+      }
+
+      return buildPresignedDownloadUrl(resolveBucketForStoredValue(key), key, now, options)
     }
 
-    const urls = await Promise.all(
-      keyOrKeys.map((key) =>
-        buildPresignedDownloadUrl(resolveBucketForStoredValue(key), key, now, options),
-      ),
-    )
+    if (typeof keyOrKeys === 'string') {
+      return buildDownloadUrl(keyOrKeys)
+    }
+
+    const urls = await Promise.all(keyOrKeys.map(buildDownloadUrl))
 
     return urls
   } catch (error: any) {
