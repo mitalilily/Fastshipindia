@@ -65,6 +65,11 @@ import {
   useAdjustWalletBalance,
 } from 'hooks/useWallet'
 import { useMemo, useState } from 'react'
+import {
+  OTHER_WALLET_REASON,
+  resolveWalletAdjustmentReason,
+  WALLET_ADJUSTMENT_REASONS,
+} from 'utils/walletAdjustmentReasons'
 
 const HISTORY_LIMIT = 25
 
@@ -110,7 +115,8 @@ export default function AdminWallets() {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [adjustmentType, setAdjustmentType] = useState('credit')
   const [amount, setAmount] = useState('')
-  const [reason, setReason] = useState('')
+  const [reasonOption, setReasonOption] = useState('')
+  const [customReason, setCustomReason] = useState('')
   const [notes, setNotes] = useState('')
   const [historyPage, setHistoryPage] = useState(1)
   const [historyType, setHistoryType] = useState('')
@@ -145,6 +151,7 @@ export default function AdminWallets() {
   const adjustWallet = useAdjustWalletBalance()
 
   const amountNumber = Number(amount || 0)
+  const reason = resolveWalletAdjustmentReason(reasonOption, customReason)
   const projectedBalance = useMemo(() => {
     const current = Number(selectedWallet?.balance || 0)
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) return current
@@ -155,7 +162,8 @@ export default function AdminWallets() {
     setSelectedWallet(wallet)
     setAdjustmentType(type)
     setAmount('')
-    setReason('')
+    setReasonOption('')
+    setCustomReason('')
     setNotes('')
     adjustmentModal.onOpen()
   }
@@ -175,7 +183,7 @@ export default function AdminWallets() {
         userId: selectedWallet.userId,
         type: adjustmentType,
         amount: amountNumber,
-        reason: reason.trim(),
+        reason,
         notes: notes.trim(),
       })
       toast({
@@ -403,7 +411,11 @@ export default function AdminWallets() {
                   leftIcon={<IconArrowUpCircle size={19} />}
                   bg={adjustmentType === 'credit' ? 'green.50' : 'white'}
                   borderColor={adjustmentType === 'credit' ? 'green.300' : '#E5EAF3'}
-                  onClick={() => setAdjustmentType('credit')}
+                  onClick={() => {
+                    setAdjustmentType('credit')
+                    setReasonOption('')
+                    setCustomReason('')
+                  }}
                 >
                   Credit
                 </Button>
@@ -414,7 +426,11 @@ export default function AdminWallets() {
                   leftIcon={<IconArrowDownCircle size={19} />}
                   bg={adjustmentType === 'debit' ? 'red.50' : 'white'}
                   borderColor={adjustmentType === 'debit' ? 'red.300' : '#E5EAF3'}
-                  onClick={() => setAdjustmentType('debit')}
+                  onClick={() => {
+                    setAdjustmentType('debit')
+                    setReasonOption('')
+                    setCustomReason('')
+                  }}
                 >
                   Debit
                 </Button>
@@ -443,16 +459,29 @@ export default function AdminWallets() {
 
               <FormControl isRequired>
                 <FormLabel>Reason</FormLabel>
-                <Textarea
-                  value={reason}
-                  maxLength={128}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder={
-                    adjustmentType === 'credit'
-                      ? 'e.g. Promotional credit or order refund'
-                      : 'e.g. Manual shipping charge or penalty'
-                  }
-                />
+                <Select
+                  value={reasonOption}
+                  onChange={(event) => {
+                    setReasonOption(event.target.value)
+                    if (event.target.value !== OTHER_WALLET_REASON) setCustomReason('')
+                  }}
+                  placeholder="Select a reason"
+                >
+                  {WALLET_ADJUSTMENT_REASONS[adjustmentType].map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                  <option value={OTHER_WALLET_REASON}>Other</option>
+                </Select>
+                {reasonOption === OTHER_WALLET_REASON ? (
+                  <Textarea
+                    mt={3}
+                    value={customReason}
+                    maxLength={128}
+                    onChange={(event) => setCustomReason(event.target.value)}
+                    placeholder="Enter the adjustment reason"
+                    autoFocus
+                  />
+                ) : null}
               </FormControl>
 
               <FormControl>
@@ -473,7 +502,7 @@ export default function AdminWallets() {
             <Button
               flex="1"
               colorScheme={adjustmentType === 'credit' ? 'green' : 'red'}
-              isDisabled={!Number.isFinite(amountNumber) || amountNumber <= 0 || reason.trim().length < 2}
+              isDisabled={!Number.isFinite(amountNumber) || amountNumber <= 0 || reason.length < 2}
               isLoading={adjustWallet.isPending}
               onClick={submitAdjustment}
             >
