@@ -1,13 +1,21 @@
 import { Request, Response } from 'express'
 import {
+  adjustWalletBalanceByAdmin,
   getConsolidatedWalletMisExportRows,
   getConsolidatedWalletMisReport,
   getAllWallets,
   getWalletByUserId,
   getWalletTransactionsByUserId,
 } from '../../models/services/adminWallet.service'
-import { createWalletTransaction } from '../../models/services/wallet.service'
 import { buildCsv } from '../../utils/csv'
+
+const MAX_ADMIN_ADJUSTMENT = 9_999_999_999.99
+
+const parsePositiveInt = (value: unknown, fallback: number, max: number) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback
+  return Math.min(max, Math.floor(parsed))
+}
 
 const WALLET_MIS_HEADERS = [
   'Customer Name',
@@ -66,8 +74,8 @@ const parseWalletMisQuery = (query: Request['query']) => {
 
 export const listWallets = async (req: Request, res: Response): Promise<any> => {
   try {
-    const page = parseInt((req.query.page as string) || '1')
-    const limit = parseInt((req.query.limit as string) || '20')
+    const page = parsePositiveInt(req.query.page, 1, 100_000)
+    const limit = parsePositiveInt(req.query.limit, 20, 100)
     const search = (req.query.search as string) || ''
     const sortBy =
       (req.query.sortBy as 'balance' | 'createdAt' | 'updatedAt' | 'email' | 'companyName' | undefined) ||
@@ -149,11 +157,25 @@ export const getWalletTransactions = async (req: Request, res: Response): Promis
       return res.status(400).json({ success: false, message: 'User ID is required' })
     }
 
-    const page = parseInt((req.query.page as string) || '1')
-    const limit = parseInt((req.query.limit as string) || '50')
-    const type = req.query.type as 'credit' | 'debit' | undefined
-    const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined
-    const dateTo = req.query.dateTo ? new Date(req.query.dateTo as string) : undefined
+    const page = parsePositiveInt(req.query.page, 1, 100_000)
+    const limit = parsePositiveInt(req.query.limit, 50, 100)
+    const rawType = String(req.query.type || '').trim().toLowerCase()
+    if (rawType && rawType !== 'credit' && rawType !== 'debit') {
+      return res.status(400).json({ success: false, message: 'Invalid transaction type' })
+    }
+    const type = rawType ? (rawType as 'credit' | 'debit') : undefined
+    const dateFrom = parseDateParam(req.query.dateFrom as string | undefined)
+    const dateTo = endOfDay(parseDateParam(req.query.dateTo as string | undefined))
+
+    if (req.query.dateFrom && !dateFrom) {
+      return res.status(400).json({ success: false, message: 'Invalid start date' })
+    }
+    if (req.query.dateTo && !dateTo) {
+      return res.status(400).json({ success: false, message: 'Invalid end date' })
+    }
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      return res.status(400).json({ success: false, message: 'Start date must be before end date' })
+    }
 
     const result = await getWalletTransactionsByUserId({
       userId,
@@ -177,7 +199,7 @@ export const getWalletTransactions = async (req: Request, res: Response): Promis
 export const adjustWalletBalance = async (req: Request, res: Response): Promise<any> => {
   try {
     const { userId } = req.params
-    const { type, amount, reason, notes } = req.body
+    const { type, amount, reason, notes } = req.body || {}
 
     if (!userId || !type || !amount || !reason) {
       return res.status(400).json({
@@ -193,47 +215,57 @@ export const adjustWalletBalance = async (req: Request, res: Response): Promise<
       })
     }
 
-    const amountNum = parseFloat(amount)
-    if (isNaN(amountNum) || amountNum <= 0) {
+    const amountNum = Number(amount)
+    if (!Number.isFinite(amountNum) || amountNum <= 0 || amountNum > MAX_ADMIN_ADJUSTMENT) {
       return res.status(400).json({
         success: false,
-        message: 'amount must be a positive number',
+        message: `amount must be between 0.01 and ${MAX_ADMIN_ADJUSTMENT}`,
+      })
+    }
+    const roundedAmount = Math.round(amountNum * 100) / 100
+    if (Math.abs(roundedAmount - amountNum) > Number.EPSILON) {
+      return res.status(400).json({
+        success: false,
+        message: 'amount can have at most two decimal places',
       })
     }
 
-    // Get wallet
-    const wallet = await getWalletByUserId(userId)
+    const cleanReason = String(reason).trim()
+    const cleanNotes = String(notes || '').trim()
+    if (cleanReason.length < 2 || cleanReason.length > 128) {
+      return res.status(400).json({
+        success: false,
+        message: 'reason must be between 2 and 128 characters',
+      })
+    }
+    if (cleanNotes.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'notes cannot exceed 1000 characters',
+      })
+    }
 
-    // Create transaction
-    await createWalletTransaction({
-      walletId: wallet.id,
-      amount: amountNum,
-      type: type as 'credit' | 'debit',
-      reason: reason,
-      ref: `admin_adjustment_${Date.now()}`,
-      allowNegativeBalance: type === 'debit',
-      meta: {
-        adjustedBy: (req as any).user?.sub,
-        notes: notes || '',
-        timestamp: new Date().toISOString(),
-      },
+    const adjustment = await adjustWalletBalanceByAdmin({
+      userId,
+      adminUserId: String((req as any).user?.sub || 'admin'),
+      amount: roundedAmount,
+      type,
+      reason: cleanReason,
+      notes: cleanNotes,
     })
 
-    // Get updated wallet
     const updatedWallet = await getWalletByUserId(userId)
 
     res.status(200).json({
       success: true,
       message: `Wallet ${type === 'credit' ? 'credited' : 'debited'} successfully`,
       data: updatedWallet,
+      transaction: adjustment.transaction,
     })
   } catch (error: any) {
     console.error('Error adjusting wallet balance:', error)
     if (error.message === 'Wallet not found for this user') {
       return res.status(404).json({ success: false, message: error.message })
-    }
-    if (error.message === 'Insufficient wallet balance') {
-      return res.status(400).json({ success: false, message: error.message })
     }
     res.status(500).json({ success: false, message: 'Server error adjusting wallet balance' })
   }

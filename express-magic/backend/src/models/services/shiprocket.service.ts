@@ -10119,6 +10119,8 @@ export const getAllB2BOrdersService = async () => {
 interface OrderFilters {
   status?: string | string[] // support single or multiple statuses
   type?: string
+  paymentType?: string
+  businessType?: string
   courier?: string
   warehouse?: string
   productQuery?: string
@@ -10152,6 +10154,9 @@ export const getB2COrdersByUserService = async (
   // 🔹 Type filter (COD / Prepaid)
   if (filters.type) {
     conditions.push(eq(b2c_orders.order_type, filters.type))
+  }
+  if (filters.paymentType) {
+    conditions.push(eq(b2c_orders.order_type, filters.paymentType))
   }
 
   // 🔹 Courier filter
@@ -10307,7 +10312,33 @@ export const getB2BOrdersByUserService = async (
 
   const conditions: any[] = [sql`${b2b_orders.user_id} = ${userId}::uuid`]
 
-  // if (filters.status) conditions.push(eq(b2b_orders.order_status, filters.status))
+  if (filters.status) {
+    conditions.push(
+      Array.isArray(filters.status)
+        ? inArray(b2b_orders.order_status, filters.status)
+        : eq(b2b_orders.order_status, filters.status),
+    )
+  }
+  const paymentType = filters.paymentType || filters.type
+  if (paymentType) conditions.push(eq(b2b_orders.order_type, paymentType))
+  if (filters.courier) {
+    const courierId = Number(filters.courier)
+    conditions.push(
+      Number.isFinite(courierId) && courierId > 0
+        ? eq(b2b_orders.courier_id, String(courierId))
+        : ilike(b2b_orders.courier_partner, `%${filters.courier}%`),
+    )
+  }
+  if (filters.warehouse?.trim()) {
+    const warehouseFilter = `%${filters.warehouse.trim()}%`
+    conditions.push(
+      or(
+        ilike(b2b_orders.pickup_location_id, warehouseFilter),
+        sql`COALESCE(${b2b_orders.pickup_details}->>'warehouse_name', '') ILIKE ${warehouseFilter}`,
+        sql`COALESCE(${b2b_orders.pickup_details}->>'name', '') ILIKE ${warehouseFilter}`,
+      ),
+    )
+  }
   if (filters.fromDate)
     conditions.push(
       gte(b2b_orders.order_date, new Date(filters.fromDate).toISOString().slice(0, 10)),
@@ -10324,8 +10355,22 @@ export const getB2BOrdersByUserService = async (
         ilike(b2b_orders.awb_number, `%${filters.search}%`),
         ilike(b2b_orders.provider_reference, `%${filters.search}%`),
         ilike(b2b_orders.provider_request_id, `%${filters.search}%`),
+        ilike(b2b_orders.buyer_email, `%${filters.search}%`),
+        ilike(b2b_orders.city, `%${filters.search}%`),
+        ilike(b2b_orders.state, `%${filters.search}%`),
+        ilike(b2b_orders.pincode, `%${filters.search}%`),
       ),
     )
+  }
+
+  if (filters.productQuery?.trim()) {
+    const productQuery = `%${filters.productQuery.trim()}%`
+    conditions.push(sql`EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(COALESCE(${b2b_orders.products}, '[]'::jsonb)) AS product
+      WHERE COALESCE(product->>'productName', product->>'name', '') ILIKE ${productQuery}
+        OR COALESCE(product->>'sku', '') ILIKE ${productQuery}
+    )`)
   }
 
   const whereCondition = conditions.length === 1 ? conditions[0] : and(...conditions)
@@ -10343,7 +10388,7 @@ export const getB2BOrdersByUserService = async (
     .select(b2bOrderListSelect)
     .from(b2b_orders)
     .where(whereCondition)
-    .orderBy(desc(b2b_orders.order_date))
+    .orderBy(filters.sortOrder === 'asc' ? asc(b2b_orders.created_at) : desc(b2b_orders.created_at))
     .limit(limit)
     .offset(offset)
 
@@ -14255,6 +14300,11 @@ export interface PaginationParams {
 
 export interface IOrderFilters {
   status?: string
+  businessType?: 'b2c' | 'b2b' | string
+  paymentType?: string
+  courier?: string
+  warehouse?: string
+  productQuery?: string
   fromDate?: string
   toDate?: string
   search?: string
@@ -14277,6 +14327,11 @@ export const getAllOrdersService = async (
     filters: {
       userId,
       status: filters.status,
+      businessType: filters.businessType,
+      paymentType: filters.paymentType,
+      courier: filters.courier,
+      warehouse: filters.warehouse,
+      productQuery: filters.productQuery,
       fromDate: filters.fromDate,
       toDate: filters.toDate,
       search: filters.search,

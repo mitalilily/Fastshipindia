@@ -7,6 +7,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Collapse,
   Divider,
   IconButton,
   ListItemIcon,
@@ -85,6 +86,11 @@ interface Order {
 
 type OrdersFilters = {
   status?: string
+  businessType?: 'b2c' | 'b2b' | string
+  paymentType?: string
+  courier?: string
+  warehouse?: string
+  productQuery?: string
   fromDate?: string
   toDate?: string
   search?: string
@@ -203,6 +209,7 @@ const AllOrders = () => {
   const [documentGenerationRef, setDocumentGenerationRef] = useState<string | null>(null)
   const [syncingTrackingOrderId, setSyncingTrackingOrderId] = useState<Order['id'] | null>(null)
   const [bulkFeedback, setBulkFeedback] = useState<BulkFeedback | null>(null)
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false)
   const [filters, setFilters] = useState<OrdersFilters>({
     status: undefined,
     fromDate: undefined,
@@ -251,6 +258,7 @@ const AllOrders = () => {
   useEffect(() => {
     setManifestScheduleOpen(false)
     setBulkFeedback(null)
+    setIsFilterPanelOpen(false)
     setSelectCourierOrder(null)
     setOrderDetailsOrder(null)
     setEditingOrder(null)
@@ -1281,7 +1289,7 @@ const AllOrders = () => {
       name: 'search',
       label: 'Search',
       type: 'text',
-      placeholder: 'Order # / Buyer Name',
+      placeholder: 'Order #, AWB, buyer, phone, city or pincode',
     },
     {
       name: 'status',
@@ -1291,11 +1299,60 @@ const AllOrders = () => {
         label: status,
         value: status,
       })),
+    },
+    {
+      name: 'paymentType',
+      label: 'Payment Type',
+      type: 'select',
+      placeholder: 'All payment types',
+      options: [
+        { label: 'Prepaid', value: 'prepaid' },
+        { label: 'Cash on Delivery', value: 'cod' },
+      ],
+    },
+    ...(currentOrderView === 'all'
+      ? [
+          {
+            name: 'businessType',
+            label: 'Order Type',
+            type: 'select' as const,
+            placeholder: 'B2C and B2B',
+            options: [
+              { label: 'B2C', value: 'b2c' },
+              { label: 'B2B', value: 'b2b' },
+            ],
+            isAdvanced: true,
+          },
+        ]
+      : []),
+    {
+      name: 'courier',
+      label: 'Courier',
+      type: 'text',
+      placeholder: 'Courier name or ID',
       isAdvanced: true,
     },
-    { name: 'fromDate', label: 'From Date', type: 'date', placeholder: 'YYYY-MM-DD' },
-    { name: 'toDate', label: 'To Date', type: 'date', placeholder: 'YYYY-MM-DD' },
+    {
+      name: 'warehouse',
+      label: 'Pickup Warehouse',
+      type: 'text',
+      placeholder: 'Warehouse name',
+      isAdvanced: true,
+    },
+    {
+      name: 'productQuery',
+      label: 'Product / SKU',
+      type: 'text',
+      placeholder: 'Product name or SKU',
+      isAdvanced: true,
+    },
+    { name: 'fromDate', label: 'From Date', type: 'date', placeholder: 'YYYY-MM-DD', isAdvanced: true },
+    { name: 'toDate', label: 'To Date', type: 'date', placeholder: 'YYYY-MM-DD', isAdvanced: true },
   ]
+
+  const activeFilterCount = Object.values(filters).filter((value) =>
+    Array.isArray(value) ? value.length > 0 : Boolean(String(value || '').trim()),
+  ).length
 
   return (
     <Stack gap={1.2}>
@@ -1349,15 +1406,12 @@ const AllOrders = () => {
             <Button
               variant="outlined"
               startIcon={<TbFilter size={16} />}
-              onClick={() =>
-                document.getElementById('orders-filter-bar')?.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'start',
-                })
-              }
+              onClick={() => setIsFilterPanelOpen((open) => !open)}
+              aria-expanded={isFilterPanelOpen}
+              color={activeFilterCount ? 'primary' : 'inherit'}
               sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
             >
-              Filters
+              Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
             </Button>
             <Button
               variant="outlined"
@@ -1387,19 +1441,22 @@ const AllOrders = () => {
           </Stack>
         </Stack>
 
-        <Box sx={{ px: { xs: 1.15, md: 1.5 }, pt: 1 }} id="orders-filter-bar">
-          <FilterBar
-            fields={filterFields}
-            defaultValues={filters}
-            onApply={(appliedFilters) => {
-              setFilters(appliedFilters)
-              setPage(1)
-              clearSelection()
-              setBulkFeedback(null)
-            }}
-            compact
-          />
-        </Box>
+        <Collapse in={isFilterPanelOpen} timeout="auto" unmountOnExit>
+          <Box sx={{ px: { xs: 1.15, md: 1.5 }, py: 1 }} id="orders-filter-bar">
+            <FilterBar
+              fields={filterFields}
+              defaultValues={filters}
+              appliedCount={activeFilterCount}
+              onApply={(appliedFilters) => {
+                setFilters(appliedFilters)
+                setPage(1)
+                clearSelection()
+                setBulkFeedback(null)
+              }}
+              compact
+            />
+          </Box>
+        </Collapse>
 
         {bulkFeedback && (
           <Alert
@@ -1532,6 +1589,7 @@ const AllOrders = () => {
           defaultRowsPerPage={rowsPerPage}
           rowsPerPageOptions={[10, 25, 50]}
           totalCount={totalCount}
+          onRowClick={(row) => setOrderDetailsOrder(row)}
           onSelectRows={(ids) => setSelectedOrderIds(ids as Array<Order['id']>)}
           selectedRowIds={selectedOrderIds}
           selectionResetToken={selectionResetToken}

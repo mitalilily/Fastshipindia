@@ -4,6 +4,7 @@ import { AdminStack, DataTable, SoftBadge } from "components/AdminUI/AdminPage";
 import { useAdminTickets } from "hooks/useTickets";
 import moment from "moment";
 import { useMemo, useState } from "react";
+import AdminTicketDetailsDrawer from "./AdminTicketDetailsDrawer";
 
 const statusItems = ["All", "Open", "Pending", "Resolved", "Closed"];
 
@@ -29,6 +30,7 @@ export default function AdminTicketDashboard() {
   const [page, setPage] = useState(1);
   const [perPage] = useState(10);
   const [status, setStatus] = useState("All");
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
 
   const { data, isLoading } = useAdminTickets({
     page,
@@ -58,8 +60,10 @@ export default function AdminTicketDashboard() {
           ticket.sellerName ||
           ticket.userName ||
           ticket.companyName ||
+          ticket.sellerCompanyInfo?.contactPerson ||
+          ticket.sellerCompanyInfo?.businessName ||
           ticket.user?.companyInfo?.businessName,
-        sellerEmail: ticket.userEmail || ticket.user?.email,
+        sellerEmail: ticket.sellerEmail || ticket.userEmail || ticket.user?.email,
         categoryLabel: ticket.category || "General",
         priorityLabel:
           ticket.priority || (ticket.status === "open" ? "MEDIUM" : "URGENT"),
@@ -116,6 +120,7 @@ export default function AdminTicketDashboard() {
       <DataTable
         loading={isLoading}
         rows={rows}
+        onRowClick={(row) => setSelectedTicketId(row.id)}
         columns={[
           {
             key: "ticket",
@@ -169,6 +174,21 @@ export default function AdminTicketDashboard() {
               value ? moment(value).format("DD/MM/YYYY, HH:mm:ss") : "—",
           },
         ]}
+        actions={(row) => (
+          <Button
+            size="sm"
+            variant="outline"
+            color="#6C5CE7"
+            borderColor="#CFC8FF"
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedTicketId(row.id);
+            }}
+          >
+            Open
+          </Button>
+        )}
+        actionsLabel="Action"
         footer={
           <>
             <Button
@@ -191,6 +211,12 @@ export default function AdminTicketDashboard() {
           </>
         }
         minW="1100px"
+      />
+
+      <AdminTicketDetailsDrawer
+        isOpen={Boolean(selectedTicketId)}
+        ticketId={selectedTicketId}
+        onClose={() => setSelectedTicketId(null)}
       />
     </AdminStack>
   );

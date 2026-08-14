@@ -7,6 +7,8 @@ const router = Router()
 router.post('/tickets', requireAuth, SupportController.createTicket)
 router.get('/tickets', requireAuth, SupportController.getMyTickets)
 router.get('/tickets/:id', requireAuth, SupportController.getTicketById)
+router.get('/tickets/:id/messages', requireAuth, SupportController.getTicketMessages)
+router.post('/tickets/:id/messages', requireAuth, SupportController.replyToTicket)
 router.patch('/tickets/:id', requireAuth, SupportController.updateTicket)
 
 export default router

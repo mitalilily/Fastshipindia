@@ -4,10 +4,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createSupportTicket,
   getMySupportTickets,
+  getSupportTicketMessages,
   getSupportTicketById,
+  replyToSupportTicket,
   updateSupportTicket,
   type CreateTicketPayload,
   type SupportTicket,
+  type SupportTicketMessage,
   type TicketStatus
 } from '../../api/support.api'
 
@@ -47,6 +50,26 @@ export const useTicketById = (id: string) =>
     queryFn: () => getSupportTicketById(id),
     enabled: !!id,
   })
+
+export const useTicketMessages = (id: string) =>
+  useQuery<SupportTicketMessage[]>({
+    queryKey: ['support-ticket-messages', id],
+    queryFn: () => getSupportTicketMessages(id),
+    enabled: !!id,
+  })
+
+export const useReplyToTicket = (id: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (message: string) => replyToSupportTicket(id, message),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['support-ticket-messages', id] })
+      queryClient.invalidateQueries({ queryKey: ['support-tickets', id] })
+      queryClient.invalidateQueries({ queryKey: ['support-tickets'] })
+    },
+  })
+}
 
 export const useUpdateTicket = (id: string) => {
   const queryClient = useQueryClient()

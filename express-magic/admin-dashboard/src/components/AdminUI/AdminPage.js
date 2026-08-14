@@ -190,13 +190,22 @@ export function DataTable({
   emptyText = "No records found",
   rowKey = "id",
   actions,
+  actionsLabel = "Action",
   footer,
   minW = "900px",
+  fitColumns = false,
+  actionsW,
+  onRowClick,
 }) {
   return (
     <AdminCard overflow="hidden">
-      <TableContainer>
-        <Table variant="simple" minW={minW}>
+      <TableContainer overflowX={fitColumns ? "hidden" : "auto"}>
+        <Table
+          variant="simple"
+          minW={fitColumns ? "100%" : minW}
+          w="100%"
+          tableLayout={fitColumns ? "fixed" : "auto"}
+        >
           <Thead>
             <Tr>
               {columns.map((column) => (
@@ -209,10 +218,11 @@ export function DataTable({
                   letterSpacing="0"
                   textTransform="uppercase"
                   py="13px"
-                  px="17px"
+                  px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                   borderColor={adminUi.border}
                   textAlign={column.align || "left"}
                   w={column.w}
+                  whiteSpace={fitColumns ? "normal" : "nowrap"}
                 >
                   {column.label}
                 </Th>
@@ -226,11 +236,13 @@ export function DataTable({
                   letterSpacing="0"
                   textTransform="uppercase"
                   py="13px"
-                  px="17px"
+                  px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                   borderColor={adminUi.border}
                   textAlign="right"
+                  w={actionsW}
+                  whiteSpace={fitColumns ? "normal" : "nowrap"}
                 >
-                  Action
+                  {actionsLabel}
                 </Th>
               ) : null}
             </Tr>
@@ -248,16 +260,42 @@ export function DataTable({
               </Tr>
             ) : rows?.length ? (
               rows.map((row, index) => (
-                <Tr key={row?.[rowKey] || row?.id || index}>
+                <Tr
+                  key={row?.[rowKey] || row?.id || index}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  cursor={onRowClick ? "pointer" : "default"}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                  _hover={onRowClick ? { bg: "#F8FAFD" } : undefined}
+                  _focusVisible={
+                    onRowClick
+                      ? { outline: "2px solid #6C5CE7", outlineOffset: "-2px" }
+                      : undefined
+                  }
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
+                      : undefined
+                  }
+                >
                   {columns.map((column) => (
                     <Td
                       key={column.key}
                       py="14px"
-                      px="17px"
+                      px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                       borderColor={adminUi.border}
                       color={adminUi.text}
                       fontSize="14px"
                       textAlign={column.align || "left"}
+                      width={column.w}
+                      maxW={column.w}
+                      whiteSpace={fitColumns ? "normal" : undefined}
+                      overflowWrap={fitColumns ? "anywhere" : undefined}
                     >
                       {column.render
                         ? column.render(row[column.key], row, index)
@@ -267,9 +305,10 @@ export function DataTable({
                   {actions ? (
                     <Td
                       py="14px"
-                      px="17px"
+                      px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                       borderColor={adminUi.border}
                       textAlign="right"
+                      width={actionsW}
                     >
                       {actions(row)}
                     </Td>

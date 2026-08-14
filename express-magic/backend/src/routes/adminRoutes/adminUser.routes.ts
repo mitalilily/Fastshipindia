@@ -9,6 +9,8 @@ import {
   deleteTeamMember,
   deleteUserController,
   getKycDetailsByUserId,
+  getSellerPickupAddresses,
+  getSellerSummary,
   getTeamMembersForUser,
   getUserBankAccounts,
   listUsers,
@@ -30,6 +32,8 @@ const router = Router()
 router.get('/users-management', requireAuth, isAdminMiddleware, listUsers)
 router.get('/search-sellers', requireAuth, isAdminMiddleware, searchSellers)
 router.patch('/:id/approve', requireAuth, isAdminMiddleware, approveUser)
+router.get('/:id/summary', requireAuth, isAdminMiddleware, getSellerSummary)
+router.get('/:id/pickup-addresses', requireAuth, isAdminMiddleware, getSellerPickupAddresses)
 router.post(
   '/:id/complete-readiness',
   requireAuth,
@@ -48,7 +52,7 @@ router.patch(
   updateTeamMemberStatus,
 )
 router.delete('/:id/team-members/:memberId', requireAuth, isAdminMiddleware, deleteTeamMember)
-router.get('/:id/bank-accounts', getUserBankAccounts)
+router.get('/:id/bank-accounts', requireAuth, isAdminMiddleware, getUserBankAccounts)
 router.patch(
   '/:id/bank-accounts/:accountId/status',
   requireAuth,
@@ -56,7 +60,7 @@ router.patch(
   updateUserBankAccountStatus,
 )
 
-router.get('/:id/kyc', requireAuth, getKycDetailsByUserId)
+router.get('/:id/kyc', requireAuth, isAdminMiddleware, getKycDetailsByUserId)
 router.post('/kyc/approve/:id', requireAuth, isAdminMiddleware, approveKyc)
 router.post('/kyc/reject/:id', requireAuth, isAdminMiddleware, rejectKyc)
 router.post('/kyc/revoke/:id', requireAuth, isAdminMiddleware, revokeKyc)

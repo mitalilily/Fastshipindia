@@ -54,7 +54,6 @@ const CompanyDetails = ({ companyInfo, companyLogoUrl }) => {
     )
   }
 
-  console.log(companyInfo)
   return (
     <Card
       bg={cardBg}

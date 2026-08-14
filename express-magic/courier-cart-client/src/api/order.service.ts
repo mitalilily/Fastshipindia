@@ -102,8 +102,9 @@ export const updateB2COrder = async (orderId: string, data: UpdateB2COrderParams
       timeout: 210000,
     })
     return res.data
-  } catch (error: any) {
-    console.error('Error updating B2C order:', error.response?.data || error.message)
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: unknown }; message?: string }
+    console.error('Error updating B2C order:', apiError.response?.data || apiError.message)
     throw error
   }
 }
@@ -112,8 +113,9 @@ export const deleteB2COrder = async (orderId: string) => {
   try {
     const res = await axiosInstance.delete(`/orders/b2c/${orderId}`)
     return res.data
-  } catch (error: any) {
-    console.error('Error deleting B2C order:', error.response?.data || error.message)
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: unknown }; message?: string }
+    console.error('Error deleting B2C order:', apiError.response?.data || apiError.message)
     throw error
   }
 }
@@ -234,8 +236,11 @@ export interface FetchOrdersListParams {
   limit?: number
   status?: string | string[]
   type?: string
+  paymentType?: string
+  businessType?: 'b2c' | 'b2b' | string
   courier?: string
   warehouse?: string
+  productQuery?: string
   sortBy?: 'created_at'
   sortOrder?: 'asc' | 'desc'
   fromDate?: string
@@ -406,12 +411,7 @@ export const regenerateOrderDocumentsService = async (
   return res.data
 }
 
-interface FetchOrdersParams {
-  page?: number
-  limit?: number
-}
-
-export const fetchAllOrders = async (params: FetchOrdersParams = {}) => {
+export const fetchAllOrders = async (params: FetchOrdersListParams = {}) => {
   try {
     const res = await axiosInstance.get('/orders/all', { params })
     return res.data // { success, orders, totalCount, totalPages }

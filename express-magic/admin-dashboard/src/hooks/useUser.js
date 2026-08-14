@@ -6,6 +6,8 @@ import {
   approveUser,
   fetchUserBankAccounts,
   getKyc,
+  getSellerPickupAddresses,
+  getSellerSummary,
   getTicketsByUserId,
   getUserInfo,
   rejectDocument,
@@ -20,6 +22,22 @@ export const useUserInfo = (id) =>
     queryKey: ['userInfo', id],
     queryFn: () => getUserInfo(id),
     enabled: !!id,
+    refetchOnWindowFocus: false,
+  })
+
+export const useSellerSummary = (userId) =>
+  useQuery({
+    queryKey: ['sellerSummary', userId],
+    queryFn: () => getSellerSummary(userId),
+    enabled: !!userId,
+    refetchOnWindowFocus: false,
+  })
+
+export const useSellerPickupAddresses = (userId) =>
+  useQuery({
+    queryKey: ['sellerPickupAddresses', userId],
+    queryFn: () => getSellerPickupAddresses(userId),
+    enabled: !!userId,
     refetchOnWindowFocus: false,
   })
 
@@ -133,6 +151,8 @@ export const useApproveKyc = () => {
         isClosable: true,
       })
       queryClient.invalidateQueries(['userKyc', userId])
+      queryClient.invalidateQueries({ queryKey: ['userInfo', userId] })
+      queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
     },
     onError: (error) => {
       toast({
@@ -161,6 +181,8 @@ export const useRejectKyc = () => {
         isClosable: true,
       })
       queryClient.invalidateQueries(['userKyc', userId])
+      queryClient.invalidateQueries({ queryKey: ['userInfo', userId] })
+      queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
     },
     onError: (error) => {
       toast({
@@ -189,6 +211,8 @@ export const useRevokeKyc = () => {
         isClosable: true,
       })
       queryClient.invalidateQueries(['userKyc', userId])
+      queryClient.invalidateQueries({ queryKey: ['userInfo', userId] })
+      queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
     },
     onError: (error) => {
       toast({

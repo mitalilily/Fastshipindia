@@ -14,7 +14,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Controller,
   useForm,
@@ -82,6 +82,26 @@ export const FilterBar = <T extends Record<string, any>>({
 
   const primaryFields = fields.filter((f) => !f.isAdvanced)
   const advancedFields = fields.filter((f) => f.isAdvanced)
+  const defaultValuesKey = JSON.stringify(defaultValues)
+  const emptyValues = useMemo(
+    () =>
+      fields.reduce<Record<string, unknown>>((values, field) => {
+        values[field.name] = field.type === 'multiselect' ? [] : ''
+        return values
+      }, {}) as T,
+    [fields],
+  )
+
+  useEffect(() => {
+    reset(defaultValues as DefaultValues<T>)
+    // JSON serialization keeps the form in sync when a parent replaces applied filters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValuesKey, reset])
+
+  const clearFilters = () => {
+    reset(emptyValues as DefaultValues<T>)
+    onApply(emptyValues)
+  }
 
   const renderFieldControl = (field: FilterField, controllerField: any) => {
     if (field.type === 'select') {
@@ -217,10 +237,7 @@ export const FilterBar = <T extends Record<string, any>>({
                 <IconButton
                   sx={desktopActionButtonSx}
                   size="small"
-                  onClick={() => {
-                    reset(defaultValues)
-                    onApply({} as T)
-                  }}
+                  onClick={clearFilters}
                 >
                   <MdDelete />
                 </IconButton>
@@ -353,8 +370,7 @@ export const FilterBar = <T extends Record<string, any>>({
                 variant="outlined"
                 startIcon={<MdDelete />}
                 onClick={() => {
-                  reset(defaultValues)
-                  onApply({} as T)
+                  clearFilters()
                   setDrawerOpen(false)
                 }}
                 sx={{

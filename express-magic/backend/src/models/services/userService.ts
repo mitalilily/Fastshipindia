@@ -1008,6 +1008,7 @@ type GetUsersParams = {
   approved?: boolean | string
   onboardingComplete?: boolean | string
   kycStatus?: string | string[]
+  plan?: string
 }
 
 const normalizeOptionalBoolean = (value: boolean | string | undefined) => {
@@ -1030,6 +1031,7 @@ export async function getAllUsersWithRoleUser({
   onboardingComplete,
   approved,
   kycStatus,
+  plan,
 }: GetUsersParams) {
   const offset = (page - 1) * perPage
   const customerRoleExpr = sql`lower(coalesce(nullif(btrim(${users.role}), ''), 'customer'))`
@@ -1094,6 +1096,10 @@ export async function getAllUsersWithRoleUser({
     )
   }
 
+  if (plan?.trim()) {
+    filters.push(ilike(schema.plans.name, plan.trim()))
+  }
+
   // Sort mapping
   const sortColumns: Record<string, any> = {
     createdAt: users.createdAt,
@@ -1137,10 +1143,14 @@ export async function getAllUsersWithRoleUser({
       businessPanUrl: schema.kyc.businessPanUrl,
       companyAddressProofUrl: schema.kyc.companyAddressProofUrl,
       gstCertificateUrl: schema.kyc.gstCertificateUrl,
+      planName: schema.plans.name,
+      planId: schema.userPlans.plan_id,
     })
     .from(users)
     .leftJoin(schema.userProfiles, eq(schema.userProfiles.userId, users.id))
     .leftJoin(schema.kyc, eq(schema.kyc.userId, users.id))
+    .leftJoin(schema.userPlans, eq(schema.userPlans.userId, users.id))
+    .leftJoin(schema.plans, eq(schema.plans.id, schema.userPlans.plan_id))
     .where(and(...filters))
     .orderBy(sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn))
     .limit(perPage)
@@ -1152,6 +1162,8 @@ export async function getAllUsersWithRoleUser({
     .from(users)
     .leftJoin(schema.userProfiles, eq(schema.userProfiles.userId, users.id))
     .leftJoin(schema.kyc, eq(schema.kyc.userId, users.id))
+    .leftJoin(schema.userPlans, eq(schema.userPlans.userId, users.id))
+    .leftJoin(schema.plans, eq(schema.plans.id, schema.userPlans.plan_id))
     .where(and(...filters))
 
   return {
@@ -1163,7 +1175,7 @@ export async function getAllUsersWithRoleUser({
 export const updateUserApprovalStatus = async (userId: string, approved: boolean) => {
   const [updated] = await db
     .update(schema.userProfiles)
-    .set({ approved })
+    .set({ approved, approvedAt: approved ? new Date() : null })
     .where(eq(schema.userProfiles.userId, userId))
     .returning()
 

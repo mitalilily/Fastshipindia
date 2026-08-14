@@ -14,7 +14,6 @@ import {
   Divider,
   Flex,
   Icon,
-  Input,
   Table,
   Tbody,
   Tr,
@@ -41,6 +40,8 @@ import {
   FiCalendar,
   FiCopy,
   FiExternalLink,
+  FiActivity,
+  FiCreditCard,
 } from 'react-icons/fi'
 
 const STATUS_OPTIONS = [
@@ -163,6 +164,17 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
       })
     }
   }
+
+  const currency = (value) => `₹${Number(value || 0).toFixed(2)}`
+  const forwardCharge = Number(
+    order.final_courier_charge ?? order.freight_charges ?? order.shipping_charges ?? 0,
+  )
+  const codCharge = Number(order.cod_charges || 0)
+  const otherCharge = Number(order.other_charges || order.transaction_fee || 0)
+  const insuranceCharge = Number(order.insurance_charge || 0)
+  const totalShippingCharge =
+    Number(order.final_courier_charge || 0) ||
+    forwardCharge + codCharge + otherCharge + insuranceCharge
 
   const InfoRow = ({ label, value, icon, copyable = false }) => (
     <Flex justify="space-between" align="center" py={2}>
@@ -418,6 +430,43 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
             </Grid>
           </Section>
 
+          <Grid templateColumns={{ base: '1fr', lg: 'repeat(3, 1fr)' }} gap={4}>
+            <Section title="Rate Breakdown" icon={FiDollarSign}>
+              <InfoRow label="Forward Freight" value={currency(forwardCharge)} />
+              <InfoRow label="RTO Charge" value={currency(order.rto_charges)} />
+              <InfoRow label="COD Charge" value={currency(codCharge)} />
+              <InfoRow label="Other Charges" value={currency(otherCharge + insuranceCharge)} />
+              <Divider my={2} />
+              <InfoRow label="Total Shipping Charge" value={currency(totalShippingCharge)} />
+            </Section>
+
+            <Section title="Payment Information" icon={FiCreditCard}>
+              <InfoRow label="Payment Method" value={(order.order_type || 'prepaid').toUpperCase()} />
+              <InfoRow label="Order Amount" value={currency(order.order_amount)} />
+              <InfoRow
+                label={order.order_type === 'cod' ? 'COD Collectable' : 'Prepaid Amount'}
+                value={currency(order.order_type === 'cod' ? order.order_amount : order.prepaid_amount || order.order_amount)}
+              />
+              <InfoRow label="Invoice Number" value={order.invoice_number} />
+            </Section>
+
+            <Section title="Tracking History" icon={FiActivity}>
+              <InfoRow
+                label="Created"
+                value={order.created_at ? new Date(order.created_at).toLocaleString('en-IN') : order.order_date}
+              />
+              <InfoRow
+                label="Current Status"
+                value={(order.order_status || 'pending').replace(/_/g, ' ').toUpperCase()}
+              />
+              <InfoRow
+                label="Last Updated"
+                value={order.updated_at ? new Date(order.updated_at).toLocaleString('en-IN') : 'N/A'}
+              />
+              <InfoRow label="Courier Message" value={order.delivery_message || order.provider_last_status} />
+            </Section>
+          </Grid>
+
           {/* Package Information */}
           <Section title="Package Information" icon={FiPackage}>
             <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={3}>
@@ -489,7 +538,13 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
             Close
           </Button>
           {order.awb_number && (
-            <Button colorScheme="blue" leftIcon={<FiTruck />}>
+            <Button
+              colorScheme="blue"
+              leftIcon={<FiTruck />}
+              onClick={() => {
+                window.location.href = `/admin/order-tracking?awb=${encodeURIComponent(order.awb_number)}`
+              }}
+            >
               Track Order
             </Button>
           )}

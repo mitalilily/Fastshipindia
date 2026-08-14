@@ -81,9 +81,14 @@ const DocCard = ({
       </Flex>
 
       {presignedUrl ? (
-        <Link href={presignedUrl} isExternal color="blue.500" fontWeight="bold">
-          View Document <ExternalLinkIcon mx="2px" />
-        </Link>
+        <Flex gap={4} wrap="wrap">
+          <Link href={presignedUrl} isExternal color="blue.500" fontWeight="bold">
+            View Document <ExternalLinkIcon mx="2px" />
+          </Link>
+          <Link href={presignedUrl} download color="purple.500" fontWeight="bold">
+            Download
+          </Link>
+        </Flex>
       ) : fileKey ? (
         <Text color="orange.500">Uploaded, preview unavailable</Text>
       ) : (
@@ -110,7 +115,7 @@ const DocCard = ({
         <Popover isOpen={isOpen} onClose={() => setIsOpen(false)} placement="auto-end" isLazy>
           <PopoverTrigger>
             <Button
-              disabled={kycStatus === 'verified'}
+              isDisabled={kycStatus === 'verified'}
               zIndex={2}
               size="sm"
               colorScheme="red"
@@ -143,13 +148,12 @@ const DocCard = ({
 }
 
 const UserKycPage = ({ userId }) => {
-  console.log('user id', userId)
   const { data: kycData, isLoading, isError, refetch } = useUserKyc(userId)
   const kyc = kycData?.kyc ?? {}
   const [rejectingReason, setRejectingReason] = useState('')
   const [revokingReason, setRevokingReason] = useState('')
 
-  const { mutate: approveKycMutate, isLoading: approving } = useApproveKyc()
+  const { mutate: approveKycMutate, isPending: approving } = useApproveKyc()
   const { mutate: rejectKycMutate } = useRejectKyc()
   const { mutate: revokeKycMutate, isLoading: revoking } = useRevokeKyc()
   const approveDocumentMutation = useApproveDocument(userId)
@@ -281,14 +285,14 @@ const UserKycPage = ({ userId }) => {
       </Heading>
 
       {/* Approve / Reject KYC */}
-      {['verification_in_progress', 'rejected'].includes(kyc.status) && (
+      {['pending', 'verification_in_progress', 'rejected'].includes(kyc.status) && (
         <Flex justify="flex-end" gap={2} mb={4}>
           <Button colorScheme="green" onClick={handleApproveKyc} isLoading={approving}>
-            Approve KYC
+            Approve All
           </Button>
           <Popover placement="bottom" isLazy>
             <PopoverTrigger>
-              <Button colorScheme="red">Reject KYC</Button>
+              <Button colorScheme="red">Reject All</Button>
             </PopoverTrigger>
             <PopoverContent zIndex={2000} portal>
               <PopoverArrow />

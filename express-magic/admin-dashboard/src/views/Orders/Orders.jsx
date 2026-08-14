@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Collapse,
   Flex,
   HStack,
   Icon,
@@ -15,6 +16,7 @@ import {
 } from '@chakra-ui/react'
 import Card from 'components/Card/Card'
 import OrdersTable from 'components/Tables/OrdersTable'
+import OrderDetailsModal from 'components/Tables/OrderDetailsModal'
 import { useOrders } from 'hooks/useOrders'
 import { useEffect, useMemo, useState } from 'react'
 import { FiChevronDown, FiDownload, FiPackage, FiPlus, FiSearch } from 'react-icons/fi'
@@ -28,6 +30,11 @@ const Orders = () => {
   const [limit, setLimit] = useState(10)
   const [filters, setFilters] = useState({
     status: '',
+    businessType: '',
+    paymentType: '',
+    courier: '',
+    warehouse: '',
+    productQuery: '',
     sortBy: 'created_at',
     sortOrder: 'desc',
     search: initialSearch,
@@ -35,6 +42,8 @@ const Orders = () => {
     toDate: '',
   })
   const [isExporting, setIsExporting] = useState(false)
+  const [showMoreFilters, setShowMoreFilters] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState(null)
 
   const { data: ordersData, isLoading, isFetching } = useOrders(page, limit, filters)
   const toast = useToast()
@@ -157,7 +166,14 @@ const Orders = () => {
                 <option value="rto_delivered">RTO Delivered</option>
               </Select>
             </Box>
-            <Button variant="link" color="#6C5CE7" rightIcon={<FiChevronDown />} alignSelf={{ base: 'flex-start', md: 'flex-end' }}>
+            <Button
+              variant="link"
+              color="#6C5CE7"
+              rightIcon={<FiChevronDown />}
+              alignSelf={{ base: 'flex-start', md: 'flex-end' }}
+              onClick={() => setShowMoreFilters((visible) => !visible)}
+              aria-expanded={showMoreFilters}
+            >
               More filters
             </Button>
           </Stack>
@@ -174,6 +190,45 @@ const Orders = () => {
             </Button>
           </HStack>
         </Flex>
+
+        <Collapse in={showMoreFilters} animateOpacity>
+          <Stack direction={{ base: 'column', md: 'row' }} spacing={4} mt={5} align="flex-end" flexWrap="wrap">
+            <FilterSelect label="Order Type" value={filters.businessType} onChange={(value) => updateFilter('businessType', value)}>
+              <option value="">B2C and B2B</option>
+              <option value="b2c">B2C</option>
+              <option value="b2b">B2B</option>
+            </FilterSelect>
+            <FilterSelect label="Payment" value={filters.paymentType} onChange={(value) => updateFilter('paymentType', value)}>
+              <option value="">All payments</option>
+              <option value="prepaid">Prepaid</option>
+              <option value="cod">Cash on Delivery</option>
+            </FilterSelect>
+            <FilterInput label="Courier" value={filters.courier} placeholder="Name or courier ID" onChange={(value) => updateFilter('courier', value)} />
+            <FilterInput label="Pickup Warehouse" value={filters.warehouse} placeholder="Warehouse name" onChange={(value) => updateFilter('warehouse', value)} />
+            <FilterInput label="Product / SKU" value={filters.productQuery} placeholder="Product name or SKU" onChange={(value) => updateFilter('productQuery', value)} />
+            <FilterInput label="From Date" type="date" value={filters.fromDate} onChange={(value) => updateFilter('fromDate', value)} />
+            <FilterInput label="To Date" type="date" value={filters.toDate} onChange={(value) => updateFilter('toDate', value)} />
+            <Button
+              variant="outline"
+              borderColor={borderColor}
+              onClick={() => {
+                setFilters((previous) => ({
+                  ...previous,
+                  businessType: '',
+                  paymentType: '',
+                  courier: '',
+                  warehouse: '',
+                  productQuery: '',
+                  fromDate: '',
+                  toDate: '',
+                }))
+                setPage(1)
+              }}
+            >
+              Clear extra filters
+            </Button>
+          </Stack>
+        </Collapse>
       </Card>
 
       <OrdersTable
@@ -184,7 +239,33 @@ const Orders = () => {
         perPage={limit}
         setPerPage={setLimit}
         loading={isLoading || isFetching}
+        onRowClick={setSelectedOrder}
       />
+
+      <OrderDetailsModal
+        isOpen={Boolean(selectedOrder)}
+        onClose={() => setSelectedOrder(null)}
+        order={selectedOrder}
+        onOrderUpdated={(updatedOrder) => setSelectedOrder(updatedOrder)}
+      />
+    </Box>
+  )
+}
+
+function FilterInput({ label, value, onChange, placeholder, type = 'text' }) {
+  return (
+    <Box minW={{ base: '100%', md: '180px' }} flex="1">
+      <Text color="gray.500" fontSize="13px" mb="6px">{label}</Text>
+      <Input type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+    </Box>
+  )
+}
+
+function FilterSelect({ label, value, onChange, children }) {
+  return (
+    <Box minW={{ base: '100%', md: '170px' }} flex="1">
+      <Text color="gray.500" fontSize="13px" mb="6px">{label}</Text>
+      <Select value={value} onChange={(event) => onChange(event.target.value)}>{children}</Select>
     </Box>
   )
 }

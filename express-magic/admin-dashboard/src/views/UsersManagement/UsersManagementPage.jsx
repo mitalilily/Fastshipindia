@@ -33,6 +33,7 @@ import {
   ToolbarCard,
 } from "components/AdminUI/AdminPage";
 import { useUpdateUserApproval, useUsersWithRoleUser } from "hooks/useUsers";
+import { usePlans } from "hooks/usePlans";
 import { useMemo, useState } from "react";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 
@@ -61,6 +62,22 @@ const lastLogin = (value) => {
   return `${Math.round(hours / 24)}d ago`;
 };
 
+const kycLabel = (row) => {
+  const status = row.kycStatus || row.domesticKyc?.status;
+  if (row.kycVerified || row.kyc_verified || status === "verified") return "KYC Verified";
+  if (status === "verification_in_progress") return "KYC Pending";
+  if (status === "rejected") return "KYC Rejected";
+  return "KYC Not Started";
+};
+
+const kycColor = (row) => {
+  const label = kycLabel(row);
+  if (label === "KYC Verified") return "green";
+  if (label === "KYC Pending") return "orange";
+  if (label === "KYC Rejected") return "red";
+  return "gray";
+};
+
 export default function UsersManagementPage() {
   const history = useHistory();
   const toast = useToast();
@@ -69,7 +86,10 @@ export default function UsersManagementPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [plan, setPlan] = useState("");
+  const [kycStatus, setKycStatus] = useState("");
+  const [onboardingComplete, setOnboardingComplete] = useState(undefined);
   const updateUserApprovalMutation = useUpdateUserApproval();
+  const { data: availablePlans = [] } = usePlans();
 
   const { data: usersResponse, isLoading } = useUsersWithRoleUser({
     page,
@@ -80,6 +100,8 @@ export default function UsersManagementPage() {
     approved:
       status === "active" ? true : status === "inactive" ? false : undefined,
     plan: plan || undefined,
+    kycStatus: kycStatus || undefined,
+    onboardingComplete,
   });
 
   const users = usersResponse?.data ?? [];
@@ -99,7 +121,9 @@ export default function UsersManagementPage() {
     return {
       total: totalCount,
       verified,
-      pending: users.filter((user) => user.kycStatus === "pending").length,
+      pending: users.filter((user) =>
+        ["pending", "verification_in_progress"].includes(user.kycStatus)
+      ).length,
       onboarded,
       active: Math.max(0, totalCount - inactive),
       inactive,
@@ -215,9 +239,13 @@ export default function UsersManagementPage() {
               placeholder="All Plans"
             >
               <option value="">All Plans</option>
-              <option value="basic">Basic</option>
-              <option value="gold">Gold</option>
-              <option value="platinum">Platinum</option>
+              {availablePlans
+                .filter((availablePlan) => availablePlan.is_active !== false)
+                .map((availablePlan) => (
+                  <option key={availablePlan.id} value={availablePlan.name}>
+                    {availablePlan.name}
+                  </option>
+                ))}
             </AdminSelect>
           </Box>
           <Button variant="ghost" color="#6C5CE7" mt={{ base: 0, md: "27px" }}>
@@ -236,16 +264,18 @@ export default function UsersManagementPage() {
         overflowX="auto"
       >
         {[
-          ["All Users", summary.total, true],
-          ["Verified", summary.verified],
-          ["Pending KYC", summary.pending],
+          ["All Users", summary.total, !kycStatus && onboardingComplete === undefined && !status, () => { setKycStatus(""); setOnboardingComplete(undefined); setStatus(""); }],
+          ["Verified", summary.verified, kycStatus === "verified", () => { setKycStatus("verified"); setOnboardingComplete(undefined); setStatus(""); }],
+          ["Pending KYC", summary.pending, kycStatus === "verification_in_progress", () => { setKycStatus("verification_in_progress"); setOnboardingComplete(undefined); setStatus(""); }],
           [
             "KYC Not Started",
             Math.max(0, summary.total - summary.verified - summary.pending),
+            kycStatus === "pending",
+            () => { setKycStatus("pending"); setOnboardingComplete(undefined); setStatus(""); },
           ],
-          ["Not Onboarded", Math.max(0, summary.total - summary.onboarded)],
-          ["Inactive", summary.inactive],
-        ].map(([label, count, active]) => (
+          ["Not Onboarded", Math.max(0, summary.total - summary.onboarded), onboardingComplete === false, () => { setOnboardingComplete(false); setKycStatus(""); setStatus(""); }],
+          ["Inactive", summary.inactive, status === "inactive", () => { setStatus("inactive"); setKycStatus(""); setOnboardingComplete(undefined); }],
+        ].map(([label, count, active, onClick]) => (
           <HStack
             key={label}
             pb="15px"
@@ -254,6 +284,8 @@ export default function UsersManagementPage() {
             }
             color={active ? "#6C5CE7" : "#586B8A"}
             flexShrink={0}
+            cursor="pointer"
+            onClick={() => { onClick(); setPage(1); }}
           >
             <Text fontSize="18px">{label}</Text>
             <SoftBadge colorScheme={active ? "purple" : "gray"}>
@@ -270,6 +302,7 @@ export default function UsersManagementPage() {
           {
             key: "contactPerson",
             label: "User",
+            w: "18%",
             render: (value, row) => {
               const name =
                 value ||
@@ -282,15 +315,15 @@ export default function UsersManagementPage() {
                 row.companyInfo?.businessName ||
                 row.businessName;
               return (
-                <HStack spacing="12px">
+                <HStack spacing="8px" minW={0} align="flex-start">
                   <Avatar
                     name={getInitials(name)}
                     size="sm"
                     bg="#F0EDFF"
                     color="#6C5CE7"
                   />
-                  <Box>
-                    <Text fontWeight="600">{name}</Text>
+                  <Box minW={0}>
+                    <Text fontWeight="600" lineHeight="1.3">{name}</Text>
                     {business ? (
                       <Text fontSize="15px" color="#607397">
                         {business}
@@ -304,16 +337,20 @@ export default function UsersManagementPage() {
           {
             key: "email",
             label: "Email",
+            w: "17%",
             render: (value) => (
-              <HStack color="#23324D">
+              <HStack color="#23324D" spacing="6px" minW={0} align="flex-start">
                 <Icon as={IconMail} boxSize="17px" color="#607397" />
-                <Text noOfLines={1}>{value || "—"}</Text>
+                <Text fontSize="13px" lineHeight="1.35" overflowWrap="anywhere">
+                  {value || "—"}
+                </Text>
               </HStack>
             ),
           },
           {
             key: "contactNumber",
             label: "Phone",
+            w: "11%",
             render: (value) =>
               value ? (
                 <HStack>
@@ -327,6 +364,7 @@ export default function UsersManagementPage() {
           {
             key: "approved",
             label: "Status",
+            w: "13%",
             render: (value, row) => (
               <Stack spacing="5px" align="flex-start">
                 <SoftBadge
@@ -341,19 +379,9 @@ export default function UsersManagementPage() {
                     : "Not Onboarded"}
                 </SoftBadge>
                 <SoftBadge
-                  colorScheme={
-                    row.kycVerified ||
-                    row.kyc_verified ||
-                    row.kycStatus === "verified"
-                      ? "green"
-                      : "gray"
-                  }
+                  colorScheme={kycColor(row)}
                 >
-                  {row.kycVerified ||
-                  row.kyc_verified ||
-                  row.kycStatus === "verified"
-                    ? "KYC Verified"
-                    : "KYC Not Started"}
+                  {kycLabel(row)}
                 </SoftBadge>
               </Stack>
             ),
@@ -361,6 +389,7 @@ export default function UsersManagementPage() {
           {
             key: "plan",
             label: "Plan",
+            w: "7%",
             render: (value, row) => (
               <SoftBadge colorScheme="gray">
                 {value?.name || row.planName || "Basic"}
@@ -370,6 +399,7 @@ export default function UsersManagementPage() {
           {
             key: "lastLogin",
             label: "Last Login",
+            w: "10%",
             render: (value, row) => (
               <HStack>
                 <Icon as={IconClock} boxSize="16px" color="#607397" />
@@ -382,11 +412,12 @@ export default function UsersManagementPage() {
           {
             key: "createdAt",
             label: "Joined",
+            w: "9%",
             render: (value) => toDate(value),
           },
         ]}
         actions={(row) => (
-          <HStack justify="flex-end" spacing="12px">
+          <HStack justify="flex-end" spacing="4px" flexWrap="wrap">
             <IconButton
               aria-label="View seller"
               icon={<IconEye size={18} />}
@@ -401,8 +432,14 @@ export default function UsersManagementPage() {
               isDisabled={updateUserApprovalMutation.isPending}
               onChange={(event) => handleApprovalChange(row.id, event.target.checked)}
             />
+            <Text textAlign="left" fontSize="11px" fontWeight="700" color={row.approved ? "#009E72" : "#D97706"}>
+              {row.approved ? "Approved" : "Pending"}
+            </Text>
           </HStack>
         )}
+        actionsLabel="Account Approval"
+        actionsW="15%"
+        fitColumns
         footer={
           <>
             <Text color="#607397" fontSize="16px">
@@ -435,7 +472,7 @@ export default function UsersManagementPage() {
             </AdminSelect>
           </>
         }
-        minW="1320px"
+        minW="100%"
       />
     </AdminStack>
   );

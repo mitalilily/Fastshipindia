@@ -9,6 +9,11 @@ import { b2bOrderListSelect, b2cOrderListSelect } from './orderListSelects'
 export interface CombinedOrderFilters {
   userId?: string
   status?: string | string[]
+  businessType?: 'b2c' | 'b2b' | string
+  paymentType?: string
+  courier?: string
+  warehouse?: string
+  productQuery?: string
   fromDate?: string
   toDate?: string
   search?: string
@@ -63,6 +68,10 @@ const buildSearchCondition = (alias: 'b2c' | 'b2b', search?: string) => {
     COALESCE(${sql.raw(`${alias}.order_number`)}, '') ILIKE ${pattern}
     OR COALESCE(${sql.raw(`${alias}.buyer_name`)}, '') ILIKE ${pattern}
     OR COALESCE(${sql.raw(`${alias}.buyer_phone`)}, '') ILIKE ${pattern}
+    OR COALESCE(${sql.raw(`${alias}.buyer_email`)}, '') ILIKE ${pattern}
+    OR COALESCE(${sql.raw(`${alias}.city`)}, '') ILIKE ${pattern}
+    OR COALESCE(${sql.raw(`${alias}.state`)}, '') ILIKE ${pattern}
+    OR COALESCE(${sql.raw(`${alias}.pincode`)}, '') ILIKE ${pattern}
     OR COALESCE(${sql.raw(`${alias}.awb_number`)}, '') ILIKE ${pattern}
     OR COALESCE(${sql.raw(`${alias}.provider_reference`)}, '') ILIKE ${pattern}
     OR COALESCE(${sql.raw(`${alias}.provider_request_id`)}, '') ILIKE ${pattern}
@@ -131,6 +140,11 @@ const buildPickupAlertCondition = (alias: 'b2c' | 'b2b', pickupAlert?: string) =
 const buildOrderConditions = (alias: 'b2c' | 'b2b', filters: CombinedOrderFilters) => {
   const conditions: SQL[] = [sql`true`]
 
+  const businessType = String(filters.businessType || '').trim().toLowerCase()
+  if (businessType && businessType !== alias) {
+    conditions.push(sql`false`)
+  }
+
   if (filters.userId) {
     conditions.push(sql`${sql.raw(`${alias}.user_id`)} = ${filters.userId}`)
   }
@@ -138,6 +152,41 @@ const buildOrderConditions = (alias: 'b2c' | 'b2b', filters: CombinedOrderFilter
   const statusCondition = buildStatusCondition(`${alias}.order_status`, filters.status)
   if (statusCondition) {
     conditions.push(statusCondition)
+  }
+
+  if (filters.paymentType) {
+    conditions.push(
+      sql`lower(coalesce(${sql.raw(`${alias}.order_type`)}, '')) = ${String(filters.paymentType).trim().toLowerCase()}`,
+    )
+  }
+
+  if (filters.courier) {
+    const courier = String(filters.courier).trim()
+    const courierId = Number(courier)
+    conditions.push(
+      Number.isFinite(courierId) && courierId > 0
+        ? sql`${sql.raw(`${alias}.courier_id`)} = ${courierId}`
+        : sql`coalesce(${sql.raw(`${alias}.courier_partner`)}, '') ILIKE ${`%${courier}%`}`,
+    )
+  }
+
+  if (filters.warehouse) {
+    const warehouse = `%${String(filters.warehouse).trim()}%`
+    conditions.push(sql`(
+      coalesce(${sql.raw(`${alias}.pickup_location_id`)}, '') ILIKE ${warehouse}
+      OR coalesce(${sql.raw(`${alias}.pickup_details`)} ->> 'warehouse_name', '') ILIKE ${warehouse}
+      OR coalesce(${sql.raw(`${alias}.pickup_details`)} ->> 'name', '') ILIKE ${warehouse}
+    )`)
+  }
+
+  if (filters.productQuery) {
+    const productQuery = `%${String(filters.productQuery).trim()}%`
+    conditions.push(sql`EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(coalesce(${sql.raw(`${alias}.products`)}, '[]'::jsonb)) AS product
+      WHERE coalesce(product->>'productName', product->>'name', '') ILIKE ${productQuery}
+        OR coalesce(product->>'sku', '') ILIKE ${productQuery}
+    )`)
   }
 
   if (filters.fromDate) {

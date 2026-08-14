@@ -83,7 +83,10 @@ export async function regenerateAdminOrderDocuments(
 
 export async function updateAdminOrderStatus(orderId, { status, note } = {}) {
   try {
-    const response = await api.patch(`/admin/orders/${orderId}/status`, { status, note })
+    const response = await api.post(`/admin/orders/${orderId}/status`, {
+      status,
+      remarks: note,
+    })
     return response.data
   } catch (error) {
     console.error('Error updating admin order status:', error.response?.data || error.message)

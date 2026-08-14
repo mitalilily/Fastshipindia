@@ -154,6 +154,12 @@ export const useBookB2CCourier = (onClose?: () => void) => {
 // useOrders.ts
 interface Filters {
   status?: string | string[]
+  type?: string
+  paymentType?: string
+  businessType?: 'b2c' | 'b2b' | string
+  courier?: string
+  warehouse?: string
+  productQuery?: string
   sortBy?: 'created_at'
   sortOrder?: 'asc' | 'desc'
   fromDate?: string
@@ -371,6 +377,11 @@ export interface FetchOrdersParams {
   page?: number
   limit?: number
   status?: string
+  businessType?: 'b2c' | 'b2b' | string
+  paymentType?: string
+  courier?: string
+  warehouse?: string
+  productQuery?: string
   fromDate?: string
   toDate?: string
   search?: string

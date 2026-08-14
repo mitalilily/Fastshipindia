@@ -11,11 +11,22 @@ export const usePlans = () => {
 }
 
 export const useCreatePlan = () => {
+  const toast = useToast()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: PlansService.createPlan,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] })
+      toast({ title: 'Plan created successfully', status: 'success', duration: 3000, isClosable: true })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Could not create plan',
+        description: error?.response?.data?.message || error.message,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      })
     },
   })
 }
@@ -34,9 +45,10 @@ export const useUpdatePlan = () => {
         isClosable: true,
       })
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: 'Error updating plan',
+        description: error?.response?.data?.message || error.message,
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -46,11 +58,22 @@ export const useUpdatePlan = () => {
 }
 
 export const useDeletePlan = () => {
+  const toast = useToast()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: PlansService.deletePlan,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plans'] })
+      toast({ title: 'Plan deleted successfully', status: 'success', duration: 3000, isClosable: true })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Could not delete plan',
+        description: error?.response?.data?.message || error.message,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      })
     },
   })
 }
