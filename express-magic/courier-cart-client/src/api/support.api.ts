@@ -24,6 +24,21 @@ export interface SupportTicket {
   status: TicketStatus
   createdAt: string
   updatedAt: string
+  sellerEmail?: string | null
+  sellerPhone?: string | null
+  sellerCompanyInfo?: Record<string, unknown> | null
+}
+
+export interface SupportTicketMessage {
+  id: string
+  ticketId: string
+  senderId: string
+  senderRole: 'admin' | 'seller'
+  message: string
+  attachments: string[]
+  createdAt: string
+  senderEmail?: string | null
+  senderCompanyInfo?: Record<string, unknown> | null
 }
 
 export const createSupportTicket = async (payload: CreateTicketPayload) => {
@@ -54,6 +69,20 @@ export const getMySupportTickets = async (page = 1, limit = 10, filters = {}) =>
 
 export const getSupportTicketById = async (id: string) => {
   const res = await axiosInstance.get<SupportTicket>(`/support/tickets/${id}`)
+  return res.data
+}
+
+export const getSupportTicketMessages = async (id: string) => {
+  const res = await axiosInstance.get<{ data: SupportTicketMessage[] }>(
+    `/support/tickets/${id}/messages`,
+  )
+  return res.data.data
+}
+
+export const replyToSupportTicket = async (id: string, message: string) => {
+  const res = await axiosInstance.post<SupportTicketMessage>(`/support/tickets/${id}/messages`, {
+    message,
+  })
   return res.data
 }
 

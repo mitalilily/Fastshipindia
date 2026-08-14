@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv'
+import fs from 'fs'
 import path from 'path'
 import { spawnSync } from 'child_process'
 import { Pool } from 'pg'
@@ -37,6 +38,21 @@ const usersTableExists = async () => {
   }
 }
 
+const ensureSupportTicketMessagesTable = async () => {
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: env === 'production' ? { rejectUnauthorized: false } : false,
+  })
+
+  try {
+    const migrationPath = path.join(backendRoot, 'migration_add_support_ticket_messages.sql')
+    await pool.query(fs.readFileSync(migrationPath, 'utf8'))
+    console.log('Support ticket conversation schema is ready')
+  } finally {
+    await pool.end()
+  }
+}
+
 async function bootstrapDatabase() {
   const hasUsersTable = await usersTableExists()
 
@@ -47,6 +63,10 @@ async function bootstrapDatabase() {
       console.log('Database schema is missing. Running drizzle schema push before startup...')
       run(npmCommand, ['run', 'migrate'])
     }
+  }
+
+  if (hasUsersTable) {
+    await ensureSupportTicketMessagesTable()
   }
 
   try {

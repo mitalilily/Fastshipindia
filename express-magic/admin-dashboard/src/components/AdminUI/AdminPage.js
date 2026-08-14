@@ -195,6 +195,7 @@ export function DataTable({
   minW = "900px",
   fitColumns = false,
   actionsW,
+  onRowClick,
 }) {
   return (
     <AdminCard overflow="hidden">
@@ -259,7 +260,29 @@ export function DataTable({
               </Tr>
             ) : rows?.length ? (
               rows.map((row, index) => (
-                <Tr key={row?.[rowKey] || row?.id || index}>
+                <Tr
+                  key={row?.[rowKey] || row?.id || index}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  cursor={onRowClick ? "pointer" : "default"}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                  _hover={onRowClick ? { bg: "#F8FAFD" } : undefined}
+                  _focusVisible={
+                    onRowClick
+                      ? { outline: "2px solid #6C5CE7", outlineOffset: "-2px" }
+                      : undefined
+                  }
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
+                      : undefined
+                  }
+                >
                   {columns.map((column) => (
                     <Td
                       key={column.key}

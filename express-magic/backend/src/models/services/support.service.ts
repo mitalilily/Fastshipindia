@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, lt, or, sql } from 'drizzle-orm'
 import { db } from '../client'
 import { supportTickets } from '../schema/supportTickets'
+import { supportTicketMessages } from '../schema/supportTicketMessages'
 import { userProfiles } from '../schema/userProfile'
 import { users } from '../schema/users'
 import { sendSupportTicketCreatedEmail } from './eventEmail.service'
@@ -171,15 +172,120 @@ export const getUserTicketsService = async (
 }
 
 export const getTicketByIdService = async (ticketId: string, userId: string, isAdmin = false) => {
-  return await db
-    .select()
+  const [ticket] = await db
+    .select({
+      id: supportTickets.id,
+      userId: supportTickets.userId,
+      subject: supportTickets.subject,
+      category: supportTickets.category,
+      subcategory: supportTickets.subcategory,
+      awbNumber: supportTickets.awbNumber,
+      description: supportTickets.description,
+      attachments: supportTickets.attachments,
+      dueDate: supportTickets.dueDate,
+      status: supportTickets.status,
+      createdAt: supportTickets.createdAt,
+      updatedAt: supportTickets.updatedAt,
+      sellerEmail: users.email,
+      sellerPhone: users.phone,
+      sellerCompanyInfo: userProfiles.companyInfo,
+    })
     .from(supportTickets)
+    .leftJoin(users, eq(supportTickets.userId, users.id))
+    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
     .where(
       isAdmin
         ? eq(supportTickets.id, ticketId)
         : and(eq(supportTickets.id, ticketId), eq(supportTickets.userId, userId)),
     )
-    .then((rows) => rows[0] || null)
+
+  return ticket || null
+}
+
+export const getTicketMessagesService = async (
+  ticketId: string,
+  userId: string,
+  isAdmin = false,
+) => {
+  const ticket = await getTicketByIdService(ticketId, userId, isAdmin)
+  if (!ticket) return null
+
+  const messages = await db
+    .select({
+      id: supportTicketMessages.id,
+      ticketId: supportTicketMessages.ticketId,
+      senderId: supportTicketMessages.senderId,
+      senderRole: supportTicketMessages.senderRole,
+      message: supportTicketMessages.message,
+      attachments: supportTicketMessages.attachments,
+      createdAt: supportTicketMessages.createdAt,
+      senderEmail: users.email,
+      senderCompanyInfo: userProfiles.companyInfo,
+    })
+    .from(supportTicketMessages)
+    .leftJoin(users, eq(supportTicketMessages.senderId, users.id))
+    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+    .where(eq(supportTicketMessages.ticketId, ticketId))
+    .orderBy(asc(supportTicketMessages.createdAt))
+
+  return messages
+}
+
+export const addTicketMessageService = async (data: {
+  ticketId: string
+  senderId: string
+  senderRole: string
+  message: string
+  attachments?: string[]
+  isAdmin?: boolean
+}) => {
+  const ticket = await getTicketByIdService(data.ticketId, data.senderId, Boolean(data.isAdmin))
+  if (!ticket) return null
+
+  const [created] = await db
+    .insert(supportTicketMessages)
+    .values({
+      ticketId: data.ticketId,
+      senderId: data.senderId,
+      senderRole: data.senderRole,
+      message: data.message.trim(),
+      attachments: data.attachments ?? [],
+    })
+    .returning()
+
+  let nextStatus: TicketStatus | undefined
+  if (data.isAdmin && ticket.status === 'open') nextStatus = 'in_progress'
+  if (!data.isAdmin && (ticket.status === 'resolved' || ticket.status === 'closed')) {
+    nextStatus = 'open'
+  }
+
+  await db
+    .update(supportTickets)
+    .set({
+      updatedAt: new Date(),
+      ...(nextStatus ? { status: nextStatus } : {}),
+    })
+    .where(eq(supportTickets.id, data.ticketId))
+
+  const notification = data.isAdmin
+    ? {
+        targetRole: 'user' as const,
+        userId: ticket.userId,
+        title: 'Support replied to your ticket',
+        message: `FastShip Support replied to “${ticket.subject}”.`,
+      }
+    : {
+        targetRole: 'admin' as const,
+        title: 'New seller reply',
+        message: `A seller replied to “${ticket.subject}”.`,
+      }
+
+  await createNotificationService({
+    ...notification,
+    type: 'ticket_update',
+  }).catch((error) => console.error('Ticket reply notification failed:', error))
+
+  return created
 }
 
 interface UpdateTicketData {
@@ -374,6 +480,9 @@ export const getAllTicketsService = async (
       updatedAt: supportTickets.updatedAt,
       userId: supportTickets.userId,
       attachments: supportTickets.attachments,
+      sellerEmail: users.email,
+      sellerPhone: users.phone,
+      sellerCompanyInfo: userProfiles.companyInfo,
     })
     .from(supportTickets)
     .leftJoin(users, eq(supportTickets.userId, users.id))

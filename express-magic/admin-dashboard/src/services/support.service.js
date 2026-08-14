@@ -21,7 +21,20 @@ export const adminGetTickets = async ({ page = 1, limit = 10, filters = {} } = {
 
 // ✅ Fetch ticket by ID
 export const adminGetTicketById = async (ticketId) => {
-  const response = await api.get(`/admin/tickets/${ticketId}`)
+  const response = await api.get(`/admin/support-tickets/${ticketId}`)
+  return response.data
+}
+
+export const adminGetTicketMessages = async (ticketId) => {
+  const response = await api.get(`/admin/support-tickets/${ticketId}/messages`)
+  return response.data?.data || []
+}
+
+export const adminReplyToTicket = async ({ ticketId, message, attachments = [] }) => {
+  const response = await api.post(`/admin/support-tickets/${ticketId}/messages`, {
+    message,
+    attachments,
+  })
   return response.data
 }
 
