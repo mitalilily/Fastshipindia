@@ -1,8 +1,11 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { CompanyType, KycDetails } from '../../types/users.types'
 import { requiredKycDetails, requiredKycFieldMap } from '../../utils/constants'
 import { db } from '../client'
 import { kyc } from '../schema/kyc'
+import { plans } from '../schema/plans'
+import { userPlans } from '../schema/userPlans'
+import { users } from '../schema/users'
 
 import { HttpError } from '../../utils/classes'
 import { userProfiles } from '../schema/userProfile'
@@ -13,6 +16,57 @@ import { ensureKycSchemaCompatibility } from './kycSchemaCompatibility.service'
 
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+
+type KycTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+const activateMerchantAfterKycApproval = async (
+  tx: KycTransaction,
+  userId: string,
+  now: Date,
+) => {
+  await tx
+    .update(userProfiles)
+    .set({
+      approved: true,
+      approvedAt: sql`coalesce(${userProfiles.approvedAt}, ${now})`,
+      rejectionReason: null,
+      domesticKyc: {
+        status: 'verified',
+        updatedAt: now,
+      },
+      updatedAt: now,
+    })
+    .where(eq(userProfiles.userId, userId))
+
+  await tx
+    .update(users)
+    .set({ accountVerified: true, updatedAt: now })
+    .where(eq(users.id, userId))
+
+  const [activePlan] = await tx
+    .select({ id: userPlans.id })
+    .from(userPlans)
+    .where(and(eq(userPlans.userId, userId), eq(userPlans.is_active, true)))
+    .limit(1)
+
+  if (activePlan) return
+
+  const [basicPlan] = await tx
+    .select({ id: plans.id })
+    .from(plans)
+    .where(and(eq(plans.is_active, true), sql`lower(${plans.name}) = 'basic'`))
+    .limit(1)
+
+  if (!basicPlan) return
+
+  await tx
+    .insert(userPlans)
+    .values({ userId, plan_id: basicPlan.id, is_active: true })
+    .onConflictDoUpdate({
+      target: userPlans.userId,
+      set: { plan_id: basicPlan.id, is_active: true },
+    })
+}
 
 export const UpdateKYCDetails = async (userId: string, details: KycDetails) => {
   await ensureKycSchemaCompatibility()
@@ -245,20 +299,28 @@ export const updateKycStatus = async (
     payload.rejectionReason = reason
   }
 
-  // Update main KYC record
-  await db.update(kyc).set(payload).where(eq(kyc.userId, userId)).execute()
+  await db.transaction(async (tx) => {
+    // Update main KYC record
+    await tx.update(kyc).set(payload).where(eq(kyc.userId, userId)).execute()
 
-  // Keep `user_profiles.domesticKyc` in sync so Admin UI shows correct status
-  await db
-    .update(userProfiles)
-    .set({
-      domesticKyc: {
-        status,
+    if (status === 'verified') {
+      await activateMerchantAfterKycApproval(tx, userId, now)
+      return
+    }
+
+    // Keep `user_profiles.domesticKyc` in sync so Admin UI shows correct status
+    await tx
+      .update(userProfiles)
+      .set({
+        domesticKyc: {
+          status,
+          updatedAt: now,
+        },
         updatedAt: now,
-      },
-    })
-    .where(eq(userProfiles.userId, userId))
-    .execute()
+      })
+      .where(eq(userProfiles.userId, userId))
+      .execute()
+  })
 }
 
 export const updateDocumentStatus = async (
@@ -331,16 +393,7 @@ export const updateDocumentStatus = async (
         .set({ status: 'verified', updatedAt: now })
         .where(eq(kyc.userId, userId))
         .execute()
-      await tx
-        .update(userProfiles)
-        .set({
-          domesticKyc: {
-            status: 'verified',
-            updatedAt: now,
-          },
-        })
-        .where(eq(userProfiles.userId, userId))
-        .execute()
+      await activateMerchantAfterKycApproval(tx, userId, now)
     }
   })
 }
