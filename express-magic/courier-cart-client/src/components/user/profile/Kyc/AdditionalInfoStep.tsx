@@ -159,6 +159,22 @@ export default function AdditionalDetailsStep({
     return [];
   }, [structure, companyType]);
 
+  const isFieldRequired = (field: keyof AdditionalKYCForm) =>
+    structure === "company" && companyType
+      ? (
+          requiredKycFieldMap[structure] as Record<
+            CompanyType,
+            Partial<Record<keyof AdditionalKYCForm, boolean>>
+          >
+        )[companyType]?.[field] ?? false
+      : (
+          requiredKycFieldMap[structure] as Partial<
+            Record<keyof AdditionalKYCForm, boolean>
+          >
+        )?.[field] ?? false;
+
+  const hasRequiredFields = requiredFields.some(isFieldRequired);
+
   const filePlaceholder = (field: keyof AdditionalKYCForm) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     watch(`${field}_key` as any);
@@ -198,6 +214,11 @@ export default function AdditionalDetailsStep({
         <Alert severity="success" sx={{ mb: 2 }}>
           No document upload is required right now. Submit to finish KYC instantly.
         </Alert>
+      ) : !hasRequiredFields ? (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          These details are optional. Upload any documents you want the verification team to
+          review, or submit KYC without them.
+        </Alert>
       ) : null}
       <Grid container spacing={3}>
         {requiredFields.map((field) => (
@@ -207,21 +228,7 @@ export default function AdditionalDetailsStep({
                 name={field}
                 control={control}
                 rules={{
-                  required:
-                    structure === "company" && companyType
-                      ? (
-                          requiredKycFieldMap[structure] as Record<
-                            CompanyType,
-                            Partial<Record<keyof AdditionalKYCForm, boolean>>
-                          >
-                        )[companyType]?.[field] ?? false
-                      : (
-                          requiredKycFieldMap[structure] as Partial<
-                            Record<keyof AdditionalKYCForm, boolean>
-                          >
-                        )?.[field] ?? false
-                      ? `${getFieldLabel(field)} is required`
-                      : false,
+                  required: isFieldRequired(field) ? `${getFieldLabel(field)} is required` : false,
                   ...(field === "gstin"
                     ? {
                         pattern: {
@@ -234,19 +241,7 @@ export default function AdditionalDetailsStep({
                     : {}),
                 }}
                 render={({ field: ctrl, fieldState }) => {
-                  const isRequired =
-                    structure === "company" && companyType
-                      ? (
-                          requiredKycFieldMap[structure] as Record<
-                            CompanyType,
-                            Partial<Record<keyof AdditionalKYCForm, boolean>>
-                          >
-                        )[companyType]?.[field] ?? false
-                      : (
-                          requiredKycFieldMap[structure] as Partial<
-                            Record<keyof AdditionalKYCForm, boolean>
-                          >
-                        )?.[field] ?? false;
+                  const isRequired = isFieldRequired(field);
 
                   return (
                     <Stack mt={1.5}>
@@ -334,19 +329,7 @@ export default function AdditionalDetailsStep({
                 name={field}
                 control={control}
                 rules={(() => {
-                  const isRequired =
-                    structure === "company" && companyType
-                      ? (
-                          requiredKycFieldMap[structure] as Record<
-                            CompanyType,
-                            Partial<Record<keyof AdditionalKYCForm, boolean>>
-                          >
-                        )[companyType]?.[field] ?? false
-                      : (
-                          requiredKycFieldMap[structure] as Partial<
-                            Record<keyof AdditionalKYCForm, boolean>
-                          >
-                        )?.[field] ?? false;
+                  const isRequired = isFieldRequired(field);
 
                   return {
                     required: isRequired ? `${getFieldLabel(field)} is required` : false,
@@ -365,20 +348,7 @@ export default function AdditionalDetailsStep({
                 render={({ field: ctrl, fieldState }) => (
                   <CustomInput
                     {...ctrl}
-                    required={
-                      (structure === "company" && companyType
-                        ? (
-                            requiredKycFieldMap[structure] as Record<
-                              CompanyType,
-                              Partial<Record<keyof AdditionalKYCForm, boolean>>
-                            >
-                          )[companyType]?.[field] ?? false
-                        : (
-                            requiredKycFieldMap[structure] as Partial<
-                              Record<keyof AdditionalKYCForm, boolean>
-                            >
-                          )?.[field] ?? false)
-                    }
+                    required={isFieldRequired(field)}
                     fullWidth
                     label={getFieldLabel(field)}
                     placeholder={
@@ -396,7 +366,7 @@ export default function AdditionalDetailsStep({
 
       {/* Submit Button */}
       <Box mt={4} display="flex" justifyContent="flex-end">
-        <Button variant="contained" type="submit" disabled={requiredFields.length > 0 && !isValid}>
+        <Button variant="contained" type="submit" disabled={hasRequiredFields && !isValid}>
           {requiredFields.length === 0 ? "Finish KYC" : "Submit KYC"}
         </Button>
       </Box>
