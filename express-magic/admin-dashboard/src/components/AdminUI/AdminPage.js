@@ -193,11 +193,18 @@ export function DataTable({
   actionsLabel = "Action",
   footer,
   minW = "900px",
+  fitColumns = false,
+  actionsW,
 }) {
   return (
     <AdminCard overflow="hidden">
-      <TableContainer>
-        <Table variant="simple" minW={minW}>
+      <TableContainer overflowX={fitColumns ? "hidden" : "auto"}>
+        <Table
+          variant="simple"
+          minW={fitColumns ? "100%" : minW}
+          w="100%"
+          tableLayout={fitColumns ? "fixed" : "auto"}
+        >
           <Thead>
             <Tr>
               {columns.map((column) => (
@@ -210,10 +217,11 @@ export function DataTable({
                   letterSpacing="0"
                   textTransform="uppercase"
                   py="13px"
-                  px="17px"
+                  px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                   borderColor={adminUi.border}
                   textAlign={column.align || "left"}
                   w={column.w}
+                  whiteSpace={fitColumns ? "normal" : "nowrap"}
                 >
                   {column.label}
                 </Th>
@@ -227,9 +235,11 @@ export function DataTable({
                   letterSpacing="0"
                   textTransform="uppercase"
                   py="13px"
-                  px="17px"
+                  px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                   borderColor={adminUi.border}
                   textAlign="right"
+                  w={actionsW}
+                  whiteSpace={fitColumns ? "normal" : "nowrap"}
                 >
                   {actionsLabel}
                 </Th>
@@ -254,11 +264,15 @@ export function DataTable({
                     <Td
                       key={column.key}
                       py="14px"
-                      px="17px"
+                      px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                       borderColor={adminUi.border}
                       color={adminUi.text}
                       fontSize="14px"
                       textAlign={column.align || "left"}
+                      width={column.w}
+                      maxW={column.w}
+                      whiteSpace={fitColumns ? "normal" : undefined}
+                      overflowWrap={fitColumns ? "anywhere" : undefined}
                     >
                       {column.render
                         ? column.render(row[column.key], row, index)
@@ -268,9 +282,10 @@ export function DataTable({
                   {actions ? (
                     <Td
                       py="14px"
-                      px="17px"
+                      px={fitColumns ? { base: "8px", xl: "11px" } : "17px"}
                       borderColor={adminUi.border}
                       textAlign="right"
+                      width={actionsW}
                     >
                       {actions(row)}
                     </Td>

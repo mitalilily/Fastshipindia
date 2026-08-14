@@ -302,6 +302,7 @@ export default function UsersManagementPage() {
           {
             key: "contactPerson",
             label: "User",
+            w: "18%",
             render: (value, row) => {
               const name =
                 value ||
@@ -314,15 +315,15 @@ export default function UsersManagementPage() {
                 row.companyInfo?.businessName ||
                 row.businessName;
               return (
-                <HStack spacing="12px">
+                <HStack spacing="8px" minW={0} align="flex-start">
                   <Avatar
                     name={getInitials(name)}
                     size="sm"
                     bg="#F0EDFF"
                     color="#6C5CE7"
                   />
-                  <Box>
-                    <Text fontWeight="600">{name}</Text>
+                  <Box minW={0}>
+                    <Text fontWeight="600" lineHeight="1.3">{name}</Text>
                     {business ? (
                       <Text fontSize="15px" color="#607397">
                         {business}
@@ -336,16 +337,20 @@ export default function UsersManagementPage() {
           {
             key: "email",
             label: "Email",
+            w: "17%",
             render: (value) => (
-              <HStack color="#23324D">
+              <HStack color="#23324D" spacing="6px" minW={0} align="flex-start">
                 <Icon as={IconMail} boxSize="17px" color="#607397" />
-                <Text noOfLines={1}>{value || "—"}</Text>
+                <Text fontSize="13px" lineHeight="1.35" overflowWrap="anywhere">
+                  {value || "—"}
+                </Text>
               </HStack>
             ),
           },
           {
             key: "contactNumber",
             label: "Phone",
+            w: "11%",
             render: (value) =>
               value ? (
                 <HStack>
@@ -359,6 +364,7 @@ export default function UsersManagementPage() {
           {
             key: "approved",
             label: "Status",
+            w: "13%",
             render: (value, row) => (
               <Stack spacing="5px" align="flex-start">
                 <SoftBadge
@@ -383,6 +389,7 @@ export default function UsersManagementPage() {
           {
             key: "plan",
             label: "Plan",
+            w: "7%",
             render: (value, row) => (
               <SoftBadge colorScheme="gray">
                 {value?.name || row.planName || "Basic"}
@@ -392,6 +399,7 @@ export default function UsersManagementPage() {
           {
             key: "lastLogin",
             label: "Last Login",
+            w: "10%",
             render: (value, row) => (
               <HStack>
                 <Icon as={IconClock} boxSize="16px" color="#607397" />
@@ -404,11 +412,12 @@ export default function UsersManagementPage() {
           {
             key: "createdAt",
             label: "Joined",
+            w: "9%",
             render: (value) => toDate(value),
           },
         ]}
         actions={(row) => (
-          <HStack justify="flex-end" spacing="12px">
+          <HStack justify="flex-end" spacing="4px" flexWrap="wrap">
             <IconButton
               aria-label="View seller"
               icon={<IconEye size={18} />}
@@ -423,12 +432,14 @@ export default function UsersManagementPage() {
               isDisabled={updateUserApprovalMutation.isPending}
               onChange={(event) => handleApprovalChange(row.id, event.target.checked)}
             />
-            <Text minW="62px" textAlign="left" fontSize="12px" fontWeight="700" color={row.approved ? "#009E72" : "#D97706"}>
+            <Text textAlign="left" fontSize="11px" fontWeight="700" color={row.approved ? "#009E72" : "#D97706"}>
               {row.approved ? "Approved" : "Pending"}
             </Text>
           </HStack>
         )}
         actionsLabel="Account Approval"
+        actionsW="15%"
+        fitColumns
         footer={
           <>
             <Text color="#607397" fontSize="16px">
@@ -461,7 +472,7 @@ export default function UsersManagementPage() {
             </AdminSelect>
           </>
         }
-        minW="1320px"
+        minW="100%"
       />
     </AdminStack>
   );

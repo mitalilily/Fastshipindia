@@ -47,7 +47,7 @@ const Header = ({
 
   return (
     <Box
-      mb={{ sm: '205px', md: '75px', xl: '70px' }}
+      mb={{ base: '116px', md: '58px' }}
       borderRadius="15px"
       px="0px"
       display="flex"
@@ -58,8 +58,9 @@ const Header = ({
       <Box
         bgImage={backgroundHeader}
         w="100%"
-        h="300px"
-        borderRadius="25px"
+        h={{ base: '190px', md: '156px' }}
+        borderRadius="20px"
+        bgSize="cover"
         bgPosition="50%"
         bgRepeat="no-repeat"
         position="relative"
@@ -92,17 +93,13 @@ const Header = ({
           align="center"
           backdropFilter="saturate(200%) blur(50px)"
           position="absolute"
+          bottom={{ base: '-96px', md: '-42px' }}
           boxShadow="0px 2px 5.5px rgba(0, 0, 0, 0.02)"
           border="2px solid"
           borderColor={borderProfileColor}
           bg={backgroundProfile}
-          p="24px"
-          borderRadius="20px"
-          transform={{
-            sm: 'translateY(45%)',
-            md: 'translateY(110%)',
-            lg: 'translateY(160%)',
-          }}
+          p={{ base: '16px', md: '18px 20px' }}
+          borderRadius="16px"
         >
           {/* Profile Info */}
           <Flex
