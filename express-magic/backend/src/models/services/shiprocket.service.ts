@@ -5440,7 +5440,13 @@ export const fetchAvailableCouriersWithRatesB2B = async (
     const systemCourierRows = await db
       .select({ id: couriers.id, serviceProvider: couriers.serviceProvider, name: couriers.name })
       .from(couriers)
-      .where(and(eq(couriers.isEnabled, true), sql`${couriers.businessType} @> '["b2b"]'::jsonb`))
+      .where(
+        and(
+          eq(couriers.isEnabled, true),
+          sql`${couriers.businessType} @> '["b2b"]'::jsonb`,
+          sql`lower(${couriers.serviceProvider}) in ('delhivery', 'delhivery_b2b')`,
+        ),
+      )
 
     const shadowfaxRows = systemCourierRows.filter(
       (row) => normalizeProviderKey(row.serviceProvider) === 'shadowfax',
@@ -9567,27 +9573,40 @@ export const createB2BShipmentService = async (
       ? Number(params.courier_id)
       : undefined
 
-  let effectiveIntegrationType = String(params.integration_type || '')
-    .trim()
-    .toLowerCase()
-
-  if (!effectiveIntegrationType && courierId) {
+  if (courierId !== undefined) {
     const [courierRow] = await db
-      .select({ serviceProvider: couriers.serviceProvider })
+      .select({
+        serviceProvider: couriers.serviceProvider,
+        isEnabled: couriers.isEnabled,
+        businessType: couriers.businessType,
+      })
       .from(couriers)
       .where(eq(couriers.id, courierId))
       .limit(1)
-    effectiveIntegrationType = String(courierRow?.serviceProvider || '')
+
+    const selectedProvider = String(courierRow?.serviceProvider || '')
       .trim()
       .toLowerCase()
+    const supportsB2B = Array.isArray(courierRow?.businessType)
+      ? courierRow.businessType.some((type) => String(type).toLowerCase() === 'b2b')
+      : false
+
+    if (
+      !courierRow ||
+      !courierRow.isEnabled ||
+      !supportsB2B ||
+      !['delhivery', 'delhivery_b2b'].includes(selectedProvider)
+    ) {
+      throw new HttpError(
+        400,
+        'B2B bookings are currently available through Delhivery only. Please select a Delhivery B2B rate.',
+      )
+    }
   }
 
-  if (!['shadowfax', 'delhivery'].includes(effectiveIntegrationType)) {
-    throw new HttpError(
-      400,
-      'B2B shipment booking is supported for Delhivery and Shadowfax only.',
-    )
-  }
+  // B2B is intentionally locked to Delhivery for now. Never trust a client-supplied
+  // integration_type here: the server is the final authority for the live LR booking.
+  const effectiveIntegrationType: string = 'delhivery'
 
   const invoiceValue = Number(
     primaryInvoice?.invoiceValue ?? params.invoice_amount ?? params.order_amount ?? 0,

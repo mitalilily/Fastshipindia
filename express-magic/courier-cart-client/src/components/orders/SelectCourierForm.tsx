@@ -169,7 +169,15 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   }
 
   const { data: couriers, isLoading, isError, isFetching } = useAvailableCouriers(courierPayload)
-  const availableCouriers = couriers ?? []
+  const availableCouriers = (couriers ?? []).filter((courier) => {
+    if (shipment_type !== 'b2b') return true
+
+    const provider = String(courier?.integration_type ?? courier?.serviceProvider ?? '')
+      .trim()
+      .toLowerCase()
+    const name = String(courier?.name ?? '').toLowerCase()
+    return provider === 'delhivery' || provider === 'delhivery_b2b' || name.includes('delhivery')
+  })
   if (!pickupPincode || !deliveryPincode || !totalWeight) {
     return <Typography>Fill pickup, delivery, and weight first to fetch couriers</Typography>
   }
@@ -183,7 +191,14 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
       </Paper>
     )
   if (isError) return <Typography color="error">Failed to fetch couriers</Typography>
-  if (!availableCouriers.length) return <Typography>No couriers available</Typography>
+  if (!availableCouriers.length)
+    return (
+      <Typography color={shipment_type === 'b2b' ? 'warning.main' : 'text.primary'}>
+        {shipment_type === 'b2b'
+          ? 'Delhivery B2B is not available for this route. Check the pickup and delivery pincodes.'
+          : 'No couriers available'}
+      </Typography>
+    )
 
   const getModeIcon = (mode?: string) => {
     const normalizedMode = String(mode || '').toLowerCase()
@@ -519,7 +534,9 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
                 Select Courier Partner
               </Typography>
               <Typography sx={{ mt: 0.5, color: TEXT_SECONDARY }}>
-                Compare freight, speed and chargeable weight before locking the shipment.
+                {shipment_type === 'b2b'
+                  ? 'B2B bookings are currently fulfilled through Delhivery. Select the available Delhivery rate.'
+                  : 'Compare freight, speed and chargeable weight before locking the shipment.'}
               </Typography>
             </Box>
             <Chip

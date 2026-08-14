@@ -1,4 +1,17 @@
-import { Box, Button, Stack, Step, StepLabel, Stepper } from '@mui/material'
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  Step,
+  StepLabel,
+  Stepper,
+  Typography,
+} from '@mui/material'
 import { useEffect, useState } from 'react'
 import { FormProvider, useForm, type FieldErrors } from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
@@ -113,6 +126,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [currentStep, setCurrentStep] = useState(0)
+  const [confirmationOpen, setConfirmationOpen] = useState(false)
   const steps = ['Order & Delivery', 'Pickup Location', 'Courier Selection']
   const { data: paymentOptions } = usePaymentOptions()
 
@@ -271,6 +285,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           })) ?? [],
         courier_id: Number(data.courierPartnerId),
         courier_partner: data.courierPartner,
+        integration_type: 'delhivery',
         is_insurance: !!data.isInsurance,
         is_rto_different: data.isRtoSame === false ? 'yes' : 'no',
         request_auto_pickup: 'no',
@@ -300,11 +315,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         payload.pickup_time = data.pickupTime
       }
 
-      // Add integration type if provided
-      if (data.integrationType) {
-        payload.integration_type = data.integrationType
-      }
-
       console.log('B2B Shipment Payload:', payload)
 
       // Call the mutation
@@ -327,6 +337,27 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0))
 
+  const requestBookingConfirmation = handleSubmit((data) => {
+    const selectedProvider = `${data.integrationType ?? ''} ${data.courierPartner ?? ''}`
+      .trim()
+      .toLowerCase()
+
+    if (!data.courierPartnerId || !selectedProvider.includes('delhivery')) {
+      methods.setError('courierPartnerId', {
+        type: 'manual',
+        message: 'Select an available Delhivery B2B rate before booking.',
+      })
+      return
+    }
+
+    setConfirmationOpen(true)
+  })
+
+  const confirmDelhiveryBooking = handleSubmit((data) => {
+    setConfirmationOpen(false)
+    return onSubmit(data)
+  })
+
   useEffect(() => {
     setValue('orderAmount', totalCollectable, { shouldValidate: true })
   }, [setValue, totalCollectable])
@@ -336,7 +367,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       <Stack gap={2} sx={{ height: '100%', position: 'relative' }}>
         <Box
           component="form"
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={requestBookingConfirmation}
           sx={{ flex: 1, overflowY: 'auto', p: 2 }}
         >
           <Box
@@ -515,16 +546,70 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                 <Button
                   type="button"
                   variant="contained"
-                  onClick={handleSubmit(onSubmit)}
+                  onClick={requestBookingConfirmation}
                   color="primary"
                   loading={createShipmentMutation?.isPending}
                 >
-                  Create & Book Order
+                  Review Delhivery Booking
                 </Button>
               )}
             </Stack>
           </Box>
         </Box>
+        <Dialog
+          open={confirmationOpen}
+          onClose={() => !createShipmentMutation.isPending && setConfirmationOpen(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle sx={{ fontWeight: 800 }}>Confirm Delhivery B2B Booking</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 0.5 }}>
+              <Alert severity="warning">
+                This is a live booking. Confirming will send the shipment to Delhivery and create
+                its LR/AWB; it is not a preview.
+              </Alert>
+              <Box>
+                <Typography color="text.secondary" variant="body2">
+                  Order ID
+                </Typography>
+                <Typography sx={{ fontWeight: 800 }}>{watch('orderId') || '-'}</Typography>
+              </Box>
+              <Box>
+                <Typography color="text.secondary" variant="body2">
+                  Courier
+                </Typography>
+                <Typography sx={{ fontWeight: 800 }}>
+                  {watch('courierPartner') || 'Delhivery B2B'}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography color="text.secondary" variant="body2">
+                  Invoice value
+                </Typography>
+                <Typography sx={{ fontWeight: 800 }}>
+                  ₹{Number(subtotal || 0).toFixed(2)}
+                </Typography>
+              </Box>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setConfirmationOpen(false)}
+              disabled={createShipmentMutation.isPending}
+            >
+              Go Back
+            </Button>
+            <Button
+              variant="contained"
+              onClick={confirmDelhiveryBooking}
+              loading={createShipmentMutation.isPending}
+            >
+              Confirm & Book with Delhivery
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     </FormProvider>
   )
