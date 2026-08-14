@@ -12,6 +12,10 @@ import { isStorageConfigurationError } from "../utils/functions";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2 } from "../config/r2Client";
+import {
+  getDatabaseUploadFromToken,
+  uploadBufferToDatabase,
+} from '../models/services/databaseUpload.service';
 
 export const createPresignedUrl = async (
   req: any,
@@ -129,16 +133,30 @@ export const uploadFileThroughBackend = async (
   }
 
   try {
-    const uploaded = await uploadBufferToStorage({
-      buffer: file.buffer,
-      filename: file.originalname,
-      contentType: file.mimetype || 'application/octet-stream',
-      userId: sub,
-      folderKey: folder,
-    });
+    let uploaded;
+    try {
+      uploaded = await uploadBufferToStorage({
+        buffer: file.buffer,
+        filename: file.originalname,
+        contentType: file.mimetype || 'application/octet-stream',
+        userId: sub,
+        folderKey: folder,
+      });
+    } catch (storageError) {
+      console.warn('Object storage upload failed; using the database upload fallback.', {
+        code: (storageError as { code?: string })?.code || 'STORAGE_UPLOAD_FAILED',
+      });
+      uploaded = await uploadBufferToDatabase({
+        buffer: file.buffer,
+        filename: file.originalname,
+        contentType: file.mimetype || 'application/octet-stream',
+        userId: sub,
+      });
+    }
 
     return res.status(200).json({
       url: uploaded.publicUrl,
+      publicUrl: uploaded.publicUrl,
       key: uploaded.key,
       originalName: file.originalname,
       size: file.size,
@@ -147,13 +165,42 @@ export const uploadFileThroughBackend = async (
     });
   } catch (err) {
     console.error('Backend file upload failed:', err);
-    if (isStorageConfigurationError(err)) {
-      return res.status(503).json({
-        message: 'File storage is temporarily unavailable. Please contact support.',
-        code: err.code,
-      });
-    }
-    return res.status(500).json({ message: 'Failed to upload file' });
+    const statusCode = Number((err as { statusCode?: number })?.statusCode || 500);
+    return res.status(statusCode).json({
+      message:
+        statusCode === 413
+          ? 'File is too large. Maximum upload size is 10 MB.'
+          : 'Failed to upload file. Please try again.',
+    });
+  }
+};
+
+export const downloadDatabaseUpload = async (
+  req: Request,
+  res: Response,
+): Promise<any> => {
+  const token = String(req.query?.token || '').trim();
+  const fileId = String(req.params?.id || '').trim();
+
+  if (!token || !fileId) {
+    return res.status(400).json({ message: 'A valid download link is required' });
+  }
+
+  try {
+    const file = await getDatabaseUploadFromToken(token, fileId);
+    if (!file) return res.status(404).json({ message: 'File not found' });
+
+    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `${file.disposition}; filename="${file.downloadName}"`,
+    );
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.status(200).send(file.content);
+  } catch (err) {
+    console.error('Database upload download failed:', err);
+    return res.status(401).json({ message: 'Download link is invalid or expired' });
   }
 };
 
