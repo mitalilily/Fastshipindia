@@ -21,6 +21,7 @@ import {
   MenuButton,
   MenuItem,
   MenuList,
+  Select,
   SimpleGrid,
   Spinner,
   Stack,
@@ -49,6 +50,11 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useHistory } from 'react-router-dom'
 import { PlansService } from 'services/plan.service'
+import {
+  OTHER_WALLET_REASON,
+  resolveWalletAdjustmentReason,
+  WALLET_ADJUSTMENT_REASONS,
+} from 'utils/walletAdjustmentReasons'
 
 const money = (value) =>
   new Intl.NumberFormat('en-IN', {
@@ -89,7 +95,8 @@ export default function SellerWorkspaceHeader({ user, userId }) {
   const passwordModal = useDisclosure()
   const [adjustmentType, setAdjustmentType] = useState('credit')
   const [amount, setAmount] = useState('')
-  const [reason, setReason] = useState('')
+  const [reasonOption, setReasonOption] = useState('')
+  const [customReason, setCustomReason] = useState('')
   const [notes, setNotes] = useState('')
   const [tempPassword, setTempPassword] = useState('')
   const [selectedPlan, setSelectedPlan] = useState(user?.currentPlanId || '')
@@ -122,6 +129,7 @@ export default function SellerWorkspaceHeader({ user, userId }) {
     [plans],
   )
   const selectedPlanRecord = activePlans.find((plan) => plan.id === selectedPlan)
+  const reason = resolveWalletAdjustmentReason(reasonOption, customReason)
   const assignPlan = useMutation({
     mutationFn: (planId) => PlansService.assignPlanToUser(userId, planId),
     onSuccess: () => {
@@ -162,7 +170,8 @@ export default function SellerWorkspaceHeader({ user, userId }) {
   const openAdjustment = (type) => {
     setAdjustmentType(type)
     setAmount('')
-    setReason('')
+    setReasonOption('')
+    setCustomReason('')
     setNotes('')
     adjustModal.onOpen()
   }
@@ -173,7 +182,7 @@ export default function SellerWorkspaceHeader({ user, userId }) {
         userId,
         type: adjustmentType,
         amount: Number(amount),
-        reason: reason.trim(),
+        reason,
         notes: notes.trim(),
       })
       toast({
@@ -365,7 +374,29 @@ export default function SellerWorkspaceHeader({ user, userId }) {
               </FormControl>
               <FormControl isRequired>
                 <FormLabel>Reason</FormLabel>
-                <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for adjustment" />
+                <Select
+                  value={reasonOption}
+                  onChange={(event) => {
+                    setReasonOption(event.target.value)
+                    if (event.target.value !== OTHER_WALLET_REASON) setCustomReason('')
+                  }}
+                  placeholder="Select a reason"
+                >
+                  {WALLET_ADJUSTMENT_REASONS[adjustmentType].map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                  <option value={OTHER_WALLET_REASON}>Other</option>
+                </Select>
+                {reasonOption === OTHER_WALLET_REASON ? (
+                  <Input
+                    mt={3}
+                    value={customReason}
+                    maxLength={128}
+                    onChange={(event) => setCustomReason(event.target.value)}
+                    placeholder="Enter the adjustment reason"
+                    autoFocus
+                  />
+                ) : null}
               </FormControl>
               <FormControl>
                 <FormLabel>Internal notes</FormLabel>
@@ -377,7 +408,7 @@ export default function SellerWorkspaceHeader({ user, userId }) {
             <Button variant="ghost" onClick={adjustModal.onClose}>Cancel</Button>
             <Button
               colorScheme={adjustmentType === 'credit' ? 'green' : 'red'}
-              isDisabled={!Number(amount) || !reason.trim()}
+              isDisabled={!Number(amount) || reason.length < 2}
               isLoading={adjustWallet.isPending}
               onClick={submitAdjustment}
             >
