@@ -1,5 +1,8 @@
 import { and, desc, eq, gte, ilike, lte, or, sql } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
 import { db, pool } from '../client'
+import { plans } from '../schema/plans'
+import { userPlans } from '../schema/userPlans'
 import { wallets, walletTransactions } from '../schema/wallet'
 import { userProfiles } from '../schema/userProfile'
 import { users } from '../schema/users'
@@ -20,8 +23,11 @@ export const getAllWallets = async ({
   sortBy = 'updatedAt',
   sortOrder = 'desc',
 }: GetAllWalletsParams) => {
+  page = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1
+  limit = Number.isFinite(limit) ? Math.min(100, Math.max(1, Math.floor(limit))) : 20
   const offset = (page - 1) * limit
-  const filters: any[] = []
+  const customerRoleExpr = sql`lower(coalesce(nullif(btrim(${users.role}), ''), 'customer'))`
+  const filters: any[] = [sql`${customerRoleExpr} = 'customer'`]
 
   // Search filter
   if (search.trim()) {
@@ -33,6 +39,7 @@ export const getAllWallets = async ({
         ilike(sql`coalesce(${userProfiles.companyInfo} ->> 'contactEmail', '')`, pattern),
         ilike(sql`coalesce(${userProfiles.companyInfo} ->> 'businessName', '')`, pattern),
         ilike(users.email, pattern),
+        ilike(sql`coalesce(${users.phone}, '')`, pattern),
       ),
     )
   }
@@ -48,15 +55,18 @@ export const getAllWallets = async ({
   const sortColumn = sortColumns[sortBy] ?? wallets.updatedAt
   const orderBy = sortOrder === 'asc' ? sortColumn : desc(sortColumn)
 
-  // Get total count
-  const totalCountResult = await db
-    .select({ count: sql<number>`count(*)` })
+  const filter = and(...filters)
+
+  const [summaryResult] = await db
+    .select({
+      totalCount: sql<number>`count(*)`,
+      totalBalance: sql<string>`coalesce(sum(${wallets.balance}), 0)`,
+      withBalance: sql<number>`count(*) filter (where ${wallets.balance} > 0)`,
+    })
     .from(wallets)
     .innerJoin(users, eq(wallets.userId, users.id))
-    .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
-    .where(filters.length > 0 ? and(...filters) : undefined)
-
-  const totalCount = Number(totalCountResult[0]?.count || 0)
+    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+    .where(filter)
 
   // Get wallets with user info
   const walletsData = await db
@@ -68,20 +78,37 @@ export const getAllWallets = async ({
       createdAt: wallets.createdAt,
       updatedAt: wallets.updatedAt,
       userEmail: users.email,
+      userPhone: users.phone,
       userRole: users.role,
+      userName: sql<string>`coalesce(
+        nullif(${userProfiles.companyInfo} ->> 'contactPerson', ''),
+        nullif(${userProfiles.companyInfo} ->> 'brandName', ''),
+        nullif(${userProfiles.companyInfo} ->> 'businessName', ''),
+        ${users.email},
+        ${users.phone},
+        'Seller'
+      )`,
+      approved: userProfiles.approved,
       companyInfo: userProfiles.companyInfo,
+      planName: plans.name,
     })
     .from(wallets)
     .innerJoin(users, eq(wallets.userId, users.id))
-    .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
-    .where(filters.length > 0 ? and(...filters) : undefined)
+    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+    .leftJoin(userPlans, eq(users.id, userPlans.userId))
+    .leftJoin(plans, eq(userPlans.plan_id, plans.id))
+    .where(filter)
     .orderBy(orderBy)
     .limit(limit)
     .offset(offset)
 
   return {
     data: walletsData,
-    totalCount,
+    totalCount: Number(summaryResult?.totalCount || 0),
+    summary: {
+      totalBalance: Number(summaryResult?.totalBalance || 0),
+      withBalance: Number(summaryResult?.withBalance || 0),
+    },
     page,
     limit,
   }
@@ -97,12 +124,25 @@ export const getWalletByUserId = async (userId: string) => {
       createdAt: wallets.createdAt,
       updatedAt: wallets.updatedAt,
       userEmail: users.email,
+      userPhone: users.phone,
       userRole: users.role,
+      userName: sql<string>`coalesce(
+        nullif(${userProfiles.companyInfo} ->> 'contactPerson', ''),
+        nullif(${userProfiles.companyInfo} ->> 'brandName', ''),
+        nullif(${userProfiles.companyInfo} ->> 'businessName', ''),
+        ${users.email},
+        ${users.phone},
+        'Seller'
+      )`,
+      approved: userProfiles.approved,
       companyInfo: userProfiles.companyInfo,
+      planName: plans.name,
     })
     .from(wallets)
     .innerJoin(users, eq(wallets.userId, users.id))
-    .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
+    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+    .leftJoin(userPlans, eq(users.id, userPlans.userId))
+    .leftJoin(plans, eq(userPlans.plan_id, plans.id))
     .where(eq(wallets.userId, userId))
     .limit(1)
 
@@ -128,6 +168,8 @@ export const getWalletTransactionsByUserId = async ({
   dateFrom?: Date
   dateTo?: Date
 }) => {
+  page = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1
+  limit = Number.isFinite(limit) ? Math.min(100, Math.max(1, Math.floor(limit))) : 50
   const offset = (page - 1) * limit
 
   // Get wallet
@@ -172,6 +214,66 @@ export const getWalletTransactionsByUserId = async ({
     page,
     limit,
   }
+}
+
+export const adjustWalletBalanceByAdmin = async ({
+  userId,
+  adminUserId,
+  type,
+  amount,
+  reason,
+  notes,
+}: {
+  userId: string
+  adminUserId: string
+  type: 'credit' | 'debit'
+  amount: number
+  reason: string
+  notes?: string
+}) => {
+  const delta = type === 'credit' ? amount : -amount
+  const ref = `admin_${Date.now()}_${randomUUID().slice(0, 8)}`
+  const timestamp = new Date()
+
+  return db.transaction(async (tx) => {
+    const [updatedWallet] = await tx
+      .update(wallets)
+      .set({
+        balance: sql`${wallets.balance} + ${delta}`,
+        updatedAt: timestamp,
+      })
+      .where(eq(wallets.userId, userId))
+      .returning({
+        id: wallets.id,
+        userId: wallets.userId,
+        balance: wallets.balance,
+        currency: wallets.currency,
+        updatedAt: wallets.updatedAt,
+      })
+
+    if (!updatedWallet) throw new Error('Wallet not found for this user')
+
+    const [transaction] = await tx
+      .insert(walletTransactions)
+      .values({
+        wallet_id: updatedWallet.id,
+        amount,
+        currency: updatedWallet.currency || 'INR',
+        type,
+        reason,
+        ref,
+        meta: {
+          source: 'admin_adjustment',
+          adjustedBy: adminUserId,
+          notes: notes || '',
+          balanceAfter: updatedWallet.balance,
+        },
+        created_at: timestamp,
+      })
+      .returning()
+
+    return { wallet: updatedWallet, transaction }
+  })
 }
 
 export const WALLET_MIS_TRANSACTION_AGAINST_OPTIONS = [
