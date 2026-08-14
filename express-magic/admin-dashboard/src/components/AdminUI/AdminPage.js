@@ -190,6 +190,7 @@ export function DataTable({
   emptyText = "No records found",
   rowKey = "id",
   actions,
+  actionsLabel = "Action",
   footer,
   minW = "900px",
 }) {
@@ -230,7 +231,7 @@ export function DataTable({
                   borderColor={adminUi.border}
                   textAlign="right"
                 >
-                  Action
+                  {actionsLabel}
                 </Th>
               ) : null}
             </Tr>

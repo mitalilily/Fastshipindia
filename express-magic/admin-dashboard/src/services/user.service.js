@@ -10,6 +10,8 @@ export async function fetchUsersWithRoleUser({
   sortBy = 'createdAt',
   sortOrder = 'desc',
   approved,
+  kycStatus,
+  plan,
 }) {
   const response = await api.get('/admin/users/users-management', {
     params: {
@@ -25,6 +27,8 @@ export async function fetchUsersWithRoleUser({
           : typeof approved === 'string' && approved !== ''
           ? approved === 'true'
           : undefined,
+      kycStatus: kycStatus || undefined,
+      plan: plan || undefined,
       sortBy,
       sortOrder,
     },
@@ -53,6 +57,18 @@ export const approveUser = async (userId) => {
 export const updateUserApproval = async (userId, approved) => {
   const response = await api.patch(`/admin/users/${userId}/approve`, { approved })
   return response.data
+}
+
+export const getSellerSummary = async (userId) => {
+  const { data } = await api.get(`/admin/users/${userId}/summary`)
+  return data.data
+}
+
+export const getSellerPickupAddresses = async (userId) => {
+  const { data } = await api.get(`/admin/users/${userId}/pickup-addresses`, {
+    params: { page: 1, limit: 100 },
+  })
+  return data
 }
 
 export const resetUserPassword = async (userId) => {

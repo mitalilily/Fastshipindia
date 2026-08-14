@@ -14,6 +14,8 @@ import { deleteEmployeeService, getEmployeesByAdminService, toggleEmployeeStatus
 import { deleteUser, findUserById, getAllUsersWithRoleUser, resetUserPassword, updateUserApprovalStatus } from '../../models/services/userService'
 import { sendKycStatusEmail } from '../../utils/emailSender'
 import { HttpError } from '../../utils/classes'
+import { getMerchantDashboardStats } from '../../models/services/dashboard.service'
+import { getPickupAddressesService } from '../../models/services/pickupAddresses.service'
 
 export async function listUsers(req: any, res: Response) {
   try {
@@ -32,6 +34,7 @@ export async function listUsers(req: any, res: Response) {
     const onboardingComplete = req.query.onboardingComplete ?? ''
     const approved = req.query.approved ?? ''
     const kycStatus = req.query.kycStatus ?? ''
+    const plan = (req.query.plan as string) || ''
     // Normalize all status values into a single array
     let businessTypes = []
 
@@ -53,6 +56,7 @@ export async function listUsers(req: any, res: Response) {
       businessTypes,
       approved,
       kycStatus,
+      plan,
     })
 
     res.status(200).json({ success: true, data, totalCount })
@@ -269,6 +273,39 @@ export async function approveUser(req: any, res: Response) {
   } catch (error) {
     console.error('Error updating user approval status:', error)
     return res.status(500).json({ success: false, message: 'Server error updating user status' })
+  }
+}
+
+export async function getSellerSummary(req: any, res: Response) {
+  try {
+    const userId = req.params.id
+    const user = await findUserById(userId)
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' })
+    }
+
+    const summary = await getMerchantDashboardStats(user.userId)
+    return res.status(200).json(summary)
+  } catch (error) {
+    console.error('Error fetching seller summary:', error)
+    return res.status(500).json({ success: false, message: 'Failed to fetch seller summary' })
+  }
+}
+
+export async function getSellerPickupAddresses(req: any, res: Response) {
+  try {
+    const userId = req.params.id
+    const user = await findUserById(userId)
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' })
+    }
+
+    const { page = 1, limit = 50, ...filters } = req.query
+    const result = await getPickupAddressesService(user.userId, filters, Number(page), Number(limit))
+    return res.status(200).json({ success: true, ...result })
+  } catch (error) {
+    console.error('Error fetching seller pickup addresses:', error)
+    return res.status(500).json({ success: false, message: 'Failed to fetch pickup addresses' })
   }
 }
 

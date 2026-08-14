@@ -30,12 +30,15 @@ import {
   Stack,
   Text,
   Tooltip,
-  useColorModeValue,
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { IconHelpCircle, IconUsersGroup } from '@tabler/icons-react'
-import ProfileBgImage from 'assets/img/ProfileBackground.png'
+import {
+  IconChartBar,
+  IconHelpCircle,
+  IconMapPin,
+  IconUsersGroup,
+} from '@tabler/icons-react'
 import OrdersTable from 'components/Tables/OrdersTable'
 import TableFilters from 'components/Tables/TableFilters'
 import { useOrders } from 'hooks/useOrders'
@@ -56,11 +59,13 @@ import { MdOutlineHomeWork } from 'react-icons/md'
 import { Route, Switch, useHistory, useLocation, useParams } from 'react-router-dom'
 import BankAccountsTab from 'views/Dashboard/Profile/components/BankAccountsTab'
 import CompanyDetails from 'views/Dashboard/Profile/components/CompanyDetails'
-import Header from 'views/Dashboard/Profile/components/Header'
 import ProfileInformation from 'views/Dashboard/Profile/components/ProfileInformation'
 import UserKycPage from 'views/Dashboard/Profile/components/UserKycTab'
 import UserTicketsPage from 'views/Dashboard/Profile/components/UserTicketsTab'
 import { GenericTable } from 'views/Dashboard/Tables/components/GenericTable'
+import SellerPickupAddressesTab from './SellerPickupAddressesTab'
+import SellerSummaryTab from './SellerSummaryTab'
+import SellerWorkspaceHeader from './SellerWorkspaceHeader'
 
 const CompanyTab = ({ user, companyLogoUrl }) => (
   <CompanyDetails companyLogoUrl={companyLogoUrl} companyInfo={user?.companyInfo} />
@@ -647,10 +652,8 @@ const TabContentWrapper = ({ children }) => (
     flex="1"
     minHeight="500px"
     width="100%"
-    mt={20}
-    p={6}
-    borderRadius="xl"
-    boxShadow="md"
+    mt={0}
+    pt={5}
     gap={4}
     overflowX="auto"
   >
@@ -698,32 +701,33 @@ export default function UserDetails() {
     ? presignedUrls?.[keysToFetch.indexOf(companyLogoKey)]
     : undefined
 
-  const bgProfile = useColorModeValue(
-    'hsla(0,0%,100%,.8)',
-    'linear-gradient(112.83deg, rgba(255, 255, 255, 0.21) 0%, rgba(255, 255, 255, 0) 110.84%)',
-  )
-
   const tabRoutes = [
-    { name: 'OVERVIEW', icon: <FaCube />, path: `/admin/users-management/${id}/overview` },
+    { name: 'Overview', icon: <FaCube />, path: `/admin/users-management/${id}/overview` },
+    { name: 'Summary', icon: <IconChartBar size={18} />, path: `/admin/users-management/${id}/summary` },
+    { name: 'KYC Verification', icon: <FaUserCog />, path: `/admin/users-management/${id}/kyc` },
     {
-      name: 'COMPANY DETAILS',
+      name: 'Company Profile',
       icon: <MdOutlineHomeWork />,
       path: `/admin/users-management/${id}/company-details`,
     },
-    { name: 'ORDERS', icon: <BsBox />, path: `/admin/users-management/${id}/orders` },
     {
-      name: 'BANK ACCOUNTS',
+      name: 'Bank Accounts',
       icon: <CiBank />,
       path: `/admin/users-management/${id}/bank-accounts`,
     },
-    { name: 'KYC', icon: <FaUserCog />, path: `/admin/users-management/${id}/kyc` },
     {
-      name: 'TEAM MEMBERS',
+      name: 'Pickup Addresses',
+      icon: <IconMapPin size={18} />,
+      path: `/admin/users-management/${id}/pickup-addresses`,
+    },
+    {
+      name: 'Team Members',
       icon: <IconUsersGroup stroke={2} size={18} />,
       path: `/admin/users-management/${id}/team-members`,
     },
+    { name: 'Orders', icon: <BsBox />, path: `/admin/users-management/${id}/orders` },
     {
-      name: 'SUPPORT TICKETS',
+      name: 'Support Tickets',
       icon: <IconHelpCircle stroke={2} size={18} />,
       path: `/admin/users-management/${id}/support-tickets`,
     },
@@ -739,20 +743,36 @@ export default function UserDetails() {
   const userId = id ?? ''
 
   return (
-    <Flex p={6} pt={{ base: '120px', md: '75px' }} direction="column" width="100%" flex="1">
-      {/* Fixed Header with tabs */}
-      <Header
-        backgroundHeader={companyLogoUrl || ProfileBgImage}
-        backgroundProfile={bgProfile}
-        avatarImage={avatarUrl}
-        name={companyInfo.contactPerson || ''}
-        email={profileData?.data?.email || ''}
-        phone={profileData?.data?.phone || ''}
-        tabs={tabRoutes}
-        activeTab={activeTab}
+    <Flex p={{ base: 4, md: 6 }} pt={{ base: '100px', md: '75px' }} direction="column" width="100%" flex="1" bg="#F8FAFD">
+      <SellerWorkspaceHeader
+        user={{
+          ...(profileData?.data || {}),
+          companyInfo: { ...companyInfo, profilePicture: avatarUrl },
+        }}
         userId={userId}
-        onTabClick={handleTabClick}
       />
+
+      <Flex borderBottom="1px solid #E4EAF3" overflowX="auto" bg="#F8FAFD">
+        {tabRoutes.map((tab) => {
+          const isActive = activeTab?.path === tab.path
+          return (
+            <Button
+              key={tab.path}
+              leftIcon={tab.icon}
+              variant="ghost"
+              flexShrink={0}
+              borderRadius="0"
+              h="52px"
+              px="14px"
+              color={isActive ? '#6C5CE7' : '#33415C'}
+              borderBottom={isActive ? '3px solid #6C5CE7' : '3px solid transparent'}
+              onClick={() => handleTabClick(tab.path)}
+            >
+              {tab.name}
+            </Button>
+          )
+        })}
+      </Flex>
 
       {/* Tab Content */}
       <Switch>
@@ -763,8 +783,18 @@ export default function UserDetails() {
         />
         <Route
           exact
+          path={`/admin/users-management/:id/summary`}
+          children={renderWithWrapper(SellerSummaryTab, { userId })}
+        />
+        <Route
+          exact
           path={`/admin/users-management/:id/company-details`}
           children={renderWithWrapper(CompanyTab, { user: profileData?.data, companyLogoUrl })}
+        />
+        <Route
+          exact
+          path={`/admin/users-management/:id/pickup-addresses`}
+          children={renderWithWrapper(SellerPickupAddressesTab, { userId })}
         />
         <Route
           exact

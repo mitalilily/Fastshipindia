@@ -61,6 +61,22 @@ const lastLogin = (value) => {
   return `${Math.round(hours / 24)}d ago`;
 };
 
+const kycLabel = (row) => {
+  const status = row.kycStatus || row.domesticKyc?.status;
+  if (row.kycVerified || row.kyc_verified || status === "verified") return "KYC Verified";
+  if (status === "verification_in_progress") return "KYC Pending";
+  if (status === "rejected") return "KYC Rejected";
+  return "KYC Not Started";
+};
+
+const kycColor = (row) => {
+  const label = kycLabel(row);
+  if (label === "KYC Verified") return "green";
+  if (label === "KYC Pending") return "orange";
+  if (label === "KYC Rejected") return "red";
+  return "gray";
+};
+
 export default function UsersManagementPage() {
   const history = useHistory();
   const toast = useToast();
@@ -69,6 +85,8 @@ export default function UsersManagementPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [plan, setPlan] = useState("");
+  const [kycStatus, setKycStatus] = useState("");
+  const [onboardingComplete, setOnboardingComplete] = useState(undefined);
   const updateUserApprovalMutation = useUpdateUserApproval();
 
   const { data: usersResponse, isLoading } = useUsersWithRoleUser({
@@ -80,6 +98,8 @@ export default function UsersManagementPage() {
     approved:
       status === "active" ? true : status === "inactive" ? false : undefined,
     plan: plan || undefined,
+    kycStatus: kycStatus || undefined,
+    onboardingComplete,
   });
 
   const users = usersResponse?.data ?? [];
@@ -99,7 +119,9 @@ export default function UsersManagementPage() {
     return {
       total: totalCount,
       verified,
-      pending: users.filter((user) => user.kycStatus === "pending").length,
+      pending: users.filter((user) =>
+        ["pending", "verification_in_progress"].includes(user.kycStatus)
+      ).length,
       onboarded,
       active: Math.max(0, totalCount - inactive),
       inactive,
@@ -236,16 +258,18 @@ export default function UsersManagementPage() {
         overflowX="auto"
       >
         {[
-          ["All Users", summary.total, true],
-          ["Verified", summary.verified],
-          ["Pending KYC", summary.pending],
+          ["All Users", summary.total, !kycStatus && onboardingComplete === undefined && !status, () => { setKycStatus(""); setOnboardingComplete(undefined); setStatus(""); }],
+          ["Verified", summary.verified, kycStatus === "verified", () => { setKycStatus("verified"); setOnboardingComplete(undefined); setStatus(""); }],
+          ["Pending KYC", summary.pending, kycStatus === "verification_in_progress", () => { setKycStatus("verification_in_progress"); setOnboardingComplete(undefined); setStatus(""); }],
           [
             "KYC Not Started",
             Math.max(0, summary.total - summary.verified - summary.pending),
+            kycStatus === "pending",
+            () => { setKycStatus("pending"); setOnboardingComplete(undefined); setStatus(""); },
           ],
-          ["Not Onboarded", Math.max(0, summary.total - summary.onboarded)],
-          ["Inactive", summary.inactive],
-        ].map(([label, count, active]) => (
+          ["Not Onboarded", Math.max(0, summary.total - summary.onboarded), onboardingComplete === false, () => { setOnboardingComplete(false); setKycStatus(""); setStatus(""); }],
+          ["Inactive", summary.inactive, status === "inactive", () => { setStatus("inactive"); setKycStatus(""); setOnboardingComplete(undefined); }],
+        ].map(([label, count, active, onClick]) => (
           <HStack
             key={label}
             pb="15px"
@@ -254,6 +278,8 @@ export default function UsersManagementPage() {
             }
             color={active ? "#6C5CE7" : "#586B8A"}
             flexShrink={0}
+            cursor="pointer"
+            onClick={() => { onClick(); setPage(1); }}
           >
             <Text fontSize="18px">{label}</Text>
             <SoftBadge colorScheme={active ? "purple" : "gray"}>
@@ -341,19 +367,9 @@ export default function UsersManagementPage() {
                     : "Not Onboarded"}
                 </SoftBadge>
                 <SoftBadge
-                  colorScheme={
-                    row.kycVerified ||
-                    row.kyc_verified ||
-                    row.kycStatus === "verified"
-                      ? "green"
-                      : "gray"
-                  }
+                  colorScheme={kycColor(row)}
                 >
-                  {row.kycVerified ||
-                  row.kyc_verified ||
-                  row.kycStatus === "verified"
-                    ? "KYC Verified"
-                    : "KYC Not Started"}
+                  {kycLabel(row)}
                 </SoftBadge>
               </Stack>
             ),
@@ -401,8 +417,12 @@ export default function UsersManagementPage() {
               isDisabled={updateUserApprovalMutation.isPending}
               onChange={(event) => handleApprovalChange(row.id, event.target.checked)}
             />
+            <Text minW="62px" textAlign="left" fontSize="12px" fontWeight="700" color={row.approved ? "#009E72" : "#D97706"}>
+              {row.approved ? "Approved" : "Pending"}
+            </Text>
           </HStack>
         )}
+        actionsLabel="Account Approval"
         footer={
           <>
             <Text color="#607397" fontSize="16px">

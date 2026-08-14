@@ -173,8 +173,6 @@ const BankAccountsTab = ({ userId }) => {
       </Center>
     )
   }
-  console.log(chequeUrls)
-
   return (
     <Box p={6} w="100%" maxW="900px" mx="auto" bg={bg} borderRadius="xl" minH="400px">
       <Flex justifyContent="space-between" alignItems="center" mb={6}>

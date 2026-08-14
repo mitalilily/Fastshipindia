@@ -20,6 +20,8 @@ export function useUsersWithRoleUser({
   sortBy = 'createdAt',
   sortOrder = 'desc',
   approved = '',
+  kycStatus = '',
+  plan = '',
 }) {
   return useQuery({
     queryKey: [
@@ -32,6 +34,8 @@ export function useUsersWithRoleUser({
       sortBy,
       sortOrder,
       approved,
+      kycStatus,
+      plan,
     ],
     queryFn: () =>
       fetchUsersWithRoleUser({
@@ -43,6 +47,8 @@ export function useUsersWithRoleUser({
         sortBy,
         sortOrder,
         approved,
+        kycStatus,
+        plan,
       }),
     staleTime: 5 * 60 * 1000, // cache for 5 minutes
     refetchOnWindowFocus: false,
@@ -68,6 +74,7 @@ export function useUpdateUserApproval() {
     mutationFn: ({ userId, approved }) => updateUserApproval(userId, approved),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
+      queryClient.invalidateQueries({ queryKey: ['userInfo'] })
     },
   })
 }
