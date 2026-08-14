@@ -144,11 +144,11 @@ export default function RequireMerchantReady({ children }: { children: ReactNode
               >
                 <Box>
                   <Typography sx={{ fontSize: '0.94rem', fontWeight: 800, color: textPrimary }}>
-                    Need a Custom Plan?
+                    Custom Plan (Optional)
                   </Typography>
                   <Typography sx={{ mt: 0.35, fontSize: '0.82rem', color: textSecondary }}>
-                    Contact our admin team for customised pricing, higher shipment support,
-                    or enterprise onboarding.
+                    Your Basic plan is activated automatically after admin KYC approval. Contact
+                    support only when you need custom pricing or enterprise limits.
                   </Typography>
                 </Box>
                 <Button
@@ -162,7 +162,7 @@ export default function RequireMerchantReady({ children }: { children: ReactNode
                     '&:hover': { bgcolor: '#0A2A66' },
                   }}
                 >
-                  Contact Support Team
+                  Request Custom Plan
                 </Button>
               </Stack>
             </Box>

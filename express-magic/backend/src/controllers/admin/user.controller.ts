@@ -472,7 +472,9 @@ export const approveKyc = async (req: any, res: Response) => {
       }).catch((err) => console.error('Failed to send KYC approval email:', err))
     }
 
-    res.json({ message: 'KYC approved' })
+    res.json({
+      message: 'KYC approved, account activated, and the Basic plan assigned when required',
+    })
   } catch {
     res.status(400).json({ message: 'Failed to approve KYC' })
   }
