@@ -42,6 +42,7 @@ const OrdersTable = ({
   perPage,
   setPerPage,
   loading = false,
+  onRowClick,
 }) => {
   const captions = ['Order', 'Status', 'Type', 'Destination', 'Provider', 'AWB', 'Charge', 'Created']
   const columnKeys = [
@@ -122,7 +123,10 @@ const OrdersTable = ({
             cursor="pointer"
             color="gray.500"
             _hover={{ color: '#6C5CE7' }}
-            onClick={() => navigator.clipboard.writeText(value)}
+            onClick={(event) => {
+              event.stopPropagation()
+              navigator.clipboard.writeText(value)
+            }}
           />
         ) : null}
       </Flex>
@@ -164,6 +168,7 @@ const OrdersTable = ({
         order_amount: '120px',
         order_date: '140px',
       }}
+      onRowClick={onRowClick}
     />
   )
 }

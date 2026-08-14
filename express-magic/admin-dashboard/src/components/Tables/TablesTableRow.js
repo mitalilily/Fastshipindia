@@ -16,12 +16,31 @@ const TablesTableRow = ({
   stickyShadow,
   stickyRightColumnKeys = [],
   stickyRightOffsets = {},
+  onClick,
 }) => {
   const bg = useColorModeValue('#FFFFFF', '#161B22')
   const borderColor = useColorModeValue('#E2E8F0', '#30363D')
+  const hoverBg = useColorModeValue('#F8FAFC', '#1C2430')
 
   return (
-    <Tr>
+    <Tr
+      onClick={onClick}
+      cursor={onClick ? 'pointer' : 'default'}
+      tabIndex={onClick ? 0 : undefined}
+      role={onClick ? 'button' : undefined}
+      _hover={onClick ? { bg: hoverBg } : undefined}
+      _focusVisible={onClick ? { outline: '2px solid #6C5CE7', outlineOffset: '-2px' } : undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
+    >
       {checkboxComponent}
       {columnKeys.map((key, idx) => {
         const value = row[key]

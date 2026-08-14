@@ -45,6 +45,7 @@ export const GenericTable = ({
   actionsColumnWidth = '180px',
   stickyRightColumnKeys = [],
   stickyRightOffsets = {},
+  onRowClick,
 }) => {
   const textColor = useColorModeValue('#0F172A', '#E6EDF3')
   const headerBg = useColorModeValue('#F8FAFC', '#1a2234')
@@ -223,6 +224,7 @@ export const GenericTable = ({
                     stickyShadow={stickyShadow}
                     stickyRightColumnKeys={stickyRightColumnKeys}
                     stickyRightOffsets={stickyRightOffsets}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
                   />
                 ))
               )}

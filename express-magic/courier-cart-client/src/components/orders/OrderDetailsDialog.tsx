@@ -85,6 +85,19 @@ const formatDimensionValue = (value?: string | number | null) => {
 const formatDimensions = (order: OrderDetailsDialogProps['order']) =>
   `${formatDimensionValue(order?.length)} * ${formatDimensionValue(order?.breadth)} * ${formatDimensionValue(order?.height)}`
 
+const formatDateTime = (value?: string | Date | null) => {
+  if (!value) return emptyText
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return emptyText
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 const normalizeStatus = (status?: string | null) =>
   String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
@@ -427,6 +440,80 @@ const ProductDetails = ({ products }: { products: ProductRow[] }) => (
   </Table>
 )
 
+const PackageDetails = ({ order }: { order: OrderDetailsDialogProps['order'] }) => (
+  <Stack spacing={1.4}>
+    <OrderDetailLine label="Dead Weight" value={formatWeight(order?.actual_weight ?? order?.weight)} />
+    <OrderDetailLine
+      label="Chargeable Weight"
+      value={formatWeight(
+        order?.charged_weight ?? order?.selected_max_slab_weight ?? order?.volumetric_weight ?? order?.weight,
+      )}
+    />
+    <OrderDetailLine label="Dimensions (L x B x H)" value={`${formatDimensions(order)} cm`} />
+    <OrderDetailLine label="Shipping Mode" value={order?.shipping_mode || order?.type || 'B2C'} chip />
+  </Stack>
+)
+
+const RateBreakdown = ({ order }: { order: OrderDetailsDialogProps['order'] }) => {
+  const forward = Number(order?.final_courier_charge ?? order?.freight_charges ?? order?.shipping_charges ?? 0) || 0
+  const rto = Number(order?.rto_charges ?? 0) || 0
+  const cod = Number(order?.cod_charges ?? 0) || 0
+  const other = Number(order?.other_charges ?? order?.transaction_fee ?? 0) || 0
+  const insurance = Number(order?.insurance_charge ?? 0) || 0
+  const total = Number(order?.final_courier_charge ?? 0) || forward + cod + other + insurance
+
+  return (
+    <Stack spacing={1.25}>
+      <OrderDetailLine label="Forward Freight" value={formatCurrency(forward, 2)} />
+      <OrderDetailLine label="RTO Charge" value={formatCurrency(rto, 2)} />
+      <OrderDetailLine label="COD Charge" value={formatCurrency(cod, 2)} />
+      <OrderDetailLine label="Other Charges" value={formatCurrency(other + insurance, 2)} />
+      <Divider />
+      <OrderDetailLine label="Total Shipping Charge" value={formatCurrency(total, 2)} emphasized />
+    </Stack>
+  )
+}
+
+const PaymentDetails = ({ order }: { order: OrderDetailsDialogProps['order'] }) => {
+  const isCod = normalizeStatus(order?.order_type) === 'cod'
+  return (
+    <Stack spacing={1.35}>
+      <OrderDetailLine label="Payment Method" value={isCod ? 'COD' : 'PREPAID'} chip />
+      <OrderDetailLine label="Order Amount" value={formatCurrency(order?.order_amount, 2)} emphasized />
+      <OrderDetailLine
+        label={isCod ? 'COD Collectable' : 'Prepaid Amount'}
+        value={formatCurrency(isCod ? order?.order_amount : order?.prepaid_amount ?? order?.order_amount, 2)}
+      />
+      <OrderDetailLine label="Invoice Number" value={order?.invoice_number} />
+    </Stack>
+  )
+}
+
+const TrackingHistory = ({ order }: { order: OrderDetailsDialogProps['order'] }) => {
+  const createdAt = order?.created_at || order?.order_date
+  const updatedAt = order?.updated_at
+  const currentMessage = order?.delivery_message || order?.provider_last_status
+
+  return (
+    <Stack spacing={1.5}>
+      <Box>
+        <Typography sx={{ fontSize: 12.2, fontWeight: 800, color: '#0F172A' }}>Order Created</Typography>
+        <Typography sx={{ fontSize: 11, color: '#64748B' }}>{formatDateTime(createdAt)}</Typography>
+      </Box>
+      <Divider />
+      <Box>
+        <Typography sx={{ fontSize: 12.2, fontWeight: 800, color: '#0F172A' }}>
+          {getStatusLabel(order?.order_status)}
+        </Typography>
+        <Typography sx={{ fontSize: 11, color: '#64748B' }}>{formatDateTime(updatedAt || createdAt)}</Typography>
+        {currentMessage ? (
+          <Typography sx={{ mt: 0.45, fontSize: 11.5, color: '#475569' }}>{currentMessage}</Typography>
+        ) : null}
+      </Box>
+    </Stack>
+  )
+}
+
 const OrderDetailsDialog = ({ open, order, onClose }: OrderDetailsDialogProps) => {
   const pickup = getPickupDetails(order)
   const products = getProductRows(order)
@@ -550,34 +637,33 @@ const OrderDetailsDialog = ({ open, order, onClose }: OrderDetailsDialogProps) =
               gap: 2.1,
             }}
           >
-            <SectionCard title="Product Details" minHeight={278}>
-              <ProductDetails products={products} />
-            </SectionCard>
+            <Stack spacing={2.1}>
+              <SectionCard title="Product Details" minHeight={278}>
+                <ProductDetails products={products} />
+              </SectionCard>
+              <SectionCard title="Tracking History">
+                <TrackingHistory order={order} />
+              </SectionCard>
+            </Stack>
 
-            <SectionCard title="Order Details" minHeight={278}>
-              <Stack spacing={1.65} divider={<Divider flexItem sx={{ borderStyle: 'dashed' }} />}>
-                <Stack spacing={1.55}>
-                  <OrderDetailLine label="Order Number" value={order?.order_number || order?.id} />
-                  <OrderDetailLine label="Payment Method" value={order?.order_type || 'prepaid'} chip />
-                  <OrderDetailLine label="Dimension" value={formatDimensions(order)} />
-                  <OrderDetailLine
-                    label="Weight"
-                    value={formatWeight(
-                      order?.charged_weight ??
-                        order?.selected_max_slab_weight ??
-                        order?.actual_weight ??
-                        order?.weight,
-                    )}
-                  />
-                  <OrderDetailLine
-                    label="Order Value"
-                    value={formatCurrency(orderValue)}
-                    emphasized
-                  />
+            <Stack spacing={2.1}>
+              <SectionCard title="Order & Package Details">
+                <Stack spacing={1.55} divider={<Divider flexItem sx={{ borderStyle: 'dashed' }} />}>
+                  <Stack spacing={1.45}>
+                    <OrderDetailLine label="Order Number" value={order?.order_number || order?.id} />
+                    <OrderDetailLine label="Order Value" value={formatCurrency(orderValue, 2)} emphasized />
+                    <OrderDetailLine label="GSTIN" value={getSenderGstin(order)} />
+                  </Stack>
+                  <PackageDetails order={order} />
                 </Stack>
-                <OrderDetailLine label="GSTIN" value={getSenderGstin(order)} />
-              </Stack>
-            </SectionCard>
+              </SectionCard>
+              <SectionCard title="Rate Breakdown">
+                <RateBreakdown order={order} />
+              </SectionCard>
+              <SectionCard title="Payment Information">
+                <PaymentDetails order={order} />
+              </SectionCard>
+            </Stack>
           </Box>
         </Stack>
       </DialogContent>

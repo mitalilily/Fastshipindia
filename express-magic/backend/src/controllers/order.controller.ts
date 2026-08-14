@@ -367,6 +367,11 @@ export const getAllOrdersController = async (req: any, res: Response) => {
     // Filters from query
     const filters = {
       status: req.query.status as string | undefined,
+      businessType: req.query.businessType as string | undefined,
+      paymentType: req.query.paymentType as string | undefined,
+      courier: req.query.courier as string | undefined,
+      warehouse: req.query.warehouse as string | undefined,
+      productQuery: req.query.productQuery as string | undefined,
       fromDate: req.query.fromDate as string | undefined,
       toDate: req.query.toDate as string | undefined,
       search: req.query.search as string | undefined,
@@ -414,6 +419,7 @@ export const getB2COrdersController = async (req: Request, res: Response) => {
     const filters = {
       status: normalizedStatus || undefined,
       type: req.query.type as string | undefined,
+      paymentType: req.query.paymentType as string | undefined,
       courier: req.query.courier as string | undefined,
       warehouse: req.query.warehouse as string | undefined,
       productQuery: req.query.productQuery as string | undefined,
@@ -477,10 +483,17 @@ export const getB2BOrdersController = async (req: any, res: Response) => {
     // Filters from query
     const filters = {
       status: req.query.status as string | undefined,
+      type: req.query.type as string | undefined,
+      paymentType: req.query.paymentType as string | undefined,
+      courier: req.query.courier as string | undefined,
+      warehouse: req.query.warehouse as string | undefined,
+      productQuery: req.query.productQuery as string | undefined,
       fromDate: req.query.fromDate as string | undefined,
       toDate: req.query.toDate as string | undefined,
       search: req.query.search as string | undefined,
       companyName: req.query.companyName as string | undefined, // optional B2B-specific filter
+      sortBy: (req.query.sortBy as 'created_at' | undefined) || 'created_at',
+      sortOrder: (req.query.sortOrder as 'asc' | 'desc' | undefined) || 'desc',
     }
 
     const { orders, totalCount, totalPages } = await getB2BOrdersByUserService(
