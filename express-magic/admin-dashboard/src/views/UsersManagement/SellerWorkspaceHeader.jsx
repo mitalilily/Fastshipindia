@@ -1,3 +1,4 @@
+import { ChevronDownIcon } from '@chakra-ui/icons'
 import {
   Avatar,
   Badge,
@@ -16,7 +17,10 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Select,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   SimpleGrid,
   Spinner,
   Stack,
@@ -30,6 +34,7 @@ import {
   IconArrowLeft,
   IconArrowUpCircle,
   IconHistory,
+  IconCrown,
   IconKey,
   IconWallet,
 } from '@tabler/icons-react'
@@ -66,6 +71,15 @@ const statusColor = (status) => {
   return 'gray'
 }
 
+const planColor = (plan) => {
+  const slug = String(plan?.slug || plan?.name || '').toLowerCase()
+  if (slug.includes('gold')) return '#F5C400'
+  if (slug.includes('diamond')) return '#18CED0'
+  if (slug.includes('platinum')) return '#8F0895'
+  if (slug.includes('silver')) return '#F59E0B'
+  return '#8A8F98'
+}
+
 export default function SellerWorkspaceHeader({ user, userId }) {
   const history = useHistory()
   const toast = useToast()
@@ -100,7 +114,14 @@ export default function SellerWorkspaceHeader({ user, userId }) {
     queryFn: () => PlansService.getPlans(),
   })
 
-  const activePlans = useMemo(() => plans.filter((plan) => plan.is_active), [plans])
+  const activePlans = useMemo(
+    () =>
+      plans
+        .filter((plan) => plan.is_active !== false)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+    [plans],
+  )
+  const selectedPlanRecord = activePlans.find((plan) => plan.id === selectedPlan)
   const assignPlan = useMutation({
     mutationFn: (planId) => PlansService.assignPlanToUser(userId, planId),
     onSuccess: () => {
@@ -240,23 +261,46 @@ export default function SellerWorkspaceHeader({ user, userId }) {
               {plansLoading ? (
                 <Spinner size="sm" />
               ) : (
-                <Select
-                  size="sm"
-                  borderRadius="9px"
-                  value={selectedPlan}
-                  isDisabled={assignPlan.isPending}
-                  onChange={(event) => {
-                    setSelectedPlan(event.target.value)
-                    assignPlan.mutate(event.target.value)
-                  }}
-                >
-                  <option value="">No plan assigned</option>
-                  {activePlans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name}
-                    </option>
-                  ))}
-                </Select>
+                <Menu placement="bottom-end">
+                  <MenuButton
+                    as={Button}
+                    size="sm"
+                    w="100%"
+                    variant="outline"
+                    borderColor="#B9AAFF"
+                    borderRadius="9px"
+                    textAlign="left"
+                    leftIcon={<IconCrown size={17} color="#F59E0B" />}
+                    rightIcon={<ChevronDownIcon />}
+                    isLoading={assignPlan.isPending}
+                  >
+                    {selectedPlanRecord?.name || 'Select plan'}
+                  </MenuButton>
+                  <MenuList borderRadius="12px" p="6px" minW="190px" boxShadow="xl">
+                    {activePlans.map((plan) => {
+                      const selected = plan.id === selectedPlan
+                      return (
+                        <MenuItem
+                          key={plan.id}
+                          borderRadius="8px"
+                          bg={selected ? '#F0EDFF' : 'transparent'}
+                          fontWeight={selected ? '800' : '600'}
+                          onClick={() => {
+                            if (selected) return
+                            setSelectedPlan(plan.id)
+                            assignPlan.mutate(plan.id)
+                          }}
+                        >
+                          <Flex align="center" gap="9px">
+                            <Box w="10px" h="10px" borderRadius="full" bg={planColor(plan)} />
+                            <Text>{plan.name}</Text>
+                            {plan.is_default ? <Badge colorScheme="blue">Default</Badge> : null}
+                          </Flex>
+                        </MenuItem>
+                      )
+                    })}
+                  </MenuList>
+                </Menu>
               )}
             </FormControl>
           </Stack>

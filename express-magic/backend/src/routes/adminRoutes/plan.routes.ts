@@ -1,8 +1,12 @@
 // src/routes/plans.routes.ts
 import { Router } from 'express'
 import { PlansController } from '../../controllers/admin/plans.controller'
+import { isAdminMiddleware } from '../../middlewares/isAdmin'
+import { requireAuth } from '../../middlewares/requireAuth'
 
 const router = Router()
+
+router.use(requireAuth, isAdminMiddleware)
 
 router.get('/', PlansController.getPlans) // GET /api/plans
 router.post('/', PlansController.createPlan) // POST /api/plans

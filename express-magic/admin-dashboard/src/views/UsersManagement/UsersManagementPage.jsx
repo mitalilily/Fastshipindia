@@ -33,6 +33,7 @@ import {
   ToolbarCard,
 } from "components/AdminUI/AdminPage";
 import { useUpdateUserApproval, useUsersWithRoleUser } from "hooks/useUsers";
+import { usePlans } from "hooks/usePlans";
 import { useMemo, useState } from "react";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
 
@@ -88,6 +89,7 @@ export default function UsersManagementPage() {
   const [kycStatus, setKycStatus] = useState("");
   const [onboardingComplete, setOnboardingComplete] = useState(undefined);
   const updateUserApprovalMutation = useUpdateUserApproval();
+  const { data: availablePlans = [] } = usePlans();
 
   const { data: usersResponse, isLoading } = useUsersWithRoleUser({
     page,
@@ -237,9 +239,13 @@ export default function UsersManagementPage() {
               placeholder="All Plans"
             >
               <option value="">All Plans</option>
-              <option value="basic">Basic</option>
-              <option value="gold">Gold</option>
-              <option value="platinum">Platinum</option>
+              {availablePlans
+                .filter((availablePlan) => availablePlan.is_active !== false)
+                .map((availablePlan) => (
+                  <option key={availablePlan.id} value={availablePlan.name}>
+                    {availablePlan.name}
+                  </option>
+                ))}
             </AdminSelect>
           </Box>
           <Button variant="ghost" color="#6C5CE7" mt={{ base: 0, md: "27px" }}>
