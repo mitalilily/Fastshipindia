@@ -1,6 +1,12 @@
-import { Box, Button, Chip, Paper, Stack, Typography, alpha } from '@mui/material'
-import { useEffect, useState } from 'react'
-import { FormProvider, useFieldArray, useForm, type FieldErrors } from 'react-hook-form'
+import { Alert, Box, Button, Chip, Paper, Stack, Typography, alpha } from '@mui/material'
+import { useEffect, useRef, useState } from 'react'
+import {
+  FormProvider,
+  useFieldArray,
+  useForm,
+  type FieldErrors,
+  type FieldPath,
+} from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
 import { FaBox, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -10,6 +16,7 @@ import { useCreateShipment, useUpdateB2COrder } from '../../../hooks/Orders/useO
 import { usePaymentOptions } from '../../../hooks/usePaymentOptions'
 import { normalizeParcelWeightInputToGrams } from '../../../utils/weight'
 import FormSectionAccordion from '../../UI/accordion/FormSectionAccordion'
+import { toast } from '../../UI/Toast'
 import AmountSummaryCard from '../AmountSummaryCard'
 import DeliveryDetailsForm from '../DeliveryDetailsForm'
 import OptionalChargesForm from '../OptionalChargesForm'
@@ -114,6 +121,9 @@ export default function B2COrderFormSteps({
   const navigate = useNavigate()
   const location = useLocation()
   const [currentStep, setCurrentStep] = useState(0)
+  const [isAdvancing, setIsAdvancing] = useState(false)
+  const [stepError, setStepError] = useState('')
+  const formScrollRef = useRef<HTMLFormElement>(null)
   const steps = ['Order & Delivery', 'Pickup Location']
   const { data: paymentOptions } = usePaymentOptions()
   const isEditMode = mode === 'edit'
@@ -316,11 +326,13 @@ export default function B2COrderFormSteps({
     if (currentStep === 0) {
       const productFields = fields.flatMap((_, idx) =>
         ['productName', 'price', 'quantity'].map(
-          (key) => `products.${idx}.${key}` as keyof B2CFormData,
+          (key) => `products.${idx}.${key}` as FieldPath<B2CFormData>,
         ),
       )
 
-      const step1Fields: (keyof B2CFormData)[] = [
+      const step1Fields: FieldPath<B2CFormData>[] = [
+        'orderId',
+        'orderDate',
         'buyerName',
         'buyerPhone',
         'address',
@@ -328,7 +340,6 @@ export default function B2COrderFormSteps({
         'orderType',
         'city',
         'state',
-        'country',
         ...productFields,
         'weight',
         'length',
@@ -336,8 +347,56 @@ export default function B2COrderFormSteps({
         'height',
       ]
 
-      const baseValid = await trigger(step1Fields)
-      if (!baseValid) return false
+      const baseValid = await trigger(step1Fields, { shouldFocus: true })
+      if (!baseValid) {
+        const invalidFields = step1Fields.filter(
+          (field) => methods.getFieldState(field).invalid,
+        )
+        const fieldLabel = (field: FieldPath<B2CFormData>) => {
+          if (field.includes('.productName')) return 'Product name'
+          if (field.includes('.price')) return 'Product price'
+          if (field.includes('.quantity')) return 'Product quantity'
+
+          const labels: Partial<Record<FieldPath<B2CFormData>, string>> = {
+            orderId: 'Order ID',
+            orderDate: 'Order date',
+            buyerName: 'Recipient name',
+            buyerPhone: 'Recipient phone',
+            address: 'Delivery address',
+            pincode: 'Delivery pincode',
+            orderType: 'Order type',
+            city: 'Delivery city',
+            state: 'Delivery state',
+            weight: 'Package weight',
+            length: 'Package length',
+            breadth: 'Package breadth',
+            height: 'Package height',
+          }
+
+          return labels[field] ?? field
+        }
+        const missingLabels = invalidFields.slice(0, 4).map(fieldLabel)
+        const remainingCount = Math.max(invalidFields.length - missingLabels.length, 0)
+        const message = `Please check: ${missingLabels.join(', ')}${
+          remainingCount ? ` and ${remainingCount} more field${remainingCount === 1 ? '' : 's'}` : ''
+        }.`
+
+        setStepError(message)
+        toast.open({ message, severity: 'warning' })
+
+        const firstInvalid = invalidFields[0]
+        if (firstInvalid) {
+          methods.setFocus(firstInvalid)
+          window.requestAnimationFrame(() => {
+            const input = document.querySelector<HTMLElement>(
+              `[name="${String(firstInvalid).replace(/"/g, '\\"')}"]`,
+            )
+            input?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          })
+        }
+
+        return false
+      }
 
       // Real-time pincode serviceability check
       const pincode = watch('pincode')
@@ -349,12 +408,17 @@ export default function B2COrderFormSteps({
             type: 'manual',
             message: 'Destination pincode not serviceable by any courier',
           })
+          const message = 'Destination pincode is not serviceable. Please use another pincode.'
+          setStepError(message)
+          toast.open({ message, severity: 'warning' })
+          methods.setFocus('pincode')
           return false
         }
       } catch {
         // ignore transient failure, allow move if fields valid
       }
 
+      setStepError('')
       return true
     }
 
@@ -362,11 +426,32 @@ export default function B2COrderFormSteps({
   }
 
   const nextStep = async () => {
-    const valid = await validateStep()
-    if (valid) setCurrentStep((prev) => Math.min(prev + 1, stepLabels.length - 1))
+    if (isAdvancing) return
+
+    setIsAdvancing(true)
+    try {
+      const valid = await validateStep()
+      if (!valid) return
+
+      setStepError('')
+      setCurrentStep((prev) => Math.min(prev + 1, stepLabels.length - 1))
+      window.requestAnimationFrame(() => {
+        formScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+        formScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    } finally {
+      setIsAdvancing(false)
+    }
   }
 
-  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0))
+  const prevStep = () => {
+    setStepError('')
+    setCurrentStep((prev) => Math.max(prev - 1, 0))
+    window.requestAnimationFrame(() => {
+      formScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+      formScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
   const stepLabels = [
     { title: 'Order & Delivery', caption: 'Customer, products and package details' },
@@ -454,6 +539,7 @@ export default function B2COrderFormSteps({
 
         <Box
           component="form"
+          ref={formScrollRef}
           onSubmit={(e) => e.preventDefault()}
           sx={{
             flex: 1,
@@ -574,6 +660,11 @@ export default function B2COrderFormSteps({
           )}
 
           {currentStep === 1 && <PickupLocationForm />}
+          {stepError ? (
+            <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+              {stepError}
+            </Alert>
+          ) : null}
           {/* Sticky footer inside scroll */}
           <Box
             sx={{
@@ -620,6 +711,8 @@ export default function B2COrderFormSteps({
                   type="button" // ✅ no accidental submit
                   variant="contained"
                   onClick={nextStep}
+                  loading={isAdvancing}
+                  disabled={isAdvancing}
                   sx={{
                     minWidth: { xs: '100%', sm: 130 },
                     fontWeight: 700,
