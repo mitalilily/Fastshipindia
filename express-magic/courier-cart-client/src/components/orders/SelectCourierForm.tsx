@@ -185,7 +185,8 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     courierPayload.height = b2bHeight
   }
 
-  const { data: couriers, isLoading, isError, isFetching } = useAvailableCouriers(courierPayload)
+  const { data: couriers, error, isLoading, isError, isFetching } =
+    useAvailableCouriers(courierPayload)
   const availableCouriers = (couriers ?? []).filter((courier) => {
     if (shipment_type !== 'b2b') return true
 
@@ -211,7 +212,23 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
         </Typography>
       </Paper>
     )
-  if (isError) return <Typography color="error">Failed to fetch couriers</Typography>
+  if (isError) {
+    const errorMessage =
+      error instanceof Error && error.message
+        ? error.message
+        : 'Failed to fetch Delhivery B2B couriers. Please try again.'
+
+    return (
+      <Paper sx={{ p: 2.5, border: '1px solid', borderColor: 'error.light' }}>
+        <Typography color="error" fontWeight={700}>
+          {shipment_type === 'b2b' ? 'Delhivery B2B setup required' : 'Failed to fetch couriers'}
+        </Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+          {errorMessage}
+        </Typography>
+      </Paper>
+    )
+  }
   if (!availableCouriers.length)
     return (
       <Typography color={shipment_type === 'b2b' ? 'warning.main' : 'text.primary'}>

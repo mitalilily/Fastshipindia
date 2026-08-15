@@ -104,6 +104,7 @@ import {
   hasUsableXpressbeesCredentials,
   type XpressbeesConfig,
 } from './courierCredentials.service'
+import { getDelhiveryB2BCredentials } from './delhiveryB2BCredentials.service'
 import { DelhiveryService } from './couriers/delhivery.service'
 import {
   DelhiveryB2BService,
@@ -5290,6 +5291,13 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         : (userOrOptions ?? {})
 
     const { userId, planIdOverride, planFallbackName } = options
+    const delhiveryCredentials = await getDelhiveryB2BCredentials()
+    if (!delhiveryCredentials.username || !delhiveryCredentials.password) {
+      throw new HttpError(
+        503,
+        'Delhivery B2B credentials are not configured. Ask an admin to save and test the B2B username and password in Courier Credentials.',
+      )
+    }
     const normalizeProviderKey = (value?: string | null) => {
       const normalized = String(value || '')
         .trim()
@@ -5405,10 +5413,15 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         destinationPincode,
         destinationZoneId,
       })
-      throw new Error(
-        `B2B zone lookup failed. Origin zone: ${
-          originZoneId ? 'found' : 'not found'
-        }, Destination zone: ${destinationZoneId ? 'found' : 'not found'}`,
+      const missingPincodes = [
+        !originZoneId ? `pickup ${originPincode || 'unknown'}` : null,
+        !destinationZoneId ? `delivery ${destinationPincode || 'unknown'}` : null,
+      ]
+        .filter(Boolean)
+        .join(' and ')
+      throw new HttpError(
+        422,
+        `Delhivery B2B zone mapping is missing for ${missingPincodes}. Ask an admin to add the pincode mapping and zone rate.`,
       )
     }
 
@@ -5459,6 +5472,13 @@ export const fetchAvailableCouriersWithRatesB2B = async (
     const systemCourierRows = enabledB2BCourierRows.filter(
       (row) => normalizeProviderKey(row.serviceProvider) === 'delhivery',
     )
+
+    if (!systemCourierRows.length) {
+      throw new HttpError(
+        422,
+        'No enabled Delhivery B2B courier is configured. Ask an admin to enable a Delhivery courier for B2B.',
+      )
+    }
 
     const shadowfaxRows = systemCourierRows.filter(
       (row) => normalizeProviderKey(row.serviceProvider) === 'shadowfax',
@@ -5511,6 +5531,13 @@ export const fetchAvailableCouriersWithRatesB2B = async (
       .from(b2bZoneToZoneRates)
       .where(and(...rateConditions))
       .orderBy(desc(b2bZoneToZoneRates.effective_from))
+
+    if (!zoneToZoneRates.length) {
+      throw new HttpError(
+        422,
+        'No active Delhivery B2B rate is configured for this zone pair and plan. Ask an admin to add a zone-to-zone rate.',
+      )
+    }
 
     // Step 6: Build courier list with rates
     const courierMap = new Map<number, any>()
@@ -5582,6 +5609,13 @@ export const fetchAvailableCouriersWithRatesB2B = async (
 
     // ✅ Final filter: Ensure all couriers have correct business_type for B2B
     combined = await filterCouriersByBusinessType(combined, 'b2b')
+
+    if (!combined.length) {
+      throw new HttpError(
+        422,
+        'No matching Delhivery B2B courier rate is enabled for this route. Check the courier and zone-rate configuration.',
+      )
+    }
 
     combined = await Promise.all(
       combined.map(async (courier: any) => {

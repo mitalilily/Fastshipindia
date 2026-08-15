@@ -107,6 +107,14 @@ services:
         generateValue: true
       - key: COURIER_SECRET_KEY
         generateValue: true
+      - key: DELHIVERY_B2B_USERNAME
+        sync: false
+      - key: DELHIVERY_B2B_PASSWORD
+        sync: false
+      - key: DELHIVERY_B2B_CLIENT_ID
+        sync: false
+      - key: DELHIVERY_B2B_WAREHOUSE_ID
+        sync: false
       - key: R2_ENDPOINT
         sync: false
       - key: R2_ACCESS_KEY_ID
