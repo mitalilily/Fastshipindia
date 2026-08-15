@@ -12,7 +12,7 @@ import ZonesManagement from 'views/Zones/ZonesManagement'
 const tabs = ['Zones', 'Pincodes', 'Rate Matrix', 'Additional Charges', 'Quote Calculator']
 
 const B2BPricingManagement = () => {
-  const [activeTab, setActiveTab] = useState('Zones')
+  const [activeTab, setActiveTab] = useState('Pincodes')
   const [selectedPlanId, setSelectedPlanId] = useState('')
   const { data: plans = [] } = useQuery({ queryKey: ['plans'], queryFn: PlansService.getPlans })
 

@@ -179,6 +179,7 @@ export const listPincodesController = async (req: Request, res: Response) => {
 export const createPincodeController = async (req: Request, res: Response) => {
   try {
     const body = req.body
+    const flagsFromBody = body.flags || {}
     const record = await createPincode({
       pincode: body.pincode,
       city: body.city,
@@ -186,12 +187,13 @@ export const createPincodeController = async (req: Request, res: Response) => {
       zoneId: body.zoneId ?? body.zone_id,
       courierScope: parseCourierScope(req),
       flags: {
-        isOda: body.isOda ?? body.is_oda,
-        isRemote: body.isRemote ?? body.is_remote,
-        isMall: body.isMall ?? body.is_mall,
-        isSez: body.isSez ?? body.is_sez,
-        isAirport: body.isAirport ?? body.is_airport,
-        isHighSecurity: body.isHighSecurity ?? body.is_high_security,
+        isOda: flagsFromBody.isOda ?? body.isOda ?? body.is_oda,
+        isRemote: flagsFromBody.isRemote ?? body.isRemote ?? body.is_remote,
+        isMall: flagsFromBody.isMall ?? body.isMall ?? body.is_mall,
+        isSez: flagsFromBody.isSez ?? body.isSez ?? body.is_sez,
+        isAirport: flagsFromBody.isAirport ?? body.isAirport ?? body.is_airport,
+        isHighSecurity:
+          flagsFromBody.isHighSecurity ?? body.isHighSecurity ?? body.is_high_security,
       },
     })
 
