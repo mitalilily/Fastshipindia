@@ -5290,10 +5290,15 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         : (userOrOptions ?? {})
 
     const { userId, planIdOverride, planFallbackName } = options
-    const normalizeProviderKey = (value?: string | null) =>
-      String(value || '')
+    const normalizeProviderKey = (value?: string | null) => {
+      const normalized = String(value || '')
         .trim()
         .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+
+      if (normalized.startsWith('delhivery')) return 'delhivery'
+      return normalized
+    }
     const makeCourierIdentityKey = (courier: {
       id: number | string
       integration_type?: string | null
@@ -5437,16 +5442,23 @@ export const fetchAvailableCouriersWithRatesB2B = async (
 
     // Step 5: Fetch B2B zone-to-zone rates
     // Get enabled couriers first - filter by business type for B2B
-    const systemCourierRows = await db
-      .select({ id: couriers.id, serviceProvider: couriers.serviceProvider, name: couriers.name })
+    const enabledB2BCourierRows = await db
+      .select({
+        id: couriers.id,
+        serviceProvider: couriers.serviceProvider,
+        name: couriers.name,
+        createdAt: couriers.createdAt,
+      })
       .from(couriers)
       .where(
         and(
           eq(couriers.isEnabled, true),
           sql`${couriers.businessType} @> '["b2b"]'::jsonb`,
-          sql`lower(${couriers.serviceProvider}) in ('delhivery', 'delhivery_b2b')`,
         ),
       )
+    const systemCourierRows = enabledB2BCourierRows.filter(
+      (row) => normalizeProviderKey(row.serviceProvider) === 'delhivery',
+    )
 
     const shadowfaxRows = systemCourierRows.filter(
       (row) => normalizeProviderKey(row.serviceProvider) === 'shadowfax',
@@ -5462,21 +5474,6 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         availableCourierNames: shadowfaxRows.map((row) => row.name),
       })
     }
-
-    const systemCourierMap = systemCourierRows.reduce<Record<string, Set<number>>>((acc, row) => {
-      const providerKey = (row.serviceProvider || '').toLowerCase()
-      if (!providerKey) return acc
-      if (
-        providerKey === 'shadowfax' &&
-        shouldFilterShadowfaxByName &&
-        !shadowfaxCourierMatchesMode(row.name)
-      ) {
-        return acc
-      }
-      if (!acc[providerKey]) acc[providerKey] = new Set<number>()
-      acc[providerKey].add(Number(row.id))
-      return acc
-    }, {})
 
     // Fetch zone-to-zone rates for all enabled couriers
     const effectiveDate = new Date()
@@ -5522,35 +5519,38 @@ export const fetchAvailableCouriersWithRatesB2B = async (
       if (!rate.courierId) continue
 
       // Check if courier is enabled
-      const providerKey = (rate.serviceProvider || '').toLowerCase()
-      const isEnabled = providerKey && systemCourierMap[providerKey]?.has(Number(rate.courierId))
+      const rateProviderKey = normalizeProviderKey(rate.serviceProvider)
+      const matchingSystemCouriers = systemCourierRows.filter(
+        (row) => Number(row.id) === Number(rate.courierId),
+      )
+      const matchedSystemCourier = rateProviderKey
+        ? matchingSystemCouriers.find(
+            (row) => normalizeProviderKey(row.serviceProvider) === rateProviderKey,
+          )
+        : matchingSystemCouriers.length === 1
+          ? matchingSystemCouriers[0]
+          : undefined
 
-      if (!isEnabled) continue
+      if (!matchedSystemCourier) continue
+      const providerKey = normalizeProviderKey(matchedSystemCourier.serviceProvider)
 
       // Get or create courier entry
       if (!courierMap.has(rate.courierId)) {
-        const [courierRow] = await db
-          .select()
-          .from(couriers)
-          .where(eq(couriers.id, rate.courierId))
-          .limit(1)
-
-        if (!courierRow) continue
+        const courierRow = matchedSystemCourier
 
         courierMap.set(rate.courierId, {
           id: courierRow.id,
           name: courierRow.name,
-          integration_type: rate.serviceProvider?.toLowerCase() || 'unknown',
-          serviceProvider: rate.serviceProvider?.toLowerCase(),
+          integration_type: providerKey,
+          serviceProvider: providerKey,
+          pricingServiceProvider: rate.serviceProvider || null,
           localRates: {},
           approxZone: {
             originZoneId,
             destinationZoneId,
           },
           provider_serviceability:
-            String(rate.serviceProvider || '')
-              .trim()
-              .toLowerCase() === 'shadowfax'
+            providerKey === 'shadowfax'
               ? {
                   mode: requestedShadowfaxMode,
                   service_mode: requestedShadowfaxService,
@@ -5559,8 +5559,8 @@ export const fetchAvailableCouriersWithRatesB2B = async (
               : null,
           courier_option_key: makeCourierIdentityKey({
             id: courierRow.id,
-            integration_type: rate.serviceProvider?.toLowerCase() || null,
-            serviceProvider: rate.serviceProvider?.toLowerCase() || null,
+            integration_type: providerKey,
+            serviceProvider: providerKey,
             max_slab_weight: null,
           }),
           createdAt: courierRow.createdAt,
@@ -5598,7 +5598,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
               (params.payment_type ?? 'prepaid').toUpperCase() === 'COD' ? 'COD' : 'PREPAID',
             courierScope: {
               courierId: Number(courier.id),
-              serviceProvider: courier.integration_type ?? courier.serviceProvider ?? undefined,
+              serviceProvider: courier.pricingServiceProvider || undefined,
             },
             pickupDate: (params as any).pickup_date,
             deliveryAddress: '',
