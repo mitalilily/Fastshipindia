@@ -10,6 +10,7 @@ interface FormSectionAccordionProps {
   subtitle?: string
   children: React.ReactNode
   defaultExpanded?: boolean
+  compact?: boolean
 }
 
 export const glassStyles = {
@@ -31,15 +32,23 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
   subtitle,
   children,
   defaultExpanded = false,
+  compact = false,
 }) => {
   return (
-    <Accordion defaultExpanded={defaultExpanded} disableGutters sx={glassStyles}>
+    <Accordion
+      defaultExpanded={defaultExpanded}
+      disableGutters
+      sx={{
+        ...glassStyles,
+        mb: compact ? 1 : glassStyles.mb,
+      }}
+    >
       <AccordionSummary
         expandIcon={<MdExpandMore color={BRAND_PRIMARY} />}
         sx={{
           backgroundColor: alpha(BRAND_PRIMARY, 0.03),
-          px: 2.5,
-          py: 1.5,
+          px: compact ? 2 : 2.5,
+          py: compact ? 0.75 : 1.5,
           transition: 'all 0.2s ease',
           '&:hover': {
             backgroundColor: alpha(BRAND_PRIMARY, 0.06),
@@ -75,8 +84,8 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
       </AccordionSummary>
       <AccordionDetails
         sx={{
-          px: 2.5,
-          py: 2.5,
+          px: compact ? 2 : 2.5,
+          py: compact ? 1.5 : 2.5,
           backgroundColor: '#FFFFFF',
         }}
       >

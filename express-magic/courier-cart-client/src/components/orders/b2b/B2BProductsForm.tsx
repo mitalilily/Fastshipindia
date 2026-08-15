@@ -1,4 +1,13 @@
-import { Box, Button, CircularProgress, IconButton, Paper, Stack, Typography } from '@mui/material'
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  IconButton,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material'
 import { useState } from 'react'
 import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
@@ -7,313 +16,348 @@ import { useDebouncedEffect } from '../../../hooks/useDebounceEffect'
 import CustomInput from '../../UI/inputs/CustomInput'
 import type { B2BFormData } from './B2BOrderForm'
 
+const emptyProduct = { productName: '', quantity: 1, unitPrice: 0 }
+const emptyBox = { lengthCm: 0, breadthCm: 0, heightCm: 0, weightKg: 0 }
+
 const ProductBoxesForm = () => {
-  const { control, setValue, trigger, watch } = useFormContext<B2BFormData>()
-  const [weightCalculations, setWeightCalculations] = useState<{
-    totalChargeableWeight: number
-    cftFactor: number
-    loading: boolean
-  }>({
+  const { control, trigger, watch } = useFormContext<B2BFormData>()
+  const [weightCalculations, setWeightCalculations] = useState({
     totalChargeableWeight: 0,
     cftFactor: 5000,
     loading: false,
   })
 
-  // Ensure boxes array exists
-  const boxes = useWatch({ control, name: 'boxes' })
-  if (!boxes || boxes.length === 0) {
-    setValue('boxes', [
-      {
-        lengthCm: 0,
-        breadthCm: 0,
-        heightCm: 0,
-        weightKg: 0,
-      },
-    ])
-  }
-
+  const {
+    fields: productFields,
+    append: appendProduct,
+    remove: removeProduct,
+  } = useFieldArray({ control, name: 'products' })
   const {
     fields: boxFields,
     append: appendBox,
     remove: removeBox,
-  } = useFieldArray({
-    control,
-    name: 'boxes',
-  })
+  } = useFieldArray({ control, name: 'boxes' })
 
-  // Watch pickup and delivery pincodes for rate calculation
+  const boxes = useWatch({ control, name: 'boxes' }) || []
+  const products = useWatch({ control, name: 'products' }) || []
   const pickupPincode = watch('pickupLocationPincode')
   const deliveryPincode = watch('pincode')
-  // planId might not be in form, so we'll use undefined
-  const planId = undefined
 
-  // Calculate weight from backend using rate calculation API with debounce
   useDebouncedEffect(
     () => {
       const calculateWeights = async () => {
-        // Need at least one box with dimensions
-        if (!boxes || boxes.length === 0) {
-          return
-        }
+        if (!boxes.length) return
 
-        // Check if we have at least one box with valid dimensions
-        const hasValidBox = boxes.some(
+        const totalActualWeight = boxes.reduce(
+          (sum, box) => sum + Number(box.weightKg || 0),
+          0,
+        )
+        const validDimensionBoxes = boxes.filter(
           (box) =>
             Number(box.lengthCm || 0) > 0 &&
             Number(box.breadthCm || 0) > 0 &&
             Number(box.heightCm || 0) > 0,
         )
 
-        if (!hasValidBox) {
-          // If no dimensions, use total actual weight as chargeable weight
-          const totalActual = boxes.reduce((sum, box) => sum + Number(box.weightKg || 0), 0)
+        if (!validDimensionBoxes.length) {
           setWeightCalculations({
-            totalChargeableWeight: totalActual,
+            totalChargeableWeight: totalActualWeight,
             cftFactor: 5000,
             loading: false,
           })
           return
         }
 
-        setWeightCalculations((prev) => ({ ...prev, loading: true }))
+        setWeightCalculations((previous) => ({ ...previous, loading: true }))
+
+        const length = Math.max(...validDimensionBoxes.map((box) => Number(box.lengthCm || 0)))
+        const width = Math.max(...validDimensionBoxes.map((box) => Number(box.breadthCm || 0)))
+        const height = Math.max(...validDimensionBoxes.map((box) => Number(box.heightCm || 0)))
 
         try {
-          // Calculate total actual weight for API call
-          const totalActualWeight = boxes.reduce((sum, box) => sum + Number(box.weightKg || 0), 0)
-
-          // For rate calculation, we need to send dimensions
-          // We'll use the largest box dimensions as representative
-          let maxLength = 0
-          let maxBreadth = 0
-          let maxHeight = 0
-
-          boxes.forEach((box) => {
-            const length = Number(box.lengthCm || 0)
-            const breadth = Number(box.breadthCm || 0)
-            const height = Number(box.heightCm || 0)
-            if (length > 0 && breadth > 0 && height > 0) {
-              maxLength = Math.max(maxLength, length)
-              maxBreadth = Math.max(maxBreadth, breadth)
-              maxHeight = Math.max(maxHeight, height)
-            }
-          })
-
-          // Use largest dimensions
-          const length = maxLength > 0 ? maxLength : undefined
-          const width = maxBreadth > 0 ? maxBreadth : undefined
-          const height = maxHeight > 0 ? maxHeight : undefined
-
-          // Call backend to get chargeable weight
-          // Use default pincodes if not available (for weight calculation only)
-          const apiPayload: {
-            originPincode: string
-            destinationPincode: string
-            weightKg: number
-            length?: number
-            width?: number
-            height?: number
-            planId?: string
-          } = {
+          const response = await axiosInstance.post('/admin/b2b/calculate-rate', {
             originPincode: pickupPincode || '110001',
             destinationPincode: deliveryPincode || '110001',
             weightKg: totalActualWeight,
-          }
-
-          if (length) apiPayload.length = length
-          if (width) apiPayload.width = width
-          if (height) apiPayload.height = height
-          // planId is always undefined for now, so we skip it
-
-          const response = await axiosInstance.post('/admin/b2b/calculate-rate', apiPayload)
-
-          if (response.data?.data) {
-            const calc = response.data.data.calculation || {}
-            const config = response.data.data.config || {}
-
-            // Get chargeable weight from backend (billableWeight)
-            const totalChargeableWeight = Number(calc.billableWeight || totalActualWeight)
-            const cftFactor = Number(config.cftFactor || calc.cftFactor || 5000)
-
-            setWeightCalculations({
-              totalChargeableWeight,
-              cftFactor,
-              loading: false,
-            })
-          } else {
-            // Fallback if API response structure is different
-            setWeightCalculations({
-              totalChargeableWeight: totalActualWeight,
-              cftFactor: 5000,
-              loading: false,
-            })
-          }
-        } catch (error: unknown) {
-          console.error('Error calculating weights from backend:', error)
-          // Fallback if API fails - calculate locally
-          const totalActual = boxes.reduce((sum, box) => sum + Number(box.weightKg || 0), 0)
-
-          // Calculate volumetric weight locally as fallback
-          let totalVolume = 0
-          boxes.forEach((box) => {
-            const length = Number(box.lengthCm || 0)
-            const breadth = Number(box.breadthCm || 0)
-            const height = Number(box.heightCm || 0)
-            if (length > 0 && breadth > 0 && height > 0) {
-              totalVolume += (length * breadth * height) / 5000
-            }
+            length,
+            width,
+            height,
           })
-
-          const totalChargeableWeight = Math.max(totalActual, totalVolume)
+          const calculation = response.data?.data?.calculation || {}
+          const config = response.data?.data?.config || {}
 
           setWeightCalculations({
-            totalChargeableWeight,
+            totalChargeableWeight: Number(calculation.billableWeight || totalActualWeight),
+            cftFactor: Number(config.cftFactor || calculation.cftFactor || 5000),
+            loading: false,
+          })
+        } catch (error: unknown) {
+          console.error('Error calculating B2B package weight:', error)
+          const totalVolumetricWeight = validDimensionBoxes.reduce(
+            (sum, box) =>
+              sum +
+              (Number(box.lengthCm) * Number(box.breadthCm) * Number(box.heightCm)) / 5000,
+            0,
+          )
+          setWeightCalculations({
+            totalChargeableWeight: Math.max(totalActualWeight, totalVolumetricWeight),
             cftFactor: 5000,
             loading: false,
           })
         }
       }
 
-      calculateWeights()
+      void calculateWeights()
     },
-    [boxes, pickupPincode, deliveryPincode, planId],
-    500, // 500ms debounce delay
+    [boxes, pickupPincode, deliveryPincode],
+    500,
   )
 
-  const columns: { name: keyof B2BFormData['boxes'][0]; label: string; type: 'text' | 'number' }[] =
-    [
-      { name: 'lengthCm', label: 'Length (cm)', type: 'number' },
-      { name: 'breadthCm', label: 'Breadth (cm)', type: 'number' },
-      { name: 'heightCm', label: 'Height (cm)', type: 'number' },
-      { name: 'weightKg', label: 'Weight (kg)', type: 'number' },
-    ]
-
-  // Function to check if last row is valid
-  const canAddNewRow = async () => {
-    const lastIndex = boxFields.length - 1
-    if (lastIndex < 0) return true
-
-    const valid = await trigger(columns.map((col) => `boxes.${lastIndex}.${col.name}` as const))
-    return valid
+  const handleAddProduct = async () => {
+    const lastIndex = productFields.length - 1
+    const valid =
+      lastIndex < 0 ||
+      (await trigger([
+        `products.${lastIndex}.productName`,
+        `products.${lastIndex}.quantity`,
+        `products.${lastIndex}.unitPrice`,
+      ]))
+    if (valid) appendProduct(emptyProduct)
   }
 
   const handleAddBox = async () => {
-    const valid = await canAddNewRow()
-    if (!valid) return
-
-    appendBox({
-      lengthCm: 0,
-      breadthCm: 0,
-      heightCm: 0,
-      weightKg: 0,
-    })
+    const lastIndex = boxFields.length - 1
+    const valid =
+      lastIndex < 0 ||
+      (await trigger([
+        `boxes.${lastIndex}.lengthCm`,
+        `boxes.${lastIndex}.breadthCm`,
+        `boxes.${lastIndex}.heightCm`,
+        `boxes.${lastIndex}.weightKg`,
+      ]))
+    if (valid) appendBox(emptyBox)
   }
 
-  const allBoxes = useWatch({ control, name: 'boxes' }) || []
+  const productsTotal = products.reduce(
+    (sum, product) => sum + Number(product.quantity || 0) * Number(product.unitPrice || 0),
+    0,
+  )
 
   return (
-    <Box mt={2}>
-      {/* Table Header */}
-      <Box display="grid" gridTemplateColumns="repeat(5, 1fr)" gap={2} mb={1}>
-        {columns.map((col) => (
-          <Typography key={col.name} fontWeight="bold">
-            {col.label}
+    <Stack spacing={2}>
+      <Box>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+          <Box>
+            <Typography fontWeight={700} color="#102A54">
+              Shipment Products
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Add every product included in this B2B shipment.
+            </Typography>
+          </Box>
+          <Typography variant="body2" fontWeight={700} color="#333369">
+            Total ₹{productsTotal.toFixed(2)}
           </Typography>
-        ))}
-        <Typography fontWeight="bold">Action</Typography>
+        </Stack>
+
+        <Stack spacing={1}>
+          {productFields.map((product, productIndex) => (
+            <Paper
+              key={product.id}
+              variant="outlined"
+              sx={{ p: 1.5, borderRadius: 2, borderColor: '#E0E6ED' }}
+            >
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'minmax(0, 2fr) minmax(110px, 0.75fr) minmax(130px, 0.9fr) 40px',
+                  },
+                  gap: 1.5,
+                  alignItems: 'start',
+                }}
+              >
+                <Controller
+                  name={`products.${productIndex}.productName`}
+                  control={control}
+                  rules={{ required: 'Product name is required' }}
+                  render={({ field, fieldState }) => (
+                    <CustomInput
+                      {...field}
+                      label="Product Name"
+                      placeholder="e.g. Cotton T-shirt"
+                      required
+                      topMargin={false}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`products.${productIndex}.quantity`}
+                  control={control}
+                  rules={{
+                    required: 'Quantity is required',
+                    min: { value: 1, message: 'Minimum 1' },
+                    validate: (value) => Number.isInteger(Number(value)) || 'Use a whole number',
+                  }}
+                  render={({ field, fieldState }) => (
+                    <CustomInput
+                      {...field}
+                      label="Quantity"
+                      type="number"
+                      required
+                      topMargin={false}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      slotProps={{ htmlInput: { min: 1, step: 1 } }}
+                    />
+                  )}
+                />
+                <Controller
+                  name={`products.${productIndex}.unitPrice`}
+                  control={control}
+                  rules={{
+                    required: 'Unit price is required',
+                    min: { value: 0.01, message: 'Enter a valid price' },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <CustomInput
+                      {...field}
+                      label="Unit Price (₹)"
+                      type="number"
+                      required
+                      topMargin={false}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+                    />
+                  )}
+                />
+                <IconButton
+                  color="error"
+                  aria-label={`Remove product ${productIndex + 1}`}
+                  disabled={productFields.length === 1}
+                  onClick={() => removeProduct(productIndex)}
+                  sx={{ mt: { xs: 0, sm: 3.2 } }}
+                >
+                  <AiOutlineDelete />
+                </IconButton>
+              </Box>
+            </Paper>
+          ))}
+        </Stack>
+
+        <Button variant="outlined" onClick={handleAddProduct} sx={{ mt: 1 }}>
+          + Add Product
+        </Button>
       </Box>
 
-      {/* Box Rows */}
-      {boxFields.map((box, bIndex) => (
-        <Box key={box.id} display="grid" gridTemplateColumns="repeat(5, 1fr)" gap={2} mb={1}>
-          {columns.map((col) => (
-            <Controller
-              key={`${box.id}-${col.name}`}
-              name={`boxes.${bIndex}.${col.name}` as const}
-              control={control}
-              rules={{
-                required: `${col.label} is required`,
-                min:
-                  col.type === 'number' ? { value: 0, message: 'Cannot be negative' } : undefined,
-              }}
-              render={({ field, fieldState }) => (
-                <CustomInput
-                  {...field}
-                  fullWidth
-                  type={col.type}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                />
-              )}
-            />
-          ))}
+      <Divider />
 
-          <IconButton color="error" sx={{ mb: 4 }} onClick={() => removeBox(bIndex)}>
-            <AiOutlineDelete />
-          </IconButton>
+      <Box>
+        <Box mb={1}>
+          <Typography fontWeight={700} color="#102A54">
+            Package Boxes
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Enter the dimensions and actual weight of each physical box.
+          </Typography>
         </Box>
-      ))}
 
-      {/* Add Box Button */}
-      <Box mt={1}>
-        <Button variant="outlined" onClick={handleAddBox}>
+        <Stack spacing={1}>
+          {boxFields.map((box, boxIndex) => (
+            <Paper
+              key={box.id}
+              variant="outlined"
+              sx={{ p: 1.5, borderRadius: 2, borderColor: '#E0E6ED' }}
+            >
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr 1fr',
+                    md: 'repeat(4, minmax(110px, 1fr)) 40px',
+                  },
+                  gap: 1.5,
+                  alignItems: 'start',
+                }}
+              >
+                {(
+                  [
+                    ['lengthCm', 'Length (cm)'],
+                    ['breadthCm', 'Breadth (cm)'],
+                    ['heightCm', 'Height (cm)'],
+                    ['weightKg', 'Weight (kg)'],
+                  ] as const
+                ).map(([name, label]) => (
+                  <Controller
+                    key={name}
+                    name={`boxes.${boxIndex}.${name}`}
+                    control={control}
+                    rules={{
+                      required: `${label} is required`,
+                      min: { value: 0.01, message: 'Must be greater than 0' },
+                    }}
+                    render={({ field, fieldState }) => (
+                      <CustomInput
+                        {...field}
+                        label={label}
+                        type="number"
+                        required
+                        topMargin={false}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+                      />
+                    )}
+                  />
+                ))}
+                <IconButton
+                  color="error"
+                  aria-label={`Remove box ${boxIndex + 1}`}
+                  disabled={boxFields.length === 1}
+                  onClick={() => removeBox(boxIndex)}
+                  sx={{ mt: { xs: 0, md: 3.2 } }}
+                >
+                  <AiOutlineDelete />
+                </IconButton>
+              </Box>
+            </Paper>
+          ))}
+        </Stack>
+
+        <Button variant="outlined" onClick={handleAddBox} sx={{ mt: 1 }}>
           + Add Box
         </Button>
       </Box>
 
-      {/* Total Weight Summary Section */}
-      {allBoxes.length > 0 && (
+      {!!boxes.length && (
         <Paper
-          sx={{
-            p: 3,
-            mt: 3,
-            borderRadius: 3,
-            border: '1px solid #E0E6ED',
-            background: '#FFFFFF',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: 'linear-gradient(90deg, #333369 0%, #3DD598 100%)',
-              borderRadius: '12px 12px 0 0',
-            },
-          }}
-          elevation={0}
+          variant="outlined"
+          sx={{ p: 1.5, borderRadius: 2, borderColor: '#E0E6ED', background: '#F5F7FA' }}
         >
-          <Box
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              background: '#F5F7FA',
-              border: '1px solid #E0E6ED',
-            }}
-          >
-            <Stack spacing={1.5}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography variant="body2" fontWeight={600} color="#333369">
-                  Chargeable Weight
-                </Typography>
-                {weightCalculations.loading ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  <Typography variant="h6" fontWeight={700} color="#333369">
-                    {weightCalculations.totalChargeableWeight.toFixed(2)} kg
-                  </Typography>
-                )}
-              </Stack>
-              <Typography variant="caption" color="#4A5568">
-                Formula: max(Actual Weight, Volumetric Weight) | Volumetric = (L×B×H) ÷{' '}
-                {weightCalculations.cftFactor}
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography variant="body2" fontWeight={700} color="#333369">
+                Chargeable Weight
               </Typography>
-            </Stack>
-          </Box>
+              <Typography variant="caption" color="#4A5568">
+                max(Actual, Volumetric) · Volumetric = (L×B×H) ÷ {weightCalculations.cftFactor}
+              </Typography>
+            </Box>
+            {weightCalculations.loading ? (
+              <CircularProgress size={20} />
+            ) : (
+              <Typography variant="h6" fontWeight={700} color="#333369">
+                {weightCalculations.totalChargeableWeight.toFixed(2)} kg
+              </Typography>
+            )}
+          </Stack>
         </Paper>
       )}
-    </Box>
+    </Stack>
   )
 }
 
