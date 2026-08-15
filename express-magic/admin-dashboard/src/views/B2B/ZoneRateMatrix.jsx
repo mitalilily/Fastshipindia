@@ -135,11 +135,10 @@ export const ZoneRateMatrix = ({ embedded = false } = {}) => {
     try {
       setUploading(true)
       await importRates.mutateAsync(formData)
-      toast({ title: 'Rates imported', status: 'success', duration: 3000, isClosable: true })
     } catch (error) {
       toast({
         title: 'Failed to import rates',
-        description: error?.message || 'Unknown error',
+        description: error?.response?.data?.error || error?.message || 'Unknown error',
         status: 'error',
       })
     } finally {

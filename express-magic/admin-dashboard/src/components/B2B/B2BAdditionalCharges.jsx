@@ -86,8 +86,12 @@ const B2BAdditionalCharges = ({
         service_provider: serviceProvider || undefined,
         plan_id: planId,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['b2b-additional-charges'])
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['b2b-additional-charges'] })
+      await queryClient.refetchQueries({
+        queryKey: ['b2b-additional-charges'],
+        type: 'active',
+      })
       toast({
         title: 'Additional charges saved',
         status: 'success',
@@ -106,12 +110,20 @@ const B2BAdditionalCharges = ({
 
   const importChargesMutation = useMutation({
     mutationFn: (formData) => b2bAdminService.importAdditionalCharges(formData),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['b2b-additional-charges'])
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['b2b-additional-charges'] })
+      await queryClient.refetchQueries({
+        queryKey: ['b2b-additional-charges'],
+        type: 'active',
+      })
+      const saved = Number(data.inserted || 0) + Number(data.updated || 0)
+      const skipped = Array.isArray(data.skipped) ? data.skipped : []
       toast({
-        title: 'Import successful',
-        description: data.message || `Imported ${data.inserted || 0} records`,
-        status: 'success',
+        title: skipped.length ? 'Import completed with warnings' : 'Import successful',
+        description: `${saved} record${saved === 1 ? '' : 's'} saved${
+          skipped.length ? `, ${skipped.length} row${skipped.length === 1 ? '' : 's'} skipped` : ''
+        }.`,
+        status: skipped.length ? 'warning' : 'success',
         duration: 5000,
       })
       onImportModalClose()

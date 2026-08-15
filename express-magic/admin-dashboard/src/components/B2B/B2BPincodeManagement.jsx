@@ -76,7 +76,7 @@ const normaliseRow = (row) => ({
 const downloadTemplate = () => {
   const csv = [
     'pincode,city,state,zone_code,is_oda,is_remote,is_mall,is_sez,is_airport,is_high_security',
-    '110001,New Delhi,Delhi,NORTH,false,false,false,false,false,false',
+    '110001,New Delhi,Delhi,A_B2B,false,false,false,false,false,false',
   ].join('\n')
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')

@@ -114,8 +114,8 @@ const ImportChargesModal = memo(
         liability_method: 'DROPDOWN: whichever_is_higher | whichever_is_lower',
       },
       {
-        courier_id: '1',
-        service_provider: 'deliveryone',
+        courier_id: courierId || '',
+        service_provider: serviceProvider || '',
         plan_id: planId || '',
         awb_charges: '50',
         cft_factor: '5',
@@ -166,7 +166,7 @@ const ImportChargesModal = memo(
         size="xl"
         action={
           <DownloadSampleCSVButton
-            headers={csvHeaders}
+            headers={csvHeaders.slice(1)}
             filename={`b2b_overhead_charges_template_${new Date().toISOString().split('T')[0]}.csv`}
             buttonText="Download Template"
             size="sm"
@@ -197,7 +197,7 @@ const ImportChargesModal = memo(
               CSV Format Requirements:
             </Text>
             <VStack align="stretch" spacing={1} fontSize="xs" color="blue.600">
-              <Text>• Row 2 shows dropdown options for method columns</Text>
+              <Text>• The downloaded template contains one editable sample row</Text>
               <Text>• Include courier_id and/or service_provider columns</Text>
               <Text>• All numeric values should be numbers only (no currency symbols)</Text>
               <Text>• Method columns: use "whichever_is_higher" or "whichever_is_lower"</Text>

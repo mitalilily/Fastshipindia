@@ -112,8 +112,9 @@ const B2BRateMatrix = ({ planId }) => {
 
   const updateRateMutation = useMutation({
     mutationFn: (data) => b2bAdminService.upsertZoneRate(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['b2b-zone-rates'])
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['b2b-zone-rates'] })
+      await queryClient.refetchQueries({ queryKey: ['b2b-zone-rates'], type: 'active' })
       toast({
         title: 'Rate saved successfully',
         status: 'success',
@@ -134,12 +135,17 @@ const B2BRateMatrix = ({ planId }) => {
 
   const importRatesMutation = useMutation({
     mutationFn: (formData) => b2bAdminService.importZoneRates(formData),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['b2b-zone-rates'])
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['b2b-zone-rates'] })
+      await queryClient.refetchQueries({ queryKey: ['b2b-zone-rates'], type: 'active' })
+      const saved = Number(data.saved ?? data.inserted ?? 0)
+      const skipped = Array.isArray(data.skipped) ? data.skipped : []
       toast({
-        title: 'Rates imported successfully',
-        description: data.message || 'CSV file has been processed',
-        status: 'success',
+        title: skipped.length ? 'Rates imported with warnings' : 'Rates imported successfully',
+        description: `${saved} rate${saved === 1 ? '' : 's'} saved${
+          skipped.length ? `, ${skipped.length} row${skipped.length === 1 ? '' : 's'} skipped` : ''
+        }.`,
+        status: skipped.length ? 'warning' : 'success',
         duration: 5000,
       })
       setImportFile(null)
@@ -149,7 +155,10 @@ const B2BRateMatrix = ({ planId }) => {
       toast({
         title: 'Failed to import rates',
         description:
-          error.response?.data?.message || error.message || 'Please check your CSV format',
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          error.message ||
+          'Please check your CSV format',
         status: 'error',
         duration: 5000,
       })
@@ -187,14 +196,13 @@ const B2BRateMatrix = ({ planId }) => {
       return
     }
 
-    // Create zone name map for easier lookup
+    // Export stable zone codes so the downloaded file can be imported unchanged.
     const zoneMap = new Map()
     zones.forEach((zone) => {
-      zoneMap.set(zone.id, zone.name)
+      zoneMap.set(zone.id, zone.code)
     })
 
-    // Build headers: Origin Zone, Destination Zone, Rate Per Kg
-    const headers = ['Origin Zone', 'Destination Zone', 'Rate Per Kg']
+    const headers = ['origin_zone_code', 'destination_zone_code', 'rate_per_kg']
 
     let rows = []
 
@@ -202,7 +210,7 @@ const B2BRateMatrix = ({ planId }) => {
       // Generate template with all zone combinations
       zones.forEach((originZone) => {
         zones.forEach((destZone) => {
-          rows.push([originZone.name, destZone.name, '']) // Rate Per Kg only
+          rows.push([originZone.code, destZone.code, ''])
         })
       })
     } else {
@@ -231,6 +239,7 @@ const B2BRateMatrix = ({ planId }) => {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(link.href)
 
     toast({
       title: isTemplate ? 'Template downloaded successfully' : 'CSV exported successfully',
@@ -258,12 +267,12 @@ const B2BRateMatrix = ({ planId }) => {
 
   // Sample CSV headers for template download
   // Use first zone if available, otherwise use placeholder
-  const firstZoneName = zones.length > 0 ? zones[0].name : 'N1'
+  const firstZoneCode = zones.length > 0 ? zones[0].code : 'A_B2B'
   const sampleCSVHeaders = [
     {
-      'Origin Zone': firstZoneName,
-      'Destination Zone': firstZoneName,
-      'Rate Per Kg': '100',
+      origin_zone_code: firstZoneCode,
+      destination_zone_code: firstZoneCode,
+      rate_per_kg: '100',
     },
   ]
 
@@ -548,8 +557,8 @@ const B2BRateMatrix = ({ planId }) => {
               CSV Format Requirements:
             </Text>
             <VStack align="stretch" spacing={1} fontSize="xs" color="blue.600">
-              <Text>• Columns: Origin Zone, Destination Zone, Rate Per Kg</Text>
-              <Text>• Zone names must match existing zone names exactly</Text>
+              <Text>• Columns: origin_zone_code, destination_zone_code, rate_per_kg</Text>
+              <Text>• Zone codes must match the matrix headers (for example A_B2B)</Text>
               <Text>• Rate Per Kg should be a number only (no currency symbols)</Text>
               <Text>• Empty cells will be treated as null/not set</Text>
             </VStack>
