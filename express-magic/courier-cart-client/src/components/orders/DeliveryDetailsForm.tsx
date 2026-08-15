@@ -9,6 +9,7 @@ import type { B2CFormData } from './b2c/B2COrderForm'
 type FormType = 'b2b' | 'b2c'
 
 const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
+  const isCompactB2B = type === 'b2b'
   const {
     control,
     setValue,
@@ -79,13 +80,28 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
   }
 
   return (
-    <Grid container spacing={2}>
+    <Grid
+      container
+      columnSpacing={isCompactB2B ? 1.5 : 2}
+      rowSpacing={isCompactB2B ? 1 : 2}
+    >
       {fields.map((fieldItem) => {
         const isNonEditable = fieldItem.name === 'city' || fieldItem.name === 'state'
         const showLoader = fieldItem.name === 'pincode' ? pinFetching : false
 
         return (
-          <Grid key={fieldItem.name} size={{ xs: 12, md: fieldItem?.name === 'address' ? 12 : 4 }}>
+          <Grid
+            key={fieldItem.name}
+            size={{
+              xs: 12,
+              md:
+                fieldItem.name === 'address'
+                  ? 12
+                  : isCompactB2B && ['companyName', 'gstin'].includes(fieldItem.name)
+                    ? 6
+                    : 4,
+            }}
+          >
             <Controller
               name={fieldItem.name as keyof (B2CFormData & B2BFormData)}
               control={control}
@@ -105,8 +121,9 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
                   label={fieldItem.label}
                   required={fieldItem?.name !== 'buyerEmail' && fieldItem?.name !== 'gstin'} // 👈 not required for email
                   {...field}
+                  topMargin={!isCompactB2B}
                   multiline={fieldItem.name === 'address'}
-                  rows={fieldItem.name === 'address' ? 2 : undefined}
+                  rows={fieldItem.name === 'address' ? (isCompactB2B ? 1 : 2) : undefined}
                   maxLength={fieldItem.name === 'address' ? 200 : undefined}
                   disabled={isNonEditable}
                   error={!!getFieldError(fieldItem.name)}

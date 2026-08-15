@@ -48,7 +48,7 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
         sx={{
           backgroundColor: alpha(BRAND_PRIMARY, 0.03),
           px: compact ? 2 : 2.5,
-          py: compact ? 0.75 : 1.5,
+          py: compact ? 0.5 : 1.5,
           transition: 'all 0.2s ease',
           '&:hover': {
             backgroundColor: alpha(BRAND_PRIMARY, 0.06),
@@ -85,7 +85,7 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
       <AccordionDetails
         sx={{
           px: compact ? 2 : 2.5,
-          py: compact ? 1.5 : 2.5,
+          py: compact ? 1 : 2.5,
           backgroundColor: '#FFFFFF',
         }}
       >

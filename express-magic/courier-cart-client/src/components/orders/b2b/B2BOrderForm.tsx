@@ -503,7 +503,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           {currentStep === 0 && (
             <Stack gap={0} mb={1}>
               <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded compact>
-                <OrderDetailsForm />
+                <OrderDetailsForm compact />
               </FormSectionAccordion>
 
               <FormSectionAccordion title="Recipient Details" icon={<FaUser />} defaultExpanded compact>
