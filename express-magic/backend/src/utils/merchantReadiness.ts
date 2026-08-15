@@ -106,13 +106,6 @@ export async function requireMerchantOrderReadiness(
     )
   }
 
-  if (!readiness.kycVerified) {
-    throw new HttpError(
-      403,
-      'KYC verification is required before creating orders.',
-    )
-  }
-
   if (!readiness.hasPickupAddress) {
     throw new HttpError(
       403,

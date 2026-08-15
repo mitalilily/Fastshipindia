@@ -69,7 +69,7 @@ const sections: Section[] = [
         icon: <PiPassword />,
       },
       {
-        title: 'KYC Details',
+        title: 'KYC Details (Optional)',
         description: 'Review verification status and submitted documents',
         key: '/profile/kyc_details',
         icon: <MdSecurity />,

@@ -1,4 +1,4 @@
-import { alpha, Box, Button, Grid, LinearProgress, Stack, Typography } from '@mui/material'
+import { alpha, Box, Button, Grid, Stack, Typography } from '@mui/material'
 import { MdOutlineFactCheck, MdVerifiedUser } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/auth/AuthContext'
@@ -26,7 +26,6 @@ const GettingStarted = () => {
   const navigate = useNavigate()
 
   const isKycDone = user?.domesticKyc?.status === 'verified'
-  const progress = isKycDone ? 100 : 55
 
   return (
     <Stack gap={2.2}>
@@ -85,40 +84,20 @@ const GettingStarted = () => {
             <Stack spacing={1.2}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Typography sx={{ fontWeight: 800, color: TEXT_PRIMARY, fontSize: '0.9rem' }}>
-                  KYC Details
+                  KYC Details (Optional)
                 </Typography>
                 <MdVerifiedUser size={20} color={isKycDone ? '#178A68' : DE_AMBER} />
               </Stack>
 
               <Typography sx={{ fontSize: '0.88rem', color: TEXT_SECONDARY, fontWeight: 500 }}>
                 {isKycDone
-                  ? 'Your KYC is verified. You are ready for full operations.'
-                  : 'Finish KYC details to unlock uninterrupted shipping workflows.'}
+                  ? 'Your optional KYC verification is complete.'
+                  : 'Add verification details whenever convenient; shipping is not blocked.'}
               </Typography>
 
-              <Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={progress}
-                  sx={{
-                    height: 6,
-                    borderRadius: 1,
-                    bgcolor: alpha(DE_BLUE, 0.1),
-                    '& .MuiLinearProgress-bar': {
-                      borderRadius: 1,
-                      bgcolor: isKycDone ? '#178A68' : DE_AMBER,
-                    },
-                  }}
-                />
-                <Stack direction="row" justifyContent="space-between" mt={0.8}>
-                  <Typography sx={{ fontSize: '11px', color: TEXT_SECONDARY, fontWeight: 700 }}>
-                    Status: {isKycDone ? 'Verified' : 'Pending'}
-                  </Typography>
-                  <Typography sx={{ fontSize: '11px', color: TEXT_SECONDARY, fontWeight: 700 }}>
-                    {progress}%
-                  </Typography>
-                </Stack>
-              </Box>
+              <Typography sx={{ fontSize: '11px', color: TEXT_SECONDARY, fontWeight: 700 }}>
+                Status: {isKycDone ? 'Verified' : 'Not submitted (Optional)'}
+              </Typography>
             </Stack>
           </Box>
         </Grid>

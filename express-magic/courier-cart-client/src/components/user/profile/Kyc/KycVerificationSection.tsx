@@ -12,7 +12,7 @@ import AdditionalDetailsStep, { type AdditionalKYCForm } from './AdditionalInfoS
 import { BusinessStructureStep } from './BusinessStructureStep'
 import ImageCaptureStep from './ImageCaptureStep'
 
-const steps = ['Business Structure', 'Selfie', 'Additional Details']
+const steps = ['Business Structure', 'Selfie (Optional)', 'Additional Details (Optional)']
 
 type ApiError = {
   response?: { data?: { message?: string } }
@@ -42,7 +42,7 @@ const isStepReady = (step: number, details?: Partial<KycDetails> | null) => {
   }
 
   if (step === 1) {
-    return Boolean(details?.selfieUrl)
+    return true
   }
 
   return true
@@ -127,11 +127,6 @@ const KYCVerificationStep: React.FC<{
       (!data.structure || (data?.structure === 'company' && !data?.companyType))
     ) {
       toast.open({ message: 'Select a business structure to continue.', severity: 'warning' })
-      return
-    }
-
-    if (activeStep === 1 && !data.selfieUrl) {
-      toast.open({ message: 'Capture a selfie to continue.', severity: 'warning' })
       return
     }
 
@@ -302,7 +297,7 @@ const KYCVerificationStep: React.FC<{
                     onClick={() => {
                       void handleNext()
                     }}
-                    disabled={!isStepValid || isPending}
+                    disabled={(activeStep === 0 && !isStepValid) || isPending}
                     endIcon={<IoChevronForward />}
                     sx={{
                       fontWeight: 600,

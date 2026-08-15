@@ -153,9 +153,10 @@ export default function Home() {
   const setupSteps = useMemo(
     () => [
       {
-        title: 'Complete KYC',
-        text: 'Verify identity to unlock all features',
+        title: 'Optional KYC',
+        text: 'Add identity verification whenever you are ready',
         done: Boolean(readinessByKey.get('kyc')?.done),
+        optional: true,
         path: '/profile/kyc_details',
       },
       {
@@ -187,7 +188,9 @@ export default function Home() {
   )
 
   const profileProgress = Math.round(
-    (setupSteps.filter((step) => step.done).length / setupSteps.length) * 100,
+    (setupSteps.filter((step) => !step.optional && step.done).length /
+      setupSteps.filter((step) => !step.optional).length) *
+      100,
   )
 
   const statusBreakdown = dashboardStats?.charts?.ordersByStatus || []
@@ -233,10 +236,10 @@ export default function Home() {
               </Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ color: ORANGE, fontWeight: 700, fontSize: { xs: '0.96rem', md: '0.88rem' } }}>
-                  Complete Your KYC
+                  Optional KYC Verification
                 </Typography>
                 <Typography sx={{ color: dim, fontWeight: 500, fontSize: { xs: '0.82rem', md: '0.76rem' }, lineHeight: 1.45 }}>
-                  Verify your identity to unlock COD orders, wallet withdrawals, and more.
+                  Add verification details whenever convenient. You can continue using the panel without it.
                 </Typography>
               </Box>
             </Stack>
@@ -257,7 +260,7 @@ export default function Home() {
                 '&:hover': { bgcolor: '#072B5B' },
               }}
             >
-              Start KYC
+              Add KYC Details
             </Button>
             <Box
               component="button"
