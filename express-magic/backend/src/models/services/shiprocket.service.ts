@@ -9928,6 +9928,38 @@ export const createB2BShipmentService = async (
         } as any)
         .where(eq(b2b_orders.id, pendingOrder.id))
 
+      try {
+        const [bookedOrder] = await db
+          .select()
+          .from(b2b_orders)
+          .where(eq(b2b_orders.id, pendingOrder.id))
+          .limit(1)
+        const generatedInvoice = bookedOrder
+          ? await generateInvoiceForManifestOrderOutsideTransaction(bookedOrder)
+          : null
+        const normalizedInvoiceKey = generatedInvoice?.key
+          ? normalizeToR2KeyOutsideTransaction(generatedInvoice.key)
+          : null
+
+        if (generatedInvoice && normalizedInvoiceKey) {
+          await db
+            .update(b2b_orders)
+            .set({
+              invoice_link: normalizedInvoiceKey,
+              invoice_number: generatedInvoice.invoiceNumber,
+              invoice_date: generatedInvoice.invoiceDate,
+              invoice_amount: generatedInvoice.invoiceAmount,
+              updated_at: new Date(),
+            } as any)
+            .where(eq(b2b_orders.id, pendingOrder.id))
+        }
+      } catch (invoiceError: any) {
+        console.error(
+          `Failed to auto-generate invoice for B2B order ${normalizedOrderNumber}:`,
+          invoiceError?.message || invoiceError,
+        )
+      }
+
       sendWebhookEvent(userId, 'order.created', {
         order_id: pendingOrder.id,
         order_number: normalizedOrderNumber,
@@ -10593,12 +10625,15 @@ async function generateInvoiceForManifestOrderOutsideTransaction(order: any): Pr
     const supportPhone = pickupDetails?.phone || user?.supportPhone || ''
     const supportEmail = user?.supportEmail || prefs?.supportEmail || ''
 
+    const storedInvoiceAmount = Number(order.invoice_amount)
     const invoiceAmount =
-      Number(order.order_amount ?? 0) +
-      Number(order.shipping_charges ?? 0) +
-      Number(order.gift_wrap ?? 0) +
-      Number(order.transaction_fee ?? 0) -
-      (Number(order.discount ?? 0) + Number(order.prepaid_amount ?? 0))
+      Number.isFinite(storedInvoiceAmount) && storedInvoiceAmount > 0
+        ? storedInvoiceAmount
+        : Number(order.order_amount ?? 0) +
+          Number(order.shipping_charges ?? 0) +
+          Number(order.gift_wrap ?? 0) +
+          Number(order.transaction_fee ?? 0) -
+          (Number(order.discount ?? 0) + Number(order.prepaid_amount ?? 0))
 
     let products: Product[] = []
     try {
