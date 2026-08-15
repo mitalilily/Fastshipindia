@@ -105,7 +105,7 @@ export default function B2BInvoicesForm() {
 
   return (
     <Box>
-      <Stack spacing={3}>
+      <Stack spacing={2}>
         {invoiceFields.map((invoice, index) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoiceValue = watch(`invoices.${index}.invoiceValue` as any)
@@ -119,7 +119,7 @@ export default function B2BInvoicesForm() {
             <Paper
               key={invoice.id}
               sx={{
-                p: 3,
+                p: { xs: 1.5, md: 2 },
                 border: '1px solid #E0E6ED',
                 borderRadius: 2,
                 background: '#FAFBFC',
@@ -127,7 +127,7 @@ export default function B2BInvoicesForm() {
               }}
               elevation={0}
             >
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                 <Typography variant="h6" fontWeight={600} color="#333369">
                   Invoice {index + 1}
                 </Typography>
@@ -143,8 +143,8 @@ export default function B2BInvoicesForm() {
                 )}
               </Stack>
 
-              <Grid container spacing={2}>
-                <Grid size={{ md: 6, xs: 12 }}>
+              <Grid container spacing={1.5}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceNumber`}
                     control={control}
@@ -182,7 +182,7 @@ export default function B2BInvoicesForm() {
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceDate`}
                     control={control}
@@ -202,7 +202,7 @@ export default function B2BInvoicesForm() {
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceValue`}
                     control={control}
@@ -237,7 +237,7 @@ export default function B2BInvoicesForm() {
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     name={`invoices.${index}.ebnNumber` as any}
@@ -288,7 +288,7 @@ export default function B2BInvoicesForm() {
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     name={`invoices.${index}.ebnExpiry` as any}
@@ -381,7 +381,7 @@ export default function B2BInvoicesForm() {
                 </Grid>
 
                 {/* Invoice File Upload */}
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceFileUrl`}
                     control={control}
@@ -573,13 +573,13 @@ export default function B2BInvoicesForm() {
 
         {/* Add Invoice Button */}
         <Box>
-          <Button variant="outlined" onClick={handleAddInvoice} fullWidth>
+          <Button variant="outlined" size="small" onClick={handleAddInvoice}>
             + Add Invoice
           </Button>
         </Box>
 
         {/* Total Invoice Value Summary */}
-        {invoiceFields.length > 0 && totalInvoiceValue > 0 && (
+        {invoiceFields.length > 1 && totalInvoiceValue > 0 && (
           <Paper
             sx={{
               p: 2,

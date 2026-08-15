@@ -29,6 +29,14 @@ import PickupLocationForm from '../PickupLocationForm'
 import { SelectCourierForm } from '../SelectCourierForm'
 import B2BInvoicesForm from './B2BInvoicesForm'
 import B2BProductsForm from './B2BProductsForm'
+
+const padDatePart = (value: number) => String(value).padStart(2, '0')
+const getTodayDate = () => {
+  const today = new Date()
+  return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
+}
+const generateInvoiceNumber = () => `INV-${Date.now()}`
+
 // Box structure - top level array
 export type Box = {
   lengthCm: number
@@ -166,8 +174,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       ],
       invoices: [
         {
-          invoiceNumber: '',
-          invoiceDate: '',
+          invoiceNumber: generateInvoiceNumber(),
+          invoiceDate: getTodayDate(),
           invoiceValue: 0,
           invoiceFileUrl: '',
         },
