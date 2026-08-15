@@ -64,7 +64,10 @@ const ImageCaptureStep: React.FC<Props> = ({ onCapture, img }) => {
   return (
     <Box textAlign="center">
       <Typography variant="h6" mb={3} fontWeight={700} color="#333369">
-        Align your face and take a selfie
+        Add a selfie (optional)
+      </Typography>
+      <Typography sx={{ mt: -2, mb: 2, color: '#64748B', fontSize: '0.9rem' }}>
+        You can take a selfie for verification or select Next to skip this step.
       </Typography>
 
       <Box

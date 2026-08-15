@@ -14,7 +14,7 @@ const sectionTabs: Array<{ label: string; value: TopSection; icon: React.ReactNo
   { label: 'User', value: 'user_profile', icon: <FiUser size={15} /> },
   { label: 'Company', value: 'company', icon: <FiFileText size={15} /> },
   { label: 'Bank', value: 'bank_details', icon: <FiCreditCard size={15} /> },
-  { label: 'KYC', value: 'kyc_details', icon: <FiShield size={15} /> },
+  { label: 'KYC (Optional)', value: 'kyc_details', icon: <FiShield size={15} /> },
 ]
 
 function resolveActiveSection(pathname: string): TopSection {
@@ -54,7 +54,7 @@ export default function ProfileLayout() {
               Profile & Verification
             </Typography>
             <Typography variant="body2" sx={{ color: '#5d769e', mt: 0.3 }}>
-              Manage personal details, business identity, bank accounts, and KYC status.
+              Manage personal details, business identity, bank accounts, and optional KYC status.
             </Typography>
           </Box>
 

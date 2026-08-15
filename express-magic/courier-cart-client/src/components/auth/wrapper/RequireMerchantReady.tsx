@@ -174,8 +174,8 @@ export default function RequireMerchantReady({ children }: { children: ReactNode
                   sx={{
                     p: 1.4,
                     borderRadius: 2,
-                    border: `1px solid ${item.done ? readyBorder : pendingBorder}`,
-                    bgcolor: item.done ? readyBg : pendingBg,
+                    border: `1px solid ${item.done || !item.required ? readyBorder : pendingBorder}`,
+                    bgcolor: item.done || !item.required ? readyBg : pendingBg,
                   }}
                 >
                   <Stack
@@ -212,7 +212,7 @@ export default function RequireMerchantReady({ children }: { children: ReactNode
                             }),
                       }}
                     >
-                      {item.done ? 'Review' : item.actionLabel}
+                      {item.done ? 'Review' : !item.required ? 'Optional' : item.actionLabel}
                     </Button>
                   </Stack>
                 </Box>

@@ -14,7 +14,6 @@ import { alpha } from '@mui/material/styles'
 import { useState } from 'react'
 import { FiX } from 'react-icons/fi'
 import { useAuth } from '../context/auth/AuthContext'
-import { useUserProfile } from '../hooks/User/useUserProfile'
 import { usePaymentOptions } from '../hooks/usePaymentOptions'
 import { useRechargeWallet } from '../hooks/useRechargeWallets'
 import { brand } from '../theme/brand'
@@ -37,25 +36,10 @@ const AddMoneyDialog: React.FC<AddMoneyDialogProps> = ({ open, setOpen }) => {
   const [amount, setAmount] = useState<number>(500)
   const recharge = useRechargeWallet()
   const { data: paymentOptions, refetch: refetchPaymentOptions } = usePaymentOptions()
-  const { data: profile } = useUserProfile(true)
 
   const minWalletRecharge = paymentOptions?.minWalletRecharge ?? 0
   const effectiveAmount = amount || 0
-  const kycStatus = profile?.domesticKyc?.status
-  const isKycBlocked = kycStatus !== 'verified'
-
   const handleRecharge = async () => {
-    if (isKycBlocked) {
-      toast.open({
-        message:
-          kycStatus === 'pending' || kycStatus === 'verification_in_progress'
-            ? 'KYC verification is not completed yet. You can recharge once your KYC is verified.'
-            : 'Please complete your KYC to recharge your wallet.',
-        severity: 'warning',
-      })
-      return
-    }
-
     const latestPaymentOptions = await refetchPaymentOptions()
     const latestMinWalletRecharge =
       latestPaymentOptions.data?.minWalletRecharge ?? minWalletRecharge ?? 0

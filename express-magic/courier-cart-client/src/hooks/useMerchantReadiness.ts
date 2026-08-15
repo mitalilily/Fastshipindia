@@ -68,6 +68,7 @@ export const useMerchantReadiness = () => {
     () => [
       {
         key: 'onboarding',
+        required: true,
         title: 'Panel Setup Completed',
         description: 'Finish the onboarding flow so your seller panel is ready for booking.',
         done: isOnboardingComplete(user),
@@ -76,6 +77,7 @@ export const useMerchantReadiness = () => {
       },
       {
         key: 'company',
+        required: true,
         title: 'Company Details Added',
         description: 'Add business identity, address, and primary contact details.',
         done: hasCompanyInfo,
@@ -84,6 +86,7 @@ export const useMerchantReadiness = () => {
       },
       {
         key: 'approval',
+        required: true,
         title: 'Account Approval',
         description: 'Wait for internal review to approve the account for live operations.',
         done: Boolean(user?.approved),
@@ -92,14 +95,16 @@ export const useMerchantReadiness = () => {
       },
       {
         key: 'kyc',
-        title: 'KYC Details Verified',
-        description: 'KYC must be verified before order creation is enabled.',
+        required: false,
+        title: 'KYC Details (Optional)',
+        description: 'Add KYC whenever you want verification; it does not block order creation.',
         done: user?.domesticKyc?.status === 'verified',
         path: '/profile/kyc_details',
-        actionLabel: 'Complete KYC Details',
+        actionLabel: 'Add Optional KYC',
       },
       {
         key: 'pickup',
+        required: true,
         title: 'Pickup Addresses Added',
         description: 'Add at least one pickup location for shipment origin.',
         done: hasPickupAddress,
@@ -108,6 +113,7 @@ export const useMerchantReadiness = () => {
       },
       {
         key: 'wallet',
+        required: true,
         title: 'Wallet Balance Ready',
         description: `Keep at least Rs ${requiredWalletBalance.toLocaleString('en-IN')} available for first-order charges.`,
         done: walletBalance >= requiredWalletBalance,
@@ -118,11 +124,12 @@ export const useMerchantReadiness = () => {
     [hasCompanyInfo, hasPickupAddress, requiredWalletBalance, user, walletBalance],
   )
 
-  const completedCount = checklist.filter((item) => item.done).length
-  const totalCount = checklist.length
+  const requiredChecklist = checklist.filter((item) => item.required)
+  const completedCount = requiredChecklist.filter((item) => item.done).length
+  const totalCount = requiredChecklist.length
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
   const isReady = completedCount === totalCount
-  const firstIncompleteStep = checklist.find((item) => !item.done) || null
+  const firstIncompleteStep = checklist.find((item) => item.required && !item.done) || null
 
   return {
     checklist,

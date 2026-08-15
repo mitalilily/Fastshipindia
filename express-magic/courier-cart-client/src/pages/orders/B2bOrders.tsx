@@ -9,7 +9,6 @@ import CustomDrawer from '../../components/UI/drawer/CustomDrawer'
 import B2BOrderForm from '../../components/orders/b2b/B2BOrderForm'
 import B2BOrdersList from '../../components/orders/b2b/B2bOrdersList'
 import { statusColorMap } from '../../components/orders/b2c/B2COrdersList'
-import { useKycVerification } from '../../hooks/User/useKycVerification'
 import { downloadClientOrdersCsv } from '../../utils/orderCsvExport'
 
 const B2bOrders = () => {
@@ -61,16 +60,13 @@ const B2bOrders = () => {
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const { checkKycBeforeAction } = useKycVerification()
 
   useEffect(() => {
     setDrawerOpen(false)
   }, [location.pathname, location.search, location.hash])
 
   const handleCreateB2BOrder = () => {
-    checkKycBeforeAction(() => {
-      setDrawerOpen(true)
-    })
+    setDrawerOpen(true)
   }
 
   const handleExportCsv = async () => {

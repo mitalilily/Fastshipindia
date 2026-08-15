@@ -47,7 +47,6 @@ import {
 } from '../../../hooks/Orders/useOrders'
 import { usePickupAddresses } from '../../../hooks/Pickup/usePickupAddresses'
 import { usePresignedDownloadMutation } from '../../../hooks/Uploads/usePresignedDownloadUrls'
-import { useKycVerification } from '../../../hooks/User/useKycVerification'
 import type { B2COrder } from '../../../types/generic.types'
 import {
   DELHIVERY_COURIER_FILTER_OPTIONS_BY_NAME,
@@ -571,16 +570,12 @@ const B2COrdersList = () => {
     setBulkFeedback(null)
   }
 
-  const { checkKycBeforeAction } = useKycVerification()
-
   const handleCreateB2COrder = () => {
-    checkKycBeforeAction(() => {
-      setOrderDrawerTitle('Create New B2C Order')
-      setOrderFormDefaults(null)
-      setEditingOrder(null)
-      setOrderFormKey((current) => current + 1)
-      setDrawerOpen(true)
-    })
+    setOrderDrawerTitle('Create New B2C Order')
+    setOrderFormDefaults(null)
+    setEditingOrder(null)
+    setOrderFormKey((current) => current + 1)
+    setDrawerOpen(true)
   }
 
   const handleEditB2COrder = (order: B2COrder) => {
