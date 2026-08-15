@@ -1,11 +1,19 @@
-import { Alert, Box, Button, Grid, IconButton, Paper, Stack, Typography } from '@mui/material'
-import { useState } from 'react'
-import { Controller, useFieldArray, useFormContext } from 'react-hook-form'
+import { Alert, Box, Button, Grid, IconButton, Paper, Stack, Tooltip, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
+import { FaSync } from 'react-icons/fa'
 import { validateInvoiceContent } from '../../../api/b2b.api'
 import CustomInput from '../../UI/inputs/CustomInput'
 import FileUploader, { type UploadedFileInfo } from '../../UI/uploader/FileUploader'
 import type { B2BFormData } from './B2BOrderForm'
+
+const padDatePart = (value: number) => String(value).padStart(2, '0')
+const getTodayDate = () => {
+  const today = new Date()
+  return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
+}
+const generateInvoiceNumber = () => `INV-${Date.now()}`
 
 export default function B2BInvoicesForm() {
   const { control, watch, setValue, getValues, trigger, setError, clearErrors } =
@@ -23,8 +31,35 @@ export default function B2BInvoicesForm() {
     name: 'invoices',
   })
 
-  // Watch boxes for validation
-  const boxes = watch('boxes') || []
+  const boxes = useWatch({ control, name: 'boxes' }) || []
+  const products = useWatch({ control, name: 'products' }) || []
+  const invoices = useWatch({ control, name: 'invoices' }) || []
+  const productsTotal = products.reduce(
+    (sum, product) => sum + Number(product.quantity || 0) * Number(product.unitPrice || 0),
+    0,
+  )
+
+  useEffect(() => {
+    invoiceFields.forEach((_, index) => {
+      if (!getValues(`invoices.${index}.invoiceNumber`)) {
+        setValue(`invoices.${index}.invoiceNumber`, generateInvoiceNumber(), {
+          shouldValidate: true,
+        })
+      }
+      if (!getValues(`invoices.${index}.invoiceDate`)) {
+        setValue(`invoices.${index}.invoiceDate`, getTodayDate(), { shouldValidate: true })
+      }
+    })
+  }, [getValues, invoiceFields, setValue])
+
+  useEffect(() => {
+    if (invoiceFields.length !== 1) return
+
+    setValue('invoices.0.invoiceValue', Number(productsTotal.toFixed(2)), {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }, [invoiceFields.length, productsTotal, setValue])
 
   // Calculate total chargeable weight for EBN validation
   const calculateTotalChargeableWeight = () => {
@@ -39,11 +74,10 @@ export default function B2BInvoicesForm() {
   }
 
   // Calculate total invoice value
-  const totalInvoiceValue = invoiceFields.reduce((sum, _, index) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const invoiceValue = watch(`invoices.${index}.invoiceValue` as any)
-    return sum + Number(invoiceValue || 0)
-  }, 0)
+  const totalInvoiceValue = invoices.reduce(
+    (sum, invoice) => sum + Number(invoice?.invoiceValue || 0),
+    0,
+  )
 
   // Function to check if last invoice is valid before adding new one
   const canAddNewInvoice = async () => {
@@ -62,8 +96,8 @@ export default function B2BInvoicesForm() {
     if (!valid) return
 
     appendInvoice({
-      invoiceNumber: '',
-      invoiceDate: '',
+      invoiceNumber: generateInvoiceNumber(),
+      invoiceDate: getTodayDate(),
       invoiceValue: 0,
       invoiceFileUrl: '',
     })
@@ -71,7 +105,7 @@ export default function B2BInvoicesForm() {
 
   return (
     <Box>
-      <Stack spacing={3}>
+      <Stack spacing={2}>
         {invoiceFields.map((invoice, index) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoiceValue = watch(`invoices.${index}.invoiceValue` as any)
@@ -85,7 +119,7 @@ export default function B2BInvoicesForm() {
             <Paper
               key={invoice.id}
               sx={{
-                p: 3,
+                p: { xs: 1.5, md: 2 },
                 border: '1px solid #E0E6ED',
                 borderRadius: 2,
                 background: '#FAFBFC',
@@ -93,7 +127,7 @@ export default function B2BInvoicesForm() {
               }}
               elevation={0}
             >
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
                 <Typography variant="h6" fontWeight={600} color="#333369">
                   Invoice {index + 1}
                 </Typography>
@@ -109,8 +143,8 @@ export default function B2BInvoicesForm() {
                 )}
               </Stack>
 
-              <Grid container spacing={2}>
-                <Grid size={{ md: 6, xs: 12 }}>
+              <Grid container spacing={1.5}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceNumber`}
                     control={control}
@@ -121,14 +155,38 @@ export default function B2BInvoicesForm() {
                         fullWidth
                         required
                         label="Invoice Number"
+                        topMargin={false}
+                        inputProps={{ readOnly: true }}
+                        helperText={
+                          fieldState.error?.message ||
+                          'Automatically generated by FastShip — no entry needed'
+                        }
+                        postfix={
+                          <Tooltip title="Generate a new Invoice Number">
+                            <FaSync
+                              size={12}
+                              style={{ cursor: 'pointer' }}
+                              onClick={() =>
+                                setValue(
+                                  `invoices.${index}.invoiceNumber`,
+                                  generateInvoiceNumber(),
+                                  {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                    shouldValidate: true,
+                                  },
+                                )
+                              }
+                            />
+                          </Tooltip>
+                        }
                         error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
                       />
                     )}
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceDate`}
                     control={control}
@@ -140,6 +198,7 @@ export default function B2BInvoicesForm() {
                         fullWidth
                         required
                         label="Invoice Date"
+                        topMargin={false}
                         InputLabelProps={{ shrink: true }}
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
@@ -148,13 +207,16 @@ export default function B2BInvoicesForm() {
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceValue`}
                     control={control}
                     rules={{
                       required: 'Invoice Value is required',
-                      min: { value: 0, message: 'Invoice Value must be ≥ 0' },
+                      min: { value: 0.01, message: 'Invoice Value must be greater than ₹0' },
+                      validate: () =>
+                        Math.abs(totalInvoiceValue - productsTotal) < 0.01 ||
+                        `Combined invoice value must equal product total ₹${productsTotal.toFixed(2)}`,
                     }}
                     render={({ field, fieldState }) => (
                       <CustomInput
@@ -163,15 +225,25 @@ export default function B2BInvoicesForm() {
                         fullWidth
                         required
                         label="Invoice Value (₹)"
-                        inputProps={{ min: 0, step: 0.01 }}
+                        topMargin={false}
+                        inputProps={{
+                          min: 0.01,
+                          step: 0.01,
+                          readOnly: invoiceFields.length === 1,
+                        }}
                         error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
+                        helperText={
+                          fieldState.error?.message ||
+                          (invoiceFields.length === 1
+                            ? 'Automatically calculated from Quantity × Unit Price'
+                            : 'Split the product total across all invoices')
+                        }
                       />
                     )}
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     name={`invoices.${index}.ebnNumber` as any}
@@ -209,6 +281,7 @@ export default function B2BInvoicesForm() {
                         fullWidth
                         required={isEbnRequired}
                         label={isEbnRequired ? 'EBN Number * (Required)' : 'EBN Number (Optional)'}
+                        topMargin={false}
                         error={!!fieldState.error}
                         helperText={
                           fieldState.error?.message ||
@@ -222,7 +295,7 @@ export default function B2BInvoicesForm() {
                   />
                 </Grid>
 
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     name={`invoices.${index}.ebnExpiry` as any}
@@ -293,6 +366,7 @@ export default function B2BInvoicesForm() {
                           type="date"
                           fullWidth
                           required={!!currentEbnNumber}
+                          topMargin={false}
                           label={
                             currentEbnNumber ? 'EBN Expiry * (Required)' : 'EBN Expiry (Optional)'
                           }
@@ -315,31 +389,14 @@ export default function B2BInvoicesForm() {
                 </Grid>
 
                 {/* Invoice File Upload */}
-                <Grid size={{ md: 6, xs: 12 }}>
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceFileUrl`}
                     control={control}
-                    rules={{
-                      validate: (value) => {
-                        const currentInvoiceValue = getValues(
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          `invoices.${index}.invoiceValue` as any,
-                        )
-                        const invoiceValue = Number(currentInvoiceValue || 0)
-
-                        // Required if invoiceValue > 0
-                        if (invoiceValue > 0 && !value) {
-                          return 'Invoice file is required when invoice value is greater than ₹0'
-                        }
-
-                        return true
-                      },
-                    }}
                     render={({ field, fieldState }) => {
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const currentInvoiceValue = watch(`invoices.${index}.invoiceValue` as any)
                       const invoiceValue = Number(currentInvoiceValue || 0)
-                      const isRequired = invoiceValue > 0
 
                       const handleFileUploaded = async (files: UploadedFileInfo[]) => {
                         if (files.length > 0) {
@@ -470,12 +527,8 @@ export default function B2BInvoicesForm() {
                             accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                             maxSizeMb={5}
                             folderKey="invoices"
-                            label={
-                              isRequired
-                                ? 'Invoice File * (PDF, JPG, PNG - Max 5MB)'
-                                : 'Invoice File (Optional - for replacement/sample shipments)'
-                            }
-                            required={isRequired}
+                            label="Invoice File (Optional - PDF, JPG, PNG, Max 5MB)"
+                            required={false}
                             onUploaded={handleFileUploaded}
                             fullWidth
                             error={!!fieldState.error}
@@ -511,9 +564,9 @@ export default function B2BInvoicesForm() {
                               {fieldState.error.message}
                             </Typography>
                           )}
-                          {!fieldState.error && isRequired && !field.value && (
+                          {!fieldState.error && !field.value && (
                             <Typography variant="caption" color="#4A5568">
-                              Required when invoice value is greater than ₹0
+                              Optional: FastShip generates the invoice PDF automatically after booking.
                             </Typography>
                           )}
                         </Stack>
@@ -528,13 +581,13 @@ export default function B2BInvoicesForm() {
 
         {/* Add Invoice Button */}
         <Box>
-          <Button variant="outlined" onClick={handleAddInvoice} fullWidth>
+          <Button variant="outlined" size="small" onClick={handleAddInvoice}>
             + Add Invoice
           </Button>
         </Box>
 
         {/* Total Invoice Value Summary */}
-        {invoiceFields.length > 0 && totalInvoiceValue > 0 && (
+        {invoiceFields.length > 1 && totalInvoiceValue > 0 && (
           <Paper
             sx={{
               p: 2,

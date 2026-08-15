@@ -946,7 +946,10 @@ export const fetchAvailableCouriersToUser = async (req: Request, res: Response) 
     return res.json({ success: true, data: couriers ?? [] })
   } catch (err: any) {
     console.error('Error fetching couriers:', err.message)
-    return res.status(500).json({ success: false, error: err.message })
+    const statusCode = Number(err?.statusCode)
+    return res
+      .status(statusCode >= 400 && statusCode < 600 ? statusCode : 500)
+      .json({ success: false, error: err.message || 'Failed to fetch available couriers' })
   }
 }
 

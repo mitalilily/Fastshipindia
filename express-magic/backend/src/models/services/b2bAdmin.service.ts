@@ -13,6 +13,7 @@ import {
   SQLWrapper,
 } from 'drizzle-orm'
 import Papa from 'papaparse'
+import { parseCsvRate, parseZoneRateCsvRows } from '../../utils/b2bCsv'
 
 import { db } from '../client'
 // Try importing the entire module first to debug
@@ -424,6 +425,10 @@ export const importPincodesFromCsv = async (
     (row) => row.pincode && row.pincode.trim(), // Only require pincode
   )
 
+  if (!rows.length) {
+    throw new Error('CSV contains no pincode rows')
+  }
+
   const zoneCache = new Map<string, string>()
 
   const resolveZoneId = async (row: PincodeCsvRecord) => {
@@ -543,6 +548,11 @@ export const importPincodesFromCsv = async (
     } catch (err: any) {
       skipped.push({ row, error: err.message })
     }
+  }
+
+  if (inserted + updated === 0) {
+    const firstError = skipped[0]?.error
+    throw new Error(firstError ? `No pincodes were imported: ${firstError}` : 'No pincodes were imported')
   }
 
   return { inserted, updated, skipped, total: inserted + updated }
@@ -1000,14 +1010,6 @@ export const deleteZoneToZoneRate = async (id: string) => {
   await db.delete(b2bZoneToZoneRates).where(eq(b2bZoneToZoneRates.id, id))
 }
 
-type ZoneRateCsvRecord = {
-  origin_zone_code: string
-  destination_zone_code: string
-  rate_per_kg: string
-  min_charge?: string
-  max_weight_limit?: string
-}
-
 export const importZoneRatesFromCsv = async (
   fileBuffer: Buffer,
   options: {
@@ -1015,58 +1017,61 @@ export const importZoneRatesFromCsv = async (
     planId?: string | null
   },
 ) => {
-  const csv = fileBuffer.toString('utf8')
-  const parsed = Papa.parse<ZoneRateCsvRecord>(csv, {
-    header: true,
-    skipEmptyLines: true,
-  })
-
-  if (parsed.errors?.length) {
-    throw new Error(`CSV parse error: ${parsed.errors[0].message}`)
-  }
-
-  const rows = parsed.data.filter((row) => row.origin_zone_code && row.destination_zone_code)
+  const rows = parseZoneRateCsvRows(fileBuffer)
+  const zoneRows = await db
+    .select({ id: zones.id, code: zones.code, name: zones.name })
+    .from(zones)
+    .where(eq(zones.business_type, 'B2B'))
   const zoneCache = new Map<string, string>()
 
-  const resolveZoneId = async (code: string) => {
-    const key = code.trim().toUpperCase()
-    if (zoneCache.has(key)) return zoneCache.get(key) as string
-
-    const [zone] = await db
-      .select({ id: zones.id })
-      .from(zones)
-      .where(and(eq(zones.code, key), eq(zones.business_type, 'B2B')))
-      .limit(1)
-
-    if (!zone) throw new Error(`Zone code ${key} not found`)
-
-    zoneCache.set(key, zone.id)
-    return zone.id
+  for (const zone of zoneRows) {
+    zoneCache.set(String(zone.code).trim().toUpperCase(), zone.id)
+    zoneCache.set(String(zone.name).trim().toUpperCase(), zone.id)
   }
 
-  let inserted = 0
+  const resolveZoneId = (value: string) => {
+    const key = value.trim().toUpperCase()
+    const zoneId = zoneCache.get(key)
+    if (!zoneId) throw new Error(`B2B zone "${value}" was not found`)
+    return zoneId
+  }
+
+  let saved = 0
   const skipped: any[] = []
 
   for (const row of rows) {
     try {
-      const originZoneId = await resolveZoneId(row.origin_zone_code)
-      const destinationZoneId = await resolveZoneId(row.destination_zone_code)
+      if (!row.originZone || !row.destinationZone) {
+        throw new Error('Origin Zone and Destination Zone are required')
+      }
+
+      const originZoneId = resolveZoneId(row.originZone)
+      const destinationZoneId = resolveZoneId(row.destinationZone)
 
       await upsertZoneToZoneRate({
         originZoneId,
         destinationZoneId,
-        ratePerKg: Number(row.rate_per_kg),
+        ratePerKg: parseCsvRate(row.ratePerKg),
         courierScope: options.courierScope,
         planId: options.planId,
       })
 
-      inserted += 1
+      saved += 1
     } catch (err: any) {
       skipped.push({ row, error: err.message })
     }
   }
 
-  return { inserted, skipped }
+  if (saved === 0) {
+    const firstError = skipped[0]?.error
+    throw new Error(
+      firstError
+        ? `No rates were imported. Row ${skipped[0].row?.rowNumber ?? 2}: ${firstError}`
+        : 'No rates were imported',
+    )
+  }
+
+  return { saved, inserted: saved, skipped, total: rows.length }
 }
 
 // -----------------------------

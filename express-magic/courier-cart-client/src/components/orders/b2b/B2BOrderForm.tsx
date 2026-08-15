@@ -29,12 +29,26 @@ import PickupLocationForm from '../PickupLocationForm'
 import { SelectCourierForm } from '../SelectCourierForm'
 import B2BInvoicesForm from './B2BInvoicesForm'
 import B2BProductsForm from './B2BProductsForm'
+
+const padDatePart = (value: number) => String(value).padStart(2, '0')
+const getTodayDate = () => {
+  const today = new Date()
+  return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
+}
+const generateInvoiceNumber = () => `INV-${Date.now()}`
+
 // Box structure - top level array
 export type Box = {
   lengthCm: number
   breadthCm: number
   heightCm: number
   weightKg: number
+}
+
+export type Product = {
+  productName: string
+  quantity: number
+  unitPrice: number
 }
 
 // Invoice structure - array of invoices
@@ -61,6 +75,9 @@ export type B2BFormData = {
 
   // Boxes array (top level)
   boxes: Box[]
+
+  // Products included in the shipment
+  products: Product[]
 
   // Invoices array
   invoices: Invoice[]
@@ -148,10 +165,17 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           weightKg: 0,
         },
       ],
+      products: [
+        {
+          productName: '',
+          quantity: 1,
+          unitPrice: 0,
+        },
+      ],
       invoices: [
         {
-          invoiceNumber: '',
-          invoiceDate: '',
+          invoiceNumber: generateInvoiceNumber(),
+          invoiceDate: getTodayDate(),
           invoiceValue: 0,
           invoiceFileUrl: '',
         },
@@ -275,6 +299,18 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
             weightKg: Number(box.weightKg || 0),
           })) ?? [],
 
+        order_items:
+          data?.products?.map((product, index) => ({
+            name: product.productName.trim(),
+            sku: `PRODUCT-${index + 1}`,
+            qty: Number(product.quantity || 0),
+            quantity: Number(product.quantity || 0),
+            price: Number(product.unitPrice || 0),
+            hsn: '',
+            discount: 0,
+            tax_rate: 0,
+          })) ?? [],
+
         // Invoices array
         invoices:
           data?.invoices?.map((invoice) => ({
@@ -364,7 +400,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
   return (
     <FormProvider {...methods}>
-      <Stack gap={2} sx={{ height: '100%', position: 'relative' }}>
+      <Stack gap={0} sx={{ height: '100%', position: 'relative' }}>
         <Box
           component="form"
           onSubmit={requestBookingConfirmation}
@@ -375,7 +411,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
               p: { xs: 2, sm: 3 },
               background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)',
               borderRadius: '16px',
-              mb: 3,
+              mb: 2,
               boxShadow: '0 8px 24px rgba(26, 35, 126, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
             }}
@@ -465,27 +501,22 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           </Box>
 
           {currentStep === 0 && (
-            <Stack gap={2} mb={2}>
-              <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded>
-                <OrderDetailsForm />
+            <Stack gap={0} mb={1}>
+              <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded compact>
+                <OrderDetailsForm compact />
               </FormSectionAccordion>
 
-              <FormSectionAccordion title="Recipient Details" icon={<FaUser />} defaultExpanded>
+              <FormSectionAccordion title="Recipient Details" icon={<FaUser />} defaultExpanded compact>
                 <DeliveryDetailsForm type="b2b" />
               </FormSectionAccordion>
 
-              {/* Boxes */}
-              <FormSectionAccordion title="Boxes" icon={<FaBox />} defaultExpanded>
-                <B2BProductsForm />
-              </FormSectionAccordion>
-
               {/* Invoices */}
-              <FormSectionAccordion title="Invoices" icon={<FaFileInvoice />} defaultExpanded>
+              <FormSectionAccordion title="Invoices" icon={<FaFileInvoice />} defaultExpanded compact>
                 <B2BInvoicesForm />
               </FormSectionAccordion>
 
-              {/* Products */}
-              <FormSectionAccordion title="Products & Boxes" icon={<FaBox />} defaultExpanded>
+              {/* Products and package dimensions */}
+              <FormSectionAccordion title="Products & Boxes" icon={<FaBox />} defaultExpanded compact>
                 <B2BProductsForm />
               </FormSectionAccordion>
 
@@ -493,6 +524,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                 title="Optional Charges & Summary"
                 icon={<BiRupee />}
                 defaultExpanded
+                compact
               >
                 <OptionalChargesForm />
               </FormSectionAccordion>
@@ -509,7 +541,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           {currentStep === 1 && <PickupLocationForm />}
 
           {currentStep === 2 && (
-            <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded>
+            <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded compact>
               <SelectCourierForm shipment_type="b2b" />
             </FormSectionAccordion>
           )}

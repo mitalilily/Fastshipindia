@@ -32,9 +32,20 @@ export const useB2BZoneRates = (filters = {}) => {
 
   const importRates = useMutation({
     mutationFn: (formData) => b2bAdminService.importZoneRates(formData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey })
-      toast({ title: 'Zone rates imported', status: 'success', duration: 3000, isClosable: true })
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey })
+      await queryClient.refetchQueries({ queryKey, type: 'active' })
+      const saved = Number(result.saved ?? result.inserted ?? 0)
+      const skipped = Array.isArray(result.skipped) ? result.skipped : []
+      toast({
+        title: skipped.length ? 'Zone rates imported with warnings' : 'Zone rates imported',
+        description: `${saved} rate${saved === 1 ? '' : 's'} saved${
+          skipped.length ? `, ${skipped.length} row${skipped.length === 1 ? '' : 's'} skipped` : ''
+        }.`,
+        status: skipped.length ? 'warning' : 'success',
+        duration: 5000,
+        isClosable: true,
+      })
     },
   })
 

@@ -23,7 +23,7 @@ const allOrderTypes = [
   { key: 'cod', label: 'Cash on Delivery' },
 ]
 
-const OrderDetailsForm = () => {
+const OrderDetailsForm = ({ compact = false }: { compact?: boolean }) => {
   const {
     control,
     clearErrors,
@@ -124,7 +124,7 @@ const OrderDetailsForm = () => {
   }, [paymentOptions, currentOrderType, orderTypes, setValue])
 
   return (
-    <Grid container spacing={2}>
+    <Grid container columnSpacing={compact ? 1.5 : 2} rowSpacing={compact ? 1 : 2}>
       {/* Order ID */}
       <Grid size={{ xs: 12, md: 4 }}>
         <Controller
@@ -136,6 +136,7 @@ const OrderDetailsForm = () => {
               label="Order ID"
               required
               {...field}
+              topMargin={!compact}
               error={!!errors?.orderId || orderIdStatus === 'unavailable'}
               helperText={orderIdHelperText}
               postfix={
@@ -168,6 +169,7 @@ const OrderDetailsForm = () => {
             <CustomDatePicker
               label="Order Date"
               {...field}
+              topMargin={!compact}
               error={!!errors?.orderDate}
               helperText={errors?.orderDate?.message as string}
             />
@@ -185,6 +187,7 @@ const OrderDetailsForm = () => {
             <CustomSelect
               required
               label="Order Type"
+              topMargin={!compact}
               value={field.value || ''}
               onSelect={(value) => field.onChange(value)}
               items={orderTypes}

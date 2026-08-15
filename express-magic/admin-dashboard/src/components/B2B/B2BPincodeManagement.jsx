@@ -21,6 +21,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { IconDownload, IconFileImport, IconPlus } from '@tabler/icons-react'
 import { useMemo, useState } from 'react'
+import { useCouriers } from '../../hooks/useCouriers'
 import {
   AdminSelect,
   DataTable,
@@ -40,6 +41,8 @@ const emptyForm = {
   city: '',
   state: '',
   zoneId: '',
+  courierId: '',
+  serviceProvider: '',
   isOda: false,
   isRemote: false,
   isMall: false,
@@ -60,6 +63,8 @@ const flagFields = [
 const normaliseRow = (row) => ({
   ...row,
   zoneId: row.zoneId ?? row.zone_id ?? '',
+  courierId: row.courierId ?? row.courier_id ?? '',
+  serviceProvider: row.serviceProvider ?? row.service_provider ?? '',
   isOda: row.isOda ?? row.is_oda ?? false,
   isRemote: row.isRemote ?? row.is_remote ?? false,
   isMall: row.isMall ?? row.is_mall ?? false,
@@ -71,7 +76,7 @@ const normaliseRow = (row) => ({
 const downloadTemplate = () => {
   const csv = [
     'pincode,city,state,zone_code,is_oda,is_remote,is_mall,is_sez,is_airport,is_high_security',
-    '110001,New Delhi,Delhi,NORTH,false,false,false,false,false,false',
+    '110001,New Delhi,Delhi,A_B2B,false,false,false,false,false,false',
   ].join('\n')
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
@@ -91,10 +96,21 @@ const B2BPincodeManagement = () => {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [zoneFilter, setZoneFilter] = useState('')
+  const [courierFilter, setCourierFilter] = useState('')
+  const [flagFilter, setFlagFilter] = useState('')
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [importFile, setImportFile] = useState(null)
   const [importZoneId, setImportZoneId] = useState('')
+  const { data: couriers = [] } = useCouriers({ businessType: 'b2b' })
+
+  const selectedCourierFilter = useMemo(() => {
+    if (!courierFilter) return { courierId: '', serviceProvider: '' }
+    const [courierId, serviceProvider] = courierFilter.split('|')
+    return { courierId, serviceProvider: serviceProvider || '' }
+  }, [courierFilter])
+
+  const flagQuery = useMemo(() => (flagFilter ? { [flagFilter]: true } : {}), [flagFilter])
 
   const { data: zones = [], isLoading: zonesLoading } = useQuery({
     queryKey: ['b2b-zones', 'pincode-management'],
@@ -102,13 +118,16 @@ const B2BPincodeManagement = () => {
   })
 
   const { data: pincodeResult, isLoading } = useQuery({
-    queryKey: ['b2b-pincodes', page, search, zoneFilter],
+    queryKey: ['b2b-pincodes', page, search, zoneFilter, courierFilter, flagFilter],
     queryFn: () =>
       b2bAdminService.getPincodes({
         page,
         limit: PAGE_SIZE,
         pincode: search || undefined,
         zone_id: zoneFilter || undefined,
+        courier_id: selectedCourierFilter.courierId || undefined,
+        service_provider: selectedCourierFilter.serviceProvider || undefined,
+        ...flagQuery,
         sortBy: 'pincode',
         sortOrder: 'asc',
       }),
@@ -170,6 +189,12 @@ const B2BPincodeManagement = () => {
       const formData = new FormData()
       formData.append('file', importFile)
       if (importZoneId) formData.append('defaultZoneId', importZoneId)
+      if (selectedCourierFilter.courierId) {
+        formData.append('courierId', selectedCourierFilter.courierId)
+      }
+      if (selectedCourierFilter.serviceProvider) {
+        formData.append('serviceProvider', selectedCourierFilter.serviceProvider)
+      }
       return b2bAdminService.importPincodes(formData)
     },
     onSuccess: (result) => {
@@ -193,7 +218,12 @@ const B2BPincodeManagement = () => {
   })
 
   const openAdd = () => {
-    setForm({ ...emptyForm, zoneId: zoneFilter || zones[0]?.id || '' })
+    setForm({
+      ...emptyForm,
+      zoneId: zoneFilter || zones[0]?.id || '',
+      courierId: selectedCourierFilter.courierId,
+      serviceProvider: selectedCourierFilter.serviceProvider,
+    })
     setErrors({})
     formModal.onOpen()
   }
@@ -221,6 +251,8 @@ const B2BPincodeManagement = () => {
       city: String(form.city).trim(),
       state: String(form.state).trim(),
       zoneId: form.zoneId,
+      courierId: form.courierId || undefined,
+      serviceProvider: form.serviceProvider || undefined,
       flags: Object.fromEntries(flagFields.map(([key]) => [key, Boolean(form[key])])),
     })
   }
@@ -236,6 +268,16 @@ const B2BPincodeManagement = () => {
       render: (zoneId) => {
         const zone = zoneById.get(String(zoneId))
         return zone ? `${zone.code} — ${zone.name}` : 'Unassigned'
+      },
+    },
+    {
+      key: 'courierId',
+      label: 'Courier',
+      w: '220px',
+      render: (courierId, row) => {
+        if (!courierId && !row.serviceProvider) return <Text color={adminUi.muted}>Global</Text>
+        const courier = couriers.find((item) => String(item.id) === String(courierId))
+        return courier?.name || row.serviceProvider || `Courier #${courierId}`
       },
     },
     {
@@ -287,6 +329,40 @@ const B2BPincodeManagement = () => {
               </option>
             ))}
           </AdminSelect>
+          <AdminSelect
+            value={courierFilter}
+            onChange={(value) => {
+              setCourierFilter(value)
+              setPage(1)
+            }}
+            maxW="290px"
+          >
+            <option value="">All couriers</option>
+            {couriers.map((courier) => {
+              const provider = courier.serviceProvider || courier.service_provider || ''
+              return (
+                <option key={courier.id} value={`${courier.id}|${provider}`}>
+                  {courier.name}
+                </option>
+              )
+            })}
+          </AdminSelect>
+          <AdminSelect
+            value={flagFilter}
+            onChange={(value) => {
+              setFlagFilter(value)
+              setPage(1)
+            }}
+            maxW="220px"
+          >
+            <option value="">All flags</option>
+            <option value="is_oda">ODA</option>
+            <option value="is_remote">Remote</option>
+            <option value="is_mall">Mall</option>
+            <option value="is_sez">SEZ / Port</option>
+            <option value="is_airport">Airport</option>
+            <option value="is_high_security">High Security</option>
+          </AdminSelect>
           <Text color={adminUi.muted} fontSize="sm">
             {total.toLocaleString('en-IN')} pincodes
           </Text>
@@ -317,7 +393,7 @@ const B2BPincodeManagement = () => {
         rows={rows}
         loading={isLoading}
         rowKey="id"
-        minW="1080px"
+        minW="1280px"
         emptyText="No pincodes found. Use Add Pincode or Import CSV to configure coverage."
         actions={(row) => (
           <HStack spacing={2} justify="flex-end">
@@ -398,6 +474,27 @@ const B2BPincodeManagement = () => {
               <FormLabel>State</FormLabel>
               <Input value={form.state} onChange={(event) => setForm((value) => ({ ...value, state: event.target.value }))} />
               <FormErrorMessage>{errors.state}</FormErrorMessage>
+            </FormControl>
+            <FormControl>
+              <FormLabel>Courier scope</FormLabel>
+              <AdminSelect
+                value={form.courierId ? `${form.courierId}|${form.serviceProvider || ''}` : ''}
+                onChange={(value) => {
+                  const [courierId = '', serviceProvider = ''] = value.split('|')
+                  setForm((current) => ({ ...current, courierId, serviceProvider }))
+                }}
+                maxW="100%"
+              >
+                <option value="">Global (all couriers)</option>
+                {couriers.map((courier) => {
+                  const provider = courier.serviceProvider || courier.service_provider || ''
+                  return (
+                    <option key={courier.id} value={`${courier.id}|${provider}`}>
+                      {courier.name}
+                    </option>
+                  )
+                })}
+              </AdminSelect>
             </FormControl>
           </SimpleGrid>
           <Box>

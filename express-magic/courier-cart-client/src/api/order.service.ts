@@ -183,6 +183,17 @@ export type CreateB2BShipmentParams = {
     weightKg: number
   }>
 
+  order_items: Array<{
+    name: string
+    sku: string
+    qty: number
+    quantity?: number
+    price: number
+    hsn: string
+    discount: number
+    tax_rate: number
+  }>
+
   // Invoices array
   invoices: Array<{
     invoiceNumber: string

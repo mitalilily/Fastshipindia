@@ -496,10 +496,13 @@ export const importAdditionalChargesFromCsv = async (
     throw new Error(`CSV parse error: ${parsed.errors[0].message}`)
   }
 
-  const rows = parsed.data.filter((row) => {
-    // At least courier_id or service_provider should be present
-    return row.courier_id || row.service_provider
-  })
+  const rows = parsed.data.filter((row) =>
+    Object.values(row).some((value) => value != null && String(value).trim() !== ''),
+  )
+
+  if (!rows.length) {
+    throw new Error('CSV contains no additional-charge rows')
+  }
 
   let inserted = 0
   let updated = 0
@@ -625,7 +628,16 @@ export const importAdditionalChargesFromCsv = async (
     }
   }
 
-  return { inserted, updated, skipped }
+  if (inserted + updated === 0) {
+    const firstError = skipped[0]?.error
+    throw new Error(
+      firstError
+        ? `No additional charges were imported: ${firstError}`
+        : 'No additional charges were imported',
+    )
+  }
+
+  return { inserted, updated, skipped, total: rows.length }
 }
 
 // -----------------------------

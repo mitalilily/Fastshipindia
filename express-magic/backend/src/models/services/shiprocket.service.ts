@@ -104,6 +104,7 @@ import {
   hasUsableXpressbeesCredentials,
   type XpressbeesConfig,
 } from './courierCredentials.service'
+import { getDelhiveryB2BCredentials } from './delhiveryB2BCredentials.service'
 import { DelhiveryService } from './couriers/delhivery.service'
 import {
   DelhiveryB2BService,
@@ -5290,10 +5291,22 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         : (userOrOptions ?? {})
 
     const { userId, planIdOverride, planFallbackName } = options
-    const normalizeProviderKey = (value?: string | null) =>
-      String(value || '')
+    const delhiveryCredentials = await getDelhiveryB2BCredentials()
+    if (!delhiveryCredentials.username || !delhiveryCredentials.password) {
+      throw new HttpError(
+        503,
+        'Delhivery B2B credentials are not configured. Ask an admin to save and test the B2B username and password in Courier Credentials.',
+      )
+    }
+    const normalizeProviderKey = (value?: string | null) => {
+      const normalized = String(value || '')
         .trim()
         .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+
+      if (normalized.startsWith('delhivery')) return 'delhivery'
+      return normalized
+    }
     const makeCourierIdentityKey = (courier: {
       id: number | string
       integration_type?: string | null
@@ -5400,10 +5413,15 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         destinationPincode,
         destinationZoneId,
       })
-      throw new Error(
-        `B2B zone lookup failed. Origin zone: ${
-          originZoneId ? 'found' : 'not found'
-        }, Destination zone: ${destinationZoneId ? 'found' : 'not found'}`,
+      const missingPincodes = [
+        !originZoneId ? `pickup ${originPincode || 'unknown'}` : null,
+        !destinationZoneId ? `delivery ${destinationPincode || 'unknown'}` : null,
+      ]
+        .filter(Boolean)
+        .join(' and ')
+      throw new HttpError(
+        422,
+        `Delhivery B2B zone mapping is missing for ${missingPincodes}. Ask an admin to add the pincode mapping and zone rate.`,
       )
     }
 
@@ -5437,16 +5455,30 @@ export const fetchAvailableCouriersWithRatesB2B = async (
 
     // Step 5: Fetch B2B zone-to-zone rates
     // Get enabled couriers first - filter by business type for B2B
-    const systemCourierRows = await db
-      .select({ id: couriers.id, serviceProvider: couriers.serviceProvider, name: couriers.name })
+    const enabledB2BCourierRows = await db
+      .select({
+        id: couriers.id,
+        serviceProvider: couriers.serviceProvider,
+        name: couriers.name,
+        createdAt: couriers.createdAt,
+      })
       .from(couriers)
       .where(
         and(
           eq(couriers.isEnabled, true),
           sql`${couriers.businessType} @> '["b2b"]'::jsonb`,
-          sql`lower(${couriers.serviceProvider}) in ('delhivery', 'delhivery_b2b')`,
         ),
       )
+    const systemCourierRows = enabledB2BCourierRows.filter(
+      (row) => normalizeProviderKey(row.serviceProvider) === 'delhivery',
+    )
+
+    if (!systemCourierRows.length) {
+      throw new HttpError(
+        422,
+        'No enabled Delhivery B2B courier is configured. Ask an admin to enable a Delhivery courier for B2B.',
+      )
+    }
 
     const shadowfaxRows = systemCourierRows.filter(
       (row) => normalizeProviderKey(row.serviceProvider) === 'shadowfax',
@@ -5462,21 +5494,6 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         availableCourierNames: shadowfaxRows.map((row) => row.name),
       })
     }
-
-    const systemCourierMap = systemCourierRows.reduce<Record<string, Set<number>>>((acc, row) => {
-      const providerKey = (row.serviceProvider || '').toLowerCase()
-      if (!providerKey) return acc
-      if (
-        providerKey === 'shadowfax' &&
-        shouldFilterShadowfaxByName &&
-        !shadowfaxCourierMatchesMode(row.name)
-      ) {
-        return acc
-      }
-      if (!acc[providerKey]) acc[providerKey] = new Set<number>()
-      acc[providerKey].add(Number(row.id))
-      return acc
-    }, {})
 
     // Fetch zone-to-zone rates for all enabled couriers
     const effectiveDate = new Date()
@@ -5515,64 +5532,73 @@ export const fetchAvailableCouriersWithRatesB2B = async (
       .where(and(...rateConditions))
       .orderBy(desc(b2bZoneToZoneRates.effective_from))
 
+    if (!zoneToZoneRates.length) {
+      throw new HttpError(
+        422,
+        'No active Delhivery B2B rate is configured for this zone pair and plan. Ask an admin to add a zone-to-zone rate.',
+      )
+    }
+
     // Step 6: Build courier list with rates
     const courierMap = new Map<number, any>()
 
-    for (const rate of zoneToZoneRates) {
-      if (!rate.courierId) continue
+    for (const courierRow of systemCourierRows) {
+      const courierId = Number(courierRow.id)
+      const providerKey = normalizeProviderKey(courierRow.serviceProvider)
+      let selectedRate: (typeof zoneToZoneRates)[number] | undefined
+      let selectedPriority = -1
 
-      // Check if courier is enabled
-      const providerKey = (rate.serviceProvider || '').toLowerCase()
-      const isEnabled = providerKey && systemCourierMap[providerKey]?.has(Number(rate.courierId))
+      // Prefer an exact courier rate, then a provider rate, and finally the
+      // global "All Couriers" rate configured in the admin matrix. The query
+      // is already newest-first, so equal-scope duplicates keep the latest.
+      for (const rate of zoneToZoneRates) {
+        const rateCourierId = rate.courierId == null ? null : Number(rate.courierId)
+        const rateProviderKey = normalizeProviderKey(rate.serviceProvider)
 
-      if (!isEnabled) continue
+        if (rateCourierId != null && rateCourierId !== courierId) continue
+        if (rateProviderKey && rateProviderKey !== providerKey) continue
 
-      // Get or create courier entry
-      if (!courierMap.has(rate.courierId)) {
-        const [courierRow] = await db
-          .select()
-          .from(couriers)
-          .where(eq(couriers.id, rate.courierId))
-          .limit(1)
+        const priority = rateCourierId != null ? (rateProviderKey ? 4 : 3) : rateProviderKey ? 2 : 1
+        if (priority > selectedPriority) {
+          selectedRate = rate
+          selectedPriority = priority
+        }
+      }
 
-        if (!courierRow) continue
+      if (!selectedRate) continue
 
-        courierMap.set(rate.courierId, {
-          id: courierRow.id,
-          name: courierRow.name,
-          integration_type: rate.serviceProvider?.toLowerCase() || 'unknown',
-          serviceProvider: rate.serviceProvider?.toLowerCase(),
-          localRates: {},
-          approxZone: {
-            originZoneId,
-            destinationZoneId,
+      courierMap.set(courierId, {
+        id: courierRow.id,
+        name: courierRow.name,
+        integration_type: providerKey,
+        serviceProvider: providerKey,
+        pricingServiceProvider: selectedRate.serviceProvider || courierRow.serviceProvider || null,
+        localRates: {
+          forward: {
+            ratePerKg: selectedRate.ratePerKg,
+            volumetricFactor: selectedRate.volumetricFactor,
           },
-          provider_serviceability:
-            String(rate.serviceProvider || '')
-              .trim()
-              .toLowerCase() === 'shadowfax'
-              ? {
-                  mode: requestedShadowfaxMode,
-                  service_mode: requestedShadowfaxService,
-                  shipping_mode: requestedShadowfaxService,
-                }
-              : null,
-          courier_option_key: makeCourierIdentityKey({
-            id: courierRow.id,
-            integration_type: rate.serviceProvider?.toLowerCase() || null,
-            serviceProvider: rate.serviceProvider?.toLowerCase() || null,
-            max_slab_weight: null,
-          }),
-          createdAt: courierRow.createdAt,
-        })
-      }
-
-      // Add rate to courier
-      const courier = courierMap.get(rate.courierId)!
-      courier.localRates.forward = {
-        ratePerKg: rate.ratePerKg,
-        volumetricFactor: rate.volumetricFactor,
-      }
+        },
+        approxZone: {
+          originZoneId,
+          destinationZoneId,
+        },
+        provider_serviceability:
+          providerKey === 'shadowfax'
+            ? {
+                mode: requestedShadowfaxMode,
+                service_mode: requestedShadowfaxService,
+                shipping_mode: requestedShadowfaxService,
+              }
+            : null,
+        courier_option_key: makeCourierIdentityKey({
+          id: courierRow.id,
+          integration_type: providerKey,
+          serviceProvider: providerKey,
+          max_slab_weight: null,
+        }),
+        createdAt: courierRow.createdAt,
+      })
     }
 
     // Step 7: Convert map to array and filter couriers with rates
@@ -5582,6 +5608,13 @@ export const fetchAvailableCouriersWithRatesB2B = async (
 
     // ✅ Final filter: Ensure all couriers have correct business_type for B2B
     combined = await filterCouriersByBusinessType(combined, 'b2b')
+
+    if (!combined.length) {
+      throw new HttpError(
+        422,
+        'No matching Delhivery B2B courier rate is enabled for this route. Check the courier and zone-rate configuration.',
+      )
+    }
 
     combined = await Promise.all(
       combined.map(async (courier: any) => {
@@ -5598,7 +5631,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
               (params.payment_type ?? 'prepaid').toUpperCase() === 'COD' ? 'COD' : 'PREPAID',
             courierScope: {
               courierId: Number(courier.id),
-              serviceProvider: courier.integration_type ?? courier.serviceProvider ?? undefined,
+              serviceProvider: courier.pricingServiceProvider || undefined,
             },
             pickupDate: (params as any).pickup_date,
             deliveryAddress: '',
@@ -9928,6 +9961,38 @@ export const createB2BShipmentService = async (
         } as any)
         .where(eq(b2b_orders.id, pendingOrder.id))
 
+      try {
+        const [bookedOrder] = await db
+          .select()
+          .from(b2b_orders)
+          .where(eq(b2b_orders.id, pendingOrder.id))
+          .limit(1)
+        const generatedInvoice = bookedOrder
+          ? await generateInvoiceForManifestOrderOutsideTransaction(bookedOrder)
+          : null
+        const normalizedInvoiceKey = generatedInvoice?.key
+          ? normalizeToR2KeyOutsideTransaction(generatedInvoice.key)
+          : null
+
+        if (generatedInvoice && normalizedInvoiceKey) {
+          await db
+            .update(b2b_orders)
+            .set({
+              invoice_link: normalizedInvoiceKey,
+              invoice_number: generatedInvoice.invoiceNumber,
+              invoice_date: generatedInvoice.invoiceDate,
+              invoice_amount: generatedInvoice.invoiceAmount,
+              updated_at: new Date(),
+            } as any)
+            .where(eq(b2b_orders.id, pendingOrder.id))
+        }
+      } catch (invoiceError: any) {
+        console.error(
+          `Failed to auto-generate invoice for B2B order ${normalizedOrderNumber}:`,
+          invoiceError?.message || invoiceError,
+        )
+      }
+
       sendWebhookEvent(userId, 'order.created', {
         order_id: pendingOrder.id,
         order_number: normalizedOrderNumber,
@@ -10593,12 +10658,15 @@ async function generateInvoiceForManifestOrderOutsideTransaction(order: any): Pr
     const supportPhone = pickupDetails?.phone || user?.supportPhone || ''
     const supportEmail = user?.supportEmail || prefs?.supportEmail || ''
 
+    const storedInvoiceAmount = Number(order.invoice_amount)
     const invoiceAmount =
-      Number(order.order_amount ?? 0) +
-      Number(order.shipping_charges ?? 0) +
-      Number(order.gift_wrap ?? 0) +
-      Number(order.transaction_fee ?? 0) -
-      (Number(order.discount ?? 0) + Number(order.prepaid_amount ?? 0))
+      Number.isFinite(storedInvoiceAmount) && storedInvoiceAmount > 0
+        ? storedInvoiceAmount
+        : Number(order.order_amount ?? 0) +
+          Number(order.shipping_charges ?? 0) +
+          Number(order.gift_wrap ?? 0) +
+          Number(order.transaction_fee ?? 0) -
+          (Number(order.discount ?? 0) + Number(order.prepaid_amount ?? 0))
 
     let products: Product[] = []
     try {

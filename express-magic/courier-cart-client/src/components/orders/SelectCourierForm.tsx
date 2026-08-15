@@ -100,8 +100,13 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
         totalWeight += chargeableWeightGrams // Sum chargeable weights in grams
       })
     }
-    // For B2B, product price is not stored in boxes, it's in invoices
-    // totalProductPrice remains 0 or can be calculated from invoices if needed
+    totalProductPrice = products?.reduce(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (sum, product: any) =>
+        sum +
+        Number(product.unitPrice ?? product.price ?? 0) * Number(product.quantity ?? 1),
+      0,
+    )
   } else if (shipment_type === 'b2c') {
     totalWeight = normalizeParcelWeightInputToGrams(watch('weight') ?? 0)
     totalProductPrice = products?.reduce(
@@ -115,19 +120,22 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     (sum, invoice) => sum + Number(invoice?.invoiceValue ?? 0),
     0,
   )
+  const b2bDeclaredValue =
+    totalB2BInvoiceValue > 0 ? totalB2BInvoiceValue : Math.max(totalProductPrice, 0)
+  const merchandiseValue = shipment_type === 'b2b' ? b2bDeclaredValue : totalProductPrice
 
   // Total shown to seller: customer-facing charges only (what customer pays)
   // Includes: products + shipping + COD (for COD orders only) + transaction_fee + gift_wrap - discount - prepaid
   // Does NOT include courier freight/COD/other charges (those are what seller pays to courier)
   const totalOrderValue =
-    totalProductPrice + shippingCharges + transactionFee + giftWrap - discount - prepaidAmount
+    merchandiseValue + shippingCharges + transactionFee + giftWrap - discount - prepaidAmount
   const declaredOrderValue = Math.max(
-    totalProductPrice + shippingCharges + transactionFee + giftWrap - discount,
+    merchandiseValue + shippingCharges + transactionFee + giftWrap - discount,
     0,
   )
   const insuranceChargeBasis =
     shipment_type === 'b2b'
-      ? Math.max(totalB2BInvoiceValue + transactionFee - discount, 0)
+      ? Math.max(b2bDeclaredValue + transactionFee - discount, 0)
       : declaredOrderValue
   const insuranceCharge = computeInsuranceChargePreview({
     enabled: Boolean(paymentOptions?.insuranceChargeEnabled),
@@ -141,12 +149,17 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const shouldShowWalletDebitPreview =
     Boolean(selectedCourierOptionKey || selectedCourierId) && walletDebitPreview > 0
   const courierPayloadOrderAmount =
-    declaredOrderValue > 0 ? declaredOrderValue : Math.max(totalProductPrice, 0)
+    declaredOrderValue > 0 ? declaredOrderValue : Math.max(merchandiseValue, 0)
   const codChargeBasis = Math.max(totalOrderValue, 0)
 
   const cod = orderType === 'cod' ? 1 : 0
 
   // COURIER API payload
+  const b2bLength = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.lengthCm || 0)))
+  const b2bBreadth = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.breadthCm || 0)))
+  const b2bHeight = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.heightCm || 0)))
+  const courierRequestWeight = shipment_type === 'b2b' ? totalWeight / 1000 : totalWeight
+
   const courierPayload: UseAvailableCouriersParams = {
     pickupPincode,
     deliveryPincode,
@@ -154,7 +167,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     pickupId,
     pickupAddressKey: `${pickupPincode}-${pickupAddressLine}-${pickupCity}-${pickupState}`,
     deliveryAddressKey: `${deliveryPincode}-${deliveryAddressLine}-${deliveryCity}-${deliveryState}`,
-    weight: totalWeight,
+    weight: courierRequestWeight,
     cod,
     payment_type: orderType,
     orderAmount: courierPayloadOrderAmount,
@@ -166,17 +179,26 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     courierPayload.length = length
     courierPayload.breadth = breadth
     courierPayload.height = height
+  } else {
+    courierPayload.length = b2bLength
+    courierPayload.breadth = b2bBreadth
+    courierPayload.height = b2bHeight
   }
 
-  const { data: couriers, isLoading, isError, isFetching } = useAvailableCouriers(courierPayload)
+  const { data: couriers, error, isLoading, isError, isFetching } =
+    useAvailableCouriers(courierPayload)
   const availableCouriers = (couriers ?? []).filter((courier) => {
     if (shipment_type !== 'b2b') return true
 
     const provider = String(courier?.integration_type ?? courier?.serviceProvider ?? '')
       .trim()
       .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
     const name = String(courier?.name ?? '').toLowerCase()
-    return provider === 'delhivery' || provider === 'delhivery_b2b' || name.includes('delhivery')
+    return (
+      provider.startsWith('delhivery') ||
+      name.includes('delhivery')
+    )
   })
   if (!pickupPincode || !deliveryPincode || !totalWeight) {
     return <Typography>Fill pickup, delivery, and weight first to fetch couriers</Typography>
@@ -190,7 +212,23 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
         </Typography>
       </Paper>
     )
-  if (isError) return <Typography color="error">Failed to fetch couriers</Typography>
+  if (isError) {
+    const errorMessage =
+      error instanceof Error && error.message
+        ? error.message
+        : 'Failed to fetch Delhivery B2B couriers. Please try again.'
+
+    return (
+      <Paper sx={{ p: 2.5, border: '1px solid', borderColor: 'error.light' }}>
+        <Typography color="error" fontWeight={700}>
+          {shipment_type === 'b2b' ? 'Delhivery B2B setup required' : 'Failed to fetch couriers'}
+        </Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+          {errorMessage}
+        </Typography>
+      </Paper>
+    )
+  }
   if (!availableCouriers.length)
     return (
       <Typography color={shipment_type === 'b2b' ? 'warning.main' : 'text.primary'}>
