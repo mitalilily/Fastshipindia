@@ -5542,64 +5542,63 @@ export const fetchAvailableCouriersWithRatesB2B = async (
     // Step 6: Build courier list with rates
     const courierMap = new Map<number, any>()
 
-    for (const rate of zoneToZoneRates) {
-      if (!rate.courierId) continue
+    for (const courierRow of systemCourierRows) {
+      const courierId = Number(courierRow.id)
+      const providerKey = normalizeProviderKey(courierRow.serviceProvider)
+      let selectedRate: (typeof zoneToZoneRates)[number] | undefined
+      let selectedPriority = -1
 
-      // Check if courier is enabled
-      const rateProviderKey = normalizeProviderKey(rate.serviceProvider)
-      const matchingSystemCouriers = systemCourierRows.filter(
-        (row) => Number(row.id) === Number(rate.courierId),
-      )
-      const matchedSystemCourier = rateProviderKey
-        ? matchingSystemCouriers.find(
-            (row) => normalizeProviderKey(row.serviceProvider) === rateProviderKey,
-          )
-        : matchingSystemCouriers.length === 1
-          ? matchingSystemCouriers[0]
-          : undefined
+      // Prefer an exact courier rate, then a provider rate, and finally the
+      // global "All Couriers" rate configured in the admin matrix. The query
+      // is already newest-first, so equal-scope duplicates keep the latest.
+      for (const rate of zoneToZoneRates) {
+        const rateCourierId = rate.courierId == null ? null : Number(rate.courierId)
+        const rateProviderKey = normalizeProviderKey(rate.serviceProvider)
 
-      if (!matchedSystemCourier) continue
-      const providerKey = normalizeProviderKey(matchedSystemCourier.serviceProvider)
+        if (rateCourierId != null && rateCourierId !== courierId) continue
+        if (rateProviderKey && rateProviderKey !== providerKey) continue
 
-      // Get or create courier entry
-      if (!courierMap.has(rate.courierId)) {
-        const courierRow = matchedSystemCourier
+        const priority = rateCourierId != null ? (rateProviderKey ? 4 : 3) : rateProviderKey ? 2 : 1
+        if (priority > selectedPriority) {
+          selectedRate = rate
+          selectedPriority = priority
+        }
+      }
 
-        courierMap.set(rate.courierId, {
+      if (!selectedRate) continue
+
+      courierMap.set(courierId, {
+        id: courierRow.id,
+        name: courierRow.name,
+        integration_type: providerKey,
+        serviceProvider: providerKey,
+        pricingServiceProvider: selectedRate.serviceProvider || courierRow.serviceProvider || null,
+        localRates: {
+          forward: {
+            ratePerKg: selectedRate.ratePerKg,
+            volumetricFactor: selectedRate.volumetricFactor,
+          },
+        },
+        approxZone: {
+          originZoneId,
+          destinationZoneId,
+        },
+        provider_serviceability:
+          providerKey === 'shadowfax'
+            ? {
+                mode: requestedShadowfaxMode,
+                service_mode: requestedShadowfaxService,
+                shipping_mode: requestedShadowfaxService,
+              }
+            : null,
+        courier_option_key: makeCourierIdentityKey({
           id: courierRow.id,
-          name: courierRow.name,
           integration_type: providerKey,
           serviceProvider: providerKey,
-          pricingServiceProvider: rate.serviceProvider || null,
-          localRates: {},
-          approxZone: {
-            originZoneId,
-            destinationZoneId,
-          },
-          provider_serviceability:
-            providerKey === 'shadowfax'
-              ? {
-                  mode: requestedShadowfaxMode,
-                  service_mode: requestedShadowfaxService,
-                  shipping_mode: requestedShadowfaxService,
-                }
-              : null,
-          courier_option_key: makeCourierIdentityKey({
-            id: courierRow.id,
-            integration_type: providerKey,
-            serviceProvider: providerKey,
-            max_slab_weight: null,
-          }),
-          createdAt: courierRow.createdAt,
-        })
-      }
-
-      // Add rate to courier
-      const courier = courierMap.get(rate.courierId)!
-      courier.localRates.forward = {
-        ratePerKg: rate.ratePerKg,
-        volumetricFactor: rate.volumetricFactor,
-      }
+          max_slab_weight: null,
+        }),
+        createdAt: courierRow.createdAt,
+      })
     }
 
     // Step 7: Convert map to array and filter couriers with rates
