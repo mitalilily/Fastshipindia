@@ -227,7 +227,8 @@ export default function Sidebar({
   const location = useLocation()
   const theme = useTheme()
   const { user } = useAuth()
-  const isSidebarExpanded = temporary || pinned
+  const [hovered, setHovered] = useState(false)
+  const isSidebarExpanded = temporary || pinned || hovered
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
   const isDark = theme.palette.mode === 'dark'
   const DARK_BG = isDark ? '#151b23' : '#ffffff'
@@ -248,6 +249,10 @@ export default function Sidebar({
   useEffect(() => {
     if (!isSidebarExpanded) setExpandedItems({})
   }, [isSidebarExpanded])
+
+  useEffect(() => {
+    if (temporary || pinned) setHovered(false)
+  }, [pinned, temporary])
 
   useEffect(() => {
     const nextExpanded: Record<string, boolean> = {}
@@ -458,6 +463,12 @@ export default function Sidebar({
         boxShadow: 'none',
         contain: 'layout paint style',
         willChange: temporary ? 'auto' : 'width',
+      }}
+      onMouseEnter={() => {
+        if (!temporary && !pinned) setHovered(true)
+      }}
+      onMouseLeave={() => {
+        if (!temporary && !pinned) setHovered(false)
       }}
     >
       <Box
