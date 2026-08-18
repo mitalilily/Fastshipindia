@@ -925,21 +925,71 @@ export const updateDelhiveryB2BCredentialsController = async (req: Request, res:
   }
 }
 
+const buildSavedDelhiveryB2BCredentials = (
+  saved: typeof courier_credentials.$inferSelect,
+) => {
+  const metadata = saved.metadata || {}
+
+  return {
+    apiBase: saved.apiBase || DEFAULT_DELHIVERY_B2B_API_BASE,
+    username: saved.username || '',
+    password: saved.password || '',
+    clientId: saved.clientId || '',
+    warehouseId: String(metadata.warehouse_id || ''),
+    freightMode: metadata.freight_mode === 'fod' ? 'fod' : 'fop',
+    fmPickup: metadata.fm_pickup !== false,
+  } as const
+}
+
 export const testDelhiveryB2BCredentialsController = async (_req: Request, res: Response) => {
+  let testedCredentials:
+    | ReturnType<typeof buildSavedDelhiveryB2BCredentials>
+    | undefined
+
   try {
-    const login = await new DelhiveryB2BService().login(true)
+    const [saved] = await db
+      .select()
+      .from(courier_credentials)
+      .where(eq(courier_credentials.provider, DELHIVERY_B2B_PROVIDER))
+      .limit(1)
+
+    if (!saved) {
+      return res.status(400).json({
+        success: false,
+        message: 'Save Delhivery B2B credentials before testing',
+      })
+    }
+
+    testedCredentials = buildSavedDelhiveryB2BCredentials(saved)
+    if (!testedCredentials.username || !testedCredentials.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Save Delhivery B2B username and password before testing',
+      })
+    }
+
+    const login = await new DelhiveryB2BService(testedCredentials).login(true)
     return res.json({
       success: true,
       data: {
         authenticated: true,
+        source: 'saved_credentials',
+        apiBase: testedCredentials.apiBase,
+        username: testedCredentials.username,
         expiresAt: new Date(login.expiresAt).toISOString(),
       },
     })
   } catch (error: any) {
     const statusCode = Number(error?.statusCode || 500)
+    const rejectedLogin = statusCode === 401 || statusCode === 403
+    const message =
+      rejectedLogin && testedCredentials
+        ? `Delhivery B2B rejected the saved credentials for ${testedCredentials.username} at ${testedCredentials.apiBase}. Check the Dev/Production API base URL and password.`
+        : error?.message || 'Delhivery B2B credential test failed'
+
     return res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
       success: false,
-      message: error?.message || 'Delhivery B2B credential test failed',
+      message,
     })
   }
 }
