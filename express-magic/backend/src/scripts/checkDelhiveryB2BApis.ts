@@ -599,12 +599,14 @@ const run = async () => {
   assert.equal((manifest.data as FormData).get('rov_insurance'), 'true')
   assert.equal((manifest.data as FormData).get('fm_pickup'), 'false')
   assert.equal((manifest.data as FormData).get('ignored'), null)
+  assert.equal((manifest.data as FormData).getAll('shipment_details').length, 1)
+  assert.equal((manifest.data as FormData).getAll('invoices').length, 1)
   assert.equal(
-    JSON.parse(String((manifest.data as FormData).get('shipment_details')))[0].order_id,
+    JSON.parse(String((manifest.data as FormData).get('shipment_details'))).order_id,
     'ORDER-1',
   )
   assert.equal(
-    JSON.parse(String((manifest.data as FormData).get('invoices')))[0].inv_num,
+    JSON.parse(String((manifest.data as FormData).get('invoices'))).inv_num,
     'I22331030453',
   )
   assert.equal(
@@ -636,16 +638,19 @@ const run = async () => {
     doc_data: undefined,
   })
   const codManifest = lastRequest('POST', '/manifest')
-  assert(!(codManifest.data instanceof FormData))
-  assert.equal(codManifest.headers?.['Content-Type'], 'application/json')
-  assert.equal((codManifest.data as any).pickup_location_id, 'warehouse-id')
-  assert.equal((codManifest.data as any).pickup_location_name, undefined)
-  assert.equal((codManifest.data as any).payment_mode, 'cod')
-  assert.equal((codManifest.data as any).cod_amount, 122)
-  assert.equal((codManifest.data as any).dropoff_store_code, 'STORE-1')
-  assert.equal((codManifest.data as any).dropoff_location, undefined)
-  assert.equal((codManifest.data as any).shipment_details[0].order_id, 'ORDER-1')
-  assert.equal((codManifest.data as any).invoices[0].inv_qr_code, 'SIGNED-INVOICE-QR')
+  assert(codManifest.data instanceof FormData)
+  assert.equal((codManifest.data as FormData).get('pickup_location_id'), 'warehouse-id')
+  assert.equal((codManifest.data as FormData).get('pickup_location_name'), null)
+  assert.equal((codManifest.data as FormData).get('payment_mode'), 'cod')
+  assert.equal((codManifest.data as FormData).get('cod_amount'), '122')
+  assert.equal((codManifest.data as FormData).get('dropoff_store_code'), 'STORE-1')
+  assert.equal((codManifest.data as FormData).get('dropoff_location'), null)
+  assert.equal((codManifest.data as FormData).getAll('shipment_details').length, 1)
+  assert.equal((codManifest.data as FormData).getAll('invoices').length, 1)
+  assert.equal(
+    JSON.parse(String((codManifest.data as FormData).get('invoices'))).inv_qr_code,
+    'SIGNED-INVOICE-QR',
+  )
 
   assert.throws(
     () =>
@@ -778,15 +783,17 @@ const run = async () => {
   assert.equal((update.data as FormData).get('cod_amount'), '0')
   assert.equal((update.data as FormData).get('consignee_pincode'), '844120')
   assert.equal((update.data as FormData).get('ignored'), null)
+  assert.equal((update.data as FormData).getAll('invoices').length, 1)
+  assert.equal((update.data as FormData).getAll('dimensions').length, 1)
   assert.equal(
-    JSON.parse(String((update.data as FormData).get('invoices')))[0].inv_number,
+    JSON.parse(String((update.data as FormData).get('invoices'))).inv_number,
     'I22331030453',
   )
   assert.equal(
-    JSON.parse(String((update.data as FormData).get('invoices')))[0].ignored,
+    JSON.parse(String((update.data as FormData).get('invoices'))).ignored,
     undefined,
   )
-  assert.deepEqual(JSON.parse(String((update.data as FormData).get('dimensions')))[0], {
+  assert.deepEqual(JSON.parse(String((update.data as FormData).get('dimensions'))), {
     width_cm: 5,
     height_cm: 4,
     length_cm: 3,
@@ -813,9 +820,10 @@ const run = async () => {
     invoices: JSON.stringify([{ qr_code: 'SIGNED-INVOICE-QR', ewaybill: '' }]),
   })
   const qrInvoiceUpdate = lastRequest('PUT', '/lrn/update/220110457')
-  assert.deepEqual(JSON.parse(String((qrInvoiceUpdate.data as FormData).get('invoices'))), [
-    { ewaybill: '', qr_code: 'SIGNED-INVOICE-QR' },
-  ])
+  assert.deepEqual(JSON.parse(String((qrInvoiceUpdate.data as FormData).get('invoices'))), {
+    ewaybill: '',
+    qr_code: 'SIGNED-INVOICE-QR',
+  })
   assert.throws(
     () =>
       service.updateShipment('220110457', {
