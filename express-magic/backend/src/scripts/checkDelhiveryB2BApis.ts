@@ -678,22 +678,23 @@ const run = async () => {
       }),
     /callback\.uri must be a valid HTTP\(S\) URL/,
   )
-  assert.throws(
-    () =>
-      service.manifestShipment({
-        ...manifestPayload,
-        billing_address: JSON.stringify({
-          name: 'Billing Contact',
-          company: 'FastShip',
-          consignor: 'FastShip',
-          address: 'Billing address',
-          city: 'Gurugram',
-          state: 'Haryana',
-          pin: '122001',
-          phone: '9999999999',
-        }),
-      }),
-    /pan_number or gst_number/,
+  await service.manifestShipment({
+    ...manifestPayload,
+    billing_address: JSON.stringify({
+      name: 'Billing Contact',
+      company: 'FastShip',
+      consignor: 'FastShip',
+      address: 'Billing address',
+      city: 'Gurugram',
+      state: 'Haryana',
+      pin: '122001',
+      phone: '9999999999',
+    }),
+  })
+  const manifestWithoutBillingTax = lastRequest('POST', '/manifest')
+  assert.match(
+    String((manifestWithoutBillingTax.data as FormData).get('billing_address')),
+    /"company": "FastShip"/,
   )
   assert.throws(
     () => service.manifestShipment({ ...manifestPayload, doc_data: undefined }),

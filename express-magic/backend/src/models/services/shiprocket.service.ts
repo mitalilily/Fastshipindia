@@ -9590,13 +9590,6 @@ const buildDelhiveryB2BBillingAddress = ({
     ),
   )
 
-  if (!gstNumber && !panNumber) {
-    throw new HttpError(
-      400,
-      'Delhivery B2B billing address requires GSTIN or PAN. Add GSTIN on the pickup address or pass billing_address/company GST before booking.',
-    )
-  }
-
   return {
     name: contactName,
     company: companyName,

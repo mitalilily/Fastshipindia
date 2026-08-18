@@ -659,9 +659,6 @@ const normalizeManifestPayload = (payload: Record<string, unknown>) => {
       ensureText(billing[field], `billing_address.${field}`)
     }
     billing.pin = ensurePincode(billing.pin, 'billing_address.pin')
-    if (!clean(billing.pan_number) && !clean(billing.gst_number)) {
-      throw new HttpError(400, 'billing_address requires pan_number or gst_number')
-    }
     data.billing_address = billing
   }
 
