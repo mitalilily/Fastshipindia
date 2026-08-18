@@ -8,10 +8,8 @@ import {
   FormHelperText,
   FormLabel,
   Input,
-  Select,
   SimpleGrid,
   Spinner,
-  Switch,
   Text,
   useToast,
   VStack,
@@ -52,10 +50,6 @@ const CourierCredentials = () => {
     apiBase: 'https://ltl-clients-api.delhivery.com',
     username: '',
     password: '',
-    clientId: '',
-    warehouseId: '',
-    freightMode: 'fop',
-    fmPickup: true,
   })
 
   useEffect(() => {
@@ -72,10 +66,6 @@ const CourierCredentials = () => {
           data.delhiveryB2B.apiBase || 'https://ltl-clients-api.delhivery.com',
         username: data.delhiveryB2B.username || '',
         password: '',
-        clientId: data.delhiveryB2B.clientId || '',
-        warehouseId: data.delhiveryB2B.warehouseId || '',
-        freightMode: data.delhiveryB2B.freightMode === 'fod' ? 'fod' : 'fop',
-        fmPickup: data.delhiveryB2B.fmPickup !== false,
       })
     }
   }, [data])
@@ -131,10 +121,6 @@ const CourierCredentials = () => {
       {
         apiBase: b2bForm.apiBase.trim(),
         username: b2bForm.username.trim(),
-        clientId: b2bForm.clientId.trim(),
-        warehouseId: b2bForm.warehouseId.trim(),
-        freightMode: b2bForm.freightMode,
-        fmPickup: b2bForm.fmPickup,
         ...(b2bForm.password.trim() ? { password: b2bForm.password.trim() } : {}),
       },
       {
@@ -287,62 +273,6 @@ const CourierCredentials = () => {
                   }
                   placeholder="Leave blank to keep saved password"
                 />
-              </FormControl>
-              <FormControl>
-                <FormLabel>Client ID</FormLabel>
-                <Input
-                  value={b2bForm.clientId}
-                  onChange={(event) =>
-                    setB2BForm((previous) => ({ ...previous, clientId: event.target.value }))
-                  }
-                  placeholder="Optional Delhivery client ID"
-                />
-                <FormHelperText>
-                  Optional for authentication. Fill only if Delhivery assigns one for operations.
-                </FormHelperText>
-              </FormControl>
-              <FormControl>
-                <FormLabel>Warehouse ID</FormLabel>
-                <Input
-                  value={b2bForm.warehouseId}
-                  onChange={(event) =>
-                    setB2BForm((previous) => ({ ...previous, warehouseId: event.target.value }))
-                  }
-                  placeholder="Optional default warehouse ID"
-                />
-                <FormHelperText>
-                  Optional for login. Warehouse create/manifest flows can use the live warehouse details.
-                </FormHelperText>
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Freight Mode</FormLabel>
-                <Select
-                  value={b2bForm.freightMode}
-                  onChange={(event) =>
-                    setB2BForm((previous) => ({ ...previous, freightMode: event.target.value }))
-                  }
-                >
-                  <option value="fop">FOP - Freight on pickup</option>
-                  <option value="fod">FOD - Freight on delivery</option>
-                </Select>
-              </FormControl>
-              <FormControl>
-                <FormLabel>First-mile Pickup</FormLabel>
-                <Flex minH="40px" align="center" gap={3}>
-                  <Switch
-                    colorScheme="blue"
-                    isChecked={b2bForm.fmPickup}
-                    onChange={(event) =>
-                      setB2BForm((previous) => ({
-                        ...previous,
-                        fmPickup: event.target.checked,
-                      }))
-                    }
-                  />
-                  <Text fontSize="sm" color="gray.600">
-                    {b2bForm.fmPickup ? 'Enabled' : 'Disabled'}
-                  </Text>
-                </Flex>
               </FormControl>
             </SimpleGrid>
 
