@@ -116,8 +116,6 @@ const CourierCredentials = () => {
       !b2bForm.apiBase.trim() && 'API Base URL',
       !b2bForm.username.trim() && 'Username',
       !data?.delhiveryB2B?.hasPassword && !b2bForm.password.trim() && 'Password',
-      !b2bForm.clientId.trim() && 'Client ID',
-      !b2bForm.warehouseId.trim() && 'Warehouse ID',
     ].filter(Boolean)
 
     if (missing.length) {
@@ -290,25 +288,31 @@ const CourierCredentials = () => {
                   placeholder="Leave blank to keep saved password"
                 />
               </FormControl>
-              <FormControl isRequired>
+              <FormControl>
                 <FormLabel>Client ID</FormLabel>
                 <Input
                   value={b2bForm.clientId}
                   onChange={(event) =>
                     setB2BForm((previous) => ({ ...previous, clientId: event.target.value }))
                   }
-                  placeholder="Delhivery client ID"
+                  placeholder="Optional Delhivery client ID"
                 />
+                <FormHelperText>
+                  Optional for authentication. Fill only if Delhivery assigns one for operations.
+                </FormHelperText>
               </FormControl>
-              <FormControl isRequired>
+              <FormControl>
                 <FormLabel>Warehouse ID</FormLabel>
                 <Input
                   value={b2bForm.warehouseId}
                   onChange={(event) =>
                     setB2BForm((previous) => ({ ...previous, warehouseId: event.target.value }))
                   }
-                  placeholder="Default warehouse ID"
+                  placeholder="Optional default warehouse ID"
                 />
+                <FormHelperText>
+                  Optional for login. Warehouse create/manifest flows can use the live warehouse details.
+                </FormHelperText>
               </FormControl>
               <FormControl isRequired>
                 <FormLabel>Freight Mode</FormLabel>
