@@ -636,16 +636,16 @@ const run = async () => {
     doc_data: undefined,
   })
   const codManifest = lastRequest('POST', '/manifest')
-  assert.equal((codManifest.data as FormData).get('pickup_location_id'), 'warehouse-id')
-  assert.equal((codManifest.data as FormData).get('pickup_location_name'), null)
-  assert.equal((codManifest.data as FormData).get('payment_mode'), 'cod')
-  assert.equal((codManifest.data as FormData).get('cod_amount'), '122')
-  assert.equal((codManifest.data as FormData).get('dropoff_store_code'), 'STORE-1')
-  assert.equal((codManifest.data as FormData).get('dropoff_location'), null)
-  assert.equal(
-    JSON.parse(String((codManifest.data as FormData).get('invoices')))[0].inv_qr_code,
-    'SIGNED-INVOICE-QR',
-  )
+  assert(!(codManifest.data instanceof FormData))
+  assert.equal(codManifest.headers?.['Content-Type'], 'application/json')
+  assert.equal((codManifest.data as any).pickup_location_id, 'warehouse-id')
+  assert.equal((codManifest.data as any).pickup_location_name, undefined)
+  assert.equal((codManifest.data as any).payment_mode, 'cod')
+  assert.equal((codManifest.data as any).cod_amount, 122)
+  assert.equal((codManifest.data as any).dropoff_store_code, 'STORE-1')
+  assert.equal((codManifest.data as any).dropoff_location, undefined)
+  assert.equal((codManifest.data as any).shipment_details[0].order_id, 'ORDER-1')
+  assert.equal((codManifest.data as any).invoices[0].inv_qr_code, 'SIGNED-INVOICE-QR')
 
   assert.throws(
     () =>

@@ -1097,6 +1097,11 @@ const isUpload = (value: unknown): value is DelhiveryB2BUpload =>
       (value as DelhiveryB2BUpload).originalname,
   )
 
+const hasUploadValue = (payload: Record<string, unknown>) =>
+  Object.values(payload).some(
+    (value) => isUpload(value) || (Array.isArray(value) && value.some(isUpload)),
+  )
+
 export class DelhiveryB2BService {
   constructor(private readonly override?: CredentialsOverride) {}
 
@@ -1411,10 +1416,11 @@ export class DelhiveryB2BService {
   }
 
   manifestShipment(payload: Record<string, unknown>) {
+    const data = normalizeManifestPayload(payload)
     return this.authorizedRequest({
       method: 'POST',
       url: '/manifest',
-      data: this.toMultipart(normalizeManifestPayload(payload)),
+      data: hasUploadValue(data) ? this.toMultipart(data) : data,
     })
   }
 
