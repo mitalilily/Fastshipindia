@@ -1588,7 +1588,11 @@ export const calculateB2BChargeableWeight = (params: {
   let volumetricWeight = weightKg
   if (length && width && height) {
     const volumeCm3 = length * width * height
-    volumetricWeight = volumeCm3 / cftFactor
+    const normalizedFactor = Number.isFinite(cftFactor) && cftFactor > 0 ? cftFactor : 5000
+    volumetricWeight =
+      normalizedFactor <= 100
+        ? (volumeCm3 / 28316.846592) * normalizedFactor
+        : volumeCm3 / normalizedFactor
   }
 
   // Billable weight is max of actual and volumetric (ALWAYS applies)
@@ -1677,8 +1681,8 @@ export const calculateB2BRate = async (params: {
     )
   }
 
-  // CFT Factor - ALWAYS used in weight calculation
-  // Formula: volumetricWeight = (L × B × H) / cftFactor
+  // CFT Factor - ALWAYS used in weight calculation.
+  // Admin may store either kg-per-CFT (5/6/etc.) or a divisor (5000/6000/etc.).
   // chargeableWeight = max(volumetricWeight, actualWeight)
   const cftFactor = Number(additionalCharges.cft_factor || 5000) // Default to 5000 if not configured
 
