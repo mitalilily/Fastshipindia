@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { randomUUID } from 'crypto'
 import {
   and,
   asc,
@@ -9518,6 +9519,12 @@ export const createB2BShipmentService = async (
 
   const pickupDetails = normalizeJsonValue(params.pickup) ?? {}
   const rtoDetails = normalizeJsonValue(params.rto)
+  const optionalNumeric = (value: unknown) => {
+    if (value === undefined || value === null || value === '') return null
+    const numericValue = Number(value)
+    return Number.isFinite(numericValue) ? numericValue : null
+  }
+  const numericOrZero = (value: unknown) => optionalNumeric(value) ?? 0
   const normalizedOrderNumber = await ensureUniqueMerchantOrderNumber(
     db as any,
     userId,
@@ -9736,9 +9743,10 @@ export const createB2BShipmentService = async (
   const [pendingOrder] = await db
     .insert(b2b_orders)
     .values({
+      id: randomUUID(),
       order_number: normalizedOrderNumber,
       order_date: params?.order_date,
-      order_amount: params?.order_amount,
+      order_amount: numericOrZero(params?.order_amount),
       integration_type: effectiveIntegrationType,
       user_id: userId,
       company_name: params.consignee?.company_name ?? '',
@@ -9758,20 +9766,20 @@ export const createB2BShipmentService = async (
       invoice_date: primaryInvoice?.invoiceDate ?? params?.invoice_date,
       invoice_amount:
         primaryInvoice?.invoiceValue !== undefined
-          ? String(primaryInvoice.invoiceValue)
-          : params?.invoice_amount
-            ? String(params.invoice_amount)
+          ? optionalNumeric(primaryInvoice.invoiceValue)
+          : params?.invoice_amount !== undefined
+            ? optionalNumeric(params.invoice_amount)
             : null,
       is_insurance: insuranceSelected,
-      declared_value: insuranceSelected ? invoiceValue : null,
-      rov_charge: insuranceSelected ? rovCharge : null,
+      declared_value: insuranceSelected ? optionalNumeric(invoiceValue) : null,
+      rov_charge: insuranceSelected ? optionalNumeric(rovCharge) : null,
       charges_breakdown: chargesBreakdown,
-      shipping_charges: params.shipping_charges ?? 0,
-      freight_charges: params.freight_charges ?? 0, // What platform charges seller
-      courier_cost: params.courier_cost ?? null, // What platform pays courier (will be updated via webhook)
-      transaction_fee: params.transaction_fee ?? 0,
-      discount: params.discount ?? 0,
-      gift_wrap: params.gift_wrap ? Number(params.gift_wrap) : 0,
+      shipping_charges: numericOrZero(params.shipping_charges),
+      freight_charges: numericOrZero(params.freight_charges), // What platform charges seller
+      courier_cost: optionalNumeric(params.courier_cost), // What platform pays courier (will be updated via webhook)
+      transaction_fee: numericOrZero(params.transaction_fee),
+      discount: numericOrZero(params.discount),
+      gift_wrap: numericOrZero(params.gift_wrap),
       products: normalizedOrderItems,
       delivery_location: params.delivery_location ?? params.zone ?? null,
       pickup_location_id: params.pickup_location_id ?? params.pickup?.warehouse_name ?? null,
