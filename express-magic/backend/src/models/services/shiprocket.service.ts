@@ -67,6 +67,7 @@ import PdfPrinter from 'pdfmake'
 import { requireMerchantOrderReadiness } from '../../utils/merchantReadiness'
 import { courierPriorityProfiles } from '../schema/courierPriority'
 import { couriers } from '../schema/couriers'
+import { kyc } from '../schema/kyc'
 import { locations } from '../schema/locations'
 import { addresses, pickupAddresses } from '../schema/pickupAddresses'
 import { plans } from '../schema/plans'
@@ -9481,6 +9482,132 @@ const waitForDelhiveryB2BManifest = async (
   throw pendingError
 }
 
+const pickCleanText = (...values: unknown[]) => {
+  for (const value of values) {
+    const text = String(value ?? '').trim()
+    if (text) return text
+  }
+  return ''
+}
+
+const normalizeTaxText = (value: unknown) => String(value ?? '').trim().toUpperCase()
+
+const getMerchantBillingSeed = async (userId: string) => {
+  const [row] = await db
+    .select({
+      email: users.email,
+      phone: users.phone,
+      companyInfo: userProfiles.companyInfo,
+      gstDetails: userProfiles.gstDetails,
+      kycGstin: kyc.gstin,
+      kycPanNumber: kyc.panNumber,
+      invoiceSellerName: invoicePreferences.sellerName,
+      invoiceBrandName: invoicePreferences.brandName,
+      invoiceGstNumber: invoicePreferences.gstNumber,
+      invoicePanNumber: invoicePreferences.panNumber,
+      invoiceSellerAddress: invoicePreferences.sellerAddress,
+      invoiceSupportPhone: invoicePreferences.supportPhone,
+      invoiceSupportEmail: invoicePreferences.supportEmail,
+    })
+    .from(users)
+    .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
+    .leftJoin(kyc, eq(kyc.userId, users.id))
+    .leftJoin(invoicePreferences, eq(invoicePreferences.userId, users.id))
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  return row || null
+}
+
+const buildDelhiveryB2BBillingAddress = ({
+  supplied,
+  params,
+  merchant,
+}: {
+  supplied?: Record<string, unknown> | null
+  params: ShipmentParams
+  merchant: Awaited<ReturnType<typeof getMerchantBillingSeed>>
+}) => {
+  const companyInfo = (merchant?.companyInfo || {}) as Record<string, unknown>
+  const gstDetails = (merchant?.gstDetails || {}) as Record<string, unknown>
+  const pickup = params.pickup || ({} as ShipmentParams['pickup'])
+  const companyName = pickCleanText(
+    supplied?.company,
+    supplied?.consignor,
+    merchant?.invoiceSellerName,
+    merchant?.invoiceBrandName,
+    companyInfo.businessName,
+    companyInfo.brandName,
+    companyInfo.companyName,
+    pickup.warehouse_name,
+    pickup.name,
+  )
+  const contactName = pickCleanText(
+    supplied?.name,
+    companyInfo.contactPerson,
+    pickup.name,
+    pickup.warehouse_name,
+    companyName,
+  )
+  const gstNumber = normalizeTaxText(
+    pickCleanText(
+      supplied?.gst_number,
+      supplied?.gstNumber,
+      pickup.gst_number,
+      merchant?.invoiceGstNumber,
+      gstDetails.gstNumber,
+      gstDetails.gstin,
+      merchant?.kycGstin,
+      companyInfo.companyGst,
+      companyInfo.companyGST,
+      companyInfo.gstin,
+      companyInfo.GSTIN,
+    ),
+  )
+  const panNumber = normalizeTaxText(
+    pickCleanText(
+      supplied?.pan_number,
+      supplied?.panNumber,
+      merchant?.invoicePanNumber,
+      merchant?.kycPanNumber,
+      companyInfo.panNumber,
+      companyInfo.pan,
+    ),
+  )
+
+  if (!gstNumber && !panNumber) {
+    throw new HttpError(
+      400,
+      'Delhivery B2B billing address requires GSTIN or PAN. Add GST/PAN in pickup, invoice preferences, or KYC before booking.',
+    )
+  }
+
+  return {
+    name: contactName,
+    company: companyName,
+    consignor: pickCleanText(supplied?.consignor, companyName),
+    address: pickCleanText(
+      supplied?.address,
+      merchant?.invoiceSellerAddress,
+      companyInfo.companyAddress,
+      pickup.address,
+    ),
+    city: pickCleanText(supplied?.city, companyInfo.city, pickup.city),
+    state: pickCleanText(supplied?.state, companyInfo.state, pickup.state),
+    pin: pickCleanText(supplied?.pin, supplied?.pincode, companyInfo.pincode, pickup.pincode),
+    phone: pickCleanText(
+      supplied?.phone,
+      merchant?.invoiceSupportPhone,
+      companyInfo.companyContactNumber,
+      companyInfo.contactNumber,
+      pickup.phone,
+      merchant?.phone,
+    ),
+    ...(panNumber ? { pan_number: panNumber } : {}),
+    ...(gstNumber ? { gst_number: gstNumber } : {}),
+  }
+}
+
 export const createB2BShipmentService = async (
   params: ShipmentParams,
   userId: string,
@@ -9841,10 +9968,11 @@ export const createB2BShipmentService = async (
       const originPincode = String(params.pickup?.pincode || '').trim()
       const destinationPincode = String(params.consignee?.pincode || '').trim()
       const weightGrams = Math.max(1, Math.round(package_weight * 1000))
-      const [originServiceability, destinationServiceability, defaults] = await Promise.all([
+      const [originServiceability, destinationServiceability, defaults, merchantBillingSeed] = await Promise.all([
         delhivery.checkServiceability(originPincode, weightGrams),
         delhivery.checkServiceability(destinationPincode, weightGrams),
         delhivery.getOperationalDefaults(),
+        getMerchantBillingSeed(userId),
       ])
 
       if (!isDelhiveryB2BServiceableResponse(originServiceability)) {
@@ -9877,6 +10005,14 @@ export const createB2BShipmentService = async (
           'A Delhivery B2B pickup warehouse name or default warehouse ID is required',
         )
       }
+      const suppliedBillingAddress = normalizeJsonValue((params as any).billing_address) as
+        | Record<string, unknown>
+        | null
+      const billingAddress = buildDelhiveryB2BBillingAddress({
+        supplied: suppliedBillingAddress,
+        params,
+        merchant: merchantBillingSeed,
+      })
       const manifestPayload: Record<string, unknown> = {
         pickup_location_name: pickupLocationName || undefined,
         pickup_location_id: pickupLocationName ? undefined : defaults.warehouseId || undefined,
@@ -9929,7 +10065,7 @@ export const createB2BShipmentService = async (
         freight_mode: freightMode,
         fm_pickup:
           params.request_auto_pickup === 'yes' ? true : Boolean(defaults.fmPickup),
-        billing_address: (params as any).billing_address,
+        billing_address: billingAddress,
         callback: (params as any).callback,
       }
 
