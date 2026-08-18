@@ -9491,12 +9491,61 @@ const pickCleanText = (...values: unknown[]) => {
 
 const normalizeTaxText = (value: unknown) => String(value ?? '').trim().toUpperCase()
 
+const getB2BPickupBillingSeed = async (userId: string, params: ShipmentParams) => {
+  try {
+    const pickup = params.pickup || ({} as ShipmentParams['pickup'])
+    const pickupPincode = pickCleanText(pickup.pincode)
+    const pickupName = pickCleanText(pickup.warehouse_name, pickup.name)
+    const conditions: any[] = [
+      eq(pickupAddresses.userId, userId),
+      eq(pickupAddresses.isPickupEnabled, true),
+    ]
+    if (pickupPincode) conditions.push(eq(addresses.pincode, pickupPincode))
+
+    const rows = await db
+      .select({
+        warehouseName: addresses.addressNickname,
+        contactName: addresses.contactName,
+        address: addresses.addressLine1,
+        city: addresses.city,
+        state: addresses.state,
+        pincode: addresses.pincode,
+        phone: addresses.contactPhone,
+        gstNumber: addresses.gstNumber,
+        isPrimary: pickupAddresses.isPrimary,
+      })
+      .from(pickupAddresses)
+      .innerJoin(addresses, eq(pickupAddresses.addressId, addresses.id))
+      .where(and(...conditions))
+      .orderBy(desc(pickupAddresses.isPrimary))
+      .limit(10)
+
+    return (
+      rows.find((row) =>
+        pickupName
+          ? [row.warehouseName, row.contactName]
+              .map((value) => String(value || '').trim().toLowerCase())
+              .includes(pickupName.toLowerCase())
+          : false,
+      ) ||
+      rows.find((row) => pickCleanText(row.gstNumber)) ||
+      rows[0] ||
+      null
+    )
+  } catch (error: any) {
+    console.warn('Unable to load B2B pickup billing fallback:', error?.message || error)
+    return null
+  }
+}
+
 const buildDelhiveryB2BBillingAddress = ({
   supplied,
   params,
+  pickupSeed,
 }: {
   supplied?: Record<string, unknown> | null
   params: ShipmentParams
+  pickupSeed?: Awaited<ReturnType<typeof getB2BPickupBillingSeed>>
 }) => {
   const pickup = params.pickup || ({} as ShipmentParams['pickup'])
   const companyName = pickCleanText(
@@ -9504,12 +9553,15 @@ const buildDelhiveryB2BBillingAddress = ({
     supplied?.consignor,
     (params as any).company?.name,
     (params as any).company_name,
+    pickupSeed?.warehouseName,
+    pickupSeed?.contactName,
     pickup.warehouse_name,
     pickup.name,
   )
   const contactName = pickCleanText(
     supplied?.name,
     (params as any).company?.contactPerson,
+    pickupSeed?.contactName,
     pickup.name,
     pickup.warehouse_name,
     companyName,
@@ -9519,6 +9571,8 @@ const buildDelhiveryB2BBillingAddress = ({
       supplied?.gst_number,
       supplied?.gstNumber,
       pickup.gst_number,
+      (pickup as any).gstNumber,
+      pickupSeed?.gstNumber,
       (params as any).company?.gst,
       (params as any).company?.gstin,
       (params as any).company_gst,
@@ -9550,20 +9604,33 @@ const buildDelhiveryB2BBillingAddress = ({
     address: pickCleanText(
       supplied?.address,
       (params as any).company?.address,
+      pickupSeed?.address,
       pickup.address,
     ),
-    city: pickCleanText(supplied?.city, (params as any).company?.city, pickup.city),
-    state: pickCleanText(supplied?.state, (params as any).company?.state, pickup.state),
+    city: pickCleanText(
+      supplied?.city,
+      (params as any).company?.city,
+      pickupSeed?.city,
+      pickup.city,
+    ),
+    state: pickCleanText(
+      supplied?.state,
+      (params as any).company?.state,
+      pickupSeed?.state,
+      pickup.state,
+    ),
     pin: pickCleanText(
       supplied?.pin,
       supplied?.pincode,
       (params as any).company?.pincode,
+      pickupSeed?.pincode,
       pickup.pincode,
     ),
     phone: pickCleanText(
       supplied?.phone,
       (params as any).company?.phone,
       (params as any).company?.contactNumber,
+      pickupSeed?.phone,
       pickup.phone,
     ),
     ...(panNumber ? { pan_number: panNumber } : {}),
@@ -9931,11 +9998,13 @@ export const createB2BShipmentService = async (
       const originPincode = String(params.pickup?.pincode || '').trim()
       const destinationPincode = String(params.consignee?.pincode || '').trim()
       const weightGrams = Math.max(1, Math.round(package_weight * 1000))
-      const [originServiceability, destinationServiceability, defaults] = await Promise.all([
-        delhivery.checkServiceability(originPincode, weightGrams),
-        delhivery.checkServiceability(destinationPincode, weightGrams),
-        delhivery.getOperationalDefaults(),
-      ])
+      const [originServiceability, destinationServiceability, defaults, pickupBillingSeed] =
+        await Promise.all([
+          delhivery.checkServiceability(originPincode, weightGrams),
+          delhivery.checkServiceability(destinationPincode, weightGrams),
+          delhivery.getOperationalDefaults(),
+          getB2BPickupBillingSeed(userId, params),
+        ])
 
       if (!isDelhiveryB2BServiceableResponse(originServiceability)) {
         throw new HttpError(400, `Delhivery B2B does not service origin pincode ${originPincode}`)
@@ -9973,6 +10042,7 @@ export const createB2BShipmentService = async (
       const billingAddress = buildDelhiveryB2BBillingAddress({
         supplied: suppliedBillingAddress,
         params,
+        pickupSeed: pickupBillingSeed,
       })
       const manifestPayload: Record<string, unknown> = {
         pickup_location_name: pickupLocationName || undefined,
