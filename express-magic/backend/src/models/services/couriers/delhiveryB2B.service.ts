@@ -1083,10 +1083,26 @@ const normalizeLastMileAppointmentPayload = (payload: Record<string, unknown>) =
   return data
 }
 
+const delhiveryFormLiteral = (value: unknown): string => {
+  if (typeof value === 'boolean') return value ? 'True' : 'False'
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '0'
+  if (typeof value === 'string') return JSON.stringify(value)
+  if (value === null || value === undefined) return 'None'
+  if (Array.isArray(value)) return `[${value.map(delhiveryFormLiteral).join(', ')}]`
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).map(
+      ([key, entry]) => `${JSON.stringify(key)}: ${delhiveryFormLiteral(entry)}`,
+    )
+    return `{${entries.join(', ')}}`
+  }
+  return JSON.stringify(String(value))
+}
+
 const formValue = (value: unknown) => {
   if (typeof value === 'string') return value
-  if (typeof value === 'boolean' || typeof value === 'number') return String(value)
-  return JSON.stringify(value)
+  if (typeof value === 'boolean') return value ? 'True' : 'False'
+  if (typeof value === 'number') return String(value)
+  return delhiveryFormLiteral(value)
 }
 
 const isUpload = (value: unknown): value is DelhiveryB2BUpload =>
@@ -1303,13 +1319,6 @@ export class DelhiveryB2BService {
             }),
             upload.originalname,
           )
-        }
-        continue
-      }
-
-      if (Array.isArray(value)) {
-        for (const entry of value) {
-          form.append(key, formValue(entry))
         }
         continue
       }

@@ -596,26 +596,25 @@ const run = async () => {
   assert.equal((manifest.data as FormData).get('pickup_location_name'), 'Test Warehouse')
   assert.equal((manifest.data as FormData).get('payment_mode'), 'prepaid')
   assert.equal((manifest.data as FormData).get('weight'), '1000')
-  assert.equal((manifest.data as FormData).get('rov_insurance'), 'true')
-  assert.equal((manifest.data as FormData).get('fm_pickup'), 'false')
+  assert.equal((manifest.data as FormData).get('rov_insurance'), 'True')
+  assert.equal((manifest.data as FormData).get('fm_pickup'), 'False')
   assert.equal((manifest.data as FormData).get('ignored'), null)
-  assert.equal((manifest.data as FormData).getAll('shipment_details').length, 1)
-  assert.equal((manifest.data as FormData).getAll('invoices').length, 1)
-  assert.equal(
-    JSON.parse(String((manifest.data as FormData).get('shipment_details'))).order_id,
-    'ORDER-1',
+  assert.match(
+    String((manifest.data as FormData).get('shipment_details')),
+    /^\[\{"order_id": "ORDER-1".*"master": False\}\]$/,
   )
-  assert.equal(
-    JSON.parse(String((manifest.data as FormData).get('invoices'))).inv_num,
-    'I22331030453',
+  assert.match(
+    String((manifest.data as FormData).get('invoices')),
+    /^\[\{"ewaybill": "", "inv_num": "I22331030453"/,
   )
+  assert.match(String((manifest.data as FormData).get('dimensions')), /^\[\{"box_count": 1/)
   assert.equal(
-    JSON.parse(String((manifest.data as FormData).get('callback'))).uri,
-    'https://example.com/delhivery/manifest',
+    String((manifest.data as FormData).get('callback')),
+    '{"uri": "https://example.com/delhivery/manifest", "method": "POST"}',
   )
-  assert.equal(
-    JSON.parse(String((manifest.data as FormData).get('billing_address'))).pan_number,
-    'ABCDE1234F',
+  assert.match(
+    String((manifest.data as FormData).get('billing_address')),
+    /"pan_number": "ABCDE1234F"/,
   )
   assert.equal(((manifest.data as FormData).get('doc_file') as File).name, 'invoice.pdf')
   assert.equal(manifest.headers?.Authorization, 'Bearer test-jwt')
@@ -645,11 +644,13 @@ const run = async () => {
   assert.equal((codManifest.data as FormData).get('cod_amount'), '122')
   assert.equal((codManifest.data as FormData).get('dropoff_store_code'), 'STORE-1')
   assert.equal((codManifest.data as FormData).get('dropoff_location'), null)
-  assert.equal((codManifest.data as FormData).getAll('shipment_details').length, 1)
-  assert.equal((codManifest.data as FormData).getAll('invoices').length, 1)
-  assert.equal(
-    JSON.parse(String((codManifest.data as FormData).get('invoices'))).inv_qr_code,
-    'SIGNED-INVOICE-QR',
+  assert.match(
+    String((codManifest.data as FormData).get('shipment_details')),
+    /^\[\{"order_id": "ORDER-1"/,
+  )
+  assert.match(
+    String((codManifest.data as FormData).get('invoices')),
+    /^\[\{"ewaybill": "", "inv_qr_code": "SIGNED-INVOICE-QR"/,
   )
 
   assert.throws(
@@ -783,27 +784,19 @@ const run = async () => {
   assert.equal((update.data as FormData).get('cod_amount'), '0')
   assert.equal((update.data as FormData).get('consignee_pincode'), '844120')
   assert.equal((update.data as FormData).get('ignored'), null)
-  assert.equal((update.data as FormData).getAll('invoices').length, 1)
-  assert.equal((update.data as FormData).getAll('dimensions').length, 1)
+  assert.match(
+    String((update.data as FormData).get('invoices')),
+    /^\[\{"ewaybill": "", "inv_number": "I22331030453", "inv_amount": 59729.67/,
+  )
+  assert.doesNotMatch(String((update.data as FormData).get('invoices')), /ignored/)
   assert.equal(
-    JSON.parse(String((update.data as FormData).get('invoices'))).inv_number,
-    'I22331030453',
+    String((update.data as FormData).get('dimensions')),
+    '[{"width_cm": 5, "height_cm": 4, "length_cm": 3, "box_count": 1}]',
   )
   assert.equal(
-    JSON.parse(String((update.data as FormData).get('invoices'))).ignored,
-    undefined,
+    String((update.data as FormData).get('cb')),
+    '{"uri": "https://btob-api-dev.delhivery.com/docket/upload_callback", "method": "POST", "authorization": "Bearer Token"}',
   )
-  assert.deepEqual(JSON.parse(String((update.data as FormData).get('dimensions'))), {
-    width_cm: 5,
-    height_cm: 4,
-    length_cm: 3,
-    box_count: 1,
-  })
-  assert.equal(
-    JSON.parse(String((update.data as FormData).get('cb'))).uri,
-    'https://btob-api-dev.delhivery.com/docket/upload_callback',
-  )
-  assert.equal(JSON.parse(String((update.data as FormData).get('cb'))).method, 'POST')
   assert.equal(((update.data as FormData).get('invoice_file') as File).name, 'updated-invoice.pdf')
   assert.equal(update.headers?.Authorization, 'Bearer test-jwt')
   assert.equal(typeof update.headers?.['X-Request-Id'], 'string')
@@ -820,10 +813,10 @@ const run = async () => {
     invoices: JSON.stringify([{ qr_code: 'SIGNED-INVOICE-QR', ewaybill: '' }]),
   })
   const qrInvoiceUpdate = lastRequest('PUT', '/lrn/update/220110457')
-  assert.deepEqual(JSON.parse(String((qrInvoiceUpdate.data as FormData).get('invoices'))), {
-    ewaybill: '',
-    qr_code: 'SIGNED-INVOICE-QR',
-  })
+  assert.equal(
+    String((qrInvoiceUpdate.data as FormData).get('invoices')),
+    '[{"ewaybill": "", "qr_code": "SIGNED-INVOICE-QR"}]',
+  )
   assert.throws(
     () =>
       service.updateShipment('220110457', {
