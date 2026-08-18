@@ -1,12 +1,12 @@
 import { randomUUID } from 'crypto'
-import { and, asc, desc, eq, gte, ilike, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, sql } from 'drizzle-orm'
 import type { ShippingRateFilters } from '../../controllers/admin/courier.controller'
 import { db } from '../client'
 import { couriers } from '../schema/couriers'
 import { courierSummary } from '../schema/courierSummary'
 import { shippingRates } from '../schema/shippingRates'
 import { userPlans } from '../schema/userPlans'
-import { zones } from '../schema/zones'
+import { b2bZoneToZoneRates, zones } from '../schema/zones'
 import {
   B2C_RATE_TYPES,
   type B2CRateType,
@@ -260,6 +260,97 @@ export const getShippingRates = async (filters: ShippingRateFilters = {}) => {
   return result
 }
 
+const zoneLabel = (zone: { code?: string | null; name?: string | null }) =>
+  [zone.code, zone.name].filter(Boolean).join(' - ') || zone.name || zone.code || 'Zone'
+
+const assignZoneMatrixRate = (rates: Record<string, any>, zone: any, value: any, origin: any) => {
+  const amount = Number(value || 0).toFixed(2)
+  const entry = {
+    forward_per_kg: amount,
+    forward: amount,
+    min_weight: 0,
+    description: `${zoneLabel(origin)} to ${zoneLabel(zone)}`,
+  }
+  for (const key of [
+    zone.id,
+    zone.code,
+    zone.name,
+    zone.code && zone.name ? `${zone.code} - ${zone.name}` : '',
+    zone.code && zone.name ? `${zone.name} (${zone.code})` : '',
+  ]) {
+    if (key) rates[key] = entry
+  }
+}
+
+const getB2BZoneMatrixRateCard = async (planId?: string | null) => {
+  const baseConditions = [eq(zones.business_type, 'B2B'), eq(b2bZoneToZoneRates.is_active, true)]
+
+  const fetchRows = (targetPlanId?: string | null) =>
+    db
+      .select({
+        rate: b2bZoneToZoneRates,
+        originZone: zones,
+      })
+      .from(b2bZoneToZoneRates)
+      .innerJoin(zones, eq(zones.id, b2bZoneToZoneRates.origin_zone_id))
+      .where(
+        and(
+          ...baseConditions,
+          targetPlanId
+            ? eq(b2bZoneToZoneRates.plan_id, targetPlanId)
+            : isNull(b2bZoneToZoneRates.plan_id),
+        ),
+      )
+      .orderBy(asc(zones.code), asc(b2bZoneToZoneRates.destination_zone_id))
+
+  let rows = planId ? await fetchRows(planId) : []
+  if (!rows.length) rows = await fetchRows(null)
+  if (!rows.length) return []
+
+  const zoneIds = Array.from(
+    new Set(
+      rows.flatMap((row) => [
+        row.rate.origin_zone_id,
+        row.rate.destination_zone_id,
+      ]),
+    ),
+  )
+  const zoneRows = zoneIds.length
+    ? await db.select().from(zones).where(inArray(zones.id, zoneIds))
+    : []
+  const zoneById = new Map(zoneRows.map((zone) => [zone.id, zone]))
+  const grouped = new Map<string, any>()
+
+  for (const row of rows) {
+    const origin = zoneById.get(row.rate.origin_zone_id) || row.originZone
+    const destination = zoneById.get(row.rate.destination_zone_id)
+    if (!origin || !destination) continue
+
+    const key = origin.id
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        id: `b2b-zone-matrix-${origin.id}`,
+        plan_id: row.rate.plan_id || null,
+        business_type: 'b2b',
+        courier_id: row.rate.courier_id || 0,
+        courier_name: `From ${zoneLabel(origin)}`,
+        service_provider: row.rate.service_provider || 'delhivery',
+        mode: 'surface',
+        min_weight: 0,
+        cod_charges: 0,
+        cod_percent: 0,
+        other_charges: 0,
+        rates: {},
+        zone_slabs: {},
+      })
+    }
+
+    assignZoneMatrixRate(grouped.get(key).rates, destination, row.rate.rate_per_kg, origin)
+  }
+
+  return Array.from(grouped.values())
+}
+
 export const getUserShippingRates = async (
   userId: string,
   filters: Omit<ShippingRateFilters, 'plan_id'> = {},
@@ -271,14 +362,18 @@ export const getUserShippingRates = async (
     .where(and(eq(userPlans.userId, userId), eq(userPlans.is_active, true)))
     .limit(1)
 
-  if (!userPlan.length) {
+  if (!userPlan.length && filters.business_type !== 'b2b') {
     throw new Error('No active plan found for this user')
   }
 
-  const planId = userPlan[0].plan_id
+  const planId = userPlan[0]?.plan_id
 
   // 2. Call existing getShippingRates with plan_id injected
-  return getShippingRates({ ...filters, plan_id: planId })
+  const rates = planId ? await getShippingRates({ ...filters, plan_id: planId }) : []
+  if (rates.length || filters.business_type !== 'b2b') return rates
+
+  // B2B admin rate-card screen stores zone-to-zone matrix rows, not legacy shipping_rates rows.
+  return getB2BZoneMatrixRateCard(planId)
 }
 
 export interface ShippingRateUpdatePayload {
