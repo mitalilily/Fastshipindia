@@ -21,22 +21,16 @@ const CourierCredentials = () => {
 
   const [deliveryOneForm, setDeliveryOneForm] = useState({
     apiBase: '',
-    clientId: '',
     username: '',
     password: '',
-    apiKey: '',
-    webhookSecret: '',
   })
 
   useEffect(() => {
     if (data?.deliveryOne) {
       setDeliveryOneForm({
         apiBase: data.deliveryOne.apiBase || '',
-        clientId: data.deliveryOne.clientId || '',
         username: data.deliveryOne.username || '',
         password: '',
-        apiKey: '',
-        webhookSecret: '',
       })
     }
   }, [data])
@@ -45,13 +39,8 @@ const CourierCredentials = () => {
     updateDeliveryOne.mutate(
       {
         apiBase: deliveryOneForm.apiBase,
-        clientId: deliveryOneForm.clientId,
         username: deliveryOneForm.username,
         ...(deliveryOneForm.password ? { password: deliveryOneForm.password } : {}),
-        ...(deliveryOneForm.apiKey ? { apiKey: deliveryOneForm.apiKey } : {}),
-        ...(deliveryOneForm.webhookSecret
-          ? { webhookSecret: deliveryOneForm.webhookSecret }
-          : {}),
       },
       {
         onSuccess: () => {
@@ -59,8 +48,6 @@ const CourierCredentials = () => {
           setDeliveryOneForm((prev) => ({
             ...prev,
             password: '',
-            apiKey: '',
-            webhookSecret: '',
           }))
         },
         onError: (err) => {
@@ -88,8 +75,8 @@ const CourierCredentials = () => {
           <VStack spacing={4} align="stretch">
             <Flex justify="space-between" align="center">
               <Text fontWeight="semibold">Delhivery</Text>
-              <Badge colorScheme={data?.deliveryOne?.hasApiKey ? 'green' : 'orange'}>
-                {data?.deliveryOne?.hasApiKey ? 'API key set' : 'Missing API key'}
+              <Badge colorScheme={data?.deliveryOne?.hasPassword ? 'green' : 'orange'}>
+                {data?.deliveryOne?.hasPassword ? 'Password set' : 'Missing password'}
               </Badge>
             </Flex>
 
@@ -101,17 +88,6 @@ const CourierCredentials = () => {
                   setDeliveryOneForm((prev) => ({ ...prev, apiBase: e.target.value }))
                 }
                 placeholder="https://track.delhivery.com"
-              />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Client ID</FormLabel>
-              <Input
-                value={deliveryOneForm.clientId}
-                onChange={(e) =>
-                  setDeliveryOneForm((prev) => ({ ...prev, clientId: e.target.value }))
-                }
-                placeholder="Delhivery client ID"
               />
             </FormControl>
 
@@ -143,43 +119,9 @@ const CourierCredentials = () => {
               )}
             </FormControl>
 
-            <FormControl>
-              <FormLabel>API Key / Token</FormLabel>
-              <Input
-                type="password"
-                value={deliveryOneForm.apiKey}
-                onChange={(e) =>
-                  setDeliveryOneForm((prev) => ({ ...prev, apiKey: e.target.value }))
-                }
-                placeholder={data?.deliveryOne?.apiKeyMasked || 'Enter Delhivery API key'}
-              />
-              {!!data?.deliveryOne?.apiKeyMasked && (
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Current key: {data.deliveryOne.apiKeyMasked}
-                </Text>
-              )}
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Webhook Secret</FormLabel>
-              <Input
-                type="password"
-                value={deliveryOneForm.webhookSecret}
-                onChange={(e) =>
-                  setDeliveryOneForm((prev) => ({ ...prev, webhookSecret: e.target.value }))
-                }
-                placeholder="Leave blank to keep existing webhook secret"
-              />
-              {data?.deliveryOne?.hasWebhookSecret && (
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Webhook secret already configured on Delhivery.
-                </Text>
-              )}
-            </FormControl>
-
             <Text fontSize="xs" color="gray.500">
-              Delhivery is the only active courier integration. Leave password, API key, or
-              webhook secret blank to keep the saved value.
+              Delhivery is the only active courier integration. Leave password blank to keep
+              the saved value.
             </Text>
 
             <Button
