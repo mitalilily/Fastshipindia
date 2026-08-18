@@ -67,7 +67,6 @@ import PdfPrinter from 'pdfmake'
 import { requireMerchantOrderReadiness } from '../../utils/merchantReadiness'
 import { courierPriorityProfiles } from '../schema/courierPriority'
 import { couriers } from '../schema/couriers'
-import { kyc } from '../schema/kyc'
 import { locations } from '../schema/locations'
 import { addresses, pickupAddresses } from '../schema/pickupAddresses'
 import { plans } from '../schema/plans'
@@ -9499,8 +9498,6 @@ const getMerchantBillingSeed = async (userId: string) => {
       phone: users.phone,
       companyInfo: userProfiles.companyInfo,
       gstDetails: userProfiles.gstDetails,
-      kycGstin: kyc.gstin,
-      kycPanNumber: kyc.panNumber,
       invoiceSellerName: invoicePreferences.sellerName,
       invoiceBrandName: invoicePreferences.brandName,
       invoiceGstNumber: invoicePreferences.gstNumber,
@@ -9511,7 +9508,6 @@ const getMerchantBillingSeed = async (userId: string) => {
     })
     .from(users)
     .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
-    .leftJoin(kyc, eq(kyc.userId, users.id))
     .leftJoin(invoicePreferences, eq(invoicePreferences.userId, users.id))
     .where(eq(users.id, userId))
     .limit(1)
@@ -9557,7 +9553,6 @@ const buildDelhiveryB2BBillingAddress = ({
       merchant?.invoiceGstNumber,
       gstDetails.gstNumber,
       gstDetails.gstin,
-      merchant?.kycGstin,
       companyInfo.companyGst,
       companyInfo.companyGST,
       companyInfo.gstin,
@@ -9569,7 +9564,6 @@ const buildDelhiveryB2BBillingAddress = ({
       supplied?.pan_number,
       supplied?.panNumber,
       merchant?.invoicePanNumber,
-      merchant?.kycPanNumber,
       companyInfo.panNumber,
       companyInfo.pan,
     ),
