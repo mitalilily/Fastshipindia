@@ -9491,56 +9491,25 @@ const pickCleanText = (...values: unknown[]) => {
 
 const normalizeTaxText = (value: unknown) => String(value ?? '').trim().toUpperCase()
 
-const getMerchantBillingSeed = async (userId: string) => {
-  const [row] = await db
-    .select({
-      email: users.email,
-      phone: users.phone,
-      companyInfo: userProfiles.companyInfo,
-      gstDetails: userProfiles.gstDetails,
-      invoiceSellerName: invoicePreferences.sellerName,
-      invoiceBrandName: invoicePreferences.brandName,
-      invoiceGstNumber: invoicePreferences.gstNumber,
-      invoicePanNumber: invoicePreferences.panNumber,
-      invoiceSellerAddress: invoicePreferences.sellerAddress,
-      invoiceSupportPhone: invoicePreferences.supportPhone,
-      invoiceSupportEmail: invoicePreferences.supportEmail,
-    })
-    .from(users)
-    .leftJoin(userProfiles, eq(userProfiles.userId, users.id))
-    .leftJoin(invoicePreferences, eq(invoicePreferences.userId, users.id))
-    .where(eq(users.id, userId))
-    .limit(1)
-
-  return row || null
-}
-
 const buildDelhiveryB2BBillingAddress = ({
   supplied,
   params,
-  merchant,
 }: {
   supplied?: Record<string, unknown> | null
   params: ShipmentParams
-  merchant: Awaited<ReturnType<typeof getMerchantBillingSeed>>
 }) => {
-  const companyInfo = (merchant?.companyInfo || {}) as Record<string, unknown>
-  const gstDetails = (merchant?.gstDetails || {}) as Record<string, unknown>
   const pickup = params.pickup || ({} as ShipmentParams['pickup'])
   const companyName = pickCleanText(
     supplied?.company,
     supplied?.consignor,
-    merchant?.invoiceSellerName,
-    merchant?.invoiceBrandName,
-    companyInfo.businessName,
-    companyInfo.brandName,
-    companyInfo.companyName,
+    (params as any).company?.name,
+    (params as any).company_name,
     pickup.warehouse_name,
     pickup.name,
   )
   const contactName = pickCleanText(
     supplied?.name,
-    companyInfo.contactPerson,
+    (params as any).company?.contactPerson,
     pickup.name,
     pickup.warehouse_name,
     companyName,
@@ -9550,29 +9519,27 @@ const buildDelhiveryB2BBillingAddress = ({
       supplied?.gst_number,
       supplied?.gstNumber,
       pickup.gst_number,
-      merchant?.invoiceGstNumber,
-      gstDetails.gstNumber,
-      gstDetails.gstin,
-      companyInfo.companyGst,
-      companyInfo.companyGST,
-      companyInfo.gstin,
-      companyInfo.GSTIN,
+      (params as any).company?.gst,
+      (params as any).company?.gstin,
+      (params as any).company_gst,
+      (params as any).gstin,
     ),
   )
   const panNumber = normalizeTaxText(
     pickCleanText(
       supplied?.pan_number,
       supplied?.panNumber,
-      merchant?.invoicePanNumber,
-      companyInfo.panNumber,
-      companyInfo.pan,
+      (params as any).company?.panNumber,
+      (params as any).company?.pan,
+      (params as any).panNumber,
+      (params as any).pan,
     ),
   )
 
   if (!gstNumber && !panNumber) {
     throw new HttpError(
       400,
-      'Delhivery B2B billing address requires GSTIN or PAN. Add GST/PAN in pickup, invoice preferences, or KYC before booking.',
+      'Delhivery B2B billing address requires GSTIN or PAN. Add GSTIN on the pickup address or pass billing_address/company GST before booking.',
     )
   }
 
@@ -9582,20 +9549,22 @@ const buildDelhiveryB2BBillingAddress = ({
     consignor: pickCleanText(supplied?.consignor, companyName),
     address: pickCleanText(
       supplied?.address,
-      merchant?.invoiceSellerAddress,
-      companyInfo.companyAddress,
+      (params as any).company?.address,
       pickup.address,
     ),
-    city: pickCleanText(supplied?.city, companyInfo.city, pickup.city),
-    state: pickCleanText(supplied?.state, companyInfo.state, pickup.state),
-    pin: pickCleanText(supplied?.pin, supplied?.pincode, companyInfo.pincode, pickup.pincode),
+    city: pickCleanText(supplied?.city, (params as any).company?.city, pickup.city),
+    state: pickCleanText(supplied?.state, (params as any).company?.state, pickup.state),
+    pin: pickCleanText(
+      supplied?.pin,
+      supplied?.pincode,
+      (params as any).company?.pincode,
+      pickup.pincode,
+    ),
     phone: pickCleanText(
       supplied?.phone,
-      merchant?.invoiceSupportPhone,
-      companyInfo.companyContactNumber,
-      companyInfo.contactNumber,
+      (params as any).company?.phone,
+      (params as any).company?.contactNumber,
       pickup.phone,
-      merchant?.phone,
     ),
     ...(panNumber ? { pan_number: panNumber } : {}),
     ...(gstNumber ? { gst_number: gstNumber } : {}),
@@ -9962,11 +9931,10 @@ export const createB2BShipmentService = async (
       const originPincode = String(params.pickup?.pincode || '').trim()
       const destinationPincode = String(params.consignee?.pincode || '').trim()
       const weightGrams = Math.max(1, Math.round(package_weight * 1000))
-      const [originServiceability, destinationServiceability, defaults, merchantBillingSeed] = await Promise.all([
+      const [originServiceability, destinationServiceability, defaults] = await Promise.all([
         delhivery.checkServiceability(originPincode, weightGrams),
         delhivery.checkServiceability(destinationPincode, weightGrams),
         delhivery.getOperationalDefaults(),
-        getMerchantBillingSeed(userId),
       ])
 
       if (!isDelhiveryB2BServiceableResponse(originServiceability)) {
@@ -10005,7 +9973,6 @@ export const createB2BShipmentService = async (
       const billingAddress = buildDelhiveryB2BBillingAddress({
         supplied: suppliedBillingAddress,
         params,
-        merchant: merchantBillingSeed,
       })
       const manifestPayload: Record<string, unknown> = {
         pickup_location_name: pickupLocationName || undefined,
