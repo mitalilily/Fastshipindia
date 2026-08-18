@@ -32,6 +32,7 @@ import { DelhiveryB2BService } from '../../models/services/couriers/delhiveryB2B
 import {
   DEFAULT_DELHIVERY_B2B_API_BASE,
   DELHIVERY_B2B_PROVIDER,
+  normalizeDelhiveryB2BApiBase,
 } from '../../models/services/delhiveryB2BCredentials.service'
 import {
   XPRESSBEES_WEBHOOK_PATH,
@@ -684,7 +685,7 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
         const metadata = row.metadata || {}
         acc.delhiveryB2B = {
           provider: 'delhivery_b2b',
-          apiBase: row.apiBase || 'https://ltl-clients-api.delhivery.com',
+          apiBase: normalizeDelhiveryB2BApiBase(row.apiBase),
           username: row.username || '',
           clientId: row.clientId || '',
           warehouseId: String(metadata.warehouse_id || ''),
@@ -839,7 +840,8 @@ export const updateDelhiveryB2BCredentialsController = async (req: Request, res:
     req.body || {}
 
   try {
-    const nextApiBase = typeof apiBase === 'string' ? apiBase.trim() : undefined
+    const nextApiBase =
+      typeof apiBase === 'string' ? normalizeDelhiveryB2BApiBase(apiBase) : undefined
     const nextUsername = typeof username === 'string' ? username.trim() : undefined
     const nextPassword = typeof password === 'string' ? password.trim() : undefined
     const nextClientId = typeof clientId === 'string' ? clientId.trim() : undefined
@@ -907,7 +909,7 @@ export const updateDelhiveryB2BCredentialsController = async (req: Request, res:
       message: 'Delhivery B2B credentials updated successfully',
       data: {
         provider: DELHIVERY_B2B_PROVIDER,
-        apiBase: saved?.apiBase || DEFAULT_DELHIVERY_B2B_API_BASE,
+        apiBase: normalizeDelhiveryB2BApiBase(saved?.apiBase),
         username: saved?.username || '',
         clientId: saved?.clientId || '',
         warehouseId: String(saved?.metadata?.warehouse_id || ''),
@@ -931,7 +933,7 @@ const buildSavedDelhiveryB2BCredentials = (
   const metadata = saved.metadata || {}
 
   return {
-    apiBase: saved.apiBase || DEFAULT_DELHIVERY_B2B_API_BASE,
+    apiBase: normalizeDelhiveryB2BApiBase(saved.apiBase),
     username: saved.username || '',
     password: saved.password || '',
     clientId: saved.clientId || '',
