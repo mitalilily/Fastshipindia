@@ -1161,6 +1161,10 @@ export class DelhiveryB2BService {
     const password = ensureRequired(credentials.password, 'password')
     const credentialKey = makeCredentialKey(credentials)
 
+    if (force && failedLogin?.credentialKey === credentialKey) {
+      failedLogin = null
+    }
+
     if (failedLogin) {
       if (failedLogin.credentialKey !== credentialKey || failedLogin.retryAt <= Date.now()) {
         failedLogin = null

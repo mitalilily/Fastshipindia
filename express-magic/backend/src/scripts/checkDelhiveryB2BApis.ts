@@ -1253,10 +1253,11 @@ const run = async () => {
   }
   await assert.rejects(() => service.login(), /Invalid credentials/)
   await assert.rejects(() => service.login(), /login is paused.*Retry after/)
+  await assert.rejects(() => service.login(true), /Invalid credentials/)
   assert.equal(
     requests.filter((request) => request.url?.endsWith('/ums/login')).length,
-    loginCountBeforeFailure + 1,
-    'Rejected credentials must not trigger another Delhivery login during its 10-minute lock window',
+    loginCountBeforeFailure + 2,
+    'Rejected credentials should pause normal logins but allow an explicit forced admin test',
   )
   DelhiveryB2BService.clearTokenCache()
 

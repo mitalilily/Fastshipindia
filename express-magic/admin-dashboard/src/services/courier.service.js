@@ -147,7 +147,18 @@ export const updateDelhiveryB2BCredentials = async (payload) => {
 }
 
 export const testDelhiveryB2BCredentials = async () => {
-  const { data } = await api.post('/admin/couriers/credentials/delhivery-b2b/test')
-  if (!data?.success) throw new Error('Delhivery B2B authentication failed')
-  return data.data
+  try {
+    const { data } = await api.post('/admin/couriers/credentials/delhivery-b2b/test')
+    if (!data?.success) {
+      throw new Error(data?.message || data?.error || 'Delhivery B2B authentication failed')
+    }
+    return data.data
+  } catch (error) {
+    throw new Error(
+      error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Delhivery B2B authentication failed',
+    )
+  }
 }
