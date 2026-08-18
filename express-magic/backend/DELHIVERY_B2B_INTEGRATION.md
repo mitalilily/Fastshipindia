@@ -12,7 +12,9 @@ https://one.delhivery.com/developer-portal/documents/b2b/
 ## Configuration
 
 Save the account in **Admin > Courier Credentials > Delhivery B2B (LTL)**. The required
-values are API base, username, reset API password, client ID, and default warehouse ID.
+values for authentication are API base, username, and reset API password. Client ID and
+default warehouse ID are optional operational defaults; warehouse creation and manifestation
+can use the live warehouse details returned or supplied during those flows.
 The same values can be supplied by `DELHIVERY_B2B_*` environment variables; environment
 values take precedence over stored credentials.
 

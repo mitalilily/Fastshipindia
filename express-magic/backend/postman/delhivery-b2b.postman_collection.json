@@ -63,17 +63,17 @@
             "script": { "type": "text/javascript", "exec": [
               "var body = pm.response.json();",
               "var config = ((body.data || {}).delhiveryB2B || {});",
-              "var configured = Boolean(config.username && config.hasPassword && config.clientId && config.warehouseId);",
+              "var configured = Boolean(config.username && config.hasPassword);",
               "pm.environment.set('delhiveryConfigured', String(configured));",
-              "pm.test('Delhivery B2B credentials and defaults are configured', function () {",
-              "  pm.expect(configured, 'Set username, password, client ID, and warehouse ID in Admin > Courier Credentials > Delhivery B2B (LTL)').to.eql(true);",
+              "pm.test('Delhivery B2B authentication credentials are configured', function () {",
+              "  pm.expect(configured, 'Set username and password in Admin > Courier Credentials > Delhivery B2B (LTL)').to.eql(true);",
               "});"
             ] }
           }],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/api/admin/couriers/credentials",
-            "description": "Fails early with an actionable message when the production/UAT Delhivery username, password, client ID, or warehouse ID is missing. Secret values are never returned."
+            "description": "Fails early with an actionable message when the production/UAT Delhivery username or password is missing. Client ID and warehouse ID are optional operational defaults. Secret values are never returned."
           }
         },
         {
