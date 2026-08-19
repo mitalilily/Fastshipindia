@@ -15,6 +15,12 @@ export const usePickupAddresses = (filters?: PickupAddressFilters) => {
   return useQuery({
     queryKey: ['pickupAddresses', filters],
     queryFn: () => getPickupAddresses(filters),
+    staleTime: 60_000,
+    retry: (failureCount, error: unknown) => {
+      const message = error instanceof Error ? error.message : ''
+      if (/unauthorized|forbidden/i.test(message)) return false
+      return failureCount < 2
+    },
   })
 }
 
