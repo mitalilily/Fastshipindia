@@ -28,6 +28,7 @@ import OptionalChargesForm from '../OptionalChargesForm'
 import OrderDetailsForm from '../OrderDetailsForm'
 import PickupLocationForm from '../PickupLocationForm'
 import { SelectCourierForm } from '../SelectCourierForm'
+import { toast } from '../../UI/Toast'
 import B2BInvoicesForm from './B2BInvoicesForm'
 import B2BProductsForm from './B2BProductsForm'
 
@@ -145,6 +146,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   const location = useLocation()
   const [currentStep, setCurrentStep] = useState(0)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
+  const [stepError, setStepError] = useState('')
   const steps = ['Order & Delivery', 'Pickup Location', 'Courier Selection']
   const { data: paymentOptions } = usePaymentOptions()
 
@@ -194,6 +196,9 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
     setValue,
     handleSubmit,
     trigger,
+    getFieldState,
+    setFocus,
+    getValues,
     formState: { errors },
   } = methods
 
@@ -367,12 +372,150 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
     }
   }
 
-  const nextStep = async () => {
-    const valid = await trigger()
-    if (valid) setCurrentStep((prev) => Math.min(prev + 1, 2))
+  const getStepFields = () => {
+    if (currentStep === 0) {
+      const values = getValues()
+      const productFields =
+        values.products?.flatMap((_, index) => [
+          `products.${index}.productName`,
+          `products.${index}.quantity`,
+          `products.${index}.unitPrice`,
+        ]) ?? []
+      const invoiceFields =
+        values.invoices?.flatMap((_, index) => [
+          `invoices.${index}.invoiceNumber`,
+          `invoices.${index}.invoiceDate`,
+          `invoices.${index}.invoiceValue`,
+          `invoices.${index}.ebnNumber`,
+          `invoices.${index}.ebnExpiry`,
+        ]) ?? []
+      const boxFields =
+        values.boxes?.flatMap((_, index) => [
+          `boxes.${index}.lengthCm`,
+          `boxes.${index}.breadthCm`,
+          `boxes.${index}.heightCm`,
+          `boxes.${index}.weightKg`,
+        ]) ?? []
+
+      return [
+        'orderId',
+        'orderDate',
+        'orderType',
+        'buyerName',
+        'buyerPhone',
+        'pincode',
+        'city',
+        'state',
+        'address',
+        'companyName',
+        ...productFields,
+        ...invoiceFields,
+        ...boxFields,
+      ]
+    }
+
+    if (currentStep === 1) {
+      return [
+        'pickupLocationId',
+        'pickupLocationPincode',
+        'pickupLocationName',
+        'pickupLocationPOCName',
+        'pickupLocationPOCPhone',
+        'pickupAddress',
+        'pickupCity',
+        'pickupState',
+        'pickupDate',
+        'pickupTime',
+      ]
+    }
+
+    return ['courierPartnerId']
   }
 
-  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 0))
+  const getFieldLabel = (field: string) => {
+    if (field.includes('.productName')) return 'Product name'
+    if (field.includes('.quantity')) return 'Product quantity'
+    if (field.includes('.unitPrice')) return 'Product price'
+    if (field.includes('.invoiceNumber')) return 'Invoice number'
+    if (field.includes('.invoiceDate')) return 'Invoice date'
+    if (field.includes('.invoiceValue')) return 'Invoice value'
+    if (field.includes('.ebnNumber')) return 'EBN number'
+    if (field.includes('.ebnExpiry')) return 'EBN expiry'
+    if (field.includes('.lengthCm')) return 'Box length'
+    if (field.includes('.breadthCm')) return 'Box breadth'
+    if (field.includes('.heightCm')) return 'Box height'
+    if (field.includes('.weightKg')) return 'Box weight'
+
+    const labels: Record<string, string> = {
+      orderId: 'Order ID',
+      orderDate: 'Order date',
+      orderType: 'Order type',
+      buyerName: 'Recipient name',
+      buyerPhone: 'Recipient phone',
+      pincode: 'Delivery pincode',
+      city: 'Delivery city',
+      state: 'Delivery state',
+      address: 'Delivery address',
+      companyName: 'Company name',
+      pickupLocationId: 'Pickup location',
+      pickupLocationPincode: 'Pickup pincode',
+      pickupLocationName: 'Pickup name',
+      pickupLocationPOCName: 'Pickup contact',
+      pickupLocationPOCPhone: 'Pickup phone',
+      pickupAddress: 'Pickup address',
+      pickupCity: 'Pickup city',
+      pickupState: 'Pickup state',
+      pickupDate: 'Pickup date',
+      pickupTime: 'Pickup time',
+      courierPartnerId: 'Courier partner',
+    }
+    return labels[field] ?? field
+  }
+
+  const validateStep = async () => {
+    const stepFields = getStepFields()
+    const valid = await trigger(stepFields as any, { shouldFocus: true })
+    if (valid) {
+      setStepError('')
+      return true
+    }
+
+    const invalidFields = stepFields.filter((field) => getFieldState(field as any).invalid)
+    const labels = invalidFields.slice(0, 4).map(getFieldLabel)
+    const remainingCount = Math.max(invalidFields.length - labels.length, 0)
+    const message = `Please check: ${labels.join(', ')}${
+      remainingCount ? ` and ${remainingCount} more field${remainingCount === 1 ? '' : 's'}` : ''
+    }.`
+
+    setStepError(message)
+    toast.open({ message, severity: 'warning' })
+
+    const firstInvalid = invalidFields[0]
+    if (firstInvalid) {
+      setFocus(firstInvalid as any)
+      window.requestAnimationFrame(() => {
+        const input = document.querySelector<HTMLElement>(
+          `[name="${String(firstInvalid).replace(/"/g, '\\"')}"]`,
+        )
+        input?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    }
+
+    return false
+  }
+
+  const nextStep = async () => {
+    const valid = await validateStep()
+    if (valid) {
+      setCurrentStep((prev) => Math.min(prev + 1, 2))
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
+    }
+  }
+
+  const prevStep = () => {
+    setStepError('')
+    setCurrentStep((prev) => Math.max(prev - 1, 0))
+  }
 
   const requestBookingConfirmation = handleSubmit((data) => {
     const selectedProvider = `${data.integrationType ?? ''} ${data.courierPartner ?? ''}`
@@ -500,6 +643,12 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
               ))}
             </Stepper>
           </Box>
+
+          {stepError && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {stepError}
+            </Alert>
+          )}
 
           {currentStep === 0 && (
             <Stack gap={0} mb={1}>
