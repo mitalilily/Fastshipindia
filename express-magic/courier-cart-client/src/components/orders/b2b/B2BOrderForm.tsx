@@ -20,6 +20,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import type { CreateB2BShipmentParams } from '../../../api/order.service'
 import { useCreateB2BShipment } from '../../../hooks/Orders/useOrders'
 import { usePaymentOptions } from '../../../hooks/usePaymentOptions'
+import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import FormSectionAccordion from '../../UI/accordion/FormSectionAccordion'
 import AmountSummaryCard from '../AmountSummaryCard'
 import DeliveryDetailsForm from '../DeliveryDetailsForm'
@@ -230,7 +231,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   const getPackageSummary = (boxes: Box[] = []) => {
     const validBoxes = boxes.filter(Boolean)
     return {
-      packageWeight: validBoxes.reduce((sum, box) => sum + Number(box.weightKg || 0), 0),
+      packageWeight: validBoxes.reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg), 0),
       packageLength: Math.max(0, ...validBoxes.map((box) => Number(box.lengthCm || 0))),
       packageBreadth: Math.max(0, ...validBoxes.map((box) => Number(box.breadthCm || 0))),
       packageHeight: Math.max(0, ...validBoxes.map((box) => Number(box.heightCm || 0))),
@@ -296,7 +297,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
             lengthCm: Number(box.lengthCm || 0),
             breadthCm: Number(box.breadthCm || 0),
             heightCm: Number(box.heightCm || 0),
-            weightKg: Number(box.weightKg || 0),
+            weightKg: b2bBoxWeightInputToKg(box.weightKg),
           })) ?? [],
 
         order_items:

@@ -4,6 +4,7 @@ import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-
 import { AiOutlineDelete } from 'react-icons/ai'
 import { FaSync } from 'react-icons/fa'
 import { validateInvoiceContent } from '../../../api/b2b.api'
+import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import CustomInput from '../../UI/inputs/CustomInput'
 import FileUploader, { type UploadedFileInfo } from '../../UI/uploader/FileUploader'
 import type { B2BFormData } from './B2BOrderForm'
@@ -67,7 +68,7 @@ export default function B2BInvoicesForm() {
     return boxes.reduce((sum: number, box: unknown) => {
       if (box && typeof box === 'object' && box !== null && 'weightKg' in box) {
         const boxWithWeight = box as { weightKg?: number }
-        return sum + Number(boxWithWeight.weightKg || 0)
+        return sum + b2bBoxWeightInputToKg(boxWithWeight.weightKg)
       }
       return sum
     }, 0)

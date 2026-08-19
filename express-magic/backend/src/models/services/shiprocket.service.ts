@@ -5639,22 +5639,33 @@ export const fetchAvailableCouriersWithRatesB2B = async (
             planId: activePlanId ?? undefined,
           })
 
+          const finalRate = rateResult?.charges?.total ?? null
+
           return {
             ...courier,
-            rate: rateResult?.charges?.total ?? courier.rate ?? null,
-            rateEstimate: rateResult?.charges?.total ?? courier.rateEstimate ?? null,
+            rate: finalRate ?? courier.rate ?? null,
+            rateEstimate: finalRate ?? courier.rateEstimate ?? null,
+            seller_freight_charge: finalRate,
+            final_freight_charge: finalRate,
+            final_courier_charge: finalRate,
             courier_cost_estimate: courier.courier_cost_estimate ?? null,
             chargeable_weight:
               rateResult?.calculation?.billableWeight ?? courier.chargeable_weight ?? null,
             volumetric_weight:
               rateResult?.calculation?.volumetricWeight ?? courier.volumetric_weight ?? null,
+            chargeable_weight_unit: 'kg',
+            volumetric_weight_unit: 'kg',
             localRates: {
               ...courier.localRates,
               forward: {
                 ...(courier.localRates?.forward || {}),
-                rate: rateResult?.charges?.total ?? null,
+                rate: finalRate,
+                total_charges: finalRate,
+                cod_charges: 0,
+                other_charges: 0,
                 billableWeight: rateResult?.calculation?.billableWeight ?? null,
                 volumetricWeight: rateResult?.calculation?.volumetricWeight ?? null,
+                weightUnit: 'kg',
               },
             },
           }
@@ -9884,10 +9895,19 @@ export const createB2BShipmentService = async (
         total: rateResult.charges.total,
       }
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('⚠️ Failed to compute B2B charges breakdown for order', params.order_number, err)
-    chargesBreakdown = null
+    throw new HttpError(
+      422,
+      `Unable to calculate B2B rate from rate chart: ${err?.message || 'rate calculation failed'}`,
+    )
   }
+
+  if (!chargesBreakdown) {
+    throw new HttpError(422, 'Unable to calculate B2B rate from rate chart: empty rate result')
+  }
+
+  const authoritativeFreightCharges = Number(chargesBreakdown.total)
 
   // 1️⃣ Insert local B2B order as 'pending'
   const [pendingOrder] = await db
@@ -9925,7 +9945,7 @@ export const createB2BShipmentService = async (
       rov_charge: insuranceSelected ? optionalNumeric(rovCharge) : null,
       charges_breakdown: chargesBreakdown,
       shipping_charges: numericOrZero(params.shipping_charges),
-      freight_charges: numericOrZero(params.freight_charges), // What platform charges seller
+      freight_charges: authoritativeFreightCharges, // What platform charges seller from B2B rate card
       courier_cost: optionalNumeric(params.courier_cost), // What platform pays courier (will be updated via webhook)
       transaction_fee: numericOrZero(params.transaction_fee),
       discount: numericOrZero(params.discount),

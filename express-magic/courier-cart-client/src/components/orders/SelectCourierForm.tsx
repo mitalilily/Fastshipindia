@@ -7,6 +7,7 @@ import {
   type UseAvailableCouriersParams,
 } from '../../hooks/Integrations/useCouriers'
 import { usePaymentOptions } from '../../hooks/usePaymentOptions'
+import { b2bBoxWeightInputToKg } from '../../utils/b2bWeight'
 import { defaultLogo } from '../../utils/constants'
 import { getCourierDisplayName, getCourierLogo } from '../../utils/courierDisplay'
 import { normalizeParcelWeightInputToGrams } from '../../utils/weight'
@@ -82,7 +83,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     if (b2bBoxes && Array.isArray(b2bBoxes)) {
       b2bBoxes.forEach((box: B2BBox) => {
         // Calculate chargeable weight per box (max of actual and volumetric)
-        const actualWeightKg = Number(box.weightKg ?? 0) // in kg
+        const actualWeightKg = b2bBoxWeightInputToKg(box.weightKg)
         const length = Number(box.lengthCm ?? 0) // in cm
         const breadth = Number(box.breadthCm ?? 0) // in cm
         const height = Number(box.heightCm ?? 0) // in cm
@@ -248,6 +249,12 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const formatCurrency = (value?: number | string | null) => `₹${Number(value || 0).toFixed(2)}`
   const formatWeightKg = (value?: number | null) =>
     value ? `${(Number(value) / 1000).toFixed(2)} kg` : '—'
+  const formatCourierWeightKg = (value?: number | null) => {
+    if (!value) return '-'
+    if (shipment_type !== 'b2b') return formatWeightKg(value)
+    const weightKg = shipment_type === 'b2b' ? Number(value) : Number(value) / 1000
+    return `${weightKg.toFixed(2)} kg`
+  }
   const toChargeNumber = (value: unknown) => {
     const parsed = Number(value ?? 0)
     return Number.isFinite(parsed) ? parsed : 0
@@ -257,7 +264,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     if (!b2bBoxes?.length) return Number(totalWeight || 0) / 1000
 
     return b2bBoxes.reduce((sum, box) => {
-      const actualWeightKg = toChargeNumber(box.weightKg)
+      const actualWeightKg = b2bBoxWeightInputToKg(box.weightKg)
       const volumetricWeightKg =
         box.lengthCm && box.breadthCm && box.heightCm
           ? (toChargeNumber(box.lengthCm) * toChargeNumber(box.breadthCm) * toChargeNumber(box.heightCm)) /
@@ -298,11 +305,13 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const getSellerFreightCharge = (courier: (typeof availableCouriers)[number]) => {
     const directFreight = toChargeNumber(courier?.seller_freight_charge ?? courier?.final_freight_charge)
     if (directFreight > 0) return directFreight
+    if (shipment_type === 'b2b') return getCourierFreightCharge(courier)
     return getCourierFreightCharge(courier) + getCourierProviderCost(courier)
   }
   const getFinalCourierCharge = (courier: (typeof availableCouriers)[number]) => {
     const directFinal = toChargeNumber(courier?.final_courier_charge)
     if (directFinal > 0) return directFinal
+    if (shipment_type === 'b2b') return getCourierFreightCharge(courier)
     return (
       getSellerFreightCharge(courier) +
       toChargeNumber(courier?.localRates?.forward?.other_charges) +
@@ -353,7 +362,11 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
               </Typography>
               <Typography sx={{ mt: 0.75, opacity: 0.9, color: '#fff' }}>
                 {shipment_type.toUpperCase()} • {orderType.toUpperCase()} •{' '}
-                {(Number(totalWeight) / 1000).toFixed(2)} kg
+                {shipment_type === 'b2b'
+                  ? `${(b2bBoxes ?? [])
+                      .reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg), 0)
+                      .toFixed(2)} kg`
+                  : `${(Number(totalWeight) / 1000).toFixed(2)} kg`}
               </Typography>
             </Box>
 
@@ -540,7 +553,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
                       />
                       <Chip
                         size="small"
-                        label={`Chargeable ${formatWeightKg(selectedCourierSummary.chargeable_weight)}`}
+                        label={`Chargeable ${formatCourierWeightKg(selectedCourierSummary.chargeable_weight)}`}
                       />
                     </Stack>
                   </Box>
@@ -730,8 +743,8 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
                     <Grid container spacing={1.1}>
                       {[
                         ['Courier Charge', finalChargeLabel],
-                        ['Chargeable', formatWeightKg(courier?.chargeable_weight)],
-                        ['Volumetric', formatWeightKg(courier?.volumetric_weight)],
+                        ['Chargeable', formatCourierWeightKg(courier?.chargeable_weight)],
+                        ['Volumetric', formatCourierWeightKg(courier?.volumetric_weight)],
                         ['Mode', local?.forward?.mode || courier?.shipping_mode || courier?.mode || '-'],
                       ].map(([label, value]) => (
                         <Grid key={label} size={{ xs: 6, lg: 3 }}>

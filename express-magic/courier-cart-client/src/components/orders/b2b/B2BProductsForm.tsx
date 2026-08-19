@@ -13,6 +13,7 @@ import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-
 import { AiOutlineDelete } from 'react-icons/ai'
 import axiosInstance from '../../../api/axiosInstance'
 import { useDebouncedEffect } from '../../../hooks/useDebounceEffect'
+import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import CustomInput from '../../UI/inputs/CustomInput'
 import type { B2BFormData } from './B2BOrderForm'
 
@@ -49,7 +50,7 @@ const ProductBoxesForm = () => {
         if (!boxes.length) return
 
         const totalActualWeight = boxes.reduce(
-          (sum, box) => sum + Number(box.weightKg || 0),
+          (sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg),
           0,
         )
         const validDimensionBoxes = boxes.filter(
@@ -289,7 +290,7 @@ const ProductBoxesForm = () => {
                     ['lengthCm', 'Length (cm)'],
                     ['breadthCm', 'Breadth (cm)'],
                     ['heightCm', 'Height (cm)'],
-                    ['weightKg', 'Weight (kg)'],
+                    ['weightKg', 'Weight (g)'],
                   ] as const
                 ).map(([name, label]) => (
                   <Controller
