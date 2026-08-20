@@ -10144,7 +10144,8 @@ export const createB2BShipmentService = async (
           ? 'fod'
           : 'fop'
       const pickupLocationName = String(params.pickup?.warehouse_name || '').trim()
-      if (!pickupLocationName && !defaults.warehouseId) {
+      const defaultWarehouseId = String(defaults.warehouseId || '').trim()
+      if (!pickupLocationName && !defaultWarehouseId) {
         throw new HttpError(
           400,
           'A Delhivery B2B pickup warehouse name or default warehouse ID is required',
@@ -10159,8 +10160,8 @@ export const createB2BShipmentService = async (
         pickupSeed: pickupBillingSeed,
       })
       const manifestPayload: Record<string, unknown> = {
-        pickup_location_name: pickupLocationName || undefined,
-        pickup_location_id: pickupLocationName ? undefined : defaults.warehouseId || undefined,
+        pickup_location_name: defaultWarehouseId ? undefined : pickupLocationName || undefined,
+        pickup_location_id: defaultWarehouseId || undefined,
         payment_mode: params.payment_type === 'cod' ? 'cod' : 'prepaid',
         cod_amount: params.payment_type === 'cod' ? Number(params.order_amount || 0) : undefined,
         weight: weightGrams,
