@@ -9884,7 +9884,6 @@ const ensureDelhiveryB2BPickupWarehouse = async ({
 }
 
 const buildDelhiveryB2BInvoiceDocument = async ({
-  userId,
   params,
   normalizedOrderNumber,
   normalizedOrderItems,
@@ -9893,7 +9892,6 @@ const buildDelhiveryB2BInvoiceDocument = async ({
   billingAddress,
   pendingOrderId,
 }: {
-  userId: string
   params: ShipmentParams
   normalizedOrderNumber: string
   normalizedOrderItems: Product[]
@@ -9902,11 +9900,6 @@ const buildDelhiveryB2BInvoiceDocument = async ({
   billingAddress: Record<string, unknown>
   pendingOrderId: string
 }) => {
-  const [prefs] = await db
-    .select()
-    .from(invoicePreferences)
-    .where(eq(invoicePreferences.userId, userId))
-
   const invoiceNumber = String(
     primaryInvoice?.invoiceNumber || params.invoice_number || normalizedOrderNumber,
   ).trim()
@@ -9980,9 +9973,9 @@ const buildDelhiveryB2BInvoiceDocument = async ({
       pickupSeed?.merchantPanNumber,
     ),
     supportPhone: pickCleanText(billingAddress.phone, pickupSeed?.phone, pickup.phone),
-    supportEmail: prefs?.supportEmail ?? '',
-    invoiceNotes: prefs?.invoiceNotes ?? '',
-    termsAndConditions: prefs?.termsAndConditions ?? '',
+    supportEmail: '',
+    invoiceNotes: '',
+    termsAndConditions: '',
     orderId: normalizedOrderNumber,
     awbNumber: '',
     courierPartner: 'Delhivery B2B',
@@ -9990,7 +9983,7 @@ const buildDelhiveryB2BInvoiceDocument = async ({
     pickupPincode: pickCleanText(pickup.pincode, pickupSeed?.pincode),
     deliveryPincode: params.consignee.pincode,
     orderDate: String(params.order_date ?? ''),
-    layout: (prefs?.template as 'classic' | 'thermal') ?? 'classic',
+    layout: 'classic',
   })
 
   if (!invoiceBuffer?.length) {
@@ -10496,7 +10489,6 @@ export const createB2BShipmentService = async (
         ? ''
         : ensuredWarehouse?.pickupLocationName || manifestPickupLocationName
       const invoiceDocument = await buildDelhiveryB2BInvoiceDocument({
-        userId,
         params,
         normalizedOrderNumber,
         normalizedOrderItems,
