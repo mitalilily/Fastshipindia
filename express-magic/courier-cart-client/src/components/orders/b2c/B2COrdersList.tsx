@@ -1172,6 +1172,54 @@ const B2COrdersList = () => {
       ),
     },
     {
+      label: 'AWB',
+      id: 'awb_number',
+      minWidth: 136,
+      truncate: false,
+      render: (_value, row) => {
+        const awb = String(row.awb_number || '').trim()
+
+        if (!awb) {
+          return (
+            <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary' }} noWrap>
+              -
+            </Typography>
+          )
+        }
+
+        return (
+          <Typography
+            component="button"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              handleTrackShipment(row)
+            }}
+            sx={{
+              all: 'unset',
+              maxWidth: '100%',
+              cursor: 'pointer',
+              color: 'primary.dark',
+              fontSize: 12,
+              fontWeight: 700,
+              lineHeight: 1.25,
+              '&:hover': {
+                textDecoration: 'underline',
+              },
+              '&:focus-visible': {
+                outline: `2px solid ${alpha(theme.palette.primary.main, 0.35)}`,
+                outlineOffset: '2px',
+                borderRadius: '4px',
+              },
+            }}
+            noWrap
+          >
+            {awb}
+          </Typography>
+        )
+      },
+    },
+    {
       label: 'Customer Details',
       id: 'buyer_name',
       minWidth: 176,
