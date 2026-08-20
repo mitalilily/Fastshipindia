@@ -9756,6 +9756,31 @@ const isDelhiveryB2BWarehouseAlreadyConfigured = (error: any) => {
   )
 }
 
+const isDelhiveryB2BManifestWarehouseMissing = (error: any) => {
+  const providerData =
+    typeof error?.response?.data === 'string'
+      ? error.response.data
+      : JSON.stringify(error?.response?.data || {})
+  const message = String(`${error?.message || ''} ${providerData}`).toLowerCase()
+  return (
+    message.includes('warehouse') &&
+    /(not been configured|not configured|configured)/i.test(message)
+  )
+}
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const getDelhiveryB2BWarehouseId = (response: unknown) =>
+  String(
+    findProviderValue(response, [
+      'pickup_location_id',
+      'warehouse_id',
+      'warehouseId',
+      'client_warehouse_id',
+      'clientWarehouseId',
+    ]) || '',
+  ).trim()
+
 const buildDelhiveryB2BPickupWarehousePayload = ({
   params,
   pickupSeed,
@@ -9842,11 +9867,62 @@ const ensureDelhiveryB2BPickupWarehouse = async ({
   })
 
   try {
-    await delhivery.createWarehouse(payload)
+    const response = await delhivery.createWarehouse(payload)
+    return {
+      pickupLocationName: warehouseName,
+      pickupLocationId: getDelhiveryB2BWarehouseId(response),
+    }
   } catch (error) {
-    if (isDelhiveryB2BWarehouseAlreadyConfigured(error)) return
+    if (isDelhiveryB2BWarehouseAlreadyConfigured(error)) {
+      return {
+        pickupLocationName: warehouseName,
+        pickupLocationId: '',
+      }
+    }
     throw error
   }
+}
+
+const manifestDelhiveryB2BShipmentWithWarehouseRetry = async ({
+  delhivery,
+  manifestPayload,
+  ensureWarehouse,
+}: {
+  delhivery: DelhiveryB2BService
+  manifestPayload: Record<string, unknown>
+  ensureWarehouse?: () => Promise<{ pickupLocationName: string; pickupLocationId: string }>
+}) => {
+  let latestPayload = { ...manifestPayload }
+  const retryDelays = [3000, 7000, 12000]
+
+  for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    try {
+      return await delhivery.manifestShipment(latestPayload)
+    } catch (error: any) {
+      const warehouseMissing = isDelhiveryB2BManifestWarehouseMissing(error)
+      if (!ensureWarehouse || !warehouseMissing || attempt >= retryDelays.length) {
+        if (warehouseMissing) {
+          throw new HttpError(
+            409,
+            'Delhivery pickup warehouse is still being configured. Please retry after a short moment.',
+          )
+        }
+        throw error
+      }
+
+      const ensuredWarehouse = await ensureWarehouse()
+      latestPayload = {
+        ...latestPayload,
+        pickup_location_name: ensuredWarehouse.pickupLocationId
+          ? undefined
+          : ensuredWarehouse.pickupLocationName,
+        pickup_location_id: ensuredWarehouse.pickupLocationId || undefined,
+      }
+      await delay(retryDelays[attempt])
+    }
+  }
+
+  return delhivery.manifestShipment(latestPayload)
 }
 
 export const createB2BShipmentService = async (
@@ -10276,18 +10352,22 @@ export const createB2BShipmentService = async (
           'A Delhivery B2B pickup warehouse name or default warehouse ID is required',
         )
       }
-      if (!defaultWarehouseId) {
-        await ensureDelhiveryB2BPickupWarehouse({
+      const ensurePickupWarehouse = () =>
+        ensureDelhiveryB2BPickupWarehouse({
           delhivery,
           params,
           pickupSeed: pickupBillingSeed,
           billingAddress,
           warehouseName: manifestPickupLocationName,
         })
-      }
+      const ensuredWarehouse = defaultWarehouseId ? null : await ensurePickupWarehouse()
+      const manifestPickupLocationId = defaultWarehouseId || ensuredWarehouse?.pickupLocationId || ''
+      const manifestPickupName = manifestPickupLocationId
+        ? ''
+        : ensuredWarehouse?.pickupLocationName || manifestPickupLocationName
       const manifestPayload: Record<string, unknown> = {
-        pickup_location_name: defaultWarehouseId ? undefined : manifestPickupLocationName,
-        pickup_location_id: defaultWarehouseId || undefined,
+        pickup_location_name: manifestPickupLocationId ? undefined : manifestPickupName,
+        pickup_location_id: manifestPickupLocationId || undefined,
         payment_mode: params.payment_type === 'cod' ? 'cod' : 'prepaid',
         cod_amount: params.payment_type === 'cod' ? Number(params.order_amount || 0) : undefined,
         weight: weightGrams,
@@ -10341,7 +10421,11 @@ export const createB2BShipmentService = async (
         callback: (params as any).callback,
       }
 
-      const initialManifest = await delhivery.manifestShipment(manifestPayload)
+      const initialManifest = await manifestDelhiveryB2BShipmentWithWarehouseRetry({
+        delhivery,
+        manifestPayload,
+        ensureWarehouse: defaultWarehouseId ? undefined : ensurePickupWarehouse,
+      })
       const manifest = await waitForDelhiveryB2BManifest(delhivery, initialManifest)
       const waybills = getDelhiveryB2BManifestIdentifiers(manifest.response).awbs
       const primaryAwb = waybills[0] || manifest.lrn
