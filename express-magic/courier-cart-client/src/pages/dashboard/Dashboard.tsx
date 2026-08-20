@@ -31,6 +31,7 @@ import TodaysOperationsCard from '../../components/dashboard/TodaysOperationsCar
 import TopDestinationsCard from '../../components/dashboard/TopDestinationsCard'
 import { useMerchantDashboardStats } from '../../hooks/useDashboard'
 import { useDashboardPreferences } from '../../hooks/useDashboardPreferences'
+import { useWalletBalance } from '../../hooks/useWalletBalance'
 import { brand, brandGradients } from '../../theme/brand'
 import {
   dashboardButtonSx,
@@ -104,6 +105,7 @@ export default function Dashboard() {
     isRefetching,
     isPlaceholderData,
   } = useMerchantDashboardStats(selectedDate)
+  const { data: walletBalanceData } = useWalletBalance()
   const { data: preferences } = useDashboardPreferences()
   const [ChartComponent, setChartComponent] = useState<
     typeof import('react-apexcharts').default | null
@@ -204,7 +206,13 @@ export default function Dashboard() {
   }
 
   const todayOps = stats.todayOperations || {}
-  const financial = stats.financial || {}
+  const liveWalletBalance = Number(walletBalanceData?.data?.balance)
+  const financial = {
+    ...(stats.financial || {}),
+    walletBalance: Number.isFinite(liveWalletBalance)
+      ? liveWalletBalance
+      : Number(stats.financial?.walletBalance || 0),
+  }
   const operational = stats.operational || {}
   const actions = stats.actions || {}
   const couriers = stats.couriers || {}

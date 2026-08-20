@@ -42,6 +42,7 @@ export function useAdjustWalletBalance() {
       qc.invalidateQueries({ queryKey: ['admin-wallets'] })
       qc.invalidateQueries({ queryKey: ['admin-wallet', variables.userId] })
       qc.invalidateQueries({ queryKey: ['admin-wallet-transactions', variables.userId] })
+      qc.invalidateQueries({ queryKey: ['admin-dashboard-stats'] })
     },
   })
 }

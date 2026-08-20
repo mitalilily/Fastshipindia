@@ -293,6 +293,8 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
   previousWeekStart.setDate(previousWeekStart.getDate() - 7)
   const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
   const todayIso = today.toISOString().slice(0, 10)
+  const actualTodayIso = actualNow.toISOString().slice(0, 10)
+  const currentWalletBalance = Number(wallet?.balance ?? 0)
 
   const getFirstValidDate = (...values: unknown[]) => {
     for (const value of values) {
@@ -641,7 +643,7 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
         delivered: deliveredToday.length,
       },
       financial: {
-        walletBalance: historicalWalletBalance,
+        walletBalance: todayIso === actualTodayIso ? currentWalletBalance : historicalWalletBalance,
         todayRevenue,
         totalRevenue,
         totalShippingCharges,

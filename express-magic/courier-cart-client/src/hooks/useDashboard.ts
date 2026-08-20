@@ -173,13 +173,13 @@ export const useMerchantDashboardStats = (selectedDate?: string) => {
       return data
     },
     initialData: () => readDashboardCache(selectedDate) ?? createEmptyDashboardStats(selectedDate),
-    initialDataUpdatedAt: () => (readDashboardCache(selectedDate) ? Date.now() - 60_000 : 0),
+    initialDataUpdatedAt: () => 0,
     placeholderData: (previousData) => previousData,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 0,
     gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    refetchInterval: 60 * 1000,
     retry: 1,
   })
 }
