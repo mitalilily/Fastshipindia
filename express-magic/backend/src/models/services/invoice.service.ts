@@ -244,7 +244,13 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
     }
   }
 
-  const adminPrefs = await getAdminInvoicePreferences()
+  const adminPrefs = await getAdminInvoicePreferences().catch((err: any) => {
+    console.warn(
+      'Failed to load admin invoice preferences, continuing invoice PDF without platform logo:',
+      err?.message || err,
+    )
+    return null
+  })
   const platformLogoKey =
     adminPrefs?.includeLogo !== false && adminPrefs?.logoFile ? adminPrefs.logoFile : null
 
