@@ -934,6 +934,61 @@ const AllOrders = () => {
       ),
     },
     {
+      id: 'awb_number',
+      label: 'AWB',
+      minWidth: 136,
+      truncate: false,
+      render: (_value, row) => {
+        const awb = String(row.awb_number || '').trim()
+        const lrn = String(row.provider_reference || row.shipment_id || '').trim()
+        const trackingReference = getTrackingReference(row)
+        const isB2B = String(row.type || row.source_type || '').toLowerCase() === 'b2b'
+        const secondaryText = isB2B && lrn && lrn !== awb ? `LRN: ${lrn}` : ''
+
+        return (
+          <Stack spacing={0.3} sx={{ minWidth: 0 }}>
+            {trackingReference ? (
+              <Typography
+                component="button"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  handleTrackShipment(row)
+                }}
+                sx={{
+                  all: 'unset',
+                  maxWidth: '100%',
+                  cursor: 'pointer',
+                  color: '#0D3B8E',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  lineHeight: 1.25,
+                  '&:hover': { textDecoration: 'underline' },
+                  '&:focus-visible': {
+                    outline: '2px solid rgba(13, 59, 142, 0.28)',
+                    outlineOffset: '2px',
+                    borderRadius: '4px',
+                  },
+                }}
+                noWrap
+              >
+                {awb || trackingReference}
+              </Typography>
+            ) : (
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary' }} noWrap>
+                -
+              </Typography>
+            )}
+            {secondaryText ? (
+              <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.secondary', lineHeight: 1.25 }} noWrap>
+                {secondaryText}
+              </Typography>
+            ) : null}
+          </Stack>
+        )
+      },
+    },
+    {
       id: 'buyer_name',
       label: 'Customer Details',
       minWidth: 176,
