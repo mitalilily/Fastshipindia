@@ -9883,6 +9883,136 @@ const ensureDelhiveryB2BPickupWarehouse = async ({
   }
 }
 
+const buildDelhiveryB2BInvoiceDocument = async ({
+  userId,
+  params,
+  normalizedOrderNumber,
+  normalizedOrderItems,
+  primaryInvoice,
+  pickupSeed,
+  billingAddress,
+  pendingOrderId,
+}: {
+  userId: string
+  params: ShipmentParams
+  normalizedOrderNumber: string
+  normalizedOrderItems: Product[]
+  primaryInvoice: any
+  pickupSeed?: Awaited<ReturnType<typeof getB2BPickupBillingSeed>>
+  billingAddress: Record<string, unknown>
+  pendingOrderId: string
+}) => {
+  const [prefs] = await db
+    .select()
+    .from(invoicePreferences)
+    .where(eq(invoicePreferences.userId, userId))
+
+  const invoiceNumber = String(
+    primaryInvoice?.invoiceNumber || params.invoice_number || normalizedOrderNumber,
+  ).trim()
+  const invoiceDate = String(
+    primaryInvoice?.invoiceDate ||
+      params.invoice_date ||
+      params.order_date ||
+      dayjs().format('YYYY-MM-DD'),
+  ).trim()
+  const invoiceAmount = Number(
+    primaryInvoice?.invoiceValue || params.invoice_amount || params.order_amount || 0,
+  )
+  const pickup = params.pickup || ({} as ShipmentParams['pickup'])
+  const products =
+    normalizedOrderItems.length > 0
+      ? normalizedOrderItems
+      : [
+          {
+            name: 'Product',
+            sku: '',
+            qty: 1,
+            price: Number(params.order_amount || invoiceAmount || 0),
+            hsn: '',
+            discount: 0,
+            tax_rate: 0,
+          },
+        ]
+
+  const invoiceBuffer = await generateInvoicePDF({
+    invoiceNumber,
+    invoiceDate: invoiceDate || dayjs().format('DD MMM YYYY'),
+    invoiceAmount,
+    buyerName: params.consignee.name,
+    buyerPhone: params.consignee.phone ?? '',
+    buyerEmail: params.consignee.email ?? '',
+    buyerAddress: params.consignee.address,
+    buyerCity: params.consignee.city,
+    buyerState: params.consignee.state,
+    buyerPincode: params.consignee.pincode,
+    products,
+    shippingCharges: Number(params.shipping_charges ?? 0),
+    giftWrap: Number(params.gift_wrap ?? 0),
+    transactionFee: Number(params.transaction_fee ?? 0),
+    discount: Number(params.discount ?? 0),
+    orderType: params.payment_type === 'cod' ? 'cod' : 'prepaid',
+    courierCod: params.payment_type === 'cod' ? Number(params.order_amount ?? 0) : 0,
+    courierName: 'Delhivery B2B',
+    courierId: String(params.courier_id ?? ''),
+    companyName: pickCleanText(
+      billingAddress.company,
+      pickupSeed?.merchantCompanyName,
+      pickup.warehouse_name,
+    ),
+    companyGST: pickCleanText(
+      billingAddress.gst_number,
+      billingAddress.gstin,
+      pickupSeed?.merchantGstin,
+    ),
+    sellerName: pickCleanText(billingAddress.company, pickup.warehouse_name, 'Seller'),
+    brandName: pickCleanText(billingAddress.company, pickupSeed?.merchantCompanyName),
+    sellerAddress: pickCleanText(billingAddress.address, pickupSeed?.address, pickup.address),
+    sellerStateCode: pickCleanText(billingAddress.state, pickupSeed?.state, pickup.state),
+    gstNumber: pickCleanText(
+      billingAddress.gst_number,
+      billingAddress.gstin,
+      pickupSeed?.merchantGstin,
+    ),
+    panNumber: pickCleanText(
+      billingAddress.pan_number,
+      billingAddress.pan,
+      pickupSeed?.merchantPanNumber,
+    ),
+    supportPhone: pickCleanText(billingAddress.phone, pickupSeed?.phone, pickup.phone),
+    supportEmail: prefs?.supportEmail ?? '',
+    invoiceNotes: prefs?.invoiceNotes ?? '',
+    termsAndConditions: prefs?.termsAndConditions ?? '',
+    orderId: normalizedOrderNumber,
+    awbNumber: '',
+    courierPartner: 'Delhivery B2B',
+    serviceType: 'ltl',
+    pickupPincode: pickCleanText(pickup.pincode, pickupSeed?.pincode),
+    deliveryPincode: params.consignee.pincode,
+    orderDate: String(params.order_date ?? ''),
+    layout: (prefs?.template as 'classic' | 'thermal') ?? 'classic',
+  })
+
+  if (!invoiceBuffer?.length) {
+    throw new HttpError(422, 'Unable to generate invoice PDF for Delhivery B2B booking')
+  }
+
+  return {
+    invoiceNumber,
+    invoiceFile: {
+      buffer: invoiceBuffer,
+      mimetype: 'application/pdf',
+      originalname: `invoice-${pendingOrderId}.pdf`,
+    },
+    docData: [
+      {
+        doc_type: 'INVOICE',
+        doc_meta: { invoice_num: [invoiceNumber] },
+      },
+    ],
+  }
+}
+
 const manifestDelhiveryB2BShipmentWithWarehouseRetry = async ({
   delhivery,
   manifestPayload,
@@ -10365,6 +10495,16 @@ export const createB2BShipmentService = async (
       const manifestPickupName = manifestPickupLocationId
         ? ''
         : ensuredWarehouse?.pickupLocationName || manifestPickupLocationName
+      const invoiceDocument = await buildDelhiveryB2BInvoiceDocument({
+        userId,
+        params,
+        normalizedOrderNumber,
+        normalizedOrderItems,
+        primaryInvoice,
+        pickupSeed: pickupBillingSeed,
+        billingAddress,
+        pendingOrderId: pendingOrder.id,
+      })
       const manifestPayload: Record<string, unknown> = {
         pickup_location_name: manifestPickupLocationId ? undefined : manifestPickupName,
         pickup_location_id: manifestPickupLocationId || undefined,
@@ -10418,6 +10558,8 @@ export const createB2BShipmentService = async (
         fm_pickup:
           params.request_auto_pickup === 'yes' ? true : Boolean(defaults.fmPickup),
         billing_address: billingAddress,
+        doc_data: invoiceDocument.docData,
+        doc_file: invoiceDocument.invoiceFile,
         callback: (params as any).callback,
       }
 
