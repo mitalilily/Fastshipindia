@@ -24,6 +24,21 @@ export interface CompleteMerchantReadinessInput {
 
 const normalize = (value: unknown) => String(value ?? '').trim()
 
+const firstValue = (...values: unknown[]) => values.map(normalize).find(Boolean) || ''
+
+const profileFallbackName = (
+  companyInfo: Partial<CompanyInfo>,
+  account: { user: typeof users.$inferSelect },
+) =>
+  firstValue(
+    companyInfo.businessName,
+    companyInfo.brandName,
+    companyInfo.contactPerson,
+    account.user.email?.split('@')[0],
+    account.user.phone,
+    'Merchant',
+  )
+
 export async function completeMerchantReadinessByAdmin(
   userId: string,
   input: CompleteMerchantReadinessInput,
@@ -45,9 +60,33 @@ export async function completeMerchantReadinessByAdmin(
       throw new HttpError(404, 'Merchant account not found')
     }
 
-    const currentCompanyInfo = account.profile.companyInfo as CompanyInfo
-    const companyAddress =
-      normalize(input.companyAddress) || normalize(currentCompanyInfo.companyAddress)
+    const currentCompanyInfo = (account.profile.companyInfo || {}) as Partial<CompanyInfo>
+    const [existingPickup] = await tx
+      .select({
+        id: pickupAddresses.id,
+        addressLine1: addresses.addressLine1,
+        addressLine2: addresses.addressLine2,
+        landmark: addresses.landmark,
+        addressNickname: addresses.addressNickname,
+        contactName: addresses.contactName,
+        contactPhone: addresses.contactPhone,
+        contactEmail: addresses.contactEmail,
+        city: addresses.city,
+        state: addresses.state,
+        pincode: addresses.pincode,
+      })
+      .from(pickupAddresses)
+      .innerJoin(addresses, eq(addresses.id, pickupAddresses.addressId))
+      .where(
+        and(eq(pickupAddresses.userId, userId), eq(pickupAddresses.isPickupEnabled, true)),
+      )
+      .limit(1)
+
+    const companyAddress = firstValue(
+      input.companyAddress,
+      currentCompanyInfo.companyAddress,
+      existingPickup?.addressLine1,
+    )
 
     if (!companyAddress) {
       throw new HttpError(
@@ -56,47 +95,63 @@ export async function completeMerchantReadinessByAdmin(
       )
     }
 
+    const fallbackName = profileFallbackName(currentCompanyInfo, account)
     const companyInfo: CompanyInfo = {
       ...currentCompanyInfo,
-      businessName:
-        normalize(currentCompanyInfo.businessName) || normalize(currentCompanyInfo.brandName),
-      brandName:
-        normalize(currentCompanyInfo.brandName) || normalize(currentCompanyInfo.businessName),
+      businessName: firstValue(currentCompanyInfo.businessName, currentCompanyInfo.brandName, fallbackName),
+      brandName: firstValue(currentCompanyInfo.brandName, currentCompanyInfo.businessName, fallbackName),
       companyAddress,
-      companyEmail:
-        normalize(currentCompanyInfo.companyEmail) ||
-        normalize(currentCompanyInfo.contactEmail) ||
-        normalize(account.user.email),
-      companyContactNumber:
-        normalize(currentCompanyInfo.companyContactNumber) ||
-        normalize(currentCompanyInfo.contactNumber) ||
-        normalize(account.user.phone),
-      contactEmail:
-        normalize(currentCompanyInfo.contactEmail) ||
-        normalize(currentCompanyInfo.companyEmail) ||
-        normalize(account.user.email),
-      contactNumber:
-        normalize(currentCompanyInfo.contactNumber) ||
-        normalize(currentCompanyInfo.companyContactNumber) ||
-        normalize(account.user.phone),
+      companyEmail: firstValue(
+        currentCompanyInfo.companyEmail,
+        currentCompanyInfo.contactEmail,
+        existingPickup?.contactEmail,
+        account.user.email,
+      ),
+      companyContactNumber: firstValue(
+        currentCompanyInfo.companyContactNumber,
+        currentCompanyInfo.contactNumber,
+        existingPickup?.contactPhone,
+        account.user.phone,
+      ),
+      contactEmail: firstValue(
+        currentCompanyInfo.contactEmail,
+        currentCompanyInfo.companyEmail,
+        existingPickup?.contactEmail,
+        account.user.email,
+      ),
+      contactNumber: firstValue(
+        currentCompanyInfo.contactNumber,
+        currentCompanyInfo.companyContactNumber,
+        existingPickup?.contactPhone,
+        account.user.phone,
+      ),
+      contactPerson: firstValue(currentCompanyInfo.contactPerson, existingPickup?.contactName, fallbackName),
+      city: firstValue(currentCompanyInfo.city, existingPickup?.city),
+      state: firstValue(currentCompanyInfo.state, existingPickup?.state),
+      pincode: firstValue(currentCompanyInfo.pincode, existingPickup?.pincode),
+      POCEmailVerified: currentCompanyInfo.POCEmailVerified ?? true,
+      POCPhoneVerified: currentCompanyInfo.POCPhoneVerified ?? true,
+      profilePicture: currentCompanyInfo.profilePicture || '',
+      companyLogoUrl: currentCompanyInfo.companyLogoUrl || '',
+      website: currentCompanyInfo.website || '',
     }
 
-    const requiredCompanyValues = [
-      companyInfo.businessName,
-      companyInfo.companyAddress,
-      companyInfo.companyEmail,
-      companyInfo.companyContactNumber,
-      companyInfo.contactNumber,
-      companyInfo.contactEmail,
-      companyInfo.state,
-      companyInfo.city,
-      companyInfo.pincode,
-    ]
+    const missingCompanyFields = [
+      ['business name', companyInfo.businessName],
+      ['address', companyInfo.companyAddress],
+      ['email', companyInfo.companyEmail],
+      ['phone', companyInfo.companyContactNumber],
+      ['city', companyInfo.city],
+      ['state', companyInfo.state],
+      ['pincode', companyInfo.pincode],
+    ].filter(([, value]) => !normalize(value))
 
-    if (requiredCompanyValues.some((value) => !normalize(value))) {
+    if (missingCompanyFields.length > 0) {
       throw new HttpError(
         400,
-        'The merchant profile must contain business name, contact, city, state, and pincode before readiness can be completed',
+        `Complete merchant profile before enabling orders. Missing: ${missingCompanyFields
+          .map(([label]) => label)
+          .join(', ')}`,
       )
     }
 
@@ -138,16 +193,8 @@ export async function completeMerchantReadinessByAdmin(
         set: verifiedKyc,
       })
 
-    const [enabledPickup] = await tx
-      .select({ id: pickupAddresses.id })
-      .from(pickupAddresses)
-      .where(
-        and(eq(pickupAddresses.userId, userId), eq(pickupAddresses.isPickupEnabled, true)),
-      )
-      .limit(1)
-
     let pickupCreated = false
-    if (!enabledPickup) {
+    if (!existingPickup) {
       const [address] = await tx
         .insert(addresses)
         .values({

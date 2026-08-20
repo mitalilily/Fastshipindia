@@ -32,7 +32,11 @@ import {
   SoftBadge,
   ToolbarCard,
 } from "components/AdminUI/AdminPage";
-import { useUpdateUserApproval, useUsersWithRoleUser } from "hooks/useUsers";
+import {
+  useCompleteMerchantReadiness,
+  useUpdateUserApproval,
+  useUsersWithRoleUser,
+} from "hooks/useUsers";
 import { usePlans } from "hooks/usePlans";
 import { useMemo, useState } from "react";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
@@ -78,6 +82,38 @@ const kycColor = (row) => {
   return "gray";
 };
 
+const isOrdersEnabled = (row) => {
+  const status = row.kycStatus || row.domesticKyc?.status;
+  return (
+    row.approved !== false &&
+    (row.onboardingComplete || row.onboarding_complete) &&
+    (row.kycVerified || row.kyc_verified || status === "verified")
+  );
+};
+
+const getCompanyAddress = (companyInfo = {}) =>
+  companyInfo.companyAddress ||
+  [companyInfo.city, companyInfo.state, companyInfo.pincode].filter(Boolean).join(", ");
+
+const buildReadinessPayload = (row) => {
+  const companyInfo = row.companyInfo || {};
+  const address = getCompanyAddress(companyInfo);
+  const nickname =
+    companyInfo.businessName ||
+    companyInfo.brandName ||
+    companyInfo.contactPerson ||
+    row.email ||
+    "Default Warehouse";
+
+  return {
+    companyAddress: address || undefined,
+    pickup: {
+      addressLine1: address || undefined,
+      addressNickname: nickname,
+    },
+  };
+};
+
 export default function UsersManagementPage() {
   const history = useHistory();
   const toast = useToast();
@@ -88,7 +124,9 @@ export default function UsersManagementPage() {
   const [plan, setPlan] = useState("");
   const [kycStatus, setKycStatus] = useState("");
   const [onboardingComplete, setOnboardingComplete] = useState(undefined);
+  const [enablingUserId, setEnablingUserId] = useState(null);
   const updateUserApprovalMutation = useUpdateUserApproval();
+  const completeReadinessMutation = useCompleteMerchantReadiness();
   const { data: availablePlans = [] } = usePlans();
 
   const { data: usersResponse, isLoading } = useUsersWithRoleUser({
@@ -147,6 +185,38 @@ export default function UsersManagementPage() {
         title: "Action failed",
         description: error.response?.data?.message || "Please try again.",
       });
+    }
+  };
+
+  const handleEnableOrders = async (row) => {
+    const name = row.contactPerson || row.companyName || row.email || "this seller";
+    const confirmed = window.confirm(
+      `Enable KYC and order booking for ${name}? This will approve the account and prepare pickup, plan, and wallet readiness.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setEnablingUserId(row.id);
+      await completeReadinessMutation.mutateAsync({
+        userId: row.id,
+        payload: buildReadinessPayload(row),
+      });
+      toast({
+        status: "success",
+        title: "Orders enabled",
+        description: "Seller can now create bookings when profile data is complete.",
+      });
+    } catch (error) {
+      toast({
+        status: "error",
+        title: "Could not enable orders",
+        description:
+          error.response?.data?.message ||
+          "Please complete seller address, city, state, pincode, email, and phone first.",
+      });
+    } finally {
+      setEnablingUserId(null);
     }
   };
 
@@ -383,6 +453,9 @@ export default function UsersManagementPage() {
                 >
                   {kycLabel(row)}
                 </SoftBadge>
+                <SoftBadge colorScheme={isOrdersEnabled(row) ? "green" : "orange"}>
+                  {isOrdersEnabled(row) ? "Orders Enabled" : "Orders Locked"}
+                </SoftBadge>
               </Stack>
             ),
           },
@@ -426,6 +499,19 @@ export default function UsersManagementPage() {
               color="#607397"
               onClick={() => handleView(row.id)}
             />
+            <Button
+              size="xs"
+              leftIcon={<IconShieldCheck size={14} />}
+              colorScheme={isOrdersEnabled(row) ? "green" : "purple"}
+              variant={isOrdersEnabled(row) ? "outline" : "solid"}
+              isDisabled={isOrdersEnabled(row)}
+              isLoading={
+                completeReadinessMutation.isPending && enablingUserId === row.id
+              }
+              onClick={() => handleEnableOrders(row)}
+            >
+              {isOrdersEnabled(row) ? "Orders On" : "Enable Orders"}
+            </Button>
             <Switch
               colorScheme="purple"
               isChecked={row.approved !== false}
@@ -437,8 +523,8 @@ export default function UsersManagementPage() {
             </Text>
           </HStack>
         )}
-        actionsLabel="Account Approval"
-        actionsW="15%"
+        actionsLabel="KYC / Orders"
+        actionsW="22%"
         fitColumns
         footer={
           <>

@@ -59,6 +59,11 @@ export const updateUserApproval = async (userId, approved) => {
   return response.data
 }
 
+export const completeMerchantReadiness = async (userId, payload = {}) => {
+  const response = await api.post(`/admin/users/${userId}/complete-readiness`, payload)
+  return response.data
+}
+
 export const getSellerSummary = async (userId) => {
   const { data } = await api.get(`/admin/users/${userId}/summary`)
   return data.data

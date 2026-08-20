@@ -1,6 +1,7 @@
 // src/hooks/useUsersWithRoleUser.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  completeMerchantReadiness,
   createUserTeamMember,
   deleteUser,
   deleteUserTeamMember,
@@ -72,6 +73,18 @@ export function useUpdateUserApproval() {
 
   return useMutation({
     mutationFn: ({ userId, approved }) => updateUserApproval(userId, approved),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
+      queryClient.invalidateQueries({ queryKey: ['userInfo'] })
+    },
+  })
+}
+
+export function useCompleteMerchantReadiness() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ userId, payload = {} }) => completeMerchantReadiness(userId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-role-user'] })
       queryClient.invalidateQueries({ queryKey: ['userInfo'] })

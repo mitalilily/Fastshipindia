@@ -1120,6 +1120,7 @@ export async function getAllUsersWithRoleUser({
       createdAt: users.createdAt,
       companyName: sql<string>`coalesce(nullif(${schema.userProfiles.companyInfo} ->> 'businessName', ''), nullif(${schema.userProfiles.companyInfo} ->> 'brandName', ''), ${users.email}, '')`,
       businessType: schema.userProfiles.businessType,
+      companyInfo: schema.userProfiles.companyInfo,
       approved: sql<boolean>`coalesce(${schema.userProfiles.approved}, false)`,
       onboardingComplete: sql<boolean>`coalesce(${schema.userProfiles.onboardingComplete}, false)`,
       onboardingStep: sql<number>`coalesce(${schema.userProfiles.onboardingStep}, 0)`,
