@@ -9999,7 +9999,7 @@ const buildDelhiveryB2BInvoiceDocument = async ({
     },
     docData: [
       {
-        doc_type: 'INVOICE',
+        doc_type: 'INVOICE_COPY',
         doc_meta: { invoice_num: [invoiceNumber] },
       },
     ],
