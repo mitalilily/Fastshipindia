@@ -174,6 +174,20 @@ export type CreateB2BShipmentParams = {
     phone: string
   }
   pickup_location_id?: string
+  billing_address?: {
+    name: string
+    company: string
+    consignor: string
+    address: string
+    city: string
+    state: string
+    pin: string
+    phone: string
+    pan_number?: string
+    pan?: string
+    gst_number?: string
+    gstin?: string
+  }
 
   // Boxes array
   boxes: Array<{

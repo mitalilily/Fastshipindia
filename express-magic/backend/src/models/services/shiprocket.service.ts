@@ -9502,6 +9502,10 @@ const pickCleanText = (...values: unknown[]) => {
 }
 
 const normalizeTaxText = (value: unknown) => String(value ?? '').trim().toUpperCase()
+const derivePanFromGstin = (value: string) =>
+  /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(value)
+    ? value.slice(2, 12)
+    : ''
 
 const getB2BPickupBillingSeed = async (userId: string, params: ShipmentParams) => {
   try {
@@ -9673,7 +9677,7 @@ const buildDelhiveryB2BBillingAddress = ({
       (params as any).gstin,
     ),
   )
-  const panNumber = normalizeTaxText(
+  const suppliedPanNumber = normalizeTaxText(
     pickCleanText(
       supplied?.pan_number,
       supplied?.panNumber,
@@ -9684,6 +9688,7 @@ const buildDelhiveryB2BBillingAddress = ({
       pickupSeed?.merchantPanNumber,
     ),
   )
+  const panNumber = suppliedPanNumber || derivePanFromGstin(gstNumber)
 
   if (!panNumber && !gstNumber) {
     throw new HttpError(

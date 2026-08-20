@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { BiCheckCircle } from 'react-icons/bi'
 import { usePickupAddresses } from '../../hooks/Pickup/usePickupAddresses'
+import { useInvoicePreferences } from '../../hooks/User/useInvoicePreferences'
 import type { B2BFormData } from './b2b/B2BOrderForm'
 import type { B2CFormData } from './b2c/B2COrderForm'
 
@@ -25,18 +26,31 @@ const getLocalDateInputValue = () => {
   return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
 }
 
-const PickupLocationForm = () => {
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
+const normalizeTaxInput = (value: unknown) =>
+  String(value ?? '')
+    .trim()
+    .toUpperCase()
+
+const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | 'b2c' }) => {
   const { control, setValue, watch } = useFormContext<B2BFormData | B2CFormData>()
   const {
     data: locations,
     isLoading,
     isError,
   } = usePickupAddresses({ isPickupEnabled: 'active' as unknown as boolean })
+  const { preferences } = useInvoicePreferences()
 
   const [openRto, setOpenRto] = useState<Record<string, boolean>>({})
 
   const pickupDate = watch('pickupDate') as string | undefined
   const pickupTime = watch('pickupTime') as string | undefined
+  const billingPanNumber = watch('billingPanNumber' as any) as string | undefined
+  const billingGstin = watch('billingGstin' as any) as string | undefined
+  const hasBillingTaxId = Boolean(
+    normalizeTaxInput(billingPanNumber) || normalizeTaxInput(billingGstin),
+  )
 
   const toggleRto = (id: string) => {
     setOpenRto((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -63,6 +77,12 @@ const PickupLocationForm = () => {
       setValue('pickupAddress', primaryLocation.pickup?.addressLine1)
       setValue('pickupCity', primaryLocation.pickup?.city)
       setValue('pickupState', primaryLocation.pickup?.state)
+      const primaryPickupGst = normalizeTaxInput(
+        (primaryLocation.pickup as any)?.gstNumber || (primaryLocation.pickup as any)?.gst_number,
+      )
+      if (shipmentType === 'b2b' && !normalizeTaxInput(billingGstin) && primaryPickupGst) {
+        setValue('billingGstin' as any, primaryPickupGst, { shouldValidate: true })
+      }
 
       if (primaryLocation?.isRTOSame) {
         setValue('isRtoSame', true)
@@ -93,7 +113,27 @@ const PickupLocationForm = () => {
         setValue('rtoState', '')
       }
     }
-  }, [primaryLocation, setValue])
+  }, [billingGstin, primaryLocation, setValue, shipmentType])
+
+  useEffect(() => {
+    if (shipmentType !== 'b2b') return
+
+    const savedPan = normalizeTaxInput(preferences?.panNumber)
+    const savedGstin = normalizeTaxInput(preferences?.gstNumber)
+    if (!normalizeTaxInput(billingPanNumber) && savedPan) {
+      setValue('billingPanNumber' as any, savedPan, { shouldValidate: true })
+    }
+    if (!normalizeTaxInput(billingGstin) && savedGstin) {
+      setValue('billingGstin' as any, savedGstin, { shouldValidate: true })
+    }
+  }, [
+    billingGstin,
+    billingPanNumber,
+    preferences?.gstNumber,
+    preferences?.panNumber,
+    setValue,
+    shipmentType,
+  ])
 
   if (isLoading) return <Typography>Loading pickup locations...</Typography>
   if (isError) return <Typography color="error">Failed to load pickup locations</Typography>
@@ -110,6 +150,9 @@ const PickupLocationForm = () => {
           {locations.pickupAddresses.map((loc) => {
             const isSelected = field.value === loc.pickupId
             const isOpen = openRto[loc.id] || false
+            const pickupGst = normalizeTaxInput(
+              (loc.pickup as any)?.gstNumber || (loc.pickup as any)?.gst_number,
+            )
 
             return (
               <Grid size={{ xs: 12, sm: 6, md: 4 }} key={loc.id} display="flex">
@@ -125,6 +168,9 @@ const PickupLocationForm = () => {
                     setValue('pickupAddress', loc?.pickup?.addressLine1)
                     setValue('pickupCity', loc?.pickup?.city)
                     setValue('pickupState', loc?.pickup?.state)
+                    if (shipmentType === 'b2b' && !normalizeTaxInput(billingGstin) && pickupGst) {
+                      setValue('billingGstin' as any, pickupGst, { shouldValidate: true })
+                    }
 
                     // 🔹 Update RTO fields
                     if (loc?.isRTOSame) {
@@ -270,6 +316,78 @@ const PickupLocationForm = () => {
               </Grid>
             )
           })}
+          {shipmentType === 'b2b' && (
+            <>
+              <Grid size={12}>
+                <Divider sx={{ my: 1 }} />
+                <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
+                  Seller Billing Tax Details
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Required for live Delhivery B2B booking. Enter either PAN or GSTIN.
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Controller
+                  name={'billingPanNumber' as any}
+                  control={control}
+                  rules={{
+                    validate: (value) => {
+                      const pan = normalizeTaxInput(value)
+                      const gstin = normalizeTaxInput(billingGstin)
+                      if (!pan && !gstin) return 'Enter seller PAN or GSTIN'
+                      if (pan && !PAN_REGEX.test(pan)) return 'Enter valid PAN, e.g. ABCDE1234F'
+                      return true
+                    },
+                  }}
+                  render={({ field: panField, fieldState: panState }) => (
+                    <TextField
+                      {...panField}
+                      value={panField.value || ''}
+                      onChange={(event) => panField.onChange(normalizeTaxInput(event.target.value))}
+                      label="Seller PAN"
+                      fullWidth
+                      error={!!panState.error}
+                      helperText={panState.error?.message || 'Use consignor/seller PAN'}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Controller
+                  name={'billingGstin' as any}
+                  control={control}
+                  rules={{
+                    validate: (value) => {
+                      const gstin = normalizeTaxInput(value)
+                      const pan = normalizeTaxInput(billingPanNumber)
+                      if (!gstin && !pan) return 'Enter seller PAN or GSTIN'
+                      if (gstin && !GSTIN_REGEX.test(gstin)) return 'Enter valid 15-character GSTIN'
+                      return true
+                    },
+                  }}
+                  render={({ field: gstField, fieldState: gstState }) => (
+                    <TextField
+                      {...gstField}
+                      value={gstField.value || ''}
+                      onChange={(event) => gstField.onChange(normalizeTaxInput(event.target.value))}
+                      label="Seller GSTIN"
+                      fullWidth
+                      error={!!gstState.error}
+                      helperText={gstState.error?.message || 'GSTIN is optional if PAN is entered'}
+                    />
+                  )}
+                />
+              </Grid>
+              {!hasBillingTaxId && (
+                <Grid size={12}>
+                  <Typography color="error" fontSize={12}>
+                    Seller PAN or GSTIN is required before live booking.
+                  </Typography>
+                </Grid>
+              )}
+            </>
+          )}
           <Grid size={{ xs: 12, md: 6 }}>
             <Controller
               name="pickupDate"

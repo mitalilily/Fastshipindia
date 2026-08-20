@@ -123,6 +123,8 @@ export type B2BFormData = {
   pickupState?: string
   pickupDate?: string
   pickupTime?: string
+  billingPanNumber?: string
+  billingGstin?: string
 
   // RTO location (for B2B, typically same as pickup)
   isRtoSame?: boolean
@@ -256,6 +258,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       }
 
       const packageSummary = getPackageSummary(data.boxes)
+      const billingPanNumber = String(data.billingPanNumber || '').trim().toUpperCase()
+      const billingGstin = String(data.billingGstin || '').trim().toUpperCase()
 
       // Prepare B2B shipment payload
       const payload: CreateB2BShipmentParams = {
@@ -296,6 +300,18 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           phone: data.pickupLocationPOCPhone ?? data.buyerPhone,
         },
         pickup_location_id: data.pickupLocationId,
+        billing_address: {
+          name: data.pickupLocationPOCName || data.pickupLocationName || 'Seller',
+          company: data.pickupLocationName || data.companyName || 'Seller',
+          consignor: data.pickupLocationName || data.companyName || 'Seller',
+          address: data.pickupAddress || '',
+          city: data.pickupCity || '',
+          state: data.pickupState || '',
+          pin: data.pickupLocationPincode || '',
+          phone: data.pickupLocationPOCPhone || data.buyerPhone,
+          ...(billingPanNumber ? { pan_number: billingPanNumber, pan: billingPanNumber } : {}),
+          ...(billingGstin ? { gst_number: billingGstin, gstin: billingGstin } : {}),
+        },
         // Boxes array
         boxes:
           data?.boxes?.map((box) => ({
@@ -426,6 +442,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         'pickupState',
         'pickupDate',
         'pickupTime',
+        'billingPanNumber',
+        'billingGstin',
       ]
     }
 
@@ -467,6 +485,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       pickupState: 'Pickup state',
       pickupDate: 'Pickup date',
       pickupTime: 'Pickup time',
+      billingPanNumber: 'Seller PAN',
+      billingGstin: 'Seller GSTIN',
       courierPartnerId: 'Courier partner',
     }
     return labels[field] ?? field
@@ -688,7 +708,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
             </Stack>
           )}
 
-          {currentStep === 1 && <PickupLocationForm />}
+          {currentStep === 1 && <PickupLocationForm shipmentType="b2b" />}
 
           {currentStep === 2 && (
             <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded compact>
