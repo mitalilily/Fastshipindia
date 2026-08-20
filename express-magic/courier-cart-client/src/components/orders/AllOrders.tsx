@@ -847,6 +847,11 @@ const AllOrders = () => {
       return
     }
 
+    if (!getTrackingReference(order)) {
+      toast.open({ message: 'Tracking reference is not available yet.', severity: 'info' })
+      return
+    }
+
     setSyncingTrackingOrderId(order.id)
     syncB2CTracking(orderId, {
       onSettled: () => {
@@ -1151,7 +1156,6 @@ const AllOrders = () => {
         const canSelectCourier = isCourierSelectionPending(row)
         const canEditDraft = row.type === 'b2c' && isB2CPreShipmentDraft(row)
         const trackingReference = getTrackingReference(row)
-        const hasAwb = Boolean(String(row.awb_number || '').trim())
         const isSyncingThisOrder = syncingTracking && syncingTrackingOrderId === row.id
 
         const renderActionItem = ({
@@ -1294,7 +1298,6 @@ const AllOrders = () => {
                 label: isLabelGenerating ? 'Regenerating Label' : 'Regenerate Label',
                 onClick: () => handleGenerateOrderDocument(row, 'label'),
                 disabled:
-                  row.type !== 'b2c' ||
                   isCancelled ||
                   !isDocumentReady ||
                   regeneratingDocuments ||
@@ -1307,7 +1310,6 @@ const AllOrders = () => {
                 label: isInvoiceGenerating ? 'Regenerating Invoice' : 'Regenerate Invoice',
                 onClick: () => handleGenerateOrderDocument(row, 'invoice'),
                 disabled:
-                  row.type !== 'b2c' ||
                   isCancelled ||
                   !isDocumentReady ||
                   regeneratingDocuments ||
@@ -1365,7 +1367,7 @@ const AllOrders = () => {
                 icon: <MdSync />,
                 label: isSyncingThisOrder ? 'Syncing Live Status' : 'Sync Live Status',
                 onClick: () => handleSyncLiveStatus(row),
-                disabled: row.type !== 'b2c' || !hasAwb || syncingTracking,
+                disabled: !trackingReference || syncingTracking,
                 loading: isSyncingThisOrder,
               })}
             </Menu>

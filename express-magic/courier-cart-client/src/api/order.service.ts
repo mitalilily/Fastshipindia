@@ -418,7 +418,7 @@ export interface SyncB2CTrackingResponse {
 
 export const syncB2COrderTrackingService = async (orderId: string) => {
   const res = await axiosInstance.post<SyncB2CTrackingResponse>(
-    `/orders/b2c/${orderId}/sync-tracking`,
+    `/orders/${orderId}/sync-tracking`,
     undefined,
     { timeout: 60000 },
   )

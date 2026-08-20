@@ -282,6 +282,7 @@ export const useSyncB2CTracking = () => {
         severity: 'success',
       })
       queryClient.invalidateQueries({ queryKey: ['b2cOrdersByUser'] })
+      queryClient.invalidateQueries({ queryKey: ['b2bOrdersByUser'] })
       queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
     onError: (error: unknown) => {

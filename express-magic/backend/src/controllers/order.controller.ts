@@ -20,6 +20,7 @@ import {
 import { regenerateOrderDocumentsServiceAdmin } from '../models/services/adminOrders.service'
 import { db } from '../models/client'
 import { b2c_orders } from '../models/schema/b2cOrders'
+import { b2b_orders } from '../models/schema/b2bOrders'
 import { generateLabelForOrder } from '../models/services/generateCustomLabelService'
 import { presignDownload } from '../models/services/upload.service'
 import { getOrderLabelReference, isExternalLabelReference } from '../utils/orderLabels'
@@ -793,6 +794,69 @@ export const regenerateOrderDocumentsController = async (req: any, res: Response
     return res.status(statusCode).json({
       success: false,
       message: error?.message || 'Failed to regenerate order documents',
+    })
+  }
+}
+
+export const syncOrderTrackingController = async (req: any, res: Response) => {
+  try {
+    const userId = getMerchantScopedUserId(req)
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' })
+    }
+
+    const orderId = String(req.params.orderId || '').trim()
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'Order ID is required' })
+    }
+
+    const [b2cOrder] = await db
+      .select()
+      .from(b2c_orders)
+      .where(and(eq(b2c_orders.id, orderId), eq(b2c_orders.user_id, userId)))
+      .limit(1)
+    const [b2bOrder] = b2cOrder
+      ? [undefined]
+      : await db
+          .select()
+          .from(b2b_orders)
+          .where(and(eq(b2b_orders.id, orderId), eq(b2b_orders.user_id, userId)))
+          .limit(1)
+
+    const order = b2cOrder || b2bOrder
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' })
+    }
+
+    const trackingReference = String(
+      b2bOrder
+        ? b2bOrder.provider_reference ||
+            b2bOrder.shipment_id ||
+            b2bOrder.awb_number ||
+            b2bOrder.provider_request_id ||
+            ''
+        : b2cOrder?.awb_number || b2cOrder?.shipment_id || b2cOrder?.provider_reference || '',
+    ).trim()
+
+    if (!trackingReference) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tracking reference is not available for this order',
+      })
+    }
+
+    const trackingData = await trackByAwbService(trackingReference)
+
+    return res.status(200).json({
+      success: true,
+      message: 'Tracking synced successfully',
+      data: trackingData,
+    })
+  } catch (error: any) {
+    const statusCode = error?.statusCode || error?.status || 400
+    return res.status(statusCode).json({
+      success: false,
+      message: error?.message || 'Failed to sync tracking',
     })
   }
 }
