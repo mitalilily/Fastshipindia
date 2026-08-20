@@ -9743,6 +9743,113 @@ const buildDelhiveryB2BBillingAddress = ({
   }
 }
 
+const isDelhiveryB2BWarehouseAlreadyConfigured = (error: any) => {
+  const statusCode = Number(error?.statusCode || error?.response?.status || 0)
+  const providerData =
+    typeof error?.response?.data === 'string'
+      ? error.response.data
+      : JSON.stringify(error?.response?.data || {})
+  const message = String(`${error?.message || ''} ${providerData}`).toLowerCase()
+  return (
+    [400, 409, 422, 500].includes(statusCode) &&
+    /(already|exist|duplicate|configured)/i.test(message)
+  )
+}
+
+const buildDelhiveryB2BPickupWarehousePayload = ({
+  params,
+  pickupSeed,
+  billingAddress,
+  warehouseName,
+}: {
+  params: ShipmentParams
+  pickupSeed?: Awaited<ReturnType<typeof getB2BPickupBillingSeed>>
+  billingAddress: Record<string, unknown>
+  warehouseName: string
+}) => {
+  const pickup = params.pickup || ({} as ShipmentParams['pickup'])
+  const addressLine = pickCleanText(
+    pickup.address,
+    pickupSeed?.address,
+    billingAddress.address,
+  )
+  const contactName = pickCleanText(
+    pickup.name,
+    pickupSeed?.contactName,
+    billingAddress.name,
+    warehouseName,
+  )
+  const phoneNumber = pickCleanText(
+    pickup.phone,
+    pickupSeed?.phone,
+    billingAddress.phone,
+  )
+  const pinCode = pickCleanText(pickup.pincode, pickupSeed?.pincode, billingAddress.pin)
+
+  if (!addressLine || !contactName || !phoneNumber || !pinCode) {
+    throw new HttpError(
+      400,
+      'Pickup warehouse address, contact name, phone, and pincode are required before booking Delhivery B2B.',
+    )
+  }
+
+  const gstNumber = normalizeTaxText(
+    pickCleanText(
+      pickup.gst_number,
+      (pickup as any).gstNumber,
+      pickupSeed?.gstNumber,
+      billingAddress.gst_number,
+      billingAddress.gstin,
+    ),
+  )
+
+  return {
+    name: warehouseName,
+    pin_code: pinCode,
+    city: pickCleanText(pickup.city, pickupSeed?.city, billingAddress.city),
+    state: pickCleanText(pickup.state, pickupSeed?.state, billingAddress.state),
+    country: 'India',
+    same_as_fwd_add: true,
+    address_details: {
+      address: addressLine,
+      contact_person: contactName,
+      phone_number: phoneNumber,
+      email: pickCleanText((pickup as any).email, billingAddress.email),
+      company: pickCleanText(billingAddress.company, warehouseName),
+    },
+    billing_details: billingAddress,
+    ...(gstNumber && /^[A-Z0-9]{15}$/.test(gstNumber) ? { consignee_gst: gstNumber } : {}),
+  }
+}
+
+const ensureDelhiveryB2BPickupWarehouse = async ({
+  delhivery,
+  params,
+  pickupSeed,
+  billingAddress,
+  warehouseName,
+}: {
+  delhivery: DelhiveryB2BService
+  params: ShipmentParams
+  pickupSeed?: Awaited<ReturnType<typeof getB2BPickupBillingSeed>>
+  billingAddress: Record<string, unknown>
+  warehouseName: string
+}) => {
+  const payload = buildDelhiveryB2BPickupWarehousePayload({
+    params,
+    pickupSeed,
+    billingAddress,
+    warehouseName,
+  })
+
+  try {
+    await delhivery.createWarehouse(payload)
+  } catch (error) {
+    if (isDelhiveryB2BWarehouseAlreadyConfigured(error)) return
+    throw error
+  }
+}
+
 export const createB2BShipmentService = async (
   params: ShipmentParams,
   userId: string,
@@ -10145,12 +10252,6 @@ export const createB2BShipmentService = async (
           : 'fop'
       const pickupLocationName = String(params.pickup?.warehouse_name || '').trim()
       const defaultWarehouseId = String(defaults.warehouseId || '').trim()
-      if (!pickupLocationName && !defaultWarehouseId) {
-        throw new HttpError(
-          400,
-          'A Delhivery B2B pickup warehouse name or default warehouse ID is required',
-        )
-      }
       const suppliedBillingAddress = normalizeJsonValue((params as any).billing_address) as
         | Record<string, unknown>
         | null
@@ -10159,8 +10260,34 @@ export const createB2BShipmentService = async (
         params,
         pickupSeed: pickupBillingSeed,
       })
+      const manifestPickupLocationName = defaultWarehouseId
+        ? ''
+        : pickCleanText(
+            pickupLocationName,
+            pickupBillingSeed?.warehouseName,
+            pickupBillingSeed?.merchantCompanyName,
+            pickupBillingSeed?.contactName,
+            billingAddress.company,
+            billingAddress.name,
+            originPincode ? `FastShip-${originPincode}` : '',
+          )
+      if (!manifestPickupLocationName && !defaultWarehouseId) {
+        throw new HttpError(
+          400,
+          'A Delhivery B2B pickup warehouse name or default warehouse ID is required',
+        )
+      }
+      if (!defaultWarehouseId) {
+        await ensureDelhiveryB2BPickupWarehouse({
+          delhivery,
+          params,
+          pickupSeed: pickupBillingSeed,
+          billingAddress,
+          warehouseName: manifestPickupLocationName,
+        })
+      }
       const manifestPayload: Record<string, unknown> = {
-        pickup_location_name: defaultWarehouseId ? undefined : pickupLocationName || undefined,
+        pickup_location_name: defaultWarehouseId ? undefined : manifestPickupLocationName,
         pickup_location_id: defaultWarehouseId || undefined,
         payment_mode: params.payment_type === 'cod' ? 'cod' : 'prepaid',
         cod_amount: params.payment_type === 'cod' ? Number(params.order_amount || 0) : undefined,

@@ -187,11 +187,20 @@ app.use(
   }),
 )
 
+const healthPayload = () => ({
+  status: 'ok',
+  commit:
+    process.env.RENDER_GIT_COMMIT ||
+    process.env.COMMIT_SHA ||
+    process.env.GIT_COMMIT ||
+    null,
+})
+
 app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok' })
+  res.status(200).json(healthPayload())
 })
 app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok' })
+  res.status(200).json(healthPayload())
 })
 
 // Shopify webhooks require raw body for HMAC verification
