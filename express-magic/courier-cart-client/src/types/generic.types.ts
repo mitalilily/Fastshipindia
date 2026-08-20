@@ -158,6 +158,12 @@ export interface B2COrder {
   prepaid_amount?: number | null
   shipping_charges?: number | null
   freight_charges?: number | null
+  charges_breakdown?: {
+    baseFreight?: number | string | null
+    overheads?: Array<{ amount?: number | string | null }>
+    demurrage?: number | string | null
+    total?: number | string | null
+  } | null
   cod_charges?: number | null
   other_charges?: number | null
   insurance_charge?: number | null

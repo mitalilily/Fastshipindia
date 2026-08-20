@@ -56,6 +56,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const pickupAddressLine = watch('pickupAddress') ?? ''
   const pickupCity = watch('pickupCity') ?? ''
   const pickupState = watch('pickupState') ?? ''
+  const pickupDate = watch('pickupDate') ?? ''
   const deliveryAddressLine = watch('address') ?? ''
   const deliveryCity = watch('city') ?? ''
   const deliveryState = watch('state') ?? ''
@@ -166,6 +167,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const courierPayload: UseAvailableCouriersParams = {
     pickupPincode,
     deliveryPincode,
+    deliveryAddress: deliveryAddressLine,
     pickupName,
     pickupId,
     pickupAddressKey: `${pickupPincode}-${pickupAddressLine}-${pickupCity}-${pickupState}`,
@@ -173,6 +175,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     weight: courierRequestWeight,
     cod,
     payment_type: orderType,
+    pickupDate,
     orderAmount: courierPayloadOrderAmount,
     codChargeBasis,
     shipmentType: shipment_type,
@@ -290,6 +293,37 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
 
     return 0
   }
+  const sumB2BOverheads = (overheads: unknown) =>
+    Array.isArray(overheads)
+      ? overheads.reduce((sum, overhead) => sum + toChargeNumber(overhead?.amount), 0)
+      : 0
+  const getB2BAuthoritativeCharge = (courier: (typeof availableCouriers)[number]) => {
+    const directFinal = toChargeNumber(
+      courier?.final_courier_charge ??
+        courier?.seller_freight_charge ??
+        courier?.final_freight_charge ??
+        courier?.total_charges,
+    )
+    if (directFinal > 0) return directFinal
+
+    const forward = courier?.localRates?.forward || {}
+    const forwardTotal = toChargeNumber(
+      forward?.total ??
+        forward?.total_charges ??
+        forward?.totalCharges ??
+        forward?.totalCharge ??
+        forward?.finalAmount,
+    )
+    if (forwardTotal > 0) return forwardTotal
+
+    const composedTotal =
+      toChargeNumber(forward?.baseFreight) +
+      toChargeNumber(forward?.demurrage) +
+      sumB2BOverheads(forward?.overheads)
+    if (composedTotal > 0) return composedTotal
+
+    return getCourierFreightCharge(courier)
+  }
   const getCourierProviderCost = (courier: (typeof availableCouriers)[number]) => {
     const providerTotal = toChargeNumber(courier?.provider_rate?.total)
     const providerFreight = toChargeNumber(courier?.provider_rate?.freight)
@@ -322,13 +356,13 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const getSellerFreightCharge = (courier: (typeof availableCouriers)[number]) => {
     const directFreight = toChargeNumber(courier?.seller_freight_charge ?? courier?.final_freight_charge)
     if (directFreight > 0) return directFreight
-    if (shipment_type === 'b2b') return getCourierFreightCharge(courier)
+    if (shipment_type === 'b2b') return getB2BAuthoritativeCharge(courier)
     return getCourierFreightCharge(courier) + getCourierProviderCost(courier)
   }
   const getFinalCourierCharge = (courier: (typeof availableCouriers)[number]) => {
     const directFinal = toChargeNumber(courier?.final_courier_charge)
     if (directFinal > 0) return directFinal
-    if (shipment_type === 'b2b') return getCourierFreightCharge(courier)
+    if (shipment_type === 'b2b') return getB2BAuthoritativeCharge(courier)
     return (
       getSellerFreightCharge(courier) +
       toChargeNumber(courier?.localRates?.forward?.other_charges) +

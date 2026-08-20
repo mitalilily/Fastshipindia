@@ -86,6 +86,7 @@ export const b2bOrderListSelect = {
   order_type: b2b_orders.order_type,
   prepaid_amount: b2b_orders.prepaid_amount,
   freight_charges: b2b_orders.freight_charges,
+  charges_breakdown: b2b_orders.charges_breakdown,
   shipping_charges: b2b_orders.shipping_charges,
   transaction_fee: b2b_orders.transaction_fee,
   discount: b2b_orders.discount,

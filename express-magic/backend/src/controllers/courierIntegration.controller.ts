@@ -751,6 +751,8 @@ export const fetchAvailableCouriers = async (req: Request, res: Response) => {
       breadth,
       height,
       shipment_type,
+      delivery_address,
+      pickup_date,
     } = req.body
     if (!origin || !destination) {
       return res.status(400).json({
@@ -781,6 +783,8 @@ export const fetchAvailableCouriers = async (req: Request, res: Response) => {
       length: Number(length),
       breadth: Number(breadth),
       height: Number(height),
+      delivery_address,
+      pickup_date,
       ...serviceabilityOptions,
     }
 

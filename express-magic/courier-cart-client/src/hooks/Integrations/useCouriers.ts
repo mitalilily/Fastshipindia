@@ -27,6 +27,7 @@ export interface UseAvailableCouriersParams {
   pickupName?: string
   pickupId?: string
   deliveryPincode: string
+  deliveryAddress?: string
   pickupAddressKey?: string
   deliveryAddressKey?: string
   weight?: number
@@ -39,6 +40,7 @@ export interface UseAvailableCouriersParams {
   enabled?: boolean
   shipmentType?: 'b2b' | 'b2c'
   payment_type: 'cod' | 'prepaid'
+  pickupDate?: string
   context?: string
   isCalculator?: boolean
   useGuest?: boolean
@@ -48,6 +50,7 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
   const {
     pickupPincode,
     deliveryPincode,
+    deliveryAddress,
     pickupId,
     pickupAddressKey,
     deliveryAddressKey,
@@ -61,6 +64,7 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
     enabled = true,
     shipmentType,
     payment_type,
+    pickupDate,
   } = params
 
   const normalizedOrderAmount =
@@ -81,6 +85,7 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
       'availableCouriers',
       pickupPincode,
       deliveryPincode,
+      deliveryAddress,
       pickupId,
       pickupAddressKey,
       deliveryAddressKey,
@@ -93,6 +98,7 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
       normalizedHeight,
       shipmentType,
       payment_type,
+      pickupDate,
       normalizedOrderAmount,
       normalizedCodChargeBasis,
       params.useGuest,
@@ -104,6 +110,8 @@ export const useAvailableCouriers = (params: UseAvailableCouriersParams) => {
         destination: deliveryPincode,
         pickupId,
         payment_type: payment_type,
+        delivery_address: deliveryAddress,
+        pickup_date: pickupDate,
         order_amount: normalizedOrderAmount,
         cod_charge_basis: normalizedCodChargeBasis,
         weight: normalizedWeight,
@@ -138,6 +146,8 @@ export const useAvailableCouriersMutation = () => {
         destination: params.deliveryPincode,
         pickupId: params.pickupId,
         payment_type: params.payment_type ?? (params.cod && params.cod > 0 ? 'cod' : 'prepaid'),
+        delivery_address: params.deliveryAddress,
+        pickup_date: params.pickupDate,
         order_amount: normalizedOrderAmount,
         cod_charge_basis: normalizedCodChargeBasis,
         weight: params.weight,

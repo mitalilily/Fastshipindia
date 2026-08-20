@@ -63,6 +63,11 @@ const formatCurrency = (value?: string | number | null, decimals = 0) => {
   return `Rs ${numericValue.toFixed(decimals)}`
 }
 
+const toMoneyNumber = (value: unknown) => {
+  const numericValue = Number(value ?? 0)
+  return Number.isFinite(numericValue) ? numericValue : 0
+}
+
 const normalizeKgValue = (value?: string | number | null) => {
   const numericValue = Number(value ?? 0)
   if (!Number.isFinite(numericValue) || numericValue <= 0) return 0
@@ -483,12 +488,33 @@ const PackageDetails = ({ order }: { order: OrderDetailsDialogProps['order'] }) 
 )
 
 const RateBreakdown = ({ order }: { order: OrderDetailsDialogProps['order'] }) => {
-  const forward = Number(order?.final_courier_charge ?? order?.freight_charges ?? order?.shipping_charges ?? 0) || 0
-  const rto = Number(order?.rto_charges ?? 0) || 0
-  const cod = Number(order?.cod_charges ?? 0) || 0
-  const other = Number(order?.other_charges ?? order?.transaction_fee ?? 0) || 0
-  const insurance = Number(order?.insurance_charge ?? 0) || 0
-  const total = Number(order?.final_courier_charge ?? 0) || forward + cod + other + insurance
+  const chargesBreakdown =
+    order?.charges_breakdown && typeof order.charges_breakdown === 'object'
+      ? order.charges_breakdown
+      : null
+  const isB2B = isB2BOrder(order) || Boolean(chargesBreakdown)
+  const overheadTotal = Array.isArray(chargesBreakdown?.overheads)
+    ? chargesBreakdown.overheads.reduce(
+        (sum: number, overhead: Record<string, unknown>) => sum + toMoneyNumber(overhead?.amount),
+        0,
+      )
+    : 0
+  const breakdownTotal = toMoneyNumber(chargesBreakdown?.total)
+  const breakdownBaseFreight = toMoneyNumber(chargesBreakdown?.baseFreight)
+  const breakdownOther = overheadTotal + toMoneyNumber(chargesBreakdown?.demurrage)
+  const storedFreight = toMoneyNumber(order?.freight_charges)
+  const storedShipping = toMoneyNumber(order?.shipping_charges)
+  const finalCourierCharge = toMoneyNumber(order?.final_courier_charge)
+  const forward = isB2B
+    ? breakdownBaseFreight || breakdownTotal || storedFreight || finalCourierCharge || storedShipping
+    : finalCourierCharge || storedFreight || storedShipping
+  const rto = toMoneyNumber(order?.rto_charges)
+  const cod = toMoneyNumber(order?.cod_charges)
+  const other = isB2B ? breakdownOther : toMoneyNumber(order?.other_charges ?? order?.transaction_fee)
+  const insurance = toMoneyNumber(order?.insurance_charge)
+  const total = isB2B
+    ? breakdownTotal || storedFreight || finalCourierCharge || forward + other
+    : finalCourierCharge || forward + cod + other + insurance
 
   return (
     <Stack spacing={1.25}>

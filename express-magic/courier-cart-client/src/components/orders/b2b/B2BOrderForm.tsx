@@ -12,7 +12,7 @@ import {
   Stepper,
   Typography,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FormProvider, useForm, type FieldErrors } from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
 import { FaBox, FaFileInvoice, FaTruck, FaUser } from 'react-icons/fa'
@@ -100,6 +100,7 @@ export type B2BFormData = {
   courierPartner: string
   courierPartnerId: string
   courierOptionKey?: string
+  selectedMaxSlabWeight?: number | null
   shippingCharges?: number
   transactionFee?: number
   giftWrap?: number
@@ -109,6 +110,9 @@ export type B2BFormData = {
   courierCost?: number | null // Estimated courier cost from serviceability (what platform pays courier)
   forwardCharges?: number
   otherCharges?: number
+  chargeableWeight?: number | null
+  volumetricWeight?: number | null
+  slabs?: number | null
   integrationType?: 'delhivery'
   shippingMode?: string
 
@@ -208,6 +212,19 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   const discount = Number(watch('discount') || 0)
   const prepaidAmount = Number(watch('prepaidAmount') || 0)
   const orderType = watch('orderType')
+  const selectedCourierPartnerId = watch('courierPartnerId')
+  const rateInputSignature = JSON.stringify({
+    buyerPincode: watch('pincode'),
+    pickupPincode: watch('pickupLocationPincode'),
+    orderType,
+    transactionFee,
+    discount,
+    prepaidAmount,
+    boxes: watch('boxes'),
+    invoices: watch('invoices'),
+    products: watch('products'),
+  })
+  const previousRateInputSignature = useRef('')
 
   // Ensure orderType is valid based on payment options
   useEffect(() => {
@@ -561,6 +578,30 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   useEffect(() => {
     setValue('orderAmount', totalCollectable, { shouldValidate: true })
   }, [setValue, totalCollectable])
+
+  useEffect(() => {
+    if (!previousRateInputSignature.current) {
+      previousRateInputSignature.current = rateInputSignature
+      return
+    }
+
+    if (previousRateInputSignature.current === rateInputSignature) return
+
+    previousRateInputSignature.current = rateInputSignature
+
+    if (!selectedCourierPartnerId) return
+
+    setValue('courierPartner', '')
+    setValue('courierPartnerId', '')
+    setValue('courierOptionKey', '')
+    setValue('selectedMaxSlabWeight', null)
+    setValue('courierCod', 0)
+    setValue('forwardCharges', 0)
+    setValue('otherCharges', 0)
+    setValue('courierCost', null)
+    setValue('chargeableWeight', null)
+    setValue('volumetricWeight', null)
+  }, [rateInputSignature, selectedCourierPartnerId, setValue])
 
   return (
     <FormProvider {...methods}>

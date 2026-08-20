@@ -5638,7 +5638,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
               serviceProvider: courier.pricingServiceProvider || undefined,
             },
             pickupDate: (params as any).pickup_date,
-            deliveryAddress: '',
+            deliveryAddress: String((params as any).delivery_address ?? (params as any).deliveryAddress ?? ''),
             planId: activePlanId ?? undefined,
           })
 
