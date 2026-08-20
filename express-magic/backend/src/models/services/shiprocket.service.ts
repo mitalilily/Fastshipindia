@@ -10398,7 +10398,7 @@ export const createB2BShipmentService = async (
             description: itemDescription || normalizedOrderNumber,
             weight: weightGrams,
             waybills: [],
-            master: true,
+            master: false,
           },
         ],
         dimensions: boxes.map((box: any) => ({
