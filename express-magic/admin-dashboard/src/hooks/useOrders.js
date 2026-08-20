@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelAdminOrder,
   fetchAllOrders,
@@ -15,8 +15,12 @@ export const useOrders = (page, limit, filters) => {
 }
 
 export const useCancelOrderMutation = () => {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (orderId) => cancelAdminOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+    },
   })
 }
 

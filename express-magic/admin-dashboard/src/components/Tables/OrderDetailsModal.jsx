@@ -42,6 +42,7 @@ import {
   FiExternalLink,
   FiActivity,
   FiCreditCard,
+  FiXCircle,
 } from 'react-icons/fi'
 
 const STATUS_OPTIONS = [
@@ -62,7 +63,22 @@ const STATUS_OPTIONS = [
   'cancellation_requested',
 ]
 
-const OrderDetailsModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
+const terminalStatuses = new Set(['cancelled', 'canceled', 'delivered', 'rto_delivered'])
+
+const canCancelOrder = (order) => {
+  const status = String(order?.order_status || '').trim().toLowerCase()
+  if (!order?.id || terminalStatuses.has(status)) return false
+  return Boolean(order?.awb_number || order?.shipment_id || order?.provider_reference || order?.provider_request_id)
+}
+
+const OrderDetailsModal = ({
+  isOpen,
+  onClose,
+  order,
+  onOrderUpdated,
+  onCancelOrder,
+  isCancellingOrder = false,
+}) => {
   const bgColor = useColorModeValue('white', 'gray.800')
   const labelColor = useColorModeValue('gray.600', 'gray.400')
   const sectionBg = useColorModeValue('gray.50', 'gray.700')
@@ -536,6 +552,17 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
         <ModalFooter>
           <Button variant="outline" mr={3} onClick={onClose}>
             Close
+          </Button>
+          <Button
+            colorScheme="red"
+            variant="outline"
+            leftIcon={<FiXCircle />}
+            mr={3}
+            isDisabled={!canCancelOrder(order) || !onCancelOrder}
+            isLoading={isCancellingOrder}
+            onClick={() => onCancelOrder?.(order)}
+          >
+            Cancel Real Shipment
           </Button>
           {order.awb_number && (
             <Button

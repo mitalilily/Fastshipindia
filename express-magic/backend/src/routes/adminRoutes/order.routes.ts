@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
   addManualNdrToOrderControllerAdmin,
+  cancelOrderControllerAdmin,
   escalateProviderOrderControllerAdmin,
   getAllOrdersControllerAdmin,
   getProviderPodControllerAdmin,
@@ -16,6 +17,7 @@ const router = Router()
 
 router.get('/all-orders', requireAuth, isAdminMiddleware, getAllOrdersControllerAdmin)
 router.get('/export', requireAuth, isAdminMiddleware, exportOrdersControllerAdmin)
+router.post('/:id/cancel', requireAuth, isAdminMiddleware, cancelOrderControllerAdmin)
 router.post('/:id/status', requireAuth, isAdminMiddleware, updateOrderStatusControllerAdmin)
 router.post('/:id/ndr', requireAuth, isAdminMiddleware, addManualNdrToOrderControllerAdmin)
 router.post('/:id/provider-update', requireAuth, isAdminMiddleware, updateProviderOrderControllerAdmin)

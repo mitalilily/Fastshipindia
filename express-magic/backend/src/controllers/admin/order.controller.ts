@@ -6,6 +6,7 @@ import {
   regenerateOrderDocumentsServiceAdmin,
   updateOrderStatusServiceAdmin,
 } from '../../models/services/adminOrders.service'
+import { cancelOrderShipment } from '../../models/services/pickup.service'
 import { db } from '../../models/client'
 import { ShadowfaxService } from '../../models/services/couriers/shadowfax.service'
 import { b2c_orders } from '../../schema/schema'
@@ -118,6 +119,29 @@ export const regenerateOrderDocumentsControllerAdmin = async (req: any, res: Res
     return res.status(400).json({
       success: false,
       message: error?.message || 'Failed to regenerate order documents',
+    })
+  }
+}
+
+export const cancelOrderControllerAdmin = async (req: any, res: Response) => {
+  try {
+    const orderId = String(req.params.id || '').trim()
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'Order ID is required' })
+    }
+
+    const result = await cancelOrderShipment(orderId)
+
+    return res.status(200).json({
+      success: true,
+      message: 'Shipment cancellation completed',
+      data: result,
+    })
+  } catch (error: any) {
+    console.error('Error cancelling order from admin:', error?.message || error)
+    return res.status(400).json({
+      success: false,
+      message: error?.message || 'Failed to cancel shipment',
     })
   }
 }

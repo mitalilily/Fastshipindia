@@ -57,7 +57,7 @@ export async function exportOrdersToCSV(filters = {}) {
 
 export async function cancelAdminOrder(orderId) {
   try {
-    const response = await api.post('/shipments/cancel', { orderId })
+    const response = await api.post(`/admin/orders/${orderId}/cancel`)
     return response.data
   } catch (error) {
     console.error('Error cancelling order:', error.response?.data || error.message)

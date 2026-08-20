@@ -17,7 +17,7 @@ import {
 import Card from 'components/Card/Card'
 import OrdersTable from 'components/Tables/OrdersTable'
 import OrderDetailsModal from 'components/Tables/OrderDetailsModal'
-import { useOrders } from 'hooks/useOrders'
+import { useCancelOrderMutation, useOrders } from 'hooks/useOrders'
 import { useEffect, useMemo, useState } from 'react'
 import { FiChevronDown, FiDownload, FiPackage, FiPlus, FiSearch } from 'react-icons/fi'
 import { useLocation } from 'react-router-dom'
@@ -44,8 +44,10 @@ const Orders = () => {
   const [isExporting, setIsExporting] = useState(false)
   const [showMoreFilters, setShowMoreFilters] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [cancellingOrderId, setCancellingOrderId] = useState(null)
 
-  const { data: ordersData, isLoading, isFetching } = useOrders(page, limit, filters)
+  const { data: ordersData, isLoading, isFetching, refetch } = useOrders(page, limit, filters)
+  const { mutateAsync: cancelOrder, isPending: isCancellingOrder } = useCancelOrderMutation()
   const toast = useToast()
 
   useEffect(() => {
@@ -94,6 +96,50 @@ const Orders = () => {
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
     setPage(1)
+  }
+
+  const handleCancelOrder = async (order) => {
+    if (!order?.id) return
+
+    const label = order.order_number || order.awb_number || order.id
+    const confirmed = window.confirm(
+      `Cancel real shipment ${label}? This will call the courier cancellation API and process wallet refund if applicable.`,
+    )
+    if (!confirmed) return
+
+    try {
+      setCancellingOrderId(order.id)
+      const response = await cancelOrder(order.id)
+      toast({
+        title: 'Shipment cancelled',
+        description: response?.message || `${label} cancellation completed.`,
+        status: 'success',
+        duration: 4500,
+        isClosable: true,
+      })
+      setSelectedOrder((current) =>
+        current?.id === order.id
+          ? {
+              ...current,
+              order_status: 'cancelled',
+            }
+          : current,
+      )
+      refetch()
+    } catch (error) {
+      toast({
+        title: 'Cancellation failed',
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          'Courier cancellation was not accepted.',
+        status: 'error',
+        duration: 6500,
+        isClosable: true,
+      })
+    } finally {
+      setCancellingOrderId(null)
+    }
   }
 
   return (
@@ -240,6 +286,8 @@ const Orders = () => {
         setPerPage={setLimit}
         loading={isLoading || isFetching}
         onRowClick={setSelectedOrder}
+        onCancelOrder={handleCancelOrder}
+        cancellingOrderId={cancellingOrderId}
       />
 
       <OrderDetailsModal
@@ -247,6 +295,8 @@ const Orders = () => {
         onClose={() => setSelectedOrder(null)}
         order={selectedOrder}
         onOrderUpdated={(updatedOrder) => setSelectedOrder(updatedOrder)}
+        onCancelOrder={handleCancelOrder}
+        isCancellingOrder={isCancellingOrder && selectedOrder?.id === cancellingOrderId}
       />
     </Box>
   )

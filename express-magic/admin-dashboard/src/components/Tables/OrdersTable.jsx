@@ -1,5 +1,5 @@
-import { Badge, Flex, Icon, Stack, Text } from '@chakra-ui/react'
-import { FiCopy, FiMapPin } from 'react-icons/fi'
+import { Badge, Button, Flex, Icon, Stack, Text, Tooltip } from '@chakra-ui/react'
+import { FiCopy, FiMapPin, FiXCircle } from 'react-icons/fi'
 import { getCourierDisplayName } from 'utils/courierDisplay'
 import { GenericTable } from 'views/Dashboard/Tables/components/GenericTable'
 
@@ -34,6 +34,14 @@ const formatDate = (value) => {
   })
 }
 
+const terminalStatuses = new Set(['cancelled', 'canceled', 'delivered', 'rto_delivered'])
+
+const canCancelOrder = (order) => {
+  const status = String(order?.order_status || '').trim().toLowerCase()
+  if (!order?.id || terminalStatuses.has(status)) return false
+  return Boolean(order?.awb_number || order?.shipment_id || order?.provider_reference || order?.provider_request_id)
+}
+
 const OrdersTable = ({
   orders,
   totalCount,
@@ -43,8 +51,10 @@ const OrdersTable = ({
   setPerPage,
   loading = false,
   onRowClick,
+  onCancelOrder,
+  cancellingOrderId,
 }) => {
-  const captions = ['Order', 'Status', 'Type', 'Destination', 'Provider', 'AWB', 'Charge', 'Created']
+  const captions = ['Order', 'Status', 'Type', 'Destination', 'Provider', 'AWB', 'Charge', 'Created', 'Action']
   const columnKeys = [
     'order_summary',
     'order_status',
@@ -54,6 +64,7 @@ const OrdersTable = ({
     'awb_number',
     'order_amount',
     'order_date',
+    'actions',
   ]
 
   const renderers = {
@@ -141,6 +152,34 @@ const OrdersTable = ({
         {formatDate(value)}
       </Text>
     ),
+    actions: (_value, row) => {
+      const allowed = canCancelOrder(row)
+      return (
+        <Tooltip
+          label={
+            allowed
+              ? 'Cancel real courier shipment and refund wallet if charged'
+              : 'Cancellation is unavailable for this order status'
+          }
+          hasArrow
+        >
+          <Button
+            size="sm"
+            leftIcon={<FiXCircle />}
+            colorScheme="red"
+            variant={allowed ? 'solid' : 'outline'}
+            isDisabled={!allowed || !onCancelOrder}
+            isLoading={cancellingOrderId === row.id}
+            onClick={(event) => {
+              event.stopPropagation()
+              onCancelOrder?.(row)
+            }}
+          >
+            Cancel
+          </Button>
+        </Tooltip>
+      )
+    },
   }
 
   return (
@@ -167,6 +206,7 @@ const OrdersTable = ({
         awb_number: '180px',
         order_amount: '120px',
         order_date: '140px',
+        actions: '140px',
       }}
       onRowClick={onRowClick}
     />
