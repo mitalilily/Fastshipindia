@@ -101,6 +101,22 @@ const formatDateTime = (value?: string | Date | null) => {
 const normalizeStatus = (status?: string | null) =>
   String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
 
+const normalizeText = (value?: string | number | null) =>
+  String(value ?? '').trim().toLowerCase()
+
+const isB2BOrder = (order: OrderDetailsDialogProps['order']) => {
+  const values = [
+    order?.source_type,
+    order?.type,
+    order?.business_type,
+    order?.courier_partner,
+    order?.provider_mode,
+    order?.provider_service,
+  ].map(normalizeText)
+
+  return values.some((value) => value === 'b2b' || value.includes('b2b') || value.includes('ltl'))
+}
+
 const getStatusLabel = (status?: string | null) => {
   const normalizedStatus = normalizeStatus(status)
   if (!normalizedStatus || normalizedStatus === 'pending') return 'NEW'
@@ -320,6 +336,9 @@ const OrderDetailLine = ({
 
 const TrackingDetails = ({ order }: { order: OrderDetailsDialogProps['order'] }) => {
   const awb = String(order?.awb_number || '').trim()
+  const lrn = String(order?.provider_reference || order?.shipment_id || '').trim()
+  const shipmentId = String(order?.shipment_id || order?.provider_reference || '').trim()
+  const isB2B = isB2BOrder(order)
   const courierName = getCourierDisplayName({
     name: order?.courier_partner,
     courier_id: order?.courier_id,
@@ -356,9 +375,18 @@ const TrackingDetails = ({ order }: { order: OrderDetailsDialogProps['order'] })
 
   return (
     <Stack spacing={1.25}>
-      <OrderDetailLine label="AWB" value={awb || emptyText} />
       <OrderDetailLine label="Courier" value={courierName || emptyText} />
-      <OrderDetailLine label="Shipment ID" value={order?.shipment_id || emptyText} />
+      {isB2B ? (
+        <>
+          <OrderDetailLine label="LRN" value={lrn || emptyText} />
+          <OrderDetailLine label="Box AWB" value={awb || emptyText} />
+        </>
+      ) : (
+        <>
+          <OrderDetailLine label="AWB" value={awb || emptyText} />
+          <OrderDetailLine label="Shipment ID" value={shipmentId || emptyText} />
+        </>
+      )}
       <OrderDetailLine label="Status" value={getStatusLabel(order?.order_status)} chip />
     </Stack>
   )

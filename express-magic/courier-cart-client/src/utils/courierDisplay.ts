@@ -22,6 +22,7 @@ type CourierLike =
 
 export const DELHIVERY_SURFACE_DISPLAY_NAME = 'Delhivery Surface'
 export const DELHIVERY_EXPRESS_DISPLAY_NAME = 'Delhivery Express'
+export const DELHIVERY_B2B_DISPLAY_NAME = 'Delhivery B2B (LTL)'
 const DELIVERY_ONE_LOGO = deliveryOneLogo
 const DELIVERY_ONE_SURFACE_ID = 99
 const DELIVERY_ONE_EXPRESS_ID = 100
@@ -75,6 +76,17 @@ const isDeliveryOneValue = (value?: string | null) => {
   )
 }
 
+const isDelhiveryB2BValue = (value?: string | null) => {
+  const normalized = normalizeToken(value)
+  return (
+    normalized === 'delhiveryb2b' ||
+    normalized === 'delhiveryltl' ||
+    normalized.includes('delhiveryb2b') ||
+    normalized.includes('delhiveryltl') ||
+    normalized.includes('delhiveryfreight')
+  )
+}
+
 export const isDelhiveryCourier = (courier: CourierLike) =>
   getCourierValues(courier).some((value) => isDeliveryOneValue(value))
 
@@ -107,6 +119,7 @@ const getDeliveryOneDisplayName = (courier: CourierLike) => {
 
 export const getCourierDisplayName = (courier: CourierLike, fallback = 'Unknown Courier') => {
   const values = getCourierValues(courier)
+  if (values.some(isDelhiveryB2BValue)) return DELHIVERY_B2B_DISPLAY_NAME
   if (values.some(isDeliveryOneValue)) return getDeliveryOneDisplayName(courier)
   if (typeof courier === 'string') return courier || fallback
   return courier?.displayName || courier?.courier_name || courier?.name || fallback
@@ -114,6 +127,10 @@ export const getCourierDisplayName = (courier: CourierLike, fallback = 'Unknown 
 
 export const getCourierLogo = (courier: CourierLike, fallback = defaultLogo) => {
   const values = getCourierValues(courier)
+  if (values.some(isDelhiveryB2BValue)) {
+    return courierLogos[DELHIVERY_SURFACE_DISPLAY_NAME] || courierLogos.deliveryone || DELIVERY_ONE_LOGO
+  }
+
   if (values.some(isDeliveryOneValue)) {
     const displayName = getDeliveryOneDisplayName(courier)
     return courierLogos[displayName] || courierLogos.deliveryone || DELIVERY_ONE_LOGO
