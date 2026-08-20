@@ -27,6 +27,9 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
   const ACCENT = '#0D3B8E'
   const sortCodeValue = String(row?.sort_code || '').trim()
   const awbValue = String(row?.awb_number || '').trim()
+  const isB2B = type === 'b2b'
+  const lrnValue = String(row?.provider_reference || row?.shipment_id || '').trim()
+  const trackingReference = isB2B ? lrnValue || awbValue : awbValue
 
   const { mutateAsync, isPending } = usePresignedDownloadMutation()
   const { mutateAsync: regenerateDocuments, isPending: isRegeneratingDocuments } =
@@ -281,12 +284,32 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
         </Typography>
       </Stack>
 
-      {/* AWB & Courier */}
+      {/* Tracking & Courier */}
       <Stack direction="row" spacing={2}>
+        {isB2B && (
+          <Stack direction="row" spacing={1} alignItems="center">
+            <MdReceipt size={20} />
+            <Typography>
+              <strong>LRN:</strong>{' '}
+              {trackingReference ? (
+                <Link
+                  component={RouterLink}
+                  to={`/tools/order_tracking?awb=${encodeURIComponent(trackingReference)}`}
+                  underline="hover"
+                  sx={{ fontWeight: 800 }}
+                >
+                  {lrnValue || trackingReference}
+                </Link>
+              ) : (
+                '-'
+              )}
+            </Typography>
+          </Stack>
+        )}
         <Stack direction="row" spacing={1} alignItems="center">
           <MdReceipt size={20} />
           <Typography>
-            <strong>AWB:</strong>{' '}
+            <strong>{isB2B ? 'Box AWB' : 'AWB'}:</strong>{' '}
             {awbValue ? (
               <Link
                 component={RouterLink}

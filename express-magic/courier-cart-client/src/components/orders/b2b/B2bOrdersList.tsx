@@ -77,19 +77,27 @@ const B2BOrdersList = ({
   const hasInvoiceGenerated = (row: B2BOrder) =>
     Boolean(String(row.invoice_url || row.invoice_key || row.invoice_link || '').trim())
 
-  const renderAwbLink = (value?: string | null) => {
-    const awb = String(value || '').trim()
-    if (!awb) return '-'
+  const getB2BTrackingReference = (row: B2BOrder) =>
+    String(
+      (row as B2BOrder & { provider_reference?: string | null }).provider_reference ||
+        row.shipment_id ||
+        row.awb_number ||
+        '',
+    ).trim()
+
+  const renderTrackingLink = (value?: string | null) => {
+    const reference = String(value || '').trim()
+    if (!reference) return '-'
 
     return (
       <Link
         component={RouterLink}
-        to={`/tools/order_tracking?awb=${encodeURIComponent(awb)}`}
+        to={`/tools/order_tracking?awb=${encodeURIComponent(reference)}`}
         underline="hover"
         onClick={(event) => event.stopPropagation()}
         sx={{ fontWeight: 800 }}
       >
-        {awb}
+        {reference}
       </Link>
     )
   }
@@ -106,7 +114,12 @@ const B2BOrdersList = ({
       ),
     },
     { label: 'Order #', id: 'order_number' },
-    { label: 'AWB', id: 'awb_number', render: (value) => renderAwbLink(value) },
+    {
+      label: 'LRN',
+      id: 'shipment_id',
+      render: (_value, row) => renderTrackingLink(getB2BTrackingReference(row)),
+    },
+    { label: 'Box AWB', id: 'awb_number', render: (value) => renderTrackingLink(value) },
     {
       label: 'Docs',
       id: 'id',

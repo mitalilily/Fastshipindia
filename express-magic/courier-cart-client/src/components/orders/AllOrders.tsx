@@ -108,6 +108,37 @@ const documentButtonMeta: Record<DocumentType, { label: string; icon: ReactNode 
   manifest: { label: 'Manifest', icon: <MdAssignment /> },
 }
 
+const getTrackingReference = (order: Order) => {
+  const isB2B = String(order.type || order.source_type || '').toLowerCase() === 'b2b'
+  const references = isB2B
+    ? [order.provider_reference, order.shipment_id, order.awb_number, order.provider_request_id]
+    : [order.awb_number, order.shipment_id, order.provider_reference, order.provider_request_id]
+
+  return references.map((value) => String(value || '').trim()).find(Boolean) || ''
+}
+
+const B2B_NON_CANCELLABLE_STATUSES = new Set([
+  'cancelled',
+  'canceled',
+  'cancellation_requested',
+  'delivered',
+  'rto_delivered',
+])
+
+const isB2BDelhiveryCancelEligible = (order: Order) => {
+  if (String(order.type || order.source_type || '').toLowerCase() !== 'b2b') return false
+
+  const status = String(order.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+  if (B2B_NON_CANCELLABLE_STATUSES.has(status)) return false
+
+  const providerText = `${order.integration_type || ''} ${order.courier_partner || ''} ${order.courier_id || ''}`
+    .toLowerCase()
+    .trim()
+  const isDelhivery = providerText.includes('delhivery') || providerText.split(/\s+/).includes('99')
+
+  return isDelhivery && Boolean(getTrackingReference(order))
+}
+
 const actionMenuItemSx = {
   minHeight: 38,
   px: 1.25,
@@ -800,13 +831,13 @@ const AllOrders = () => {
   }
 
   const handleTrackShipment = (order: Order) => {
-    const awb = String(order.awb_number || '').trim()
-    if (!awb) {
-      toast.open({ message: 'AWB is not available for tracking yet.', severity: 'info' })
+    const trackingReference = getTrackingReference(order)
+    if (!trackingReference) {
+      toast.open({ message: 'Tracking reference is not available yet.', severity: 'info' })
       return
     }
 
-    navigate(`/tools/order_tracking?awb=${encodeURIComponent(awb)}`)
+    navigate(`/tools/order_tracking?awb=${encodeURIComponent(trackingReference)}`)
   }
 
   const handleSyncLiveStatus = (order: Order) => {
@@ -1064,6 +1095,7 @@ const AllOrders = () => {
         const isMenuOpen = activeActionOrderId === row.id && Boolean(actionMenuAnchor)
         const canSelectCourier = isCourierSelectionPending(row)
         const canEditDraft = row.type === 'b2c' && isB2CPreShipmentDraft(row)
+        const trackingReference = getTrackingReference(row)
         const hasAwb = Boolean(String(row.awb_number || '').trim())
         const isSyncingThisOrder = syncingTracking && syncingTrackingOrderId === row.id
 
@@ -1258,7 +1290,11 @@ const AllOrders = () => {
                 icon: <MdDelete />,
                 label: cancellingShipment ? 'Cancelling Shipment' : 'Cancel Shipment',
                 onClick: () => cancelShipment(String(row.id)),
-                disabled: row.type !== 'b2c' || !isB2CCancelEligible(row) || cancellingShipment,
+                disabled:
+                  !(
+                    (row.type === 'b2c' && isB2CCancelEligible(row)) ||
+                    isB2BDelhiveryCancelEligible(row)
+                  ) || cancellingShipment,
                 loading: cancellingShipment,
                 danger: true,
               })}
@@ -1267,7 +1303,7 @@ const AllOrders = () => {
                 icon: <MdTrackChanges />,
                 label: 'Track Shipment',
                 onClick: () => handleTrackShipment(row),
-                disabled: !hasAwb,
+                disabled: !trackingReference,
               })}
               {renderActionItem({
                 key: 'sync-live-status',
@@ -1412,6 +1448,14 @@ const AllOrders = () => {
               sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
             >
               Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<MdTrackChanges size={16} />}
+              onClick={() => navigate('/tools/order_tracking')}
+              sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
+            >
+              Track By
             </Button>
             <Button
               variant="outlined"

@@ -188,7 +188,11 @@ export default function OrderTrackingForm() {
     }
 
     const routeParams = new URLSearchParams(trackingQuery)
-    const awb = routeParams.get('awb')?.trim()
+    const awb =
+      routeParams.get('awb')?.trim() ||
+      routeParams.get('lrn')?.trim() ||
+      routeParams.get('shipmentId')?.trim() ||
+      routeParams.get('shipment_id')?.trim()
     const orderNumber =
       routeParams.get('orderNumber')?.trim() || routeParams.get('order')?.trim()
     const contact = routeParams.get('contact')?.trim()
@@ -378,8 +382,7 @@ export default function OrderTrackingForm() {
                   maxWidth: 430,
                 }}
               >
-                Track by AWB or order details, review shipment timelines, and keep the utility view
-                aligned with the rest of the panel.
+                Track by AWB, LRN, shipment ID, or order details, and review shipment timelines.
               </Typography>
             </Stack>
           </Grid>
@@ -406,7 +409,7 @@ export default function OrderTrackingForm() {
                       color="text.secondary"
                       sx={{ mt: 0.15, fontSize: '0.84rem', lineHeight: 1.45 }}
                     >
-                      Enter your AWB number or order details to track shipment.
+                      Enter your AWB, LRN, shipment ID, or order details to track shipment.
                     </Typography>
                   </Box>
                   <Stack
@@ -429,7 +432,7 @@ export default function OrderTrackingForm() {
                       onClick={() => selectMode('awb')}
                       sx={modeButtonSx(mode === 'awb')}
                     >
-                      Track By AWB
+                      Track By AWB / LRN
                     </Button>
                     <Button
                       type="button"
@@ -452,14 +455,14 @@ export default function OrderTrackingForm() {
                             <CustomInput
                               {...field}
                               id="awb"
-                              placeholder="e.g. 1234567890"
+                              placeholder="AWB, LRN, or Shipment ID"
                               prefix={<FaHashtag />}
                               error={!!errors.awb}
-                              label="AWB Number"
+                              label="AWB / LRN / Shipment ID"
                               topMargin={false}
                             />
                           )}
-                          rules={{ required: 'AWB number is required' }}
+                          rules={{ required: 'Tracking reference is required' }}
                         />
                         {errors.awb && <FormHelperText error>{errors.awb.message}</FormHelperText>}
                       </FormControl>
@@ -545,7 +548,7 @@ export default function OrderTrackingForm() {
               <Grid container spacing={1.6}>
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Typography variant="body2" color="text.secondary">
-                    AWB Number
+                    Tracking Reference
                   </Typography>
                   <Typography fontWeight={600}>{tracking.awb_number || '—'}</Typography>
                 </Grid>

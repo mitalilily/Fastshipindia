@@ -25,6 +25,7 @@ type ForwardRate = {
   cod_charge_source?: string | null
   is_prepaid?: boolean
   is_cod?: boolean
+  weightUnit?: string | null
 }
 
 type LocalRates = {
@@ -46,7 +47,9 @@ export type Courier = {
   name?: string | null
   displayName?: string | null
   chargeable_weight?: number | null
+  chargeable_weight_unit?: string | null
   volumetric_weight?: number | null
+  volumetric_weight_unit?: string | null
   slabs?: number | null
   rate?: number | null
   rateEstimate?: number | null
@@ -85,6 +88,23 @@ const toChargeNumber = (value: unknown) => {
 
 const formatAmount = (value: number) =>
   value > 0 ? value.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : 'N/A'
+
+const formatChargeableWeight = (courier: Courier, shipmentType?: string) => {
+  const value = toChargeNumber(courier.chargeable_weight)
+  if (value <= 0) return '-'
+
+  const declaredUnit = String(
+    courier.chargeable_weight_unit || courier.localRates?.forward?.weightUnit || '',
+  ).toLowerCase()
+  const shouldDisplayAsKg =
+    declaredUnit === 'kg' ||
+    shipmentType === 'b2b' ||
+    String(courier.integration_type || '').toLowerCase().includes('b2b') ||
+    value <= 50
+  const kgValue = shouldDisplayAsKg ? value : value / 1000
+
+  return `${kgValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })} kg`
+}
 
 export default function CourierRateList({
   availableCouriers = [],
@@ -349,9 +369,7 @@ export default function CourierRateList({
                             Weight
                           </Typography>
                           <Typography sx={{ fontWeight: 800, color: brand.ink, fontSize: '0.85rem' }}>
-                            {courier?.chargeable_weight
-                              ? `${courier.chargeable_weight.toLocaleString('en-IN')} g`
-                              : '-'}
+                            {formatChargeableWeight(courier, shipmentType)}
                           </Typography>
                         </Box>
                       </Stack>

@@ -2,11 +2,13 @@ import { eq } from 'drizzle-orm'
 import { sendWebhookEvent } from '../../services/webhookDelivery.service'
 import { db } from '../client'
 import { b2c_orders } from '../schema/b2cOrders'
+import { b2b_orders } from '../schema/b2bOrders'
 import { cancelAmazonShipment, getAmazonShippingTracking } from './amazonShipping.service'
 import {
   applyAmazonShippingCredentialsToEnv,
   getStoredAmazonShippingCredentials,
 } from './amazonShippingCredentials.service'
+import { DelhiveryB2BService } from './couriers/delhiveryB2B.service'
 import { DelhiveryService } from './couriers/delhivery.service'
 import { EkartService } from './couriers/ekart.service'
 import { ShadowfaxService } from './couriers/shadowfax.service'
@@ -233,6 +235,135 @@ const isSalesChannelSourceOrder = (order: any) => {
   return localOrderId.startsWith('shopify_') || localOrderId.startsWith('woo_')
 }
 
+const getB2BCancellationReference = (order: any) =>
+  String(
+    order?.provider_reference ||
+      order?.shipment_id ||
+      order?.provider_request_id ||
+      order?.awb_number ||
+      order?.order_id ||
+      '',
+  ).trim()
+
+const cancelB2BOrderShipment = async (order: any) => {
+  const integration = resolveCancellationProvider(order)
+  const currentStatus = String(order.order_status || '').trim().toLowerCase()
+  const lrn = getB2BCancellationReference(order)
+  const providerMeta: Record<string, unknown> =
+    order.provider_meta && typeof order.provider_meta === 'object' && !Array.isArray(order.provider_meta)
+      ? (order.provider_meta as Record<string, unknown>)
+      : {}
+
+  console.log('B2B order found for cancellation:', {
+    orderId: order.id,
+    orderNumber: order.order_number,
+    integrationType: integration,
+    lrn,
+    awbNumber: order.awb_number,
+    shipmentId: order.shipment_id,
+    currentStatus,
+  })
+
+  if (currentStatus === 'cancelled') {
+    return {
+      success: true,
+      alreadyCancelled: true,
+      message: 'Order already cancelled',
+    }
+  }
+
+  if (TERMINAL_NON_CANCELLABLE_STATUSES.has(currentStatus)) {
+    throw new Error(`Order is already ${currentStatus} and cannot be cancelled`)
+  }
+
+  if (integration !== 'delhivery') {
+    throw new Error('Only Delhivery B2B is supported for B2B cancellation')
+  }
+
+  if (!lrn) {
+    throw new Error('Delhivery B2B cancellation requires an LRN or shipment reference')
+  }
+
+  const svc = new DelhiveryB2BService()
+  const cancellationResult = await svc.cancelShipment(lrn)
+  const isSuccess = isCancellationAccepted(cancellationResult)
+
+  console.log('Delhivery B2B cancellation response validation:', {
+    orderId: order.id,
+    lrn,
+    isSuccess,
+    response: cancellationResult,
+  })
+
+  if (!isSuccess) {
+    throw new Error(getCancellationErrorMessage(cancellationResult))
+  }
+
+  const finalStatus = 'cancelled'
+  const cancelledAt = new Date()
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(b2b_orders)
+      .set({
+        order_status: finalStatus,
+        provider_last_status: finalStatus,
+        delivery_message: getCancellationDeliveryMessage(cancellationResult),
+        provider_meta: {
+          ...providerMeta,
+          cancellation: {
+            provider: 'delhivery_b2b',
+            requested_at: cancelledAt.toISOString(),
+            lrn,
+            awb_number: order.awb_number || null,
+            result: cancellationResult,
+          },
+        },
+        updated_at: cancelledAt,
+      })
+      .where(eq(b2b_orders.id, order.id))
+
+    await applyCancellationRefundOnce(tx, order, 'pickup_cancel_api_b2b')
+  })
+
+  await logTrackingEvent({
+    orderId: order.id,
+    userId: order.user_id,
+    awbNumber: lrn || order.awb_number || null,
+    courier: order.courier_partner || 'Delhivery B2B',
+    statusCode: finalStatus,
+    statusText: 'B2B shipment cancelled',
+    raw: cancellationResult,
+  }).catch((err) => {
+    console.warn('Failed to log B2B cancellation tracking event:', err)
+  })
+
+  await sendWebhookEvent(order.user_id, 'tracking.updated', {
+    awb_number: order.awb_number || null,
+    lrn,
+    order_id: order.id,
+    order_number: order.order_number,
+    status: finalStatus,
+    raw_status: finalStatus,
+    courier_partner: order.courier_partner,
+  }).catch((err) => {
+    console.warn('Failed to send B2B cancellation tracking webhook:', err)
+  })
+
+  await sendWebhookEvent(order.user_id, 'order.cancelled', {
+    awb_number: order.awb_number || null,
+    lrn,
+    order_id: order.id,
+    order_number: order.order_number,
+    status: finalStatus,
+    courier_partner: order.courier_partner,
+  }).catch((err) => {
+    console.warn('Failed to send B2B order cancellation webhook:', err)
+  })
+
+  return cancellationResult
+}
+
 const syncSalesChannelStatusForOrder = async (orderId: string, source: string) => {
   const [updatedOrder] = await db
     .select()
@@ -264,8 +395,14 @@ export async function cancelOrderShipment(orderId: string) {
   const [order] = await db.select().from(b2c_orders).where(eq(b2c_orders.id, orderId))
 
   if (!order) {
-    console.error('Order not found:', orderId)
-    throw new Error('Order not found')
+    const [b2bOrder] = await db.select().from(b2b_orders).where(eq(b2b_orders.id, orderId))
+
+    if (!b2bOrder) {
+      console.error('Order not found:', orderId)
+      throw new Error('Order not found')
+    }
+
+    return cancelB2BOrderShipment(b2bOrder)
   }
 
   const integration = resolveCancellationProvider(order)
