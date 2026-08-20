@@ -9817,7 +9817,6 @@ const buildDelhiveryB2BPickupWarehousePayload = ({
       email: pickCleanText((pickup as any).email, billingAddress.email),
       company: pickCleanText(billingAddress.company, warehouseName),
     },
-    billing_details: billingAddress,
     ...(gstNumber && /^[A-Z0-9]{15}$/.test(gstNumber) ? { consignee_gst: gstNumber } : {}),
   }
 }
