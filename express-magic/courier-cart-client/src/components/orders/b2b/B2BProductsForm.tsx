@@ -290,7 +290,7 @@ const ProductBoxesForm = () => {
                     ['lengthCm', 'Length (cm)'],
                     ['breadthCm', 'Breadth (cm)'],
                     ['heightCm', 'Height (cm)'],
-                    ['weightKg', 'Weight (g)'],
+                    ['weightKg', 'Weight (kg)'],
                   ] as const
                 ).map(([name, label]) => (
                   <Controller
