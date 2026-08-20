@@ -51,6 +51,10 @@ const DELHIVERY_B2B_TRACKING_STATUS_MAP: Record<string, string> = {
   RETURN_OFD: 'rto_in_transit',
   RETURN_DELIVERED: 'rto_delivered',
   NOT_PICKED: 'pickup_initiated',
+  CANCELLED: 'cancelled',
+  CANCELED: 'cancelled',
+  CANCELLED_BY_CUSTOMER: 'cancelled',
+  CANCELLED_BY_SELLER: 'cancelled',
   LOST: 'lost',
 }
 
@@ -1456,10 +1460,14 @@ export class DelhiveryB2BService {
   }
 
   cancelShipment(lrn: string) {
+    const normalizedLrn = ensureRequired(lrn, 'lrn')
     return this.authorizedRequest({
       method: 'DELETE',
-      url: `/lrn/cancel/${encodeURIComponent(ensureRequired(lrn, 'lrn'))}`,
-    })
+      url: `/lrn/cancel/${encodeURIComponent(normalizedLrn)}`,
+    }).then(
+      (result) =>
+        result || { success: true, message: 'Cancellation request accepted', lrn: normalizedLrn },
+    )
   }
 
   trackShipment(lrn: string, allWaybills = false) {

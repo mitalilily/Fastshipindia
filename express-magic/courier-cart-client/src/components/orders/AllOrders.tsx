@@ -118,18 +118,27 @@ const getTrackingReference = (order: Order) => {
 }
 
 const B2B_NON_CANCELLABLE_STATUSES = new Set([
-  'cancelled',
-  'canceled',
-  'cancellation_requested',
   'delivered',
   'rto_delivered',
 ])
+
+const isB2BProviderCancellationVerified = (order: Order) => {
+  const cancellation = order.provider_meta?.cancellation
+  return Boolean(
+    cancellation &&
+      typeof cancellation === 'object' &&
+      String(cancellation.provider_verified_at || '').trim(),
+  )
+}
 
 const isB2BDelhiveryCancelEligible = (order: Order) => {
   if (String(order.type || order.source_type || '').toLowerCase() !== 'b2b') return false
 
   const status = String(order.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
   if (B2B_NON_CANCELLABLE_STATUSES.has(status)) return false
+  if ((status === 'cancelled' || status === 'canceled') && isB2BProviderCancellationVerified(order)) {
+    return false
+  }
 
   const providerText = `${order.integration_type || ''} ${order.courier_partner || ''} ${order.courier_id || ''}`
     .toLowerCase()

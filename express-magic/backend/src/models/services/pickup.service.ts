@@ -245,6 +245,48 @@ const getB2BCancellationReference = (order: any) =>
       '',
   ).trim()
 
+const isProviderCancellationVerified = (value: unknown) => {
+  const text = cancellationResponseText(value)
+  if (
+    text.includes('not cancelled') ||
+    text.includes('not canceled') ||
+    text.includes('cannot be cancelled') ||
+    text.includes('cannot be canceled')
+  ) {
+    return false
+  }
+
+  return (
+    text.includes('cancelled') ||
+    text.includes('canceled') ||
+    text.includes('cancelled_by_customer') ||
+    text.includes('cancelled by customer') ||
+    text.includes('cancelled_by_seller') ||
+    text.includes('cancelled by seller')
+  )
+}
+
+const verifyDelhiveryB2BCancellation = async (svc: DelhiveryB2BService, lrn: string) => {
+  const retryDelaysMs = [0, 3000, 7000, 15000]
+  let lastTracking: any = null
+  let lastError: any = null
+
+  for (const delayMs of retryDelaysMs) {
+    if (delayMs > 0) await delay(delayMs)
+
+    try {
+      lastTracking = await svc.trackShipment(lrn, true)
+      if (isProviderCancellationVerified(lastTracking)) {
+        return { verified: true, tracking: lastTracking }
+      }
+    } catch (error: any) {
+      lastError = error
+    }
+  }
+
+  return { verified: false, tracking: lastTracking, error: lastError }
+}
+
 const cancelB2BOrderShipment = async (order: any) => {
   const integration = resolveCancellationProvider(order)
   const currentStatus = String(order.order_status || '').trim().toLowerCase()
@@ -264,7 +306,13 @@ const cancelB2BOrderShipment = async (order: any) => {
     currentStatus,
   })
 
-  if (currentStatus === 'cancelled') {
+  const existingCancellation =
+    providerMeta.cancellation && typeof providerMeta.cancellation === 'object'
+      ? (providerMeta.cancellation as Record<string, unknown>)
+      : null
+  const providerAlreadyVerified = Boolean(existingCancellation?.provider_verified_at)
+
+  if (currentStatus === 'cancelled' && providerAlreadyVerified) {
     return {
       success: true,
       alreadyCancelled: true,
@@ -299,6 +347,38 @@ const cancelB2BOrderShipment = async (order: any) => {
     throw new Error(getCancellationErrorMessage(cancellationResult))
   }
 
+  const verification = await verifyDelhiveryB2BCancellation(svc, lrn)
+  if (!verification.verified) {
+    const requestedAt = new Date()
+    await db
+      .update(b2b_orders)
+      .set({
+        order_status: 'cancellation_requested',
+        provider_last_status: 'cancellation_requested',
+        delivery_message:
+          'Cancellation requested with Delhivery B2B; provider has not confirmed cancellation yet',
+        provider_meta: {
+          ...providerMeta,
+          cancellation: {
+            provider: 'delhivery_b2b',
+            requested_at: requestedAt.toISOString(),
+            lrn,
+            awb_number: order.awb_number || null,
+            pending_provider_confirmation: true,
+            result: cancellationResult,
+            last_tracking: verification.tracking || null,
+            last_error: verification.error?.message || null,
+          },
+        },
+        updated_at: requestedAt,
+      })
+      .where(eq(b2b_orders.id, order.id))
+
+    throw new Error(
+      'Delhivery B2B cancellation was requested but provider tracking has not confirmed cancellation yet. Retry cancel after a minute or check Delhivery One.',
+    )
+  }
+
   const finalStatus = 'cancelled'
   const cancelledAt = new Date()
 
@@ -314,9 +394,11 @@ const cancelB2BOrderShipment = async (order: any) => {
           cancellation: {
             provider: 'delhivery_b2b',
             requested_at: cancelledAt.toISOString(),
+            provider_verified_at: cancelledAt.toISOString(),
             lrn,
             awb_number: order.awb_number || null,
             result: cancellationResult,
+            verified_tracking: verification.tracking || null,
           },
         },
         updated_at: cancelledAt,
