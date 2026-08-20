@@ -1706,6 +1706,7 @@ export const calculateB2BRate = async (params: {
   } else {
     throw new Error('Rate per kg is required for B2B pricing')
   }
+  const freightBeforeMinimum = baseFreight
 
   // Minimum Chargeable - ALWAYS applied after calculating freight
   // Condition: "₹200 OR 10kg × rate/kg" (admin selectable method: whichever_is_higher or whichever_is_lower)
@@ -1741,7 +1742,8 @@ export const calculateB2BRate = async (params: {
   }
 
   // Apply minimum charge to base freight (ALWAYS - if baseFreight < minimumCharge, set to minimumCharge)
-  if (minimumCharge > 0 && baseFreight < minimumCharge) {
+  const minimumChargeApplied = minimumCharge > 0 && baseFreight < minimumCharge
+  if (minimumChargeApplied) {
     baseFreight = minimumCharge
   }
 
@@ -2517,6 +2519,15 @@ export const calculateB2BRate = async (params: {
       billableWeight,
       volumetricDivisor: cftFactor,
       usedVolumetric: volumetricWeight > params.weightKg,
+      ratePerKg: Number(rate.rate_per_kg),
+      freightBeforeMinimum,
+      minimumCharge,
+      minimumChargeApplied,
+      minimumChargeAmount: minChargeAmount,
+      minimumChargeWeight: minChargeWeight,
+      minimumChargeMethod: minChargeMethod,
+      minChargeByAmount,
+      minChargeByWeight,
     },
     charges: {
       baseFreight,

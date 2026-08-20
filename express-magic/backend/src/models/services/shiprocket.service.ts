@@ -5643,6 +5643,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
           })
 
           const finalRate = rateResult?.charges?.total ?? null
+          const calculation = rateResult?.calculation ?? {}
 
           return {
             ...courier,
@@ -5655,7 +5656,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
             chargeable_weight:
               rateResult?.calculation?.billableWeight ?? courier.chargeable_weight ?? null,
             volumetric_weight:
-              rateResult?.calculation?.volumetricWeight ?? courier.volumetric_weight ?? null,
+              calculation?.volumetricWeight ?? courier.volumetric_weight ?? null,
             chargeable_weight_unit: 'kg',
             volumetric_weight_unit: 'kg',
             localRates: {
@@ -5666,8 +5667,18 @@ export const fetchAvailableCouriersWithRatesB2B = async (
                 total_charges: finalRate,
                 cod_charges: 0,
                 other_charges: 0,
-                billableWeight: rateResult?.calculation?.billableWeight ?? null,
-                volumetricWeight: rateResult?.calculation?.volumetricWeight ?? null,
+                ratePerKg: calculation?.ratePerKg ?? courier.localRates?.forward?.ratePerKg ?? null,
+                baseFreight: rateResult?.charges?.baseFreight ?? null,
+                freightBeforeMinimum: calculation?.freightBeforeMinimum ?? null,
+                minimumCharge: calculation?.minimumCharge ?? null,
+                minimumChargeApplied: Boolean(calculation?.minimumChargeApplied),
+                minimumChargeAmount: calculation?.minimumChargeAmount ?? null,
+                minimumChargeWeight: calculation?.minimumChargeWeight ?? null,
+                minimumChargeMethod: calculation?.minimumChargeMethod ?? null,
+                minChargeByAmount: calculation?.minChargeByAmount ?? null,
+                minChargeByWeight: calculation?.minChargeByWeight ?? null,
+                billableWeight: calculation?.billableWeight ?? null,
+                volumetricWeight: calculation?.volumetricWeight ?? null,
                 weightUnit: 'kg',
               },
             },

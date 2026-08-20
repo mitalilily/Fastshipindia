@@ -21,6 +21,7 @@ import {
   getCourierCount,
   getCourierSummary,
 } from '../models/services/courierIntegration.service'
+import { calculateB2BRate } from '../models/services/b2bAdmin.service'
 import {
   fetchAvailableCouriersForGuest,
   fetchAvailableCouriersWithRates,
@@ -950,6 +951,54 @@ export const fetchAvailableCouriersToUser = async (req: Request, res: Response) 
     return res
       .status(statusCode >= 400 && statusCode < 600 ? statusCode : 500)
       .json({ success: false, error: err.message || 'Failed to fetch available couriers' })
+  }
+}
+
+export const calculateB2BRateForUserController = async (req: Request, res: Response) => {
+  try {
+    const userId = getMerchantScopedUserId(req)
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' })
+    }
+
+    const [userPlan] = await db
+      .select({ planId: userPlans.plan_id })
+      .from(userPlans)
+      .where(eq(userPlans.userId, userId))
+      .limit(1)
+
+    const result = await calculateB2BRate({
+      originPincode: req.body.originPincode ?? req.body.origin_pincode ?? req.body.origin,
+      destinationPincode:
+        req.body.destinationPincode ?? req.body.destination_pincode ?? req.body.destination,
+      weightKg: Number(req.body.weightKg ?? req.body.weight ?? 0),
+      length: req.body.length ? Number(req.body.length) : undefined,
+      width: req.body.width ? Number(req.body.width) : undefined,
+      height: req.body.height ? Number(req.body.height) : undefined,
+      invoiceValue: Number(req.body.invoiceValue ?? req.body.invoice_value ?? 0),
+      paymentMode: (req.body.paymentMode ?? req.body.payment_mode ?? 'PREPAID').toUpperCase(),
+      courierScope: {
+        courierId:
+          (req.body.courierId ?? req.body.courier_id) !== undefined &&
+          (req.body.courierId ?? req.body.courier_id) !== null &&
+          (req.body.courierId ?? req.body.courier_id) !== ''
+            ? Number(req.body.courierId ?? req.body.courier_id)
+            : null,
+        serviceProvider: req.body.serviceProvider ?? req.body.service_provider ?? 'delhivery',
+      },
+      pickupDate: req.body.pickupDate ?? req.body.pickup_date ?? undefined,
+      deliveryAddress:
+        req.body.deliveryAddress ?? req.body.delivery_address ?? req.body.address ?? undefined,
+      planId: userPlan?.planId ?? undefined,
+    })
+
+    return res.json({ success: true, data: result })
+  } catch (err: any) {
+    console.error('Error calculating B2B rate for user:', err.message)
+    const statusCode = Number(err?.statusCode)
+    return res
+      .status(statusCode >= 400 && statusCode < 600 ? statusCode : 400)
+      .json({ success: false, error: err.message || 'Failed to calculate B2B rate' })
   }
 }
 

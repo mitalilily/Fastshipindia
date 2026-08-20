@@ -304,6 +304,21 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   }
   const getCourierCodCharge = (courier: (typeof availableCouriers)[number]) =>
     orderType === 'cod' ? toChargeNumber(courier?.localRates?.forward?.cod_charges) : 0
+  const getB2BRateBreakdown = (courier: (typeof availableCouriers)[number]) => {
+    const forward = courier?.localRates?.forward || {}
+    const ratePerKg = toChargeNumber(forward?.ratePerKg)
+    const freightBeforeMinimum = toChargeNumber(forward?.freightBeforeMinimum)
+    const minimumCharge = toChargeNumber(forward?.minimumCharge)
+    const baseFreight = toChargeNumber(forward?.baseFreight)
+
+    return {
+      ratePerKg,
+      freightBeforeMinimum,
+      minimumCharge,
+      baseFreight,
+      minimumChargeApplied: Boolean(forward?.minimumChargeApplied),
+    }
+  }
   const getSellerFreightCharge = (courier: (typeof availableCouriers)[number]) => {
     const directFreight = toChargeNumber(courier?.seller_freight_charge ?? courier?.final_freight_charge)
     if (directFreight > 0) return directFreight
@@ -620,6 +635,8 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
               const finalCourierCharge = getFinalCourierCharge(courier)
               const isBookable = courier?.is_bookable !== false
               const finalChargeLabel = isBookable ? formatCurrency(finalCourierCharge) : 'Unavailable'
+              const b2bRateBreakdown =
+                shipment_type === 'b2b' ? getB2BRateBreakdown(courier) : null
 
               return (
                 <Paper
@@ -766,6 +783,31 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
                         </Grid>
                       ))}
                     </Grid>
+
+                    {b2bRateBreakdown && (
+                      <Stack direction="row" spacing={1} flexWrap="wrap">
+                        {b2bRateBreakdown.ratePerKg > 0 && (
+                          <Chip
+                            size="small"
+                            label={`Rate/kg ${formatCurrency(b2bRateBreakdown.ratePerKg)}`}
+                          />
+                        )}
+                        {b2bRateBreakdown.freightBeforeMinimum > 0 && (
+                          <Chip
+                            size="small"
+                            label={`Base ${formatCurrency(b2bRateBreakdown.freightBeforeMinimum)}`}
+                          />
+                        )}
+                        {b2bRateBreakdown.minimumChargeApplied && (
+                          <Chip
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            label={`Minimum ${formatCurrency(b2bRateBreakdown.minimumCharge)}`}
+                          />
+                        )}
+                      </Stack>
+                    )}
 
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                       {courier?.prepaid === false && (

@@ -76,7 +76,7 @@ const ProductBoxesForm = () => {
         const height = Math.max(...validDimensionBoxes.map((box) => Number(box.heightCm || 0)))
 
         try {
-          const response = await axiosInstance.post('/admin/b2b/calculate-rate', {
+          const response = await axiosInstance.post('/couriers/b2b/calculate-rate', {
             originPincode: pickupPincode || '110001',
             destinationPincode: deliveryPincode || '110001',
             weightKg: totalActualWeight,
@@ -143,6 +143,10 @@ const ProductBoxesForm = () => {
     (sum, product) => sum + Number(product.quantity || 0) * Number(product.unitPrice || 0),
     0,
   )
+  const volumetricFormula =
+    weightCalculations.cftFactor <= 100
+      ? `max(Actual, Volumetric) - Volumetric uses CFT factor ${weightCalculations.cftFactor}`
+      : `max(Actual, Volumetric) - Volumetric = (LxBxH) / ${weightCalculations.cftFactor}`
 
   return (
     <Stack spacing={2}>
@@ -345,7 +349,7 @@ const ProductBoxesForm = () => {
                 Chargeable Weight
               </Typography>
               <Typography variant="caption" color="#4A5568">
-                max(Actual, Volumetric) · Volumetric = (L×B×H) ÷ {weightCalculations.cftFactor}
+                {volumetricFormula}
               </Typography>
             </Box>
             {weightCalculations.loading ? (

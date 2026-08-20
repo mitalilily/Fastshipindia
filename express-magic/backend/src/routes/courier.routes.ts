@@ -11,6 +11,7 @@ import {
 import { getShippingRatesForUserController } from '../controllers/courier.controller'
 import {
   createCourierController,
+  calculateB2BRateForUserController,
   fetchAvailableCouriers,
   fetchAvailableCouriersForGuestController,
   fetchAvailableCouriersToUser,
@@ -34,6 +35,7 @@ router.get(
 router.post('/available-to-guest', fetchAvailableCouriersForGuestController)
 router.post('/available', requireAuth, fetchAvailableCouriers)
 router.post('/available-to-user', requireAuth, fetchAvailableCouriersToUser)
+router.post('/b2b/calculate-rate', requireAuth, calculateB2BRateForUserController)
 router.post('/create', createCourierController)
 router.delete('/delete/:id', deleteCourierController)
 router.patch('/status/:id', requireAuth, isAdminMiddleware, updateCourierStatusController)
