@@ -71,6 +71,7 @@ import { locations } from '../schema/locations'
 import { addresses, pickupAddresses } from '../schema/pickupAddresses'
 import { plans } from '../schema/plans'
 import { shippingRates } from '../schema/shippingRates'
+import { kyc } from '../schema/kyc'
 import { userPlans } from '../schema/userPlans'
 import { userProfiles } from '../schema/userProfile'
 import { b2bPincodes, b2bZoneToZoneRates, zones } from '../schema/zones'
@@ -9507,6 +9508,48 @@ const getB2BPickupBillingSeed = async (userId: string, params: ShipmentParams) =
     const pickup = params.pickup || ({} as ShipmentParams['pickup'])
     const pickupPincode = pickCleanText(pickup.pincode)
     const pickupName = pickCleanText(pickup.warehouse_name, pickup.name)
+    const [merchantTax] = await db
+      .select({
+        companyName: sql<string>`COALESCE(
+          NULLIF((${userProfiles.companyInfo} ->> 'businessName'), ''),
+          NULLIF((${userProfiles.companyInfo} ->> 'brandName'), ''),
+          NULLIF(${invoicePreferences.sellerName}, ''),
+          NULLIF(${invoicePreferences.brandName}, ''),
+          ''
+        )`,
+        contactName: sql<string>`COALESCE(NULLIF((${userProfiles.companyInfo} ->> 'contactPerson'), ''), '')`,
+        address: sql<string>`COALESCE(NULLIF((${userProfiles.companyInfo} ->> 'companyAddress'), ''), NULLIF(${invoicePreferences.sellerAddress}, ''), '')`,
+        city: sql<string>`COALESCE(NULLIF((${userProfiles.companyInfo} ->> 'city'), ''), '')`,
+        state: sql<string>`COALESCE(NULLIF((${userProfiles.companyInfo} ->> 'state'), ''), '')`,
+        pincode: sql<string>`COALESCE(NULLIF((${userProfiles.companyInfo} ->> 'pincode'), ''), '')`,
+        phone: sql<string>`COALESCE(
+          NULLIF((${userProfiles.companyInfo} ->> 'contactNumber'), ''),
+          NULLIF((${userProfiles.companyInfo} ->> 'companyContactNumber'), ''),
+          NULLIF(${invoicePreferences.supportPhone}, ''),
+          ''
+        )`,
+        gstNumber: sql<string>`COALESCE(
+          NULLIF(${kyc.gstin}, ''),
+          NULLIF(${invoicePreferences.gstNumber}, ''),
+          NULLIF((${userProfiles.gstDetails} ->> 'gstNumber'), ''),
+          NULLIF((${userProfiles.companyInfo} ->> 'gstin'), ''),
+          NULLIF((${userProfiles.companyInfo} ->> 'GSTIN'), ''),
+          ''
+        )`,
+        panNumber: sql<string>`COALESCE(
+          NULLIF(${kyc.panNumber}, ''),
+          NULLIF(${invoicePreferences.panNumber}, ''),
+          NULLIF((${userProfiles.companyInfo} ->> 'panNumber'), ''),
+          NULLIF((${userProfiles.companyInfo} ->> 'pan'), ''),
+          ''
+        )`,
+      })
+      .from(userProfiles)
+      .leftJoin(kyc, eq(kyc.userId, userProfiles.userId))
+      .leftJoin(invoicePreferences, eq(invoicePreferences.userId, userProfiles.userId))
+      .where(eq(userProfiles.userId, userId))
+      .limit(1)
+
     const conditions: any[] = [
       eq(pickupAddresses.userId, userId),
       eq(pickupAddresses.isPickupEnabled, true),
@@ -9531,7 +9574,7 @@ const getB2BPickupBillingSeed = async (userId: string, params: ShipmentParams) =
       .orderBy(desc(pickupAddresses.isPrimary))
       .limit(10)
 
-    return (
+    const selectedPickup =
       rows.find((row) =>
         pickupName
           ? [row.warehouseName, row.contactName]
@@ -9542,7 +9585,44 @@ const getB2BPickupBillingSeed = async (userId: string, params: ShipmentParams) =
       rows.find((row) => pickCleanText(row.gstNumber)) ||
       rows[0] ||
       null
-    )
+
+    if (selectedPickup) {
+      return {
+        ...selectedPickup,
+        merchantGstin: merchantTax?.gstNumber || '',
+        merchantPanNumber: merchantTax?.panNumber || '',
+        merchantCompanyName: merchantTax?.companyName || '',
+        merchantContactName: merchantTax?.contactName || '',
+        merchantAddress: merchantTax?.address || '',
+        merchantCity: merchantTax?.city || '',
+        merchantState: merchantTax?.state || '',
+        merchantPincode: merchantTax?.pincode || '',
+        merchantPhone: merchantTax?.phone || '',
+      }
+    }
+
+    if (!merchantTax) return null
+
+    return {
+      warehouseName: merchantTax.companyName || pickupName || '',
+      contactName: merchantTax.contactName || merchantTax.companyName || pickupName || '',
+      address: merchantTax.address || pickup.address || '',
+      city: merchantTax.city || pickup.city || '',
+      state: merchantTax.state || pickup.state || '',
+      pincode: merchantTax.pincode || pickup.pincode || '',
+      phone: merchantTax.phone || pickup.phone || '',
+      gstNumber: merchantTax.gstNumber || '',
+      isPrimary: false,
+      merchantGstin: merchantTax.gstNumber || '',
+      merchantPanNumber: merchantTax.panNumber || '',
+      merchantCompanyName: merchantTax.companyName || '',
+      merchantContactName: merchantTax.contactName || '',
+      merchantAddress: merchantTax.address || '',
+      merchantCity: merchantTax.city || '',
+      merchantState: merchantTax.state || '',
+      merchantPincode: merchantTax.pincode || '',
+      merchantPhone: merchantTax.phone || '',
+    }
   } catch (error: any) {
     console.warn('Unable to load B2B pickup billing fallback:', error?.message || error)
     return null
@@ -9564,6 +9644,7 @@ const buildDelhiveryB2BBillingAddress = ({
     supplied?.consignor,
     (params as any).company?.name,
     (params as any).company_name,
+    pickupSeed?.merchantCompanyName,
     pickupSeed?.warehouseName,
     pickupSeed?.contactName,
     pickup.warehouse_name,
@@ -9572,6 +9653,7 @@ const buildDelhiveryB2BBillingAddress = ({
   const contactName = pickCleanText(
     supplied?.name,
     (params as any).company?.contactPerson,
+    pickupSeed?.merchantContactName,
     pickupSeed?.contactName,
     pickup.name,
     pickup.warehouse_name,
@@ -9584,6 +9666,7 @@ const buildDelhiveryB2BBillingAddress = ({
       pickup.gst_number,
       (pickup as any).gstNumber,
       pickupSeed?.gstNumber,
+      pickupSeed?.merchantGstin,
       (params as any).company?.gst,
       (params as any).company?.gstin,
       (params as any).company_gst,
@@ -9598,8 +9681,16 @@ const buildDelhiveryB2BBillingAddress = ({
       (params as any).company?.pan,
       (params as any).panNumber,
       (params as any).pan,
+      pickupSeed?.merchantPanNumber,
     ),
   )
+
+  if (!panNumber && !gstNumber) {
+    throw new HttpError(
+      400,
+      'Either PAN or GSTIN must be available in billing address, merchant KYC, invoice settings, or pickup GST before booking Delhivery B2B.',
+    )
+  }
 
   return {
     name: contactName,
@@ -9608,18 +9699,21 @@ const buildDelhiveryB2BBillingAddress = ({
     address: pickCleanText(
       supplied?.address,
       (params as any).company?.address,
+      pickupSeed?.merchantAddress,
       pickupSeed?.address,
       pickup.address,
     ),
     city: pickCleanText(
       supplied?.city,
       (params as any).company?.city,
+      pickupSeed?.merchantCity,
       pickupSeed?.city,
       pickup.city,
     ),
     state: pickCleanText(
       supplied?.state,
       (params as any).company?.state,
+      pickupSeed?.merchantState,
       pickupSeed?.state,
       pickup.state,
     ),
@@ -9627,6 +9721,7 @@ const buildDelhiveryB2BBillingAddress = ({
       supplied?.pin,
       supplied?.pincode,
       (params as any).company?.pincode,
+      pickupSeed?.merchantPincode,
       pickupSeed?.pincode,
       pickup.pincode,
     ),
@@ -9634,11 +9729,12 @@ const buildDelhiveryB2BBillingAddress = ({
       supplied?.phone,
       (params as any).company?.phone,
       (params as any).company?.contactNumber,
+      pickupSeed?.merchantPhone,
       pickupSeed?.phone,
       pickup.phone,
     ),
-    ...(panNumber ? { pan_number: panNumber } : {}),
-    ...(gstNumber ? { gst_number: gstNumber } : {}),
+    ...(panNumber ? { pan_number: panNumber, pan: panNumber } : {}),
+    ...(gstNumber ? { gst_number: gstNumber, gstin: gstNumber } : {}),
   }
 }
 

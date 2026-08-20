@@ -76,6 +76,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
 
   // COMPUTE TOTAL WEIGHT AND PRICE
   let totalWeight = 0
+  let totalActualWeight = 0
   let totalProductPrice = 0
 
   if (shipment_type === 'b2b') {
@@ -98,6 +99,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
         const chargeableWeightKg = Math.max(actualWeightKg, volumetricWeightKg)
         const chargeableWeightGrams = chargeableWeightKg * 1000
 
+        totalActualWeight += actualWeightKg * 1000
         totalWeight += chargeableWeightGrams // Sum chargeable weights in grams
       })
     }
@@ -159,7 +161,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const b2bLength = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.lengthCm || 0)))
   const b2bBreadth = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.breadthCm || 0)))
   const b2bHeight = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.heightCm || 0)))
-  const courierRequestWeight = shipment_type === 'b2b' ? totalWeight / 1000 : totalWeight
+  const courierRequestWeight = shipment_type === 'b2b' ? totalActualWeight / 1000 : totalWeight
 
   const courierPayload: UseAvailableCouriersParams = {
     pickupPincode,
