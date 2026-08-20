@@ -1336,7 +1336,7 @@ const B2COrdersList = () => {
     {
       label: 'Status',
       id: 'order_status',
-      minWidth: 84,
+      minWidth: 160,
       truncate: false,
       render: (_value, row) => (
         <Chip
@@ -1344,7 +1344,8 @@ const B2COrdersList = () => {
           size="small"
           sx={{
             height: 25,
-            minWidth: 58,
+            minWidth: 74,
+            maxWidth: '100%',
             borderRadius: '999px',
             color: 'secondary.main',
             bgcolor: alpha(theme.palette.secondary.main, 0.08),
@@ -1361,7 +1362,7 @@ const B2COrdersList = () => {
     {
       label: 'Action',
       id: 'id',
-      minWidth: 170,
+      minWidth: 160,
       sticky: 'right',
       stickyOffset: 0,
       truncate: false,
@@ -1432,7 +1433,7 @@ const B2COrdersList = () => {
               sx={{
                 minWidth: 78,
                 minHeight: 31,
-                px: 1,
+                px: 0.9,
                 borderRadius: '8px',
                 fontSize: 11.4,
                 fontWeight: 600,

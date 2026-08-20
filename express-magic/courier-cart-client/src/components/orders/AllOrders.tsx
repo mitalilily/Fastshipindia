@@ -1119,7 +1119,7 @@ const AllOrders = () => {
     {
       label: 'Status',
       id: 'order_status',
-      minWidth: 84,
+      minWidth: 160,
       truncate: false,
       render: (_value, row) => (
         <Chip
@@ -1127,7 +1127,8 @@ const AllOrders = () => {
           size="small"
           sx={{
             height: 25,
-            minWidth: 58,
+            minWidth: 74,
+            maxWidth: '100%',
             borderRadius: '999px',
             color: '#05BD7E',
             bgcolor: alpha('#05BD7E', 0.08),
@@ -1144,7 +1145,7 @@ const AllOrders = () => {
     {
       label: 'Action',
       id: 'id',
-      minWidth: 170,
+      minWidth: 160,
       sticky: 'right',
       stickyOffset: 0,
       truncate: false,
@@ -1213,7 +1214,7 @@ const AllOrders = () => {
               sx={{
                 minWidth: 78,
                 minHeight: 31,
-                px: 1,
+                px: 0.9,
                 borderRadius: '8px',
                 fontSize: 11.4,
                 fontWeight: 600,
