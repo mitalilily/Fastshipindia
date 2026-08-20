@@ -146,10 +146,12 @@ const MAX_MANIFEST_RETRY_ATTEMPTS = 3
 const MANIFEST_ORDER_LOOKUP_CHUNK_SIZE = 500
 const PROVIDER_MANIFEST_REQUEST_CHUNK_SIZE = 100
 const WALLET_TRANSACTION_GST_PERCENT = 18
+const B2B_WALLET_DEBIT_REASON = 'B2B Freight Charges'
 export const ORIGINAL_WALLET_DEBIT_REASONS = [
   'B2C Prepaid Order Payment',
   'B2C COD Service Charges',
   'reverse_shipment',
+  B2B_WALLET_DEBIT_REASON,
 ]
 
 type ShadowfaxForwardModeSelection = 'marketplace' | 'warehouse'
@@ -1382,7 +1384,7 @@ export const getOrderRefundOutstanding = async (
   walletId: string,
   orderId: string,
   orderNumber: string | null | undefined,
-  fallbackDebit = 0,
+  _fallbackDebit = 0,
 ) => {
   const transactions = await executor
     .select({
@@ -1401,7 +1403,7 @@ export const getOrderRefundOutstanding = async (
     )
     .reduce((sum: number, transaction: any) => sum + Number(transaction.amount ?? 0), 0)
 
-  const refundableBase = totalOriginalDebit > 0 ? totalOriginalDebit : Math.max(0, fallbackDebit)
+  const refundableBase = totalOriginalDebit
 
   const totalRefundCredits = transactions
     .filter(
@@ -10314,6 +10316,26 @@ export const createB2BShipmentService = async (
   }
 
   const authoritativeFreightCharges = Number(chargesBreakdown.total)
+  const b2bWalletDebitAmount = Number(Math.max(0, authoritativeFreightCharges).toFixed(2))
+
+  if (b2bWalletDebitAmount <= 0) {
+    throw new HttpError(400, 'Unable to book B2B shipment because wallet debit amount is zero.')
+  }
+
+  const [b2bWallet] = await db.select().from(wallets).where(eq(wallets.userId, userId)).limit(1)
+  if (!b2bWallet?.id) {
+    throw new HttpError(400, 'Wallet not found for this user.')
+  }
+
+  const b2bWalletBalance = Number(b2bWallet.balance ?? 0)
+  if (b2bWalletBalance < b2bWalletDebitAmount) {
+    throw new HttpError(
+      400,
+      `Insufficient wallet balance for B2B shipment. Required ₹${b2bWalletDebitAmount.toFixed(
+        2,
+      )}, available ₹${b2bWalletBalance.toFixed(2)}.`,
+    )
+  }
 
   // 1️⃣ Insert local B2B order as 'pending'
   const [pendingOrder] = await db
@@ -10382,6 +10404,82 @@ export const createB2BShipmentService = async (
     } as any)
     .returning({ id: b2b_orders.id })
 
+  let b2bWalletDebited = false
+  const debitB2BWalletForPendingOrder = async () => {
+    const [existingDebit] = await db
+      .select({ id: walletTransactions.id })
+      .from(walletTransactions)
+      .where(
+        and(
+          eq(walletTransactions.wallet_id, b2bWallet.id),
+          eq(walletTransactions.type, 'debit'),
+          eq(walletTransactions.ref, pendingOrder.id),
+          eq(walletTransactions.reason, B2B_WALLET_DEBIT_REASON),
+        ),
+      )
+      .limit(1)
+
+    if (existingDebit) {
+      b2bWalletDebited = true
+      return
+    }
+
+    await createWalletTransaction({
+      walletId: b2bWallet.id,
+      amount: b2bWalletDebitAmount,
+      currency: b2bWallet.currency ?? 'INR',
+      type: 'debit',
+      reason: B2B_WALLET_DEBIT_REASON,
+      ref: pendingOrder.id,
+      meta: {
+        order_number: normalizedOrderNumber,
+        payment_type: params.payment_type,
+        freight_charges: authoritativeFreightCharges,
+        charges_breakdown: chargesBreakdown,
+        charged_weight: null,
+        integration_type: effectiveIntegrationType,
+        courier_id: courierId ?? null,
+        total_wallet_debit: b2bWalletDebitAmount,
+      },
+    })
+    b2bWalletDebited = true
+  }
+
+  const refundB2BWalletDebitForFailedBooking = async (error: any) => {
+    if (!b2bWalletDebited) return
+
+    const failureRefundReason = `Refund for failed B2B booking ${normalizedOrderNumber}`
+    const [existingRefund] = await db
+      .select({ id: walletTransactions.id })
+      .from(walletTransactions)
+      .where(
+        and(
+          eq(walletTransactions.wallet_id, b2bWallet.id),
+          eq(walletTransactions.type, 'credit'),
+          eq(walletTransactions.ref, pendingOrder.id),
+          eq(walletTransactions.reason, failureRefundReason),
+        ),
+      )
+      .limit(1)
+
+    if (existingRefund) return
+
+    await createWalletTransaction({
+      walletId: b2bWallet.id,
+      amount: b2bWalletDebitAmount,
+      currency: b2bWallet.currency ?? 'INR',
+      type: 'credit',
+      reason: failureRefundReason,
+      ref: pendingOrder.id,
+      meta: {
+        source: 'b2b_booking_failure',
+        order_number: normalizedOrderNumber,
+        error: error?.message || 'B2B shipment booking failed',
+        reversed_wallet_debit: b2bWalletDebitAmount,
+      },
+    })
+  }
+
   const boxes = inferredBoxes
 
   const totalDeadWeight = boxes.reduce((sum: number, b: any) => sum + Number(b.weight ?? 0), 0)
@@ -10414,6 +10512,8 @@ export const createB2BShipmentService = async (
   if (effectiveIntegrationType === 'delhivery') {
     const delhivery = new DelhiveryB2BService()
     try {
+      await debitB2BWalletForPendingOrder()
+
       const originPincode = String(params.pickup?.pincode || '').trim()
       const destinationPincode = String(params.consignee?.pincode || '').trim()
       const weightGrams = Math.max(1, Math.round(package_weight * 1000))
@@ -10652,6 +10752,13 @@ export const createB2BShipmentService = async (
         shipment: manifest.response,
       }
     } catch (error: any) {
+      await refundB2BWalletDebitForFailedBooking(error).catch((refundError: any) => {
+        console.error(
+          `Failed to reverse B2B wallet debit for ${normalizedOrderNumber}:`,
+          refundError?.message || refundError,
+        )
+      })
+
       await db
         .update(b2b_orders)
         .set({

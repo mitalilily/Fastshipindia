@@ -609,16 +609,28 @@ export async function applyCancellationRefundOnce(
     )
     .reduce((sum: number, transaction: any) => sum + Number(transaction.amount ?? 0), 0)
 
-  const fallbackRefundAmount =
-    order.order_type === 'prepaid'
-      ? Number(order.order_amount ?? 0) + freightCharges + otherCharges
-      : freightCharges + otherCharges + codCharges
+  if (originalWalletDebit <= 0) {
+    console.warn(
+      `⚠️ Skipping cancellation refund for ${order.order_number}; no original wallet debit exists`,
+      {
+        source,
+        order_type: order.order_type,
+        order_amount: Number(order.order_amount ?? 0),
+        freight_charges: freightCharges,
+        other_charges: otherCharges,
+        cod_charges: codCharges,
+        debit_transactions_found: debitTransactions.length,
+      },
+    )
+    return 0
+  }
+
   const refundAmount = await getOrderRefundOutstanding(
     tx,
     wallet.id,
     order.id,
     order.order_number,
-    fallbackRefundAmount,
+    originalWalletDebit,
   )
 
   if (refundAmount <= 0) {
