@@ -45,8 +45,8 @@ export default function RevenueByTypeChart({
     dataLabels: { enabled: false },
     plotOptions: {
       bar: {
-        borderRadius: 6,
-        columnWidth: '48%',
+        borderRadius: 2,
+        columnWidth: '42%',
       },
     },
     tooltip: {

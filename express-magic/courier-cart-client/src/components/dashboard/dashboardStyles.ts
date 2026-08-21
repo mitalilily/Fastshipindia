@@ -36,17 +36,16 @@ export const getDashboardCssVars = (mode: PaletteMode) => {
 export const dashboardCardSx = {
   height: '100%',
   minHeight: 0,
-  borderRadius: '18px',
+  borderRadius: '8px',
   position: 'relative',
   border: `1px solid ${dashboardPalette.line}`,
   background: dashboardPalette.surface,
-  boxShadow: '0 18px 40px rgba(15, 23, 42, 0.06)',
+  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.045)',
   overflow: 'hidden',
-  transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+  transition: 'border-color 160ms ease, box-shadow 160ms ease',
   '&:hover': {
-    borderColor: alpha(dashboardPalette.blue, 0.18),
-    boxShadow: '0 22px 52px rgba(15, 23, 42, 0.09)',
-    transform: 'translateY(-1px)',
+    borderColor: alpha(dashboardPalette.blue, 0.2),
+    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.06)',
   },
 } satisfies SxProps<Theme>
 
@@ -57,20 +56,20 @@ export const dashboardTileSx = (color = dashboardPalette.orange) => ({
 }) satisfies SxProps<Theme>
 
 export const dashboardIconSx = (color = dashboardPalette.orange) => ({
-  width: 42,
-  height: 42,
-  borderRadius: '14px',
+  width: 30,
+  height: 30,
+  borderRadius: '6px',
   display: 'grid',
   placeItems: 'center',
-  color: '#FFFFFF',
-  background: `linear-gradient(135deg, ${color} 0%, ${alpha(color, 0.74)} 100%)`,
-  border: `1px solid ${alpha(color, 0.26)}`,
-  boxShadow: `0 10px 22px ${alpha(color, 0.2)}`,
+  color,
+  background: alpha(color, 0.055),
+  border: `1px solid ${alpha(color, 0.14)}`,
+  boxShadow: 'none',
   flex: '0 0 auto',
   '& svg': {
-    width: 21,
-    height: 21,
-    strokeWidth: 2.15,
+    width: 17,
+    height: 17,
+    strokeWidth: 2,
   },
 }) satisfies SxProps<Theme>
 

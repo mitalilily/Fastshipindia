@@ -71,7 +71,7 @@ export default function QuickStatsCards({
     {
       title: 'Wallet Balance',
       value: formatCurrency(Number(financial.walletBalance || 0)),
-      status: walletLow ? 'Low balance · Recharge now' : 'Balance ready for shipping',
+      status: walletLow ? 'Low balance - Recharge now' : 'Balance ready for shipping',
       statusTone: walletLow ? 'danger' : 'success',
       icon: <TbWallet />,
       statusIcon: walletLow ? <TbAlertCircle /> : <TbCircleCheck />,
@@ -109,21 +109,14 @@ export default function QuickStatsCards({
             <Card
               sx={{
                 ...dashboardCardSx,
-                minHeight: 178,
-                borderColor: alpha(stat.color, isDark ? 0.34 : 0.16),
-                background: isDark
-                  ? `linear-gradient(145deg, ${alpha(stat.color, 0.17)} 0%, ${dashboardPalette.surface} 58%)`
-                  : `linear-gradient(145deg, ${alpha(stat.color, 0.075)} 0%, #ffffff 58%)`,
-                boxShadow: isDark
-                  ? '0 16px 36px rgba(0,0,0,0.18)'
-                  : `0 14px 34px ${alpha(stat.color, 0.085)}`,
-                transition: 'transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
+                minHeight: 164,
+                borderColor: alpha(stat.color, isDark ? 0.28 : 0.14),
+                background: dashboardPalette.surface,
+                boxShadow: isDark ? '0 12px 28px rgba(0,0,0,0.16)' : '0 10px 28px rgba(15, 23, 42, 0.045)',
+                transition: 'border-color 180ms ease, box-shadow 180ms ease',
                 '&:hover': {
-                  transform: 'translateY(-3px)',
-                  borderColor: alpha(stat.color, 0.42),
-                  boxShadow: isDark
-                    ? '0 20px 42px rgba(0,0,0,0.26)'
-                    : `0 20px 42px ${alpha(stat.color, 0.14)}`,
+                  borderColor: alpha(stat.color, 0.32),
+                  boxShadow: isDark ? '0 14px 32px rgba(0,0,0,0.2)' : '0 12px 32px rgba(15, 23, 42, 0.06)',
                 },
               }}
             >
@@ -132,7 +125,7 @@ export default function QuickStatsCards({
                 aria-label={`${stat.title}: ${stat.value}. ${stat.action}`}
                 sx={{
                   height: '100%',
-                  minHeight: 178,
+                  minHeight: 164,
                   display: 'flex',
                   alignItems: 'stretch',
                   '&:focus-visible': {
@@ -141,15 +134,15 @@ export default function QuickStatsCards({
                   },
                 }}
               >
-                <CardContent sx={{ p: '20px !important', width: '100%' }}>
-                  <Stack spacing={1.5} height="100%">
+                <CardContent sx={{ p: '18px !important', width: '100%' }}>
+                  <Stack spacing={1.35} height="100%">
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Typography
                         sx={{
                           color: dashboardPalette.muted,
-                          fontSize: '0.76rem',
+                          fontSize: '0.74rem',
                           fontWeight: 700,
-                          letterSpacing: '0.04em',
+                          letterSpacing: 0,
                           textTransform: 'uppercase',
                         }}
                       >
@@ -157,16 +150,16 @@ export default function QuickStatsCards({
                       </Typography>
                       <Box
                         sx={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: '13px',
+                          width: 30,
+                          height: 30,
+                          borderRadius: '6px',
                           display: 'grid',
                           placeItems: 'center',
                           color: stat.color,
-                          bgcolor: alpha(stat.color, isDark ? 0.2 : 0.1),
-                          border: `1px solid ${alpha(stat.color, isDark ? 0.35 : 0.18)}`,
-                          boxShadow: `0 8px 20px ${alpha(stat.color, 0.1)}`,
-                          '& svg': { width: 22, height: 22, strokeWidth: 1.8 },
+                          bgcolor: alpha(stat.color, isDark ? 0.14 : 0.055),
+                          border: `1px solid ${alpha(stat.color, isDark ? 0.24 : 0.13)}`,
+                          boxShadow: 'none',
+                          '& svg': { width: 17, height: 17, strokeWidth: 1.8 },
                         }}
                       >
                         {stat.icon}
@@ -176,10 +169,10 @@ export default function QuickStatsCards({
                     <Typography
                       sx={{
                         color: dashboardPalette.ink,
-                        fontSize: { xs: '1.8rem', lg: '1.65rem', xl: '1.8rem' },
+                        fontSize: { xs: '1.62rem', lg: '1.48rem', xl: '1.62rem' },
                         fontWeight: 750,
                         lineHeight: 1,
-                        letterSpacing: '-0.035em',
+                        letterSpacing: 0,
                         overflowWrap: 'anywhere',
                       }}
                     >
@@ -195,7 +188,7 @@ export default function QuickStatsCards({
                           minWidth: 0,
                           px: 1,
                           py: 0.55,
-                          borderRadius: 999,
+                          borderRadius: '6px',
                           color: statusStyle.color,
                           bgcolor: statusStyle.background,
                         }}

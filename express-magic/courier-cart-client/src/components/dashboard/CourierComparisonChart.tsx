@@ -47,8 +47,8 @@ export default function CourierComparisonChart({
     dataLabels: { enabled: false },
     plotOptions: {
       bar: {
-        borderRadius: 6,
-        columnWidth: '46%',
+        borderRadius: 2,
+        columnWidth: '42%',
       },
     },
     tooltip: {

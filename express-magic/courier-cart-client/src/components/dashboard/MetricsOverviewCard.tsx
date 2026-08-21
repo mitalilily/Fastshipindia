@@ -20,18 +20,21 @@ export default function MetricsOverviewCard({ metrics, formatCurrency }: Metrics
       value: formatCurrency(metrics.avgOrderValue || 0),
       icon: <MdAnalytics size={20} />,
       color: dashboardPalette.blue,
+      accent: '#0A4EA3',
     },
     {
       title: 'Prepaid Orders',
       value: metrics.totalPrepaidOrders?.toLocaleString() || '0',
       icon: <MdShoppingBag size={20} />,
       color: '#0F766E',
+      accent: '#0F766E',
     },
     {
       title: 'COD Orders',
       value: metrics.totalCodOrders?.toLocaleString() || '0',
       icon: <TbCurrencyRupee size={20} />,
-      color: dashboardPalette.amber,
+      color: '#B8141A',
+      accent: '#B8141A',
     },
   ]
 
@@ -50,33 +53,32 @@ export default function MetricsOverviewCard({ metrics, formatCurrency }: Metrics
             <Grid size={{ xs: 12, sm: 4 }} key={metric.title}>
               <Box
                 sx={{
-                  p: 1.7,
-                  borderRadius: '12px',
-                  background: alpha(metric.color, 0.055),
-                  border: `1px solid ${alpha(metric.color, 0.16)}`,
-                  minHeight: 108,
+                  p: 1.65,
+                  borderRadius: '8px',
+                  background: '#FFFFFF',
+                  border: '1px solid #DDE5F0',
+                  minHeight: 104,
+                  boxShadow: 'none',
+                  borderTop: `3px solid ${alpha(metric.accent, 0.72)}`,
                 }}
               >
-                <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                <Stack direction="row" spacing={0.85} alignItems="center" mb={1.2}>
                   <Box
                     sx={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: '9px',
-                      display: 'grid',
-                      placeItems: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
                       color: metric.color,
-                      bgcolor: alpha(metric.color, 0.1),
                       flex: '0 0 auto',
+                      '& svg': { width: 17, height: 17 },
                     }}
                   >
                     {metric.icon}
                   </Box>
-                  <Typography sx={{ fontSize: '0.74rem', fontWeight: 500, color: dashboardPalette.muted, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: dashboardPalette.muted, lineHeight: 1.2 }}>
                     {metric.title}
                   </Typography>
                 </Stack>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: dashboardPalette.ink, overflowWrap: 'anywhere' }}>
+                <Typography sx={{ fontSize: '1.28rem', fontWeight: 800, color: dashboardPalette.ink, overflowWrap: 'anywhere' }}>
                   {metric.value}
                 </Typography>
               </Box>

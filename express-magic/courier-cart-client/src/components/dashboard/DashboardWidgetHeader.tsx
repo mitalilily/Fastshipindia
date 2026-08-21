@@ -25,13 +25,13 @@ export default function DashboardWidgetHeader({
       spacing={1.5}
       sx={{ minWidth: 0 }}
     >
-      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+      <Stack direction="row" spacing={1.15} alignItems="center" sx={{ minWidth: 0 }}>
         <Box sx={dashboardIconSx(color)}>{icon}</Box>
         <Box sx={{ minWidth: 0 }}>
           <Typography
             sx={{
               color: dashboardPalette.ink,
-              fontSize: { xs: '0.98rem', md: '1.04rem' },
+              fontSize: { xs: '0.92rem', md: '0.98rem' },
               fontWeight: 800,
               lineHeight: 1.18,
             }}
@@ -42,9 +42,9 @@ export default function DashboardWidgetHeader({
           <Typography
             sx={{
               color: dashboardPalette.muted,
-              fontSize: { xs: '0.76rem', md: '0.8rem' },
-              fontWeight: 600,
-              mt: 0.35,
+              fontSize: { xs: '0.72rem', md: '0.76rem' },
+              fontWeight: 500,
+              mt: 0.25,
               lineHeight: 1.3,
             }}
             noWrap
