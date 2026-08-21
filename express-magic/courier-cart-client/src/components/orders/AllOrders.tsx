@@ -1120,6 +1120,8 @@ const AllOrders = () => {
       label: 'Status',
       id: 'order_status',
       minWidth: 160,
+      sticky: 'right',
+      stickyOffset: 160,
       truncate: false,
       render: (_value, row) => (
         <Chip

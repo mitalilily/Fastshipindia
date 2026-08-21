@@ -200,6 +200,12 @@ export default function DataTable<T extends { id: string | number }>(props: Data
     }
   }
 
+  const visibleColumns = columns.filter((col) => !(col.hiddenOnMobile && isMobile))
+  const shipmentTableMinWidth = isShipmentVariant
+    ? visibleColumns.reduce((total, col) => total + (col.minWidth || 100), selectable ? 38 : 0) +
+      (expandable && renderExpandedRow ? 40 : 0)
+    : undefined
+
   return (
     <CardContent
       sx={{
@@ -459,7 +465,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
             </Stack>
           )
         ) : (
-          <Box sx={{ overflowX: isShipmentVariant ? 'hidden' : 'auto', borderRadius: isCompact ? '8px' : '14px' }}>
+          <Box sx={{ overflowX: 'auto', borderRadius: isCompact ? '8px' : '14px' }}>
             <TableContainer
               component={Paper}
               sx={{
@@ -470,7 +476,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                 boxShadow: 'none',
                 borderRadius: isCompact ? '8px' : '12px',
                 backdropFilter: 'none',
-                overflowX: isShipmentVariant ? 'hidden' : 'auto',
+                overflowX: 'auto',
               }}
             >
               <Table
@@ -483,6 +489,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                         borderSpacing: '0 6px',
                         tableLayout: 'fixed',
                         width: '100%',
+                        minWidth: shipmentTableMinWidth,
                       }
                     : undefined
                 }
