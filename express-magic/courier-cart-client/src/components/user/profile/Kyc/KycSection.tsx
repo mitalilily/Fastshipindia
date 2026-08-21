@@ -44,7 +44,7 @@ const KycSection = () => {
   }
 
   return (
-    <Box display="flex" justifyContent="center" width="100%">
+    <Box display="flex" justifyContent="stretch" width="100%">
       {showDetailsCard ? (
         <KycDetailsCard
           kyc={kycData?.kyc ?? {}}

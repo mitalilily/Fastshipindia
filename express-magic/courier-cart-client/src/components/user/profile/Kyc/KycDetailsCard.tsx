@@ -1,5 +1,7 @@
 import type { JSX } from '@emotion/react/jsx-runtime'
+import type { ReactNode } from 'react'
 import {
+  alpha,
   Box,
   Button,
   Card,
@@ -26,7 +28,7 @@ import {
   MdVerifiedUser,
 } from 'react-icons/md'
 import { usePresignedDownloadUrls } from '../../../../hooks/Uploads/usePresignedDownloadUrls'
-import type { CompanyType } from '../../../../types/generic.types'
+import type { BusinessStructure, CompanyType } from '../../../../types/generic.types'
 import type { KycDetails } from '../../../../types/user.types'
 import { requiredKycDetails } from '../../../../utils/constants'
 import { getMimeType } from '../../../../utils/functions'
@@ -41,8 +43,18 @@ const iconMap: Record<string, JSX.Element> = {
   cancelledChequeUrl: <MdAccountBalance />,
   partnershipDeedUrl: <MdGavel />,
   boardResolutionUrl: <MdDescription />,
+  businessPanUrl: <MdBadge />,
+  companyAddressProofUrl: <MdBusiness />,
+  gstCertificateUrl: <MdDescription />,
+  llpAgreementUrl: <MdGavel />,
+  msmeCertUrl: <MdDescription />,
   selfieUrl: <MdAccountBox />,
+  structure: <MdBusiness />,
+  companyType: <MdBusiness />,
+  gstin: <MdDescription />,
   cin: <MdBusiness />,
+  createdAt: <MdDescription />,
+  updatedAt: <MdDescription />,
 }
 
 const getLabel = (key: string) => {
@@ -58,8 +70,11 @@ const getLabel = (key: string) => {
     cancelledChequeUrl: 'Cancelled Cheque',
     partnershipDeedUrl: 'Partnership Deed',
     boardResolutionUrl: 'Board Resolution',
+    msmeCertUrl: 'MSME Certificate',
     structure: 'Business Structure',
+    companyType: 'Company Type',
     selfieUrl: 'Selfie',
+    gstin: 'GSTIN',
     cin: 'CIN',
     createdAt: 'Submitted On',
     updatedAt: 'Last Updated',
@@ -67,19 +82,36 @@ const getLabel = (key: string) => {
   return map[key] || key
 }
 
+const readableValue = (value?: string | null) =>
+  value
+    ? value
+        .replace(/_/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+    : ''
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getStatus = (kyc: any, key: string) => kyc?.[`${key.replace('Url', '')}Status`] as string
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getRejection = (kyc: any, key: string) =>
-  kyc?.[`${key.replace('Url', '')}RejectionReason`] as string
+const getRejection = (kyc: any, key: string) => {
+  const stem = key.replace('Url', '')
+  return (kyc?.[`${stem}RejectionReason`] || kyc?.[`${stem}Reason`]) as string
+}
 
 const StatusChip = ({ status }: { status?: string }) => {
   const config = {
-    verified: { bg: '#3DD598', color: '#FFFFFF', label: 'VERIFIED' },
-    rejected: { bg: '#E74C3C', color: '#FFFFFF', label: 'REJECTED' },
-    verification_in_progress: { bg: '#FFA726', color: '#FFFFFF', label: 'IN PROGRESS' },
-    pending: { bg: '#4A5568', color: '#FFFFFF', label: 'PENDING' },
+    verified: { bg: '#E8F8F0', border: '#A7F3D0', color: '#047857', label: 'Verified' },
+    rejected: { bg: '#FEE2E2', border: '#FECACA', color: '#B91C1C', label: 'Rejected' },
+    verification_in_progress: {
+      bg: '#FFF7ED',
+      border: '#FED7AA',
+      color: '#C2410C',
+      label: 'In progress',
+    },
+    pending: { bg: '#EFF6FF', border: '#BFDBFE', color: '#1D4ED8', label: 'Pending' },
+    missing: { bg: '#F8FAFC', border: '#CBD5E1', color: '#64748B', label: 'Not uploaded' },
   }
 
   const style = status ? config[status as keyof typeof config] : null
@@ -89,16 +121,41 @@ const StatusChip = ({ status }: { status?: string }) => {
       size="small"
       label={style.label}
       sx={{
-        fontWeight: 700,
+        height: 24,
+        borderRadius: 999,
+        border: `1px solid ${style.border}`,
         bgcolor: style.bg,
         color: style.color,
-        fontSize: '0.7rem',
-        letterSpacing: 0.5,
-        boxShadow: `0 2px 8px ${style.bg}40`,
+        fontSize: '0.72rem',
+        fontWeight: 800,
+        letterSpacing: 0,
       }}
     />
   ) : null
 }
+
+const SectionTitle = ({ children }: { children: ReactNode }) => (
+  <Typography
+    variant="h6"
+    fontWeight={800}
+    sx={{
+      mb: 2,
+      color: '#17213C',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 1,
+      '&::before': {
+        content: '""',
+        width: 4,
+        height: 22,
+        bgcolor: '#10B981',
+        borderRadius: 999,
+      },
+    }}
+  >
+    {children}
+  </Typography>
+)
 
 const PreviewBlock = ({
   labelKey,
@@ -122,118 +179,160 @@ const PreviewBlock = ({
 
   if (loading) {
     return (
-      <Grid size={{ md: 4, xs: 12 }}>
-        <Typography variant="body2" color="text.secondary">
-          {icon} {label}
-        </Typography>
-        <Skeleton variant="rounded" width={140} height={140} sx={{ mt: 1 }} />
+      <Grid size={{ md: 4, sm: 6, xs: 12 }}>
+        <Box
+          sx={{
+            border: '1px solid #E2E8F0',
+            borderRadius: 2,
+            p: 2,
+            bgcolor: '#FFFFFF',
+          }}
+        >
+          <Skeleton width="55%" height={24} />
+          <Skeleton variant="rounded" width="100%" height={126} sx={{ mt: 1.5 }} />
+        </Box>
       </Grid>
     )
   }
 
-  if (!url) return null
-
   return (
-    <Grid size={{ md: 4, sm: 12 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Box sx={{ color: '#333369', display: 'flex', alignItems: 'center' }}>{icon}</Box>
-          <Typography variant="subtitle2" fontWeight={700} color="#1A1A1A">
-            {label}
-          </Typography>
-        </Box>
-        <StatusChip status={status} />
-      </Box>
-
+    <Grid size={{ md: 4, sm: 6, xs: 12 }}>
       <Box
         sx={{
-          mt: 1,
-          p: 1.5,
+          height: '100%',
+          p: 2,
           borderRadius: 2,
-          border: '1px solid #E0E6ED',
+          border: '1px solid #E2E8F0',
           bgcolor: '#FFFFFF',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-          transition: 'all 0.3s ease',
+          boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
+          transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
           '&:hover': {
-            boxShadow: '0 4px 12px rgba(51, 51, 105, 0.12)',
-            transform: 'translateY(-2px)',
+            borderColor: '#B6C6DB',
+            boxShadow: '0 14px 32px rgba(15, 23, 42, 0.08)',
           },
         }}
       >
-        {isPdf ? (
-          <Box
-            component="img"
-            src="/logo/pdf.png"
-            alt={label}
-            sx={{
-              width: '60%',
-              height: 190,
-              borderRadius: 2,
-              objectFit: 'contain',
-              border: '1px solid #ccc',
-              boxShadow: 2,
-              transition: 'transform 0.2s ease-in-out',
-              '&:hover': { transform: 'scale(1.02)' },
-            }}
-          />
-        ) : (
-          <Box
-            component="img"
-            src={url}
-            alt={label}
-            sx={{
-              width: '100%',
-              maxHeight: 220,
-              borderRadius: 2,
-              objectFit: 'cover',
-              border: '1px solid #E0E6ED',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-              transition: 'transform 0.3s ease',
-              '&:hover': { transform: 'scale(1.05)' },
-            }}
-          />
-        )}
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1.5}>
+          <Stack direction="row" spacing={1.25} alignItems="center" minWidth={0}>
+            <Box
+              sx={{
+                width: 38,
+                height: 38,
+                borderRadius: 1.5,
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+                color: '#0A4EA3',
+                bgcolor: alpha('#0A4EA3', 0.08),
+                border: `1px solid ${alpha('#0A4EA3', 0.14)}`,
+                fontSize: 20,
+              }}
+            >
+              {icon}
+            </Box>
+            <Box minWidth={0}>
+              <Typography noWrap fontWeight={800} color="#17213C">
+                {label}
+              </Typography>
+              <Typography variant="caption" color="#64748B">
+                {url ? (isPdf ? 'PDF document' : 'Image document') : 'Document not uploaded'}
+              </Typography>
+            </Box>
+          </Stack>
+          <StatusChip status={status || (url ? undefined : 'missing')} />
+        </Stack>
 
-        <Stack direction="row" spacing={1} mt={1} alignItems="center">
-          <Button
-            href={url}
-            target="_blank"
-            rel="noopener"
-            variant="contained"
-            size="small"
-            startIcon={<MdPreview />}
-            sx={{
-              borderRadius: 1.5,
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 2,
-              py: 0.8,
-              '&:hover': {
-                transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(51, 51, 105, 0.3)',
-              },
-              transition: 'all 0.3s ease',
-            }}
-          >
-            {isPdf ? 'Open PDF' : 'Preview'}
-          </Button>
+        <Box
+          sx={{
+            mt: 2,
+            height: 132,
+            borderRadius: 2,
+            overflow: 'hidden',
+            border: url ? '1px solid #E2E8F0' : '1px dashed #CBD5E1',
+            bgcolor: '#F8FAFC',
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          {url ? (
+            isPdf ? (
+              <Stack alignItems="center" spacing={1}>
+                <Box
+                  component="img"
+                  src="/logo/pdf.png"
+                  alt={label}
+                  sx={{ width: 54, height: 54, objectFit: 'contain' }}
+                />
+                <Typography variant="caption" color="#64748B" fontWeight={700}>
+                  PDF file attached
+                </Typography>
+              </Stack>
+            ) : (
+              <Box
+                component="img"
+                src={url}
+                alt={label}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            )
+          ) : (
+            <Stack alignItems="center" spacing={0.75} textAlign="center" px={2}>
+              <Box sx={{ color: '#94A3B8', fontSize: 30, display: 'flex' }}>{icon}</Box>
+              <Typography variant="body2" color="#475569" fontWeight={800}>
+                Waiting for upload
+              </Typography>
+              <Typography variant="caption" color="#64748B">
+                This requirement is still empty.
+              </Typography>
+            </Stack>
+          )}
+        </Box>
+
+        <Stack direction="row" spacing={1} mt={1.5} alignItems="center" flexWrap="wrap">
+          {url && (
+            <Button
+              href={url}
+              target="_blank"
+              rel="noopener"
+              variant="outlined"
+              size="small"
+              startIcon={<MdPreview />}
+              sx={{
+                borderRadius: 1.5,
+                textTransform: 'none',
+                fontWeight: 800,
+                color: '#0A4EA3',
+                borderColor: '#C9D7EA',
+                '&:hover': {
+                  borderColor: '#0A4EA3',
+                  bgcolor: alpha('#0A4EA3', 0.06),
+                },
+              }}
+            >
+              {isPdf ? 'Open PDF' : 'Preview'}
+            </Button>
+          )}
 
           {status === 'rejected' && rejectionReason && (
             <Typography
               variant="caption"
               sx={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 0.5,
-                color: '#E74C3C',
-                fontWeight: 600,
-                bgcolor: 'rgba(231, 76, 60, 0.1)',
+                color: '#B91C1C',
+                fontWeight: 700,
+                bgcolor: '#FEE2E2',
                 px: 1,
                 py: 0.5,
                 borderRadius: 1,
               }}
             >
-              <MdErrorOutline size={16} /> <em>{rejectionReason}</em>
+              <MdErrorOutline size={16} /> {rejectionReason}
             </Typography>
           )}
         </Stack>
@@ -255,22 +354,36 @@ const LabelValue = ({
   const icon = iconMap[labelKey] || <MdDescription />
 
   return (
-    <Grid size={{ md: 6, xs: 12 }}>
-      <Typography
-        variant="body2"
-        color="#4A5568"
-        fontWeight={600}
-        sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}
+    <Grid size={{ md: 4, sm: 6, xs: 12 }}>
+      <Box
+        sx={{
+          height: '100%',
+          minHeight: 94,
+          p: 2,
+          borderRadius: 2,
+          border: '1px solid #E2E8F0',
+          bgcolor: '#F8FAFC',
+        }}
       >
-        {icon} {label}
-      </Typography>
-      {loading ? (
-        <Skeleton width="70%" sx={{ bgcolor: '#F5F7FA' }} />
-      ) : (
-        <Typography variant="body1" fontWeight={600} color="#1A1A1A">
-          {value || '-'}
+        <Typography
+          variant="body2"
+          color="#64748B"
+          fontWeight={800}
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}
+        >
+          <Box component="span" sx={{ color: '#0A4EA3', display: 'flex' }}>
+            {icon}
+          </Box>
+          {label}
         </Typography>
-      )}
+        {loading ? (
+          <Skeleton width="70%" sx={{ bgcolor: '#E2E8F0' }} />
+        ) : (
+          <Typography variant="body1" fontWeight={800} color="#0F172A" sx={{ wordBreak: 'break-word' }}>
+            {value || '-'}
+          </Typography>
+        )}
+      </Box>
     </Grid>
   )
 }
@@ -284,15 +397,18 @@ const KycDetailsCard = ({
   kyc: KycDetails
   isLoading?: boolean
 }) => {
-  const structure = kyc?.structure ?? 'company'
+  const structure = (kyc?.structure ?? 'company') as BusinessStructure
   const companyType = kyc?.companyType
   const config = requiredKycDetails[structure]
-  const allFields =
-    structure === 'company' && typeof config === 'object' && !Array.isArray(config)
-      ? config[companyType as CompanyType] ?? []
-      : Array.isArray(config)
-      ? config
-      : []
+  const companyFields =
+    structure === 'company' && typeof config === 'object' && !Array.isArray(config) ? config : null
+  const allFields: (keyof AdditionalKYCForm)[] = companyFields
+    ? companyFields[(companyType || 'private_limited') as CompanyType] ??
+      Object.values(companyFields)[0] ??
+      []
+    : Array.isArray(config)
+    ? config
+    : []
   const isFileField = (f: keyof AdditionalKYCForm) =>
     [
       'aadhaarUrl',
@@ -353,146 +469,110 @@ const KycDetailsCard = ({
   return (
     <Card
       sx={{
-        mt: 4,
-        px: 3,
-        py: 3,
+        width: '100%',
+        maxWidth: 1180,
+        mx: 'auto',
+        mt: { xs: 1, md: 2 },
         borderRadius: 3,
         bgcolor: '#FFFFFF',
-        border: '1px solid #E0E6ED',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        border: '1px solid #DCE5F1',
+        boxShadow: '0 18px 44px rgba(15, 23, 42, 0.08)',
         position: 'relative',
+        overflow: 'hidden',
         '&::before': {
           content: '""',
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: '4px',
+          height: '5px',
           background: BRAND_GRADIENT,
-          borderRadius: '12px 12px 0 0',
         },
       }}
     >
-      <CardContent>
-        <Box
-          display="flex"
+      <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
           justifyContent="space-between"
-          alignItems="center"
-          flexWrap="wrap"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
           gap={2}
-          mb={2}
+          mb={3}
         >
-          <Box display="flex" alignItems="center" gap={2}>
-            <Typography variant="h6" fontWeight={700} color="#333369">
-              {loading ? <Skeleton width={120} /> : 'KYC Details'}
+          <Box>
+            <Typography variant="h5" fontWeight={900} color="#0F172A">
+              {loading ? <Skeleton width={150} /> : 'KYC Details'}
             </Typography>
+            <Typography color="#64748B" fontWeight={600} mt={0.5}>
+              Business verification information and uploaded document checklist.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <StatusChip status={kyc?.status} />
             {!loading && (
-              <Button variant="contained" size="small" startIcon={<MdEdit />} onClick={onEdit}>
+              <Button
+                variant="contained"
+                size="medium"
+                startIcon={<MdEdit />}
+                onClick={onEdit}
+                sx={{
+                  minWidth: 100,
+                  borderRadius: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 900,
+                  background: BRAND_GRADIENT,
+                  boxShadow: '0 10px 24px rgba(10, 78, 163, 0.18)',
+                }}
+              >
                 Edit
               </Button>
             )}
-          </Box>
-          <StatusChip status={kyc?.status} />
-        </Box>
+          </Stack>
+        </Stack>
 
-        <Divider sx={{ mb: 3, borderColor: '#E0E6ED' }} />
+        <Divider sx={{ mb: 3, borderColor: '#E2E8F0' }} />
 
-        <Typography
-          variant="h6"
-          fontWeight={700}
-          sx={{
-            mb: 2.5,
-            color: '#333369',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            '&::before': {
-              content: '""',
-              width: 4,
-              height: 24,
-              bgcolor: '#3DD598',
-              borderRadius: 1,
-            },
-          }}
-        >
-          Basic Information
-        </Typography>
-        <Grid container spacing={3}>
-          <LabelValue labelKey="structure" value={structure} loading={loading} />
-          {allFields.includes('cin') && (
-            <LabelValue labelKey="cin" value={kyc?.cin} loading={loading} />
+        <SectionTitle>Basic Information</SectionTitle>
+        <Grid container spacing={2}>
+          <LabelValue labelKey="structure" value={readableValue(structure)} loading={loading} />
+          {structure === 'company' && (
+            <LabelValue
+              labelKey="companyType"
+              value={readableValue(companyType || 'private_limited')}
+              loading={loading}
+            />
           )}
-          <PreviewBlock
-            labelKey="selfieUrl"
-            url={urlMap['selfieUrl']}
-            mime={mimeMap['selfieUrl']}
-            loading={loading}
-            kyc={kyc}
-          />
+          {allFields.includes('cin') && <LabelValue labelKey="cin" value={kyc?.cin} loading={loading} />}
+          {kyc?.selfieUrl && (
+            <PreviewBlock
+              labelKey="selfieUrl"
+              url={urlMap['selfieUrl']}
+              mime={mimeMap['selfieUrl']}
+              loading={loading}
+              kyc={kyc}
+            />
+          )}
         </Grid>
 
-        {fileFieldsToShow.length > 0 && (
-          <>
-            <Divider sx={{ my: 4, borderColor: '#E0E6ED' }} />
-            <Typography
-              variant="h6"
-              fontWeight={700}
-              sx={{
-                mb: 2.5,
-                color: '#333369',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                '&::before': {
-                  content: '""',
-                  width: 4,
-                  height: 24,
-                  bgcolor: '#3DD598',
-                  borderRadius: 1,
-                },
-              }}
-            >
-              Uploaded Documents
-            </Typography>
-            <Grid container spacing={3}>
-              {fileFieldsToShow.map((field: string) => (
-                <PreviewBlock
-                  key={field}
-                  labelKey={field}
-                  url={urlMap[field]}
-                  mime={mimeMap[field]}
-                  loading={loading}
-                  kyc={kyc}
-                />
-              ))}
-            </Grid>
-          </>
-        )}
+        <Divider sx={{ my: 4, borderColor: '#E2E8F0' }} />
+        <SectionTitle>Uploaded Documents</SectionTitle>
+        <Grid container spacing={2}>
+          {fileFieldsToShow.map((field: string) => (
+            <PreviewBlock
+              key={field}
+              labelKey={field}
+              url={urlMap[field]}
+              mime={mimeMap[field]}
+              loading={loading}
+              kyc={kyc}
+            />
+          ))}
+        </Grid>
 
         {textFieldsToShow.length > 0 && (
           <>
-            <Divider sx={{ my: 4, borderColor: '#E0E6ED' }} />
-            <Typography
-              variant="h6"
-              fontWeight={700}
-              sx={{
-                mb: 2.5,
-                color: '#333369',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                '&::before': {
-                  content: '""',
-                  width: 4,
-                  height: 24,
-                  bgcolor: '#3DD598',
-                  borderRadius: 1,
-                },
-              }}
-            >
-              Other Details
-            </Typography>
-            <Grid container spacing={3}>
+            <Divider sx={{ my: 4, borderColor: '#E2E8F0' }} />
+            <SectionTitle>Other Details</SectionTitle>
+            <Grid container spacing={2}>
               {textFieldsToShow.map((field: string) => (
                 <LabelValue
                   key={field}
@@ -505,8 +585,9 @@ const KycDetailsCard = ({
           </>
         )}
 
-        <Divider sx={{ my: 4, borderColor: '#E0E6ED' }} />
-        <Grid container spacing={3}>
+        <Divider sx={{ my: 4, borderColor: '#E2E8F0' }} />
+        <SectionTitle>Activity</SectionTitle>
+        <Grid container spacing={2}>
           <LabelValue
             labelKey="createdAt"
             value={kyc?.createdAt ? moment(kyc.createdAt).format('DD MMM YYYY, hh:mm A') : ''}
