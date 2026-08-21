@@ -217,11 +217,11 @@ const SidebarContent = ({
         nextOpen[item.label] = true;
       }
     });
-    setOpenGroups((prev) => ({ ...prev, ...nextOpen }));
+    setOpenGroups(nextOpen);
   }, [location.pathname]);
 
   const toggleGroup = (label) => {
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+    setOpenGroups((prev) => (prev[label] ? {} : { [label]: true }));
   };
 
   const renderIcon = (Icon, active) => (

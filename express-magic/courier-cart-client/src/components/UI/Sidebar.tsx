@@ -256,11 +256,11 @@ export default function Sidebar({
         nextExpanded[item.text] = true
       }
     })
-    setExpandedItems((prev) => ({ ...prev, ...nextExpanded }))
+    setExpandedItems(nextExpanded)
   }, [location.pathname])
 
   const toggleExpand = (key: string) => {
-    setExpandedItems((prev) => ({ ...prev, [key]: !prev[key] }))
+    setExpandedItems((prev) => (prev[key] ? {} : { [key]: true }))
   }
 
   const handleRouteNavigate = () => {
