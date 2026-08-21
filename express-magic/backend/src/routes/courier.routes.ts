@@ -36,8 +36,8 @@ router.post('/available-to-guest', fetchAvailableCouriersForGuestController)
 router.post('/available', requireAuth, fetchAvailableCouriers)
 router.post('/available-to-user', requireAuth, fetchAvailableCouriersToUser)
 router.post('/b2b/calculate-rate', requireAuth, calculateB2BRateForUserController)
-router.post('/create', createCourierController)
-router.delete('/delete/:id', deleteCourierController)
+router.post('/create', requireAuth, isAdminMiddleware, createCourierController)
+router.delete('/delete/:id', requireAuth, isAdminMiddleware, deleteCourierController)
 router.patch('/status/:id', requireAuth, isAdminMiddleware, updateCourierStatusController)
 router.patch(
   '/providers/:serviceProvider',

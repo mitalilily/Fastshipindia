@@ -18,6 +18,7 @@ export const useIntegrateShopify = () => {
     mutationFn: (params: ShopifyForm) => integrateShopifyStore(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userInfo"] });
+      queryClient.invalidateQueries({ queryKey: ["stores"] });
     },
   });
 };
@@ -28,6 +29,7 @@ export const useIntegrateWooCommerce = () => {
     mutationFn: (payload: WooCommerceForm) => connectWooCommerce(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userInfo"] });
+      queryClient.invalidateQueries({ queryKey: ["stores"] });
     },
   });
 };

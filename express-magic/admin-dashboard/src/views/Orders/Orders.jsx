@@ -142,6 +142,11 @@ const Orders = () => {
     }
   }
 
+  const openClientOrderCreate = () => {
+    const clientBaseUrl = (process.env.REACT_APP_CLIENT_URL || 'https://app.fastship.in').replace(/\/+$/, '')
+    window.open(`${clientBaseUrl}/orders/create`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <Box pt={{ base: '100px', md: '92px' }}>
       <Card bg={panelBg} borderColor={borderColor} borderWidth="1px" borderRadius="20px" p="26px" mb="20px" boxShadow="none">
@@ -231,7 +236,13 @@ const Orders = () => {
             <Button leftIcon={<FiDownload />} variant="outline" borderColor={borderColor} color={textColor} isLoading={isExporting} onClick={handleExport}>
               Export CSV
             </Button>
-            <Button leftIcon={<FiPlus />} bg="#6C5CE7" color="white" _hover={{ bg: '#5A4BD1' }}>
+            <Button
+              leftIcon={<FiPlus />}
+              bg="#6C5CE7"
+              color="white"
+              _hover={{ bg: '#5A4BD1' }}
+              onClick={openClientOrderCreate}
+            >
               Create Manual Order
             </Button>
           </HStack>

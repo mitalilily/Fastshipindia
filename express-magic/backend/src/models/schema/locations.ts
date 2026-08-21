@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { jsonb, pgTableCreator, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { boolean, jsonb, pgTableCreator, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 
 const createTable = pgTableCreator((name) => `shiplifi_${name}`)
 
@@ -10,6 +10,7 @@ export const locations = createTable('locations', {
   city: varchar('city', { length: 120 }).notNull(),
   state: varchar('state', { length: 120 }).notNull(),
   country: varchar('country', { length: 120 }).default('India').notNull(),
+  active: boolean('active').default(true).notNull(),
   // Use jsonb for flexibility of multiple tags (metro, regional, special, etc.)
 
   tags: jsonb('tags')

@@ -1,5 +1,6 @@
-import { Box, Button, Card, CardActions, CardContent, Grid, Typography } from "@mui/material";
+import { Box, Card, Grid, Typography } from "@mui/material";
 import ShopifyIntegration from "../integrations/ShopifyIntegration";
+import WooCommerceIntegration from "../integrations/woocommerce/WooCommerceIntegration";
 
 interface IAllChannelOptions {
   fromChannelList?: boolean;
@@ -8,26 +9,15 @@ const AllChannelOptions = ({ fromChannelList = false }: IAllChannelOptions) => {
   const connectedPlatforms = [
     {
       name: "Shopify",
-      enabled: true,
       component: (
         <ShopifyIntegration fullWidth fromChannelList={fromChannelList} />
       ),
     },
     {
       name: "WooCommerce",
-      enabled: false,
-    },
-    {
-      name: "Magento V2",
-      enabled: false,
-    },
-    {
-      name: "BigCommerce",
-      enabled: false,
-    },
-    {
-      name: "Wix",
-      enabled: false,
+      component: (
+        <WooCommerceIntegration fullWidth fromChannelList={fromChannelList} />
+      ),
     },
     // {
     //   name: "Amazon",
@@ -89,33 +79,7 @@ const AllChannelOptions = ({ fromChannelList = false }: IAllChannelOptions) => {
                 },
               }}
             >
-              {platform.enabled ? (
-                platform.component
-              ) : (
-                <Card
-                  variant="outlined"
-                  sx={{
-                    bgcolor: "transparent",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    color: "inherit",
-                    height: "100%",
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    opacity: 0.65,
-                    cursor: "not-allowed",
-                  }}
-                >
-                  <CardContent sx={{ textAlign: "center", flexGrow: 1 }}>
-                    <Typography fontWeight={600}>{platform.name}</Typography>
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: "center", pb: 2 }}>
-                    <Button size="small" variant="contained" disabled>
-                      Coming Soon
-                    </Button>
-                  </CardActions>
-                </Card>
-              )}
+              {platform.component}
             </Box>
           </Grid>
         ))}

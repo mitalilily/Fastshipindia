@@ -8,6 +8,7 @@ import {
   Switch,
   Text,
   Tooltip,
+  useDisclosure,
   useToast,
 } from "@chakra-ui/react";
 import {
@@ -31,6 +32,7 @@ import {
   SoftBadge,
   adminUi,
 } from "components/AdminUI/AdminPage";
+import AddCourierModal from "components/Modal/AddCourierModal";
 import {
   useCouriers,
   useCreateCourier,
@@ -159,6 +161,7 @@ const Couriers = () => {
   const deleteCourier = useDeleteCourier();
   const updateCourierStatus = useUpdateCourierStatus();
   const toast = useToast();
+  const addCourierModal = useDisclosure();
 
   const rows = useMemo(() => {
     const source = couriers.length ? couriers : fallbackCouriers;
@@ -184,6 +187,32 @@ const Couriers = () => {
     disabled: rows.filter((row) => row.isEnabled === false).length,
     delivery: rows.length || 36,
     manual: 0,
+  };
+
+  const handleCourierStatusToggle = (row) => {
+    updateCourierStatus.mutate(
+      {
+        id: row.id,
+        serviceProvider: row.serviceProvider,
+        isEnabled: row.isEnabled === false,
+      },
+      {
+        onSuccess: () =>
+          toast({
+            title: `Courier ${
+              row.isEnabled !== false ? "disabled" : "enabled"
+            } successfully`,
+            status: "success",
+          }),
+        onError: (toggleError) =>
+          toast({
+            title: "Failed to update courier status",
+            description:
+              toggleError?.response?.data?.message || toggleError?.message,
+            status: "error",
+          }),
+      }
+    );
   };
 
   if (isLoading && !couriers.length) {
@@ -234,7 +263,7 @@ const Couriers = () => {
     {
       key: "isEnabled",
       label: "Status",
-      render: (value) => (
+      render: (value, row) => (
         <HStack spacing="0">
           <SoftBadge
             bg={value !== false ? adminUi.purple : "#B8BDC3"}
@@ -248,6 +277,8 @@ const Couriers = () => {
             isChecked={value !== false}
             size="md"
             ml="-2px"
+            isDisabled={updateCourierStatus.isPending}
+            onChange={() => handleCourierStatusToggle(row)}
           />
         </HStack>
       ),
@@ -297,11 +328,7 @@ const Couriers = () => {
                 leftIcon={<IconPlus size={18} />}
                 onClick={() => {
                   createCourier.reset?.();
-                  toast({
-                    title:
-                      "Add courier form is ready in the configured modal flow.",
-                    status: "info",
-                  });
+                  addCourierModal.onOpen();
                 }}
               >
                 Add Courier
@@ -400,29 +427,8 @@ const Couriers = () => {
               <Switch
                 colorScheme="purple"
                 isChecked={row.isEnabled !== false}
-                onChange={() =>
-                  updateCourierStatus.mutate(
-                    {
-                      id: row.id,
-                      serviceProvider: row.serviceProvider,
-                      isEnabled: row.isEnabled === false,
-                    },
-                    {
-                      onSuccess: () =>
-                        toast({
-                          title: `Courier ${
-                            row.isEnabled !== false ? "disabled" : "enabled"
-                          } successfully`,
-                          status: "success",
-                        }),
-                      onError: () =>
-                        toast({
-                          title: "Failed to update courier status",
-                          status: "error",
-                        }),
-                    }
-                  )
-                }
+                isDisabled={updateCourierStatus.isPending}
+                onChange={() => handleCourierStatusToggle(row)}
               />
             </Tooltip>
             <IconButton
@@ -446,6 +452,7 @@ const Couriers = () => {
           </HStack>
         )}
       />
+      <AddCourierModal isOpen={addCourierModal.isOpen} onClose={addCourierModal.onClose} />
     </AdminStack>
   );
 };

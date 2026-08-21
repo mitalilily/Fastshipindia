@@ -1,9 +1,16 @@
-import { and, count, eq, ilike } from 'drizzle-orm'
+import { and, count, eq, ilike, or } from 'drizzle-orm'
 import { db } from '../client'
 import { locations } from '../schema/locations'
 
 export const LocationService = {
-  create: async (data: { pincode: string; city: string; state: string; country?: string }) => {
+  create: async (data: {
+    pincode: string
+    city: string
+    state: string
+    country?: string
+    active?: boolean
+    tags?: string[]
+  }) => {
     // Check if a location with the same pincode and city already exists
     const existing = await db
       .select()
@@ -28,6 +35,8 @@ export const LocationService = {
       .values({
         ...data,
         country: data.country || 'India',
+        active: data.active !== false,
+        tags: Array.isArray(data.tags) ? data.tags : [],
       })
       .returning()
 
@@ -37,7 +46,7 @@ export const LocationService = {
   list: async (params: {
     page?: number
     limit?: number
-    filters?: { pincode?: string; city?: string; state?: string }
+    filters?: { search?: string; pincode?: string; city?: string; state?: string; active?: boolean }
   }) => {
     const page = params.page ?? 1
     const limit = params.limit ?? 20
@@ -45,7 +54,18 @@ export const LocationService = {
 
     const conditions = []
     if (params.filters) {
-      const { pincode, city, state } = params.filters
+      const { search, pincode, city, state, active } = params.filters
+      const normalizedSearch = String(search || '').trim()
+      if (normalizedSearch) {
+        const pattern = `%${normalizedSearch}%`
+        conditions.push(
+          or(
+            ilike(locations.pincode, pattern),
+            ilike(locations.city, pattern),
+            ilike(locations.state, pattern),
+          ),
+        )
+      }
       const normalizedPincode = String(pincode || '').trim()
       if (normalizedPincode) {
         conditions.push(
@@ -56,6 +76,7 @@ export const LocationService = {
       }
       if (city) conditions.push(ilike(locations.city, `%${city}%`))
       if (state) conditions.push(ilike(locations.state, `%${state}%`))
+      if (typeof active === 'boolean') conditions.push(eq(locations.active, active))
     }
 
     const whereCondition = conditions.length ? and(...conditions) : undefined
@@ -80,7 +101,14 @@ export const LocationService = {
 
   update: async (
     id: string,
-    data: { pincode?: string; city?: string; state?: string; country?: string },
+    data: {
+      pincode?: string
+      city?: string
+      state?: string
+      country?: string
+      active?: boolean
+      tags?: string[]
+    },
   ) => {
     const updated = await db.update(locations).set(data).where(eq(locations.id, id)).returning()
     return updated[0]

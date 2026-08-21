@@ -3,18 +3,27 @@ import {
   Button,
   Checkbox,
   Flex,
+  FormControl,
+  FormLabel,
   HStack,
-  Icon,
   IconButton,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Select,
-  Spinner,
+  Stack,
   Switch,
   Text,
+  useDisclosure,
+  useToast,
 } from "@chakra-ui/react";
 import {
   IconCircleCheck,
   IconCircleX,
-  IconDownload,
   IconGlobe,
   IconMapPin,
   IconPlus,
@@ -29,72 +38,21 @@ import {
   PageIntro,
   PrimaryButton,
   SearchInput,
+  SoftBadge,
   adminUi,
 } from "components/AdminUI/AdminPage";
-import { useDeleteLocation, useLocations } from "hooks/useLocations";
+import {
+  useCreateLocation,
+  useDeleteLocation,
+  useLocations,
+  useUpdateLocation,
+} from "hooks/useLocations";
 import { useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
 
-const fallbackLocations = [
-  {
-    id: "534125",
-    pincode: "534125",
-    city: "ACHANTA",
-    state: "ANDHRA PRADESH",
-    tags: "-",
-    active: true,
-  },
-  {
-    id: "534372",
-    pincode: "534372",
-    city: "ACHANTA",
-    state: "ANDHRA PRADESH",
-    tags: "-",
-    active: true,
-  },
-  {
-    id: "518317",
-    pincode: "518317",
-    city: "Adoni",
-    state: "ANDHRA PRADESH",
-    tags: "-",
-    active: true,
-  },
-  {
-    id: "518318",
-    pincode: "518318",
-    city: "Adoni",
-    state: "ANDHRA PRADESH",
-    tags: "-",
-    active: true,
-  },
-  {
-    id: "518424",
-    pincode: "518424",
-    city: "Atmakur",
-    state: "ANDHRA PRADESH",
-    tags: "-",
-    active: true,
-  },
-  {
-    id: "518425",
-    pincode: "518425",
-    city: "Atmakur",
-    state: "ANDHRA PRADESH",
-    tags: "-",
-    active: true,
-  },
-  {
-    id: "518535",
-    pincode: "518535",
-    city: "Atmakur",
-    state: "ANDHRA PRADESH",
-    tags: "-",
-    active: true,
-  },
-];
+function PaginationStrip({ page, limit, total, onPageChange, onLimitChange }) {
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const visiblePages = Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
 
-function PaginationStrip({ total = 28381 }) {
   return (
     <Flex
       justify="flex-end"
@@ -106,78 +64,81 @@ function PaginationStrip({ total = 28381 }) {
       borderColor={adminUi.border}
       bg="#FFFFFF"
     >
-      <Text color="#93A0BA" fontSize="22px">
-        ‹
+      <Text
+        color={page <= 1 ? "#CBD5E1" : "#93A0BA"}
+        fontSize="22px"
+        cursor={page <= 1 ? "default" : "pointer"}
+        onClick={() => page > 1 && onPageChange(page - 1)}
+      >
+        {'<'}
       </Text>
-      {[1, 2, 3, 4, 5].map((page) => (
+      {visiblePages.map((pageNumber) => (
         <Flex
-          key={page}
+          key={pageNumber}
           w="40px"
           h="40px"
           align="center"
           justify="center"
           borderRadius="9px"
-          bg={page === 1 ? "#E8E2FF" : "transparent"}
-          color={page === 1 ? adminUi.purple : adminUi.muted}
+          bg={pageNumber === page ? "#E8E2FF" : "transparent"}
+          color={pageNumber === page ? adminUi.purple : adminUi.muted}
           fontSize="16px"
           fontWeight="700"
+          cursor="pointer"
+          onClick={() => onPageChange(pageNumber)}
         >
-          {page}
+          {pageNumber}
         </Flex>
       ))}
-      <Text color="#93A0BA" fontSize="22px">
-        ...284
-      </Text>
-      <Text color="#93A0BA" fontSize="22px">
-        ›
+      {totalPages > 5 ? (
+        <Text color="#93A0BA" fontSize="22px">
+          ...{totalPages}
+        </Text>
+      ) : null}
+      <Text
+        color={page >= totalPages ? "#CBD5E1" : "#93A0BA"}
+        fontSize="22px"
+        cursor={page >= totalPages ? "default" : "pointer"}
+        onClick={() => page < totalPages && onPageChange(page + 1)}
+      >
+        {'>'}
       </Text>
       <Select
         maxW="154px"
         h="40px"
         borderColor="#D6DEE9"
         fontSize="17px"
-        defaultValue="100"
+        value={limit}
+        onChange={(event) => onLimitChange(Number(event.target.value))}
       >
         <option value="100">100 / page</option>
         <option value="50">50 / page</option>
+        <option value="20">20 / page</option>
       </Select>
     </Flex>
   );
 }
-
-function ManualServiceability() {
-  return (
-    <AdminStack spacing="20px">
-      <AdminCard p="25px">
-        <Text fontSize="15px" color={adminUi.muted} mb="8px">
-          Select Manual Courier
-        </Text>
-        <AdminSelect maxW="480px">
-          <option value="">Choose a manual courier...</option>
-        </AdminSelect>
-      </AdminCard>
-      <AdminCard
-        minH="186px"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <Text color={adminUi.muted} fontSize="18px">
-          Select a manual courier above to configure serviceability.
-        </Text>
-      </AdminCard>
-    </AdminStack>
-  );
-}
-
 function ServiceabilityLocations() {
   const [filters, setFilters] = useState({ search: "", state: "" });
-  const { data, isLoading } = useLocations({ page: 1, limit: 100, ...filters });
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(100);
+  const [form, setForm] = useState({
+    pincode: "",
+    city: "",
+    state: "",
+    country: "India",
+    active: true,
+  });
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const toast = useToast();
+  const { data, isLoading } = useLocations({ page, limit, ...filters });
+  const createLocation = useCreateLocation();
+  const updateLocation = useUpdateLocation();
   const { mutate: deleteLocation } = useDeleteLocation();
 
   const rows = useMemo(() => {
     const source = data?.data || [];
-    if (!source.length) return fallbackLocations;
+    if (!source.length) return [];
     return source.map((location) => ({
       ...location,
       id: location.id || location.pincode,
@@ -189,7 +150,61 @@ function ServiceabilityLocations() {
     }));
   }, [data]);
 
-  const total = data?.total || 28381;
+  const total = data?.total || 0;
+  const activeCount = rows.filter((row) => row.active !== false).length;
+  const inactiveCount = rows.filter((row) => row.active === false).length;
+
+  const updateFilter = (key, value) => {
+    setFilters((previous) => ({ ...previous, [key]: value }));
+    setPage(1);
+  };
+
+  const handleStatusToggle = (row, active) => {
+    updateLocation.mutate(
+      { id: row.id, data: { active } },
+      {
+        onSuccess: () => toast({ title: "Location status updated", status: "success" }),
+        onError: (error) =>
+          toast({
+            title: "Failed to update location",
+            description: error?.response?.data?.message || error?.message,
+            status: "error",
+          }),
+      }
+    );
+  };
+
+  const handleCreateLocation = () => {
+    if (!/^\d{6}$/.test(String(form.pincode).trim())) {
+      return toast({ title: "Valid 6 digit pincode is required", status: "warning" });
+    }
+    if (!form.city.trim() || !form.state.trim()) {
+      return toast({ title: "City and state are required", status: "warning" });
+    }
+
+    createLocation.mutate(
+      {
+        ...form,
+        pincode: form.pincode.trim(),
+        city: form.city.trim(),
+        state: form.state.trim(),
+        country: form.country.trim() || "India",
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Location added", status: "success" });
+          setForm({ pincode: "", city: "", state: "", country: "India", active: true });
+          onClose();
+        },
+        onError: (error) =>
+          toast({
+            title: "Failed to add location",
+            description: error?.response?.data?.message || error?.message,
+            status: "error",
+          }),
+      }
+    );
+  };
 
   const columns = [
     {
@@ -205,8 +220,21 @@ function ServiceabilityLocations() {
     {
       key: "active",
       label: "Status",
-      render: (value) => (
-        <Switch colorScheme="purple" isChecked={value !== false} />
+      render: (value, row) => (
+        <HStack spacing="10px">
+          <Switch
+            colorScheme="purple"
+            isChecked={value !== false}
+            isDisabled={updateLocation.isPending}
+            onChange={(event) => handleStatusToggle(row, event.target.checked)}
+          />
+          <SoftBadge
+            bg={value !== false ? "#DDFBEC" : "#FEE2E2"}
+            color={value !== false ? "#00A36C" : "#B91C1C"}
+          >
+            {value !== false ? "Active" : "Inactive"}
+          </SoftBadge>
+        </HStack>
       ),
     },
   ];
@@ -228,13 +256,13 @@ function ServiceabilityLocations() {
               />
               <Metric
                 icon={IconCircleCheck}
-                value={total.toLocaleString("en-IN")}
+                value={activeCount.toLocaleString("en-IN")}
                 label="active"
                 color="#00B989"
               />
               <Metric
                 icon={IconCircleX}
-                value="0"
+                value={inactiveCount.toLocaleString("en-IN")}
                 label="inactive"
                 color="#FF5A5F"
               />
@@ -259,7 +287,7 @@ function ServiceabilityLocations() {
               <SearchInput
                 value={filters.search}
                 onChange={(value) =>
-                  setFilters((previous) => ({ ...previous, search: value }))
+                  updateFilter("search", value)
                 }
                 placeholder="Pincode, city, state..."
                 maxW="300px"
@@ -272,7 +300,7 @@ function ServiceabilityLocations() {
               <AdminSelect
                 value={filters.state}
                 onChange={(value) =>
-                  setFilters((previous) => ({ ...previous, state: value }))
+                  updateFilter("state", value)
                 }
                 maxW="213px"
               >
@@ -280,26 +308,12 @@ function ServiceabilityLocations() {
                 <option value="ANDHRA PRADESH">ANDHRA PRADESH</option>
               </AdminSelect>
             </Box>
-            <Text color={adminUi.purple} fontSize="16px" mt="26px">
-              More filters
-            </Text>
           </HStack>
           <HStack spacing="10px">
             <Text color={adminUi.muted} fontSize="16px" mr="4px">
               {total} results
             </Text>
-            <Button
-              leftIcon={<IconDownload size={18} />}
-              variant="outline"
-              h="50px"
-              borderColor="#D6DEE9"
-              borderRadius="9px"
-              bg="#FFFFFF"
-              fontSize="18px"
-            >
-              Import CSV
-            </Button>
-            <PrimaryButton leftIcon={<IconPlus size={18} />}>
+            <PrimaryButton leftIcon={<IconPlus size={18} />} onClick={onOpen}>
               Add Location
             </PrimaryButton>
           </HStack>
@@ -307,7 +321,16 @@ function ServiceabilityLocations() {
       </AdminCard>
 
       <AdminCard overflow="hidden">
-        <PaginationStrip total={total} />
+        <PaginationStrip
+          page={page}
+          limit={limit}
+          total={total}
+          onPageChange={setPage}
+          onLimitChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
         <DataTable
           columns={columns}
           rows={rows}
@@ -321,22 +344,96 @@ function ServiceabilityLocations() {
               size="sm"
               variant="ghost"
               color="#607397"
-              onClick={() => deleteLocation(row.id)}
+              onClick={() =>
+                deleteLocation(row.id, {
+                  onSuccess: () => toast({ title: "Location deleted", status: "success" }),
+                  onError: () => toast({ title: "Failed to delete location", status: "error" }),
+                })
+              }
             />
           )}
         />
       </AdminCard>
+
+      <Modal isOpen={isOpen} onClose={onClose} isCentered>
+        <ModalOverlay bg="blackAlpha.500" backdropFilter="blur(6px)" />
+        <ModalContent borderRadius="16px">
+          <ModalHeader>Add Location</ModalHeader>
+          <ModalBody>
+            <Stack spacing={4}>
+              <FormControl>
+                <FormLabel>Pincode</FormLabel>
+                <Input
+                  value={form.pincode}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, pincode: event.target.value }))
+                  }
+                  placeholder="110001"
+                  maxLength={6}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>City</FormLabel>
+                <Input
+                  value={form.city}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, city: event.target.value }))
+                  }
+                  placeholder="New Delhi"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>State</FormLabel>
+                <Input
+                  value={form.state}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, state: event.target.value }))
+                  }
+                  placeholder="DELHI"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Country</FormLabel>
+                <Input
+                  value={form.country}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, country: event.target.value }))
+                  }
+                  placeholder="India"
+                />
+              </FormControl>
+              <HStack justify="space-between">
+                <Text fontWeight="700" color={adminUi.text}>
+                  Active
+                </Text>
+                <Switch
+                  colorScheme="purple"
+                  isChecked={form.active}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, active: event.target.checked }))
+                  }
+                />
+              </HStack>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="purple"
+              onClick={handleCreateLocation}
+              isLoading={createLocation.isPending}
+            >
+              Save Location
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </AdminStack>
   );
 }
 
-const ServiceabilityPage = () => {
-  const location = useLocation();
-  return location.pathname.includes("manual-serviceability") ? (
-    <ManualServiceability />
-  ) : (
-    <ServiceabilityLocations />
-  );
-};
+const ServiceabilityPage = () => <ServiceabilityLocations />;
 
 export default ServiceabilityPage;

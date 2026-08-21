@@ -16,10 +16,17 @@ export const LocationController = {
     try {
       const page = Number(req.query.page) || 1
       const limit = Number(req.query.limit) || 20
+      const activeParam = req.query.active
+      const active =
+        activeParam === undefined || activeParam === ''
+          ? undefined
+          : String(activeParam).toLowerCase() === 'true'
       const filters = {
+        search: req.query.search as string,
         pincode: req.query.pincode as string,
         city: req.query.city as string,
         state: req.query.state as string,
+        active,
       }
       const result = await LocationService.list({ page, limit, filters })
       res.json(result)

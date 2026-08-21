@@ -155,7 +155,6 @@ const sidebarItems = [
       },
       { label: "Service Providers", path: "/admin/service-providers" },
       { label: "Serviceability", path: "/admin/serviceability" },
-      { label: "Manual Serviceability", path: "/admin/manual-serviceability" },
       { label: "B2C Pricing", path: "/admin/pricing/b2c" },
       { label: "B2B Pricing", path: "/admin/pricing/b2b" },
     ],
