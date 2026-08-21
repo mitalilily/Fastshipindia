@@ -1120,8 +1120,6 @@ const AllOrders = () => {
       label: 'Status',
       id: 'order_status',
       minWidth: 160,
-      sticky: 'right',
-      stickyOffset: 160,
       truncate: false,
       render: (_value, row) => (
         <Chip
@@ -1148,8 +1146,6 @@ const AllOrders = () => {
       label: 'Action',
       id: 'id',
       minWidth: 160,
-      sticky: 'right',
-      stickyOffset: 0,
       truncate: false,
       render: (_v, row) => {
         const orderStatus = String(row.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
