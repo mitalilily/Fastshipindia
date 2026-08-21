@@ -3,18 +3,20 @@ import {
   Badge,
   Box,
   IconButton,
+  Popover,
   Stack,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MdDarkMode, MdLightMode, MdNotifications, MdSearch } from 'react-icons/md'
 import { TbHeadphones, TbLayoutSidebarLeftCollapseFilled } from 'react-icons/tb'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/auth/AuthContext'
 import { useClientThemeMode } from '../../context/theme/ClientThemeContext'
 import { useClientNotifications } from '../../hooks/useClientNotifications'
+import GlobalSearch from './GlobalSearch'
 import QuickActions from './QuickActions'
 import WalletMenu from './WalletMenu'
 import UserMenu from './UserMenu'
@@ -55,6 +57,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const topBarRef = useRef<HTMLDivElement | null>(null)
+  const [searchAnchor, setSearchAnchor] = useState<HTMLElement | null>(null)
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const activeSection = getSectionLabel(location.pathname)
   const { walletBalance, isAuthenticated } = useAuth()
@@ -66,6 +69,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
   const textColor = isDark ? '#f8fafc' : '#11182d'
   const mutedColor = isDark ? '#93a4ba' : '#64748b'
   const hoverBg = isDark ? alpha('#fff', 0.05) : alpha('#11182d', 0.055)
+  const searchOpen = Boolean(searchAnchor)
   const { data: notifications = [] } = useClientNotifications(isAuthenticated)
 
   const unreadCount = useMemo(
@@ -157,12 +161,38 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         {!isMobile ? (
           <IconButton
             aria-label="Search"
-            onClick={() => navigate('/orders/list')}
+            aria-expanded={searchOpen ? 'true' : undefined}
+            aria-haspopup="dialog"
+            onClick={(event) => setSearchAnchor(event.currentTarget)}
             sx={{ width: 36, height: 36, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
           >
             <MdSearch size={23} />
           </IconButton>
         ) : null}
+
+        <Popover
+          open={searchOpen}
+          anchorEl={searchAnchor}
+          onClose={() => setSearchAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          PaperProps={{
+            elevation: 0,
+            sx: {
+              mt: 1,
+              width: { xs: 330, sm: 430, md: 560 },
+              maxWidth: 'calc(100vw - 24px)',
+              borderRadius: 2.2,
+              border: `1px solid ${borderColor}`,
+              bgcolor: navBg,
+              boxShadow: isDark ? '0 24px 54px rgba(0,0,0,0.36)' : '0 20px 42px rgba(15,23,42,0.14)',
+              overflow: 'visible',
+              p: 1.2,
+            },
+          }}
+        >
+          <GlobalSearch />
+        </Popover>
 
         <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
           <WalletMenu compactLabel={`\u20B9${Number(walletBalance ?? 0).toLocaleString('en-IN')}`} />

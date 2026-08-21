@@ -98,23 +98,29 @@ const GlobalSearch = () => {
     setOpen(false)
   }
 
+  const runSearch = () => {
+    const trimmedQuery = searchQuery.trim()
+    if (!trimmedQuery) {
+      setOpen(true)
+      return
+    }
+
+    if (trimmedQuery.length >= 8 && /^[A-Z0-9]+$/.test(trimmedQuery.toUpperCase())) {
+      navigate(`/tools/order_tracking?awb=${encodeURIComponent(trimmedQuery.toUpperCase())}`)
+    } else if (searchResults?.results && searchResults.results.length > 0) {
+      handleResultClick(searchResults.results[0])
+      return
+    } else {
+      navigate(`/orders/list?search=${encodeURIComponent(trimmedQuery)}`)
+    }
+
+    setSearchQuery('')
+    setOpen(false)
+  }
+
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      const trimmedQuery = searchQuery.trim()
-      if (!trimmedQuery) return
-
-      // If it looks like an AWB number, navigate to tracking
-      if (trimmedQuery.length >= 8 && /^[A-Z0-9]+$/.test(trimmedQuery.toUpperCase())) {
-        navigate(`/tools/order_tracking?awb=${encodeURIComponent(trimmedQuery.toUpperCase())}`)
-      } else if (searchResults?.results && searchResults.results.length > 0) {
-        // Navigate to first result
-        handleResultClick(searchResults.results[0])
-      } else {
-        // Fallback to orders list search
-        navigate(`/orders/list?search=${encodeURIComponent(trimmedQuery)}`)
-      }
-      setSearchQuery('')
-      setOpen(false)
+      runSearch()
     }
     if (e.key === 'Escape') {
       setOpen(false)
@@ -194,21 +200,7 @@ const GlobalSearch = () => {
                   <CircularProgress size={20} sx={{ color: INK }} />
                 ) : (
                   <IconButton
-                    onClick={() => {
-                      const trimmedQuery = searchQuery.trim()
-                      if (
-                        trimmedQuery.length >= 8 &&
-                        /^[A-Z0-9]+$/.test(trimmedQuery.toUpperCase())
-                      ) {
-                        navigate(`/tools/order_tracking?awb=${encodeURIComponent(trimmedQuery.toUpperCase())}`)
-                      } else if (searchResults?.results && searchResults.results.length > 0) {
-                        handleResultClick(searchResults.results[0])
-                      } else {
-                        navigate(`/orders/list?search=${encodeURIComponent(trimmedQuery)}`)
-                      }
-                      setSearchQuery('')
-                      setOpen(false)
-                    }}
+                    onClick={runSearch}
                     edge="end"
                     sx={{
                       color: INK,
