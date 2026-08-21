@@ -2,20 +2,13 @@ import {
   alpha,
   Badge,
   Box,
-  Button,
-  CircularProgress,
-  Divider,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
-  Popover,
   Stack,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { MdDarkMode, MdLightMode, MdNotifications, MdSearch } from 'react-icons/md'
 import { TbHeadphones, TbLayoutSidebarLeftCollapseFilled } from 'react-icons/tb'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -49,6 +42,7 @@ const getSectionLabel = (pathname: string) =>
       { label: 'Operations', match: '/ops' },
       { label: 'Tools', match: '/tools' },
       { label: 'Support', match: '/support' },
+      { label: 'Notifications', match: '/notifications' },
       { label: 'Settings', match: '/settings' },
       { label: 'Channels', match: '/channels' },
       { label: 'Couriers', match: '/couriers' },
@@ -61,7 +55,6 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const topBarRef = useRef<HTMLDivElement | null>(null)
-  const [notificationAnchor, setNotificationAnchor] = useState<HTMLElement | null>(null)
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const activeSection = getSectionLabel(location.pathname)
   const { walletBalance, isAuthenticated } = useAuth()
@@ -73,21 +66,12 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
   const textColor = isDark ? '#f8fafc' : '#11182d'
   const mutedColor = isDark ? '#93a4ba' : '#64748b'
   const hoverBg = isDark ? alpha('#fff', 0.05) : alpha('#11182d', 0.055)
-  const notificationOpen = Boolean(notificationAnchor)
-  const {
-    data: notifications = [],
-    isLoading: notificationsLoading,
-    markRead,
-    markAllRead,
-    markingAllRead,
-  } = useClientNotifications(isAuthenticated)
+  const { data: notifications = [] } = useClientNotifications(isAuthenticated)
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !(notification.read ?? notification.isRead)).length,
     [notifications],
   )
-
-  const latestNotifications = useMemo(() => notifications.slice(0, 8), [notifications])
 
   useEffect(() => {
     const root = document.documentElement
@@ -251,7 +235,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
 
         <IconButton
           aria-label="Notifications"
-          onClick={(event) => setNotificationAnchor(event.currentTarget)}
+          onClick={() => navigate('/notifications')}
           sx={{ width: 36, height: 36, color: mutedColor, '&:hover': { bgcolor: hoverBg, color: textColor } }}
         >
           <Badge
@@ -295,121 +279,6 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
             </Box>
           </Badge>
         </IconButton>
-
-        <Popover
-          open={notificationOpen}
-          anchorEl={notificationAnchor}
-          onClose={() => setNotificationAnchor(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          PaperProps={{
-            elevation: 0,
-            sx: {
-              mt: 1.15,
-              width: { xs: 320, sm: 380 },
-              maxWidth: 'calc(100vw - 24px)',
-              borderRadius: 2,
-              border: `1px solid ${borderColor}`,
-              bgcolor: navBg,
-              color: textColor,
-              boxShadow: isDark ? '0 24px 54px rgba(0,0,0,0.36)' : '0 20px 42px rgba(15,23,42,0.14)',
-              overflow: 'hidden',
-            },
-          }}
-        >
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1.7, py: 1.35 }}>
-            <Box>
-              <Typography sx={{ color: textColor, fontWeight: 700, fontSize: '0.98rem' }}>
-                Notifications
-              </Typography>
-              <Typography sx={{ color: mutedColor, fontWeight: 650, fontSize: '0.78rem', mt: 0.2 }}>
-                {unreadCount ? `${unreadCount} unread` : 'All caught up'}
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              disabled={!unreadCount || markingAllRead}
-              onClick={() => markAllRead()}
-              sx={{ color: ORANGE, fontWeight: 600 }}
-            >
-              Mark all read
-            </Button>
-          </Stack>
-          <Divider sx={{ borderColor }} />
-          {notificationsLoading ? (
-            <Stack alignItems="center" justifyContent="center" sx={{ py: 5 }}>
-              <CircularProgress size={24} sx={{ color: ORANGE }} />
-            </Stack>
-          ) : latestNotifications.length ? (
-            <List sx={{ p: 0, maxHeight: 420, overflowY: 'auto' }}>
-              {latestNotifications.map((notification) => {
-                const unread = !(notification.read ?? notification.isRead)
-                return (
-                  <ListItemButton
-                    key={notification.id}
-                    onClick={() => {
-                      if (unread) markRead(notification.id)
-                    }}
-                    sx={{
-                      alignItems: 'flex-start',
-                      gap: 1.2,
-                      px: 1.7,
-                      py: 1.35,
-                      bgcolor: unread ? alpha(ORANGE, isDark ? 0.12 : 0.08) : 'transparent',
-                      borderBottom: `1px solid ${borderColor}`,
-                      '&:hover': { bgcolor: hoverBg },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        mt: 0.5,
-                        width: 9,
-                        height: 9,
-                        borderRadius: '50%',
-                        bgcolor: unread ? ORANGE : alpha(mutedColor, 0.35),
-                        flexShrink: 0,
-                      }}
-                    />
-                    <ListItemText
-                      primary={notification.title || 'Notification'}
-                      secondary={
-                        <>
-                          <Typography component="span" sx={{ display: 'block', color: mutedColor, fontSize: '0.82rem', lineHeight: 1.45 }}>
-                            {notification.message}
-                          </Typography>
-                          {notification.createdAt ? (
-                            <Typography component="span" sx={{ display: 'block', color: alpha(mutedColor, 0.82), fontSize: '0.72rem', mt: 0.6, fontWeight: 500 }}>
-                              {new Date(notification.createdAt).toLocaleString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </Typography>
-                          ) : null}
-                        </>
-                      }
-                      primaryTypographyProps={{
-                        color: textColor,
-                        fontWeight: unread ? 700 : 500,
-                        fontSize: '0.9rem',
-                        lineHeight: 1.35,
-                      }}
-                    />
-                  </ListItemButton>
-                )
-              })}
-            </List>
-          ) : (
-            <Stack alignItems="center" textAlign="center" sx={{ px: 3, py: 5 }}>
-              <MdNotifications size={30} color={mutedColor} />
-              <Typography sx={{ mt: 1, color: textColor, fontWeight: 600 }}>No notifications yet</Typography>
-              <Typography sx={{ mt: 0.5, color: mutedColor, fontSize: '0.82rem' }}>
-                New order and shipment updates will appear here.
-              </Typography>
-            </Stack>
-          )}
-        </Popover>
 
         <UserMenu compact />
       </Stack>

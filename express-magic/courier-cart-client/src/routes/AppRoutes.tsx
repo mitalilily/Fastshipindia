@@ -94,6 +94,7 @@ const Couriers = lazy(loadCouriers)
 const CodRemittancesList = lazy(loadCodRemittances)
 const KeyboardShortcutsPage = lazy(() => import('../pages/KeyboardShortcutsPage'))
 const Reports = lazy(() => import('../pages/reports/Reports'))
+const NotificationsPage = lazy(() => import('../pages/notifications/NotificationsPage'))
 
 // Weight Reconciliation
 const WeightReconciliation = lazy(
@@ -347,6 +348,7 @@ function RoutedApp() {
             <Route path="/couriers/partners" element={<Couriers />} />
             <Route path="/cod-remittance" element={<CodRemittancesList />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/reconciliation/weight" element={<WeightReconciliation />} />
             <Route path="/reconciliation/weight/:id" element={<DiscrepancyDetails />} />
             <Route

@@ -51,6 +51,7 @@ const routes = [
   'couriers/partners',
   'cod-remittance',
   'reports',
+  'notifications',
   'reconciliation/weight',
   'reconciliation/weight/settings',
   'ops/ndr',
