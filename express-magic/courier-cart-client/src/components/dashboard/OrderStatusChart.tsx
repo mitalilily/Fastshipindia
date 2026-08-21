@@ -1,7 +1,14 @@
 import React from 'react'
-import { Box, Card, CardContent, Stack, Typography } from '@mui/material'
+import { Box, Card, CardContent } from '@mui/material'
 import { MdPieChart } from 'react-icons/md'
-import { dashboardCardSx, dashboardChartBase, dashboardIconSx, dashboardPalette } from './dashboardStyles'
+import DashboardWidgetHeader from './DashboardWidgetHeader'
+import {
+  dashboardCardContentSx,
+  dashboardCardSx,
+  dashboardChartBase,
+  dashboardChartShellSx,
+  dashboardPalette,
+} from './dashboardStyles'
 
 interface OrderStatusChartProps {
   chartData: { status: string; count: number }[]
@@ -87,21 +94,16 @@ export default function OrderStatusChart({ chartData, ChartComponent }: OrderSta
 
   return (
     <Card sx={dashboardCardSx}>
-      <CardContent sx={{ p: 2.4 }}>
-        <Stack direction="row" spacing={1.2} alignItems="center" mb={2}>
-          <Box sx={dashboardIconSx(dashboardPalette.blue)}>
-            <MdPieChart size={20} />
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
-              Order Status
-            </Typography>
-            <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
-              Breakdown by shipment state
-            </Typography>
-          </Box>
-        </Stack>
-        {ChartComponent && <ChartComponent options={chartOptions} series={chartSeries} type="donut" height={340} />}
+      <CardContent sx={dashboardCardContentSx}>
+        <DashboardWidgetHeader
+          icon={<MdPieChart />}
+          title="Order Status"
+          subtitle="Breakdown by shipment state"
+          color={dashboardPalette.blue}
+        />
+        <Box sx={dashboardChartShellSx}>
+          {ChartComponent && <ChartComponent options={chartOptions} series={chartSeries} type="donut" height={300} />}
+        </Box>
       </CardContent>
     </Card>
   )

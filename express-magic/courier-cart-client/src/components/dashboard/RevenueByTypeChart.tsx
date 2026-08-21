@@ -1,7 +1,14 @@
 import React from 'react'
-import { Box, Card, CardContent, Stack, Typography } from '@mui/material'
+import { Box, Card, CardContent } from '@mui/material'
 import { MdMonetizationOn } from 'react-icons/md'
-import { dashboardCardSx, dashboardChartBase, dashboardIconSx, dashboardPalette } from './dashboardStyles'
+import DashboardWidgetHeader from './DashboardWidgetHeader'
+import {
+  dashboardCardContentSx,
+  dashboardCardSx,
+  dashboardChartBase,
+  dashboardChartShellSx,
+  dashboardPalette,
+} from './dashboardStyles'
 
 interface RevenueByTypeChartProps {
   chartData: { type: string; revenue: number }[]
@@ -63,21 +70,16 @@ export default function RevenueByTypeChart({
 
   return (
     <Card sx={dashboardCardSx}>
-      <CardContent sx={{ p: 2.4 }}>
-        <Stack direction="row" spacing={1.2} alignItems="center" mb={2}>
-          <Box sx={dashboardIconSx(dashboardPalette.green)}>
-            <MdMonetizationOn size={20} />
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
-              Revenue by Type
-            </Typography>
-            <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
-              Split by payment mode
-            </Typography>
-          </Box>
-        </Stack>
-        {ChartComponent && <ChartComponent options={chartOptions} series={chartSeries} type="bar" height={300} />}
+      <CardContent sx={dashboardCardContentSx}>
+        <DashboardWidgetHeader
+          icon={<MdMonetizationOn />}
+          title="Revenue by Type"
+          subtitle="Split by payment mode"
+          color={dashboardPalette.green}
+        />
+        <Box sx={dashboardChartShellSx}>
+          {ChartComponent && <ChartComponent options={chartOptions} series={chartSeries} type="bar" height={285} />}
+        </Box>
       </CardContent>
     </Card>
   )

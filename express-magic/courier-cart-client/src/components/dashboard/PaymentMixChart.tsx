@@ -1,7 +1,14 @@
 import React from 'react'
 import { alpha, Box, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material'
 import { MdDonutLarge } from 'react-icons/md'
-import { dashboardCardSx, dashboardChartBase, dashboardIconSx, dashboardPalette } from './dashboardStyles'
+import DashboardWidgetHeader from './DashboardWidgetHeader'
+import {
+  dashboardCardContentSx,
+  dashboardCardSx,
+  dashboardChartBase,
+  dashboardChartShellSx,
+  dashboardPalette,
+} from './dashboardStyles'
 
 interface PaymentMixChartProps {
   metrics: {
@@ -65,28 +72,23 @@ export default function PaymentMixChart({ metrics, ChartComponent, formatCurrenc
 
   return (
     <Card sx={dashboardCardSx}>
-      <CardContent sx={{ p: 2.4 }}>
-        <Stack direction="row" spacing={1.2} alignItems="center" mb={1.2}>
-          <Box sx={dashboardIconSx(dashboardPalette.red)}>
-            <MdDonutLarge size={20} />
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
-              Payment Mix
-            </Typography>
-            <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
-              Prepaid versus COD share
-            </Typography>
-          </Box>
-        </Stack>
+      <CardContent sx={dashboardCardContentSx}>
+        <DashboardWidgetHeader
+          icon={<MdDonutLarge />}
+          title="Payment Mix"
+          subtitle="Prepaid versus COD share"
+          color={dashboardPalette.red}
+        />
 
-        {ChartComponent ? (
-          <ChartComponent options={chartOptions} series={chartSeries} type="donut" height={275} />
-        ) : (
-          <Box sx={{ height: 275, display: 'grid', placeItems: 'center' }}>
-            <CircularProgress size={26} sx={{ color: dashboardPalette.red }} />
-          </Box>
-        )}
+        <Box sx={{ ...dashboardChartShellSx, minHeight: { xs: 230, md: 250 }, mt: 1 }}>
+          {ChartComponent ? (
+            <ChartComponent options={chartOptions} series={chartSeries} type="donut" height={250} />
+          ) : (
+            <Box sx={{ height: 250, display: 'grid', placeItems: 'center' }}>
+              <CircularProgress size={26} sx={{ color: dashboardPalette.red }} />
+            </Box>
+          )}
+        </Box>
 
         <Stack spacing={0.85}>
           {rows.map((row) => (

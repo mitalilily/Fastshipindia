@@ -1,7 +1,14 @@
 import React, { useState } from 'react'
-import { Box, Card, CardContent, CircularProgress, ToggleButton, ToggleButtonGroup, Stack, Typography } from '@mui/material'
+import { Box, Card, CardContent, CircularProgress, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import { FaChartLine } from 'react-icons/fa'
-import { dashboardCardSx, dashboardChartBase, dashboardIconSx, dashboardPalette } from './dashboardStyles'
+import DashboardWidgetHeader from './DashboardWidgetHeader'
+import {
+  dashboardCardContentSx,
+  dashboardCardSx,
+  dashboardChartBase,
+  dashboardChartShellSx,
+  dashboardPalette,
+} from './dashboardStyles'
 
 interface OrdersTrendChartProps {
   sevenDayOrders: { date: string; orders: number }[]
@@ -102,50 +109,44 @@ export default function OrdersTrendChart({
 
   return (
     <Card sx={dashboardCardSx}>
-      <CardContent sx={{ p: 2.4 }}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'stretch', sm: 'center' }}
-          gap={1.2}
-          mb={2}
-        >
-          <Stack direction="row" spacing={1.2} alignItems="center" minWidth={0}>
-            <Box sx={dashboardIconSx(dashboardPalette.blue)}>
-              <FaChartLine size={17} />
+      <CardContent sx={dashboardCardContentSx}>
+        <DashboardWidgetHeader
+          icon={<FaChartLine />}
+          title="Orders & Revenue Trend"
+          subtitle="Shipment volume with earned revenue"
+          color={dashboardPalette.blue}
+          action={
+            <ToggleButtonGroup
+              exclusive
+              size="small"
+              value={range}
+              onChange={(_, value: '7d' | '30d' | null) => value && setRange(value)}
+              aria-label="Analytics range"
+              sx={{
+                '& .MuiToggleButton-root': {
+                  minWidth: 38,
+                  px: 1,
+                  py: 0.45,
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  borderColor: 'var(--dashboard-line)',
+                },
+              }}
+            >
+              <ToggleButton value="7d">7D</ToggleButton>
+              <ToggleButton value="30d">30D</ToggleButton>
+            </ToggleButtonGroup>
+          }
+        />
+        <Box sx={dashboardChartShellSx}>
+          {ChartComponent ? (
+            <ChartComponent options={chartOptions} series={chartSeries} type="area" height={285} />
+          ) : (
+            <Box sx={{ height: 285, display: 'grid', placeItems: 'center' }}>
+              <CircularProgress size={26} thickness={4} sx={{ color: dashboardPalette.blue }} />
             </Box>
-            <Box minWidth={0}>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
-                Orders & Revenue Trend
-              </Typography>
-              <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
-                Shipment volume with earned revenue
-              </Typography>
-            </Box>
-          </Stack>
-          <ToggleButtonGroup
-            exclusive
-            size="small"
-            value={range}
-            onChange={(_, value: '7d' | '30d' | null) => value && setRange(value)}
-            aria-label="Analytics range"
-            sx={{
-              flexShrink: 0,
-              alignSelf: { xs: 'flex-end', sm: 'auto' },
-              '& .MuiToggleButton-root': { px: 1.1, py: 0.45, fontSize: '0.72rem' },
-            }}
-          >
-            <ToggleButton value="7d">7D</ToggleButton>
-            <ToggleButton value="30d">30D</ToggleButton>
-          </ToggleButtonGroup>
-        </Stack>
-        {ChartComponent ? (
-          <ChartComponent options={chartOptions} series={chartSeries} type="area" height={300} />
-        ) : (
-          <Box sx={{ height: 300, display: 'grid', placeItems: 'center' }}>
-            <CircularProgress size={26} thickness={4} sx={{ color: dashboardPalette.blue }} />
-          </Box>
-        )}
+          )}
+        </Box>
       </CardContent>
     </Card>
   )

@@ -1,7 +1,8 @@
 import { alpha, Box, Card, CardContent, Grid, Stack, Typography } from '@mui/material'
 import { MdAnalytics, MdShoppingBag } from 'react-icons/md'
 import { TbCurrencyRupee } from 'react-icons/tb'
-import { dashboardCardSx, dashboardIconSx, dashboardPalette } from './dashboardStyles'
+import DashboardWidgetHeader from './DashboardWidgetHeader'
+import { dashboardCardContentSx, dashboardCardSx, dashboardPalette } from './dashboardStyles'
 
 interface MetricsOverviewCardProps {
   metrics: {
@@ -36,22 +37,15 @@ export default function MetricsOverviewCard({ metrics, formatCurrency }: Metrics
 
   return (
     <Card sx={dashboardCardSx}>
-      <CardContent sx={{ p: 2.4 }}>
-        <Stack direction="row" spacing={1.2} alignItems="center" mb={2.3}>
-          <Box sx={dashboardIconSx(dashboardPalette.blue)}>
-            <MdAnalytics size={20} />
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
-              Key Metrics
-            </Typography>
-            <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
-              Order mix and value
-            </Typography>
-          </Box>
-        </Stack>
+      <CardContent sx={dashboardCardContentSx}>
+        <DashboardWidgetHeader
+          icon={<MdAnalytics />}
+          title="Key Metrics"
+          subtitle="Order mix and value"
+          color={dashboardPalette.blue}
+        />
 
-        <Grid container spacing={1.5}>
+        <Grid container spacing={1.5} sx={{ mt: 2.25 }}>
           {metricCards.map((metric) => (
             <Grid size={{ xs: 12, sm: 4 }} key={metric.title}>
               <Box

@@ -1,7 +1,14 @@
 import React from 'react'
-import { Box, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material'
+import { Box, Card, CardContent, CircularProgress } from '@mui/material'
 import { MdTimeline } from 'react-icons/md'
-import { dashboardCardSx, dashboardChartBase, dashboardIconSx, dashboardPalette } from './dashboardStyles'
+import DashboardWidgetHeader from './DashboardWidgetHeader'
+import {
+  dashboardCardContentSx,
+  dashboardCardSx,
+  dashboardChartBase,
+  dashboardChartShellSx,
+  dashboardPalette,
+} from './dashboardStyles'
 
 interface ShipmentFlowChartProps {
   todayOps: {
@@ -54,32 +61,27 @@ export default function ShipmentFlowChart({ todayOps, ChartComponent }: Shipment
 
   return (
     <Card sx={dashboardCardSx}>
-      <CardContent sx={{ p: 2.4 }}>
-        <Stack direction="row" spacing={1.2} alignItems="center" mb={2}>
-          <Box sx={dashboardIconSx(dashboardPalette.blue)}>
-            <MdTimeline size={20} />
-          </Box>
-          <Box>
-            <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
-              Shipment Lifecycle
-            </Typography>
-            <Typography sx={{ fontSize: '0.76rem', color: dashboardPalette.muted }}>
-              Today's operational flow
-            </Typography>
-          </Box>
-        </Stack>
-        {ChartComponent ? (
-          <ChartComponent
-            options={chartOptions}
-            series={[{ name: 'Shipments', data: stages.map((stage) => stage.value) }]}
-            type="bar"
-            height={300}
-          />
-        ) : (
-          <Box sx={{ height: 300, display: 'grid', placeItems: 'center' }}>
-            <CircularProgress size={26} sx={{ color: dashboardPalette.blue }} />
-          </Box>
-        )}
+      <CardContent sx={dashboardCardContentSx}>
+        <DashboardWidgetHeader
+          icon={<MdTimeline />}
+          title="Shipment Lifecycle"
+          subtitle="Today's operational flow"
+          color={dashboardPalette.blue}
+        />
+        <Box sx={dashboardChartShellSx}>
+          {ChartComponent ? (
+            <ChartComponent
+              options={chartOptions}
+              series={[{ name: 'Shipments', data: stages.map((stage) => stage.value) }]}
+              type="bar"
+              height={285}
+            />
+          ) : (
+            <Box sx={{ height: 285, display: 'grid', placeItems: 'center' }}>
+              <CircularProgress size={26} sx={{ color: dashboardPalette.blue }} />
+            </Box>
+          )}
+        </Box>
       </CardContent>
     </Card>
   )
