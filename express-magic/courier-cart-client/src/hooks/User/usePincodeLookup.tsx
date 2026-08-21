@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { UseFormClearErrors, UseFormSetError, UseFormSetValue } from 'react-hook-form'
-import { fetchLocations } from '../../api/locations'
+import { lookupPincodeLocation } from '../../api/locations'
 
 export function usePincodeLookup(
   pincode: string,
@@ -29,10 +29,8 @@ export function usePincodeLookup(
 
       setLoading(true)
       try {
-        const data = await fetchLocations({ pincode: normalizedPincode, limit: 1 })
+        const loc = await lookupPincodeLocation(normalizedPincode)
         if (!isCurrentLookup) return
-
-        const loc = data?.data?.[0]
 
         if (!loc?.city || !loc?.state) {
           setError(`${type}Pincode`, {

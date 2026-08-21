@@ -2,7 +2,7 @@ import { alpha, Divider, Grid, Paper, Stack, Tooltip, Typography } from '@mui/ma
 import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
-import { fetchLocations } from '../../../api/locations'
+import { lookupPincodeLocation } from '../../../api/locations'
 import { BiInfoCircle } from 'react-icons/bi'
 import { useAuth } from '../../../context/auth/AuthContext'
 import { usePresignedDownloadUrls } from '../../../hooks/Uploads/usePresignedDownloadUrls'
@@ -26,11 +26,6 @@ interface CompanyFormValues {
   state: string
   pincode: string
   logo?: string
-}
-
-interface LocationRow {
-  city?: string
-  state?: string
 }
 
 const PINCODE_REGEX = /^[1-9][0-9]{5}$/
@@ -94,17 +89,7 @@ export default function CompanyInfoForm() {
   const pincode = watch('pincode')
   const [pinFetching, setPinFetching] = useState(false)
 
-  const lookupPincode = useCallback(async (pin: string): Promise<LocationRow | null> => {
-    const data = await fetchLocations({ pincode: pin, limit: 1 })
-    const location = Array.isArray(data?.data) ? data.data[0] : data?.data
-
-    if (!location?.city || !location?.state) return null
-
-    return {
-      city: String(location.city),
-      state: String(location.state),
-    }
-  }, [])
+  const lookupPincode = useCallback((pin: string) => lookupPincodeLocation(pin), [])
 
   useEffect(() => {
     const normalizedPincode = normalizePincode(pincode)
