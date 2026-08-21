@@ -220,6 +220,33 @@ export default function UsersManagementPage() {
     }
   };
 
+  const handleDisableOrders = async (row) => {
+    const name = row.contactPerson || row.companyName || row.email || "this seller";
+    const confirmed = window.confirm(
+      `Disable order booking for ${name}? The seller account will move to Pending and order creation will be locked.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setEnablingUserId(row.id);
+      await updateUserApprovalMutation.mutateAsync({ userId: row.id, approved: false });
+      toast({
+        status: "success",
+        title: "Orders disabled",
+        description: "Seller order booking is now locked.",
+      });
+    } catch (error) {
+      toast({
+        status: "error",
+        title: "Could not disable orders",
+        description: error.response?.data?.message || "Please try again.",
+      });
+    } finally {
+      setEnablingUserId(null);
+    }
+  };
+
   return (
     <AdminStack>
       <PageIntro
@@ -489,40 +516,49 @@ export default function UsersManagementPage() {
             render: (value) => toDate(value),
           },
         ]}
-        actions={(row) => (
-          <HStack justify="flex-end" spacing="4px" flexWrap="wrap">
-            <IconButton
-              aria-label="View seller"
-              icon={<IconEye size={18} />}
-              size="sm"
-              variant="ghost"
-              color="#607397"
-              onClick={() => handleView(row.id)}
-            />
-            <Button
-              size="xs"
-              leftIcon={<IconShieldCheck size={14} />}
-              colorScheme={isOrdersEnabled(row) ? "green" : "purple"}
-              variant={isOrdersEnabled(row) ? "outline" : "solid"}
-              isDisabled={isOrdersEnabled(row)}
-              isLoading={
-                completeReadinessMutation.isPending && enablingUserId === row.id
-              }
-              onClick={() => handleEnableOrders(row)}
-            >
-              {isOrdersEnabled(row) ? "Orders On" : "Enable Orders"}
-            </Button>
-            <Switch
-              colorScheme="purple"
-              isChecked={row.approved !== false}
-              isDisabled={updateUserApprovalMutation.isPending}
-              onChange={(event) => handleApprovalChange(row.id, event.target.checked)}
-            />
-            <Text textAlign="left" fontSize="11px" fontWeight="700" color={row.approved ? "#009E72" : "#D97706"}>
-              {row.approved ? "Approved" : "Pending"}
-            </Text>
-          </HStack>
-        )}
+        actions={(row) => {
+          const ordersEnabled = isOrdersEnabled(row);
+          const accountApproved = row.approved !== false;
+          const actionPending =
+            enablingUserId === row.id &&
+            (completeReadinessMutation.isPending || updateUserApprovalMutation.isPending);
+
+          return (
+            <HStack justify="flex-end" spacing="4px" flexWrap="wrap">
+              <IconButton
+                aria-label="View seller"
+                icon={<IconEye size={18} />}
+                size="sm"
+                variant="ghost"
+                color="#607397"
+                onClick={() => handleView(row.id)}
+              />
+              <Button
+                size="xs"
+                leftIcon={ordersEnabled ? <IconShieldX size={14} /> : <IconShieldCheck size={14} />}
+                colorScheme={ordersEnabled ? "red" : "purple"}
+                variant={ordersEnabled ? "outline" : "solid"}
+                isLoading={actionPending}
+                isDisabled={
+                  (completeReadinessMutation.isPending || updateUserApprovalMutation.isPending) &&
+                  enablingUserId !== row.id
+                }
+                onClick={() => (ordersEnabled ? handleDisableOrders(row) : handleEnableOrders(row))}
+              >
+                {ordersEnabled ? "Disable Orders" : "Enable Orders"}
+              </Button>
+              <Switch
+                colorScheme="purple"
+                isChecked={accountApproved}
+                isDisabled={updateUserApprovalMutation.isPending}
+                onChange={(event) => handleApprovalChange(row.id, event.target.checked)}
+              />
+              <Text textAlign="left" fontSize="11px" fontWeight="700" color={accountApproved ? "#009E72" : "#D97706"}>
+                {accountApproved ? "Approved" : "Pending"}
+              </Text>
+            </HStack>
+          );
+        }}
         actionsLabel="KYC / Orders"
         actionsW="22%"
         fitColumns
