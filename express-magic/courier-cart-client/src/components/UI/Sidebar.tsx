@@ -158,6 +158,12 @@ const navSections: NavSection[] = [
         ],
       },
       {
+        text: 'Pickup',
+        icon: <TbBuildingWarehouse size={STANDARD_ICON_SIZE} />,
+        path: '/settings/manage_pickups?add=1',
+        roles: ['customer', 'admin'],
+      },
+      {
         text: 'Reconciliation',
         icon: <TbScale size={STANDARD_ICON_SIZE} />,
         path: '/reconciliation/weight',
@@ -215,8 +221,10 @@ const settingsItem: NavItem = {
   roles: ['customer', 'admin'],
 }
 
+const getNavigationMatchPath = (path: string) => path.split(/[?#]/)[0] || path
+
 const itemHasActiveChild = (pathname: string, item: NavItem) =>
-  Boolean(item.children?.some((sub) => isActive(pathname, sub.path)))
+  Boolean(item.children?.some((sub) => isActive(pathname, getNavigationMatchPath(sub.path))))
 
 export default function Sidebar({
   role = 'customer',
@@ -250,13 +258,10 @@ export default function Sidebar({
   }, [isSidebarExpanded])
 
   useEffect(() => {
-    const nextExpanded: Record<string, boolean> = {}
-    ;[...navSections.flatMap((section) => section.items), settingsItem].forEach((item) => {
-      if (item.children?.some((sub) => isActive(location.pathname, sub.path))) {
-        nextExpanded[item.text] = true
-      }
-    })
-    setExpandedItems(nextExpanded)
+    const activeParent = [...navSections.flatMap((section) => section.items), settingsItem].find((item) =>
+      item.children?.some((sub) => isActive(location.pathname, getNavigationMatchPath(sub.path))),
+    )
+    setExpandedItems(activeParent ? { [activeParent.text]: true } : {})
   }, [location.pathname])
 
   const toggleExpand = (key: string) => {
@@ -312,7 +317,9 @@ export default function Sidebar({
   }
 
   const renderItem = (item: NavItem) => {
-    const isSelected = isActive(location.pathname, item.path)
+    const itemMatchPath = getNavigationMatchPath(item.path)
+    const isSettingsRoot = item.text === settingsItem.text
+    const isSelected = isSettingsRoot ? location.pathname === itemMatchPath : isActive(location.pathname, itemMatchPath)
     const hasChildren = Boolean(item.children?.length)
     const childSelected = itemHasActiveChild(location.pathname, item)
     const isExpanded = expandedItems[item.text]
@@ -500,12 +507,21 @@ export default function Sidebar({
           overflowX: 'hidden',
           overscrollBehavior: 'contain',
           scrollbarGutter: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
+          scrollbarWidth: 'thin',
+          scrollbarColor: `${alpha(ACTIVE, isDark ? 0.55 : 0.35)} transparent`,
+          msOverflowStyle: 'auto',
           WebkitOverflowScrolling: 'touch',
           py: temporary ? 'clamp(6px, 1.4vh, 12px)' : 'clamp(4px, 1vh, 8px)',
           bgcolor: DARK_BG,
-          '&::-webkit-scrollbar': { width: 0, height: 0, display: 'none' },
+          '&::-webkit-scrollbar': { width: 6 },
+          '&::-webkit-scrollbar-track': { background: 'transparent' },
+          '&::-webkit-scrollbar-thumb': {
+            borderRadius: 999,
+            backgroundColor: alpha(ACTIVE, isDark ? 0.48 : 0.26),
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            backgroundColor: alpha(ACTIVE, isDark ? 0.62 : 0.38),
+          },
         }}
       >
         {visibleSections.map((section) =>
