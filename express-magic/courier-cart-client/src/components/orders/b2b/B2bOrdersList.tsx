@@ -1,4 +1,4 @@
-import { Alert, Button, Link, Stack } from '@mui/material'
+import { Alert, Button, Chip, Link, Stack, Typography, alpha } from '@mui/material'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import moment from 'moment'
@@ -102,48 +102,280 @@ const B2BOrdersList = ({
     )
   }
 
+  const formatCurrency = (value?: number | string | null, decimals = 2) =>
+    `Rs ${Number(value ?? 0).toFixed(decimals)}`
+
+  const normalizeKgValue = (value?: number | string | null) => {
+    const numericValue = Number(value ?? 0)
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return 0
+    return numericValue > 50 ? numericValue / 1000 : numericValue
+  }
+
+  const formatKg = (value?: number | string | null) => `${normalizeKgValue(value).toFixed(1)} Kg`
+
+  const formatOrderDateTime = (value?: string | null) => {
+    if (!value) return '-'
+    const date = moment(value)
+    return date.isValid() ? date.format('DD MMM YYYY | hh:mm A') : '-'
+  }
+
+  const parseMaybeJsonObject = (value: unknown): Record<string, unknown> => {
+    if (!value) return {}
+    if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
+    if (typeof value === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(value)
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : {}
+      } catch {
+        return {}
+      }
+    }
+    return {}
+  }
+
+  const parseMaybeJsonArray = (value: unknown): Array<Record<string, unknown>> => {
+    if (Array.isArray(value)) return value as Array<Record<string, unknown>>
+    if (typeof value === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(value)
+        return Array.isArray(parsed) ? (parsed as Array<Record<string, unknown>>) : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  const getOrderProducts = (row: B2BOrder) => parseMaybeJsonArray(row.products)
+
+  const getProductName = (row: B2BOrder) => {
+    const products = getOrderProducts(row)
+    const firstProduct = products[0]
+    const rawName = String(firstProduct?.productName ?? firstProduct?.name ?? firstProduct?.box_name ?? '').trim()
+    if (!rawName) return '-'
+    return products.length > 1 ? `${rawName} +${products.length - 1}` : rawName
+  }
+
+  const getPickupDetails = (row: B2BOrder) =>
+    parseMaybeJsonObject((row as B2BOrder & { pickup_details?: unknown }).pickup_details)
+
+  const getSenderName = (row: B2BOrder) => {
+    const pickup = getPickupDetails(row)
+    return String(
+      pickup.warehouse_name ||
+        pickup.name ||
+        pickup.company_name ||
+        (row as B2BOrder & { merchantName?: string; seller_name?: string }).merchantName ||
+        row.pickup_location_id ||
+        '-',
+    ).trim() || '-'
+  }
+
+  const getSenderPhone = (row: B2BOrder) => {
+    const pickup = getPickupDetails(row)
+    return String(
+      pickup.phone ||
+        pickup.mobile ||
+        pickup.contact_number ||
+        (row as B2BOrder & { merchantPhone?: string; seller_phone?: string }).merchantPhone ||
+        '',
+    ).trim()
+  }
+
+  const getInvoiceDetails = (row: B2BOrder) => {
+    const extendedRow = row as B2BOrder & { invoices?: unknown; invoice_details?: unknown; invoice_number?: string; invoice_no?: string }
+    const rawInvoices: unknown = extendedRow.invoices || extendedRow.invoice_details
+    const firstInvoice = parseMaybeJsonArray(rawInvoices)[0] || parseMaybeJsonObject(rawInvoices)
+    const invoiceNumber = String(
+      firstInvoice.invoiceNumber ||
+        firstInvoice.invoice_number ||
+        firstInvoice.invoiceNo ||
+        extendedRow.invoice_number ||
+        extendedRow.invoice_no ||
+        '-',
+    ).trim() || '-'
+    const amount = (firstInvoice.invoiceValue ??
+      firstInvoice.invoice_amount ??
+      firstInvoice.amount ??
+      row.order_amount) as number | string | null | undefined
+    return { invoiceNumber, amount }
+  }
+
+  const getPickedUpAt = (row: B2BOrder) => {
+    const extendedRow = row as B2BOrder & {
+      picked_up_at?: string
+      pickup_date?: string
+      pickup_time?: string
+      provider_picked_up_at?: string
+    }
+    const pickup = getPickupDetails(row)
+    return extendedRow.picked_up_at || extendedRow.pickup_date || extendedRow.pickup_time || extendedRow.provider_picked_up_at || pickup.picked_up_at
+  }
+
+  const getChargedWeight = (row: B2BOrder) => {
+    const extendedRow = row as B2BOrder & {
+      charged_weight?: number | string
+      selected_max_slab_weight?: number | string
+      chargeable_weight?: number | string
+      volumetric_weight?: number | string
+      weight?: number | string
+    }
+    return extendedRow.charged_weight ??
+      extendedRow.selected_max_slab_weight ??
+      extendedRow.chargeable_weight ??
+      extendedRow.volumetric_weight ??
+      extendedRow.weight
+  }
+
   const columns: Column<B2BOrder>[] = [
     {
-      label: 'Source',
-      id: 'is_external_api',
-      render: (_, row) => (
-        <StatusChip
-          label={row.is_external_api ? 'API' : 'Local'}
-          status={row.is_external_api ? 'info' : 'success'}
-        />
-      ),
-    },
-    { label: 'Order #', id: 'order_number' },
-    {
-      label: 'LRN',
+      label: 'LRN / AWB',
       id: 'shipment_id',
-      render: (_value, row) => renderTrackingLink(getB2BTrackingReference(row)),
-    },
-    { label: 'Box AWB', id: 'awb_number', render: (value) => renderTrackingLink(value) },
-    {
-      label: 'Docs',
-      id: 'id',
-      minWidth: 220,
-      sticky: 'right',
-      stickyOffset: 140,
+      minWidth: 214,
+      truncate: false,
       render: (_v, row) => (
-        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-          <StatusChip
-            label={hasLabelGenerated(row) ? 'Label Generated' : 'Label Pending'}
-            status={hasLabelGenerated(row) ? 'success' : 'pending'}
-          />
-          <StatusChip
-            label={hasInvoiceGenerated(row) ? 'Invoice Generated' : 'Invoice Pending'}
-            status={hasInvoiceGenerated(row) ? 'success' : 'pending'}
-          />
+        <Stack spacing={0.3} sx={{ minWidth: 0 }}>
+          <Typography sx={{ maxWidth: '100%', fontSize: 12.2, fontWeight: 700, lineHeight: 1.25 }} noWrap>
+            {renderTrackingLink(getB2BTrackingReference(row))}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.secondary', lineHeight: 1.25 }} noWrap>
+            Created: {formatOrderDateTime(row.created_at || row.order_date)}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.primary', lineHeight: 1.25 }} noWrap>
+            Picked Up: {formatOrderDateTime(getPickedUpAt(row) as string | null)}
+          </Typography>
         </Stack>
       ),
     },
-    { label: 'Buyer', id: 'buyer_name' },
-    { label: 'Amount', id: 'order_amount', render: (v) => `₹${Number(v)?.toFixed(2)}` },
+    {
+      label: 'Order Type',
+      id: 'order_number',
+      minWidth: 128,
+      truncate: false,
+      render: () => (
+        <Chip
+          label="Domestic - B2B"
+          size="small"
+          sx={{
+            height: 24,
+            borderRadius: '7px',
+            color: '#7C2D8E',
+            bgcolor: alpha('#D946EF', 0.14),
+            border: `1px solid ${alpha('#A21CAF', 0.2)}`,
+            '& .MuiChip-label': { px: 0.8, fontSize: 10.5, fontWeight: 700 },
+          }}
+        />
+      ),
+    },
+    {
+      label: 'Product Details',
+      id: 'products',
+      minWidth: 132,
+      truncate: false,
+      render: (_v, row) => {
+        const isCod = String(row.order_type || '').toLowerCase() === 'cod'
+        return (
+          <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 12.1, fontWeight: 500, color: 'text.primary', maxWidth: '100%' }} noWrap>
+              {getProductName(row)}
+            </Typography>
+            <Chip
+              label={isCod ? 'COD' : 'Prepaid'}
+              size="small"
+              sx={{
+                width: 'fit-content',
+                height: 21,
+                mt: 0.2,
+                borderRadius: '6px',
+                color: isCod ? '#B45309' : '#047857',
+                bgcolor: isCod ? alpha('#F59E0B', 0.12) : alpha('#10B981', 0.13),
+                border: `1px solid ${isCod ? alpha('#B45309', 0.18) : alpha('#047857', 0.18)}`,
+                '& .MuiChip-label': { px: 0.65, fontSize: 10, fontWeight: 700 },
+              }}
+            />
+          </Stack>
+        )
+      },
+    },
+    {
+      label: 'Invoice Details',
+      id: 'order_amount',
+      minWidth: 156,
+      truncate: false,
+      render: (_value, row) => {
+        const invoice = getInvoiceDetails(row)
+        return (
+          <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 12.1, color: 'text.primary', fontWeight: 700 }} noWrap>
+              {formatCurrency(invoice.amount, 2)}
+            </Typography>
+            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
+              Invoice No: {invoice.invoiceNumber}
+            </Typography>
+          </Stack>
+        )
+      },
+    },
+    {
+      label: 'Sender Details',
+      id: 'pickup_location_id',
+      minWidth: 150,
+      truncate: false,
+      render: (_value, row) => (
+        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
+            {getSenderName(row)}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+            {getSenderPhone(row) || '-'}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      label: 'Receiver Details',
+      id: 'buyer_name',
+      minWidth: 150,
+      truncate: false,
+      render: (_value, row) => (
+        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
+            {row.buyer_name || '-'}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+            {row.buyer_phone || '-'}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      label: 'Charged Weight',
+      id: 'packages',
+      minWidth: 110,
+      truncate: false,
+      render: (_value, row) => (
+        <Typography sx={{ fontSize: 12.1, color: 'text.primary', fontWeight: 700 }} noWrap>
+          {formatKg(getChargedWeight(row))}
+        </Typography>
+      ),
+    },
+    {
+      label: 'Updated At',
+      id: 'updated_at',
+      minWidth: 118,
+      truncate: false,
+      render: (value) => (
+        <Typography sx={{ maxWidth: '100%', fontSize: 11.2, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
+          {formatOrderDateTime(value)}
+        </Typography>
+      ),
+    },
     {
       label: 'Courier',
       id: 'courier_partner',
+      minWidth: 140,
       render: (value, row) =>
         getCourierDisplayName({
           name: value,
@@ -152,31 +384,33 @@ const B2BOrdersList = ({
         }),
     },
     {
-      label: 'Source',
-      id: 'is_external_api',
-      render: (_v, row) => (
-        <StatusChip
-          label={row.is_external_api ? 'API' : 'Local'}
-          status={row.is_external_api ? 'info' : 'success'}
-        />
-      ),
-    },
-    {
       label: 'Status',
       id: 'order_status',
       minWidth: 150,
-      sticky: 'right',
-      stickyOffset: 360,
       render: (v) => <StatusChip label={v} status={statusColorMap[v] || 'info'} />,
     },
-    { label: 'Order Date', id: 'order_date', render: (v) => moment(v).format('DD MMM YYYY') },
-    { label: 'Last Updated', id: 'updated_at', render: (v) => moment(v).format('DD MMM YYYY') },
+    {
+      label: 'Docs',
+      id: 'id',
+      minWidth: 178,
+      truncate: false,
+      render: (_v, row) => (
+        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+          <StatusChip
+            label={hasLabelGenerated(row) ? 'Label Ready' : 'Label Pending'}
+            status={hasLabelGenerated(row) ? 'success' : 'pending'}
+          />
+          <StatusChip
+            label={hasInvoiceGenerated(row) ? 'Invoice Ready' : 'Invoice Pending'}
+            status={hasInvoiceGenerated(row) ? 'success' : 'pending'}
+          />
+        </Stack>
+      ),
+    },
     {
       label: 'Actions',
-      id: 'id',
+      id: 'awb_number',
       minWidth: 140,
-      sticky: 'right',
-      stickyOffset: 0,
       render: (_, row) => {
         const courierText = (row.courier_partner || '').toLowerCase()
         const integrationText = String((row as B2BOrder & { integration_type?: string }).integration_type || '').toLowerCase()
@@ -244,6 +478,9 @@ const B2BOrdersList = ({
           title="My B2B Orders"
           pagination
           currentPage={page}
+          density="compact"
+          tableVariant="shipment"
+          maxHeight={640}
           expandable
           renderExpandedRow={(row) => <OrderExpandedRow type="b2b" row={row} />}
           defaultRowsPerPage={rowsPerPage}

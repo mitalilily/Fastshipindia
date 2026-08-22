@@ -785,12 +785,6 @@ const AllOrders = () => {
 
   const formatKg = (value?: number | string | null) => `${normalizeKgValue(value).toFixed(1)} Kg`
 
-  const formatDimensionValue = (value?: number | string | null) => {
-    const numericValue = Number(value ?? 0)
-    if (!Number.isFinite(numericValue) || numericValue <= 0) return '0'
-    return Number.isInteger(numericValue) ? String(numericValue) : numericValue.toFixed(1)
-  }
-
   const formatOrderDateTime = (value?: string | null) => {
     if (!value) return '-'
     const date = moment(value)
@@ -819,17 +813,94 @@ const AllOrders = () => {
     return products.length > 1 ? `${rawName} +${products.length - 1}` : rawName
   }
 
-  const getProductQuantity = (row: Order) => {
-    const products = getOrderProducts(row)
-    const quantity = products.reduce((sum, product) => {
-      const productQuantity = Number(product.quantity ?? product.qty ?? 0)
-      return sum + (Number.isFinite(productQuantity) ? productQuantity : 0)
-    }, 0)
-    return Math.max(quantity, 1)
+  const parseMaybeJsonObject = (value: unknown): Record<string, unknown> => {
+    if (!value) return {}
+    if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
+    if (typeof value === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(value)
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : {}
+      } catch {
+        return {}
+      }
+    }
+    return {}
   }
 
-  const getPickupAddressName = (row: Order) =>
-    String(row.pickup_details?.warehouse_name || row.pickup_details?.name || '-').trim() || '-'
+  const getPickupDetails = (row: Order) => parseMaybeJsonObject(row.pickup_details)
+
+  const getPickupAddressName = (row: Order) => {
+    const pickup = getPickupDetails(row)
+    return String(pickup.warehouse_name || pickup.name || row.pickup_location_name || row.pickup_location_id || '-').trim() || '-'
+  }
+
+  const getSenderName = (row: Order) => {
+    const pickup = getPickupDetails(row)
+    return String(
+      pickup.warehouse_name ||
+        pickup.name ||
+        pickup.company_name ||
+        row.seller_name ||
+        row.merchantName ||
+        row.merchant_name ||
+        getPickupAddressName(row),
+    ).trim() || '-'
+  }
+
+  const getSenderPhone = (row: Order) => {
+    const pickup = getPickupDetails(row)
+    return String(pickup.phone || pickup.mobile || pickup.contact_number || row.seller_phone || row.merchantPhone || '').trim()
+  }
+
+  const getReceiverName = (row: Order) => String(row.buyer_name || row.company_name || row.receiver_name || '-').trim() || '-'
+
+  const getReceiverPhone = (row: Order) => String(row.buyer_phone || row.receiver_phone || '').trim()
+
+  const getInvoiceDetails = (row: Order) => {
+    const rawInvoices: unknown = row.invoices || row.invoice_details
+    let firstInvoice: Record<string, unknown> = {}
+    if (Array.isArray(rawInvoices)) {
+      firstInvoice = (rawInvoices[0] || {}) as Record<string, unknown>
+    } else if (typeof rawInvoices === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(rawInvoices)
+        firstInvoice = Array.isArray(parsed)
+          ? ((parsed[0] || {}) as Record<string, unknown>)
+          : parsed && typeof parsed === 'object'
+            ? (parsed as Record<string, unknown>)
+            : {}
+      } catch {
+        firstInvoice = {}
+      }
+    } else if (rawInvoices && typeof rawInvoices === 'object') {
+      firstInvoice = rawInvoices as Record<string, unknown>
+    }
+
+    const invoiceNumber = String(
+      firstInvoice.invoiceNumber ||
+        firstInvoice.invoice_number ||
+        firstInvoice.invoiceNo ||
+        row.invoice_number ||
+        row.invoice_no ||
+        '-',
+    ).trim() || '-'
+    const amount = (firstInvoice.invoiceValue ??
+      firstInvoice.invoice_amount ??
+      firstInvoice.amount ??
+      row.order_amount) as number | string | null | undefined
+    return { invoiceNumber, amount }
+  }
+
+  const getOrderTypeLabel = (row: Order) =>
+    `Domestic - ${String(row.type || row.source_type || row.shipping_mode || 'B2C').toUpperCase()}`
+
+  const getPickedUpAt = (row: Order) =>
+    row.picked_up_at || row.pickup_date || row.pickup_time || row.provider_picked_up_at || row.pickup_details?.picked_up_at
+
+  const getChargedWeight = (row: Order) =>
+    row.charged_weight ?? row.selected_max_slab_weight ?? row.chargeable_weight ?? row.volumetric_weight ?? row.weight
 
   const getDisplayStatusLabel = (status?: string | null) => {
     const normalizedStatus = String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
@@ -968,8 +1039,8 @@ const AllOrders = () => {
   const columns: Column<Order>[] = [
     {
       id: 'order_number',
-      label: 'Order Details',
-      minWidth: 142,
+      label: 'LRN / AWB',
+      minWidth: 214,
       truncate: false,
       render: (_v, row) => (
         <Stack spacing={0.35} sx={{ minWidth: 0 }}>
@@ -997,183 +1068,137 @@ const AllOrders = () => {
             }}
             noWrap
           >
-            {row.order_number || '-'}
+            {getTrackingReference(row) || row.order_number || '-'}
           </Typography>
           <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.secondary', lineHeight: 1.25 }} noWrap>
-            {formatOrderDateTime(row.created_at || row.order_date)}
+            Created: {formatOrderDateTime(row.created_at || row.order_date)}
           </Typography>
           <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.primary', lineHeight: 1.25 }} noWrap>
-            {row.is_external_api ? 'API' : 'Custom'}
+            Picked Up: {formatOrderDateTime(getPickedUpAt(row))}
           </Typography>
         </Stack>
       ),
     },
     {
       id: 'awb_number',
-      label: 'AWB',
-      minWidth: 136,
-      truncate: false,
-      render: (_value, row) => {
-        const awb = String(row.awb_number || '').trim()
-        const lrn = String(row.provider_reference || row.shipment_id || '').trim()
-        const trackingReference = getTrackingReference(row)
-        const isB2B = String(row.type || row.source_type || '').toLowerCase() === 'b2b'
-        const secondaryText = isB2B && lrn && lrn !== awb ? `LRN: ${lrn}` : ''
-
-        return (
-          <Stack spacing={0.3} sx={{ minWidth: 0 }}>
-            {trackingReference ? (
-              <Typography
-                component="button"
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  handleTrackShipment(row)
-                }}
-                sx={{
-                  all: 'unset',
-                  maxWidth: '100%',
-                  cursor: 'pointer',
-                  color: '#0D3B8E',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  lineHeight: 1.25,
-                  '&:hover': { textDecoration: 'underline' },
-                  '&:focus-visible': {
-                    outline: '2px solid rgba(13, 59, 142, 0.28)',
-                    outlineOffset: '2px',
-                    borderRadius: '4px',
-                  },
-                }}
-                noWrap
-              >
-                {awb || trackingReference}
-              </Typography>
-            ) : (
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary' }} noWrap>
-                -
-              </Typography>
-            )}
-            {secondaryText ? (
-              <Typography sx={{ maxWidth: '100%', fontSize: 10.7, color: 'text.secondary', lineHeight: 1.25 }} noWrap>
-                {secondaryText}
-              </Typography>
-            ) : null}
-          </Stack>
-        )
-      },
-    },
-    {
-      id: 'buyer_name',
-      label: 'Customer Details',
-      minWidth: 176,
-      truncate: false,
-      render: (_v, row) => (
-        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 500, color: 'text.primary', lineHeight: 1.28 }} noWrap>
-            {row.buyer_name || '-'}
-          </Typography>
-          <Typography sx={{ maxWidth: '100%', fontSize: 10.9, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
-            {row.buyer_email || '-'}
-          </Typography>
-          <Typography sx={{ maxWidth: '100%', fontSize: 10.9, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
-            {row.buyer_phone || '-'}
-          </Typography>
-        </Stack>
-      ),
-    },
-    {
-      label: 'Product Details',
-      id: 'products',
-      minWidth: 112,
+      label: 'Order Type',
+      minWidth: 128,
       truncate: false,
       render: (_value, row) => (
-        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: 12.1, fontWeight: 500, color: 'text.primary', maxWidth: '100%' }} noWrap>
-            {getProductName(row)}
-          </Typography>
-          <Typography sx={{ fontSize: 10.9, color: 'text.primary', fontWeight: 500 }} noWrap>
-            QTY:{getProductQuantity(row)}
-          </Typography>
-        </Stack>
+        <Chip
+          label={getOrderTypeLabel(row)}
+          size="small"
+          sx={{
+            height: 24,
+            borderRadius: '7px',
+            color: '#7C2D8E',
+            bgcolor: alpha('#D946EF', 0.14),
+            border: `1px solid ${alpha('#A21CAF', 0.2)}`,
+            '& .MuiChip-label': { px: 0.8, fontSize: 10.5, fontWeight: 700 },
+          }}
+        />
       ),
     },
     {
-      label: 'Package Details',
-      id: 'weight',
-      minWidth: 158,
-      truncate: false,
-      render: (_value, row) => {
-        const applicableWeight =
-          row.charged_weight ?? row.selected_max_slab_weight ?? row.volumetric_weight ?? row.weight
-        return (
-          <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
-              Dead wt. :{formatKg(row.weight)}
-            </Typography>
-            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
-              {formatDimensionValue(row.length)} X {formatDimensionValue(row.breadth)} X{' '}
-              {formatDimensionValue(row.height)} (cm)
-            </Typography>
-            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
-              Applicable wt. :{formatKg(applicableWeight)}
-            </Typography>
-          </Stack>
-        )
-      },
-    },
-    {
-      label: 'Payment',
-      id: 'order_amount',
-      minWidth: 88,
+      id: 'products',
+      label: 'Product Details',
+      minWidth: 132,
       truncate: false,
       render: (_value, row) => {
         const isCod = String(row.order_type || '').toLowerCase() === 'cod'
         return (
-          <Stack spacing={0.45} alignItems="flex-start">
-            <Typography sx={{ fontSize: 12.1, color: 'text.primary', fontWeight: 500 }} noWrap>
-              {formatCurrency(row.order_amount, 0)}
+        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 12.1, fontWeight: 500, color: 'text.primary', maxWidth: '100%' }} noWrap>
+            {getProductName(row)}
+          </Typography>
+          <Chip
+            label={isCod ? 'COD' : 'Prepaid'}
+            size="small"
+            sx={{
+              width: 'fit-content',
+              height: 21,
+              mt: 0.2,
+              borderRadius: '6px',
+              color: isCod ? '#B45309' : '#047857',
+              bgcolor: isCod ? alpha('#F59E0B', 0.12) : alpha('#10B981', 0.13),
+              border: `1px solid ${isCod ? alpha('#B45309', 0.18) : alpha('#047857', 0.18)}`,
+              '& .MuiChip-label': { px: 0.65, fontSize: 10, fontWeight: 700 },
+            }}
+          />
+        </Stack>
+        )
+      },
+    },
+    {
+      label: 'Invoice Details',
+      id: 'order_amount',
+      minWidth: 156,
+      truncate: false,
+      render: (_value, row) => {
+        const invoice = getInvoiceDetails(row)
+        return (
+          <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 12.1, color: 'text.primary', fontWeight: 700 }} noWrap>
+              {formatCurrency(invoice.amount, 2)}
             </Typography>
-            <Chip
-              label={isCod ? 'COD' : 'Prepaid'}
-              size="small"
-              sx={{
-                height: 22,
-                px: 0.65,
-                borderRadius: '999px',
-                color: isCod ? 'warning.dark' : '#038B60',
-                bgcolor: isCod ? alpha('#FF9C4B', 0.12) : alpha('#05BD7E', 0.12),
-                border: `1px solid ${isCod ? alpha('#B45309', 0.24) : alpha('#05BD7E', 0.45)}`,
-                '& .MuiChip-label': {
-                  px: 0.5,
-                  fontSize: 10,
-                  fontWeight: 600,
-                },
-              }}
-            />
+            <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
+              Invoice No: {invoice.invoiceNumber}
+            </Typography>
           </Stack>
         )
       },
     },
     {
-      label: 'Pickup Address',
+      label: 'Sender Details',
       id: 'pickup_location_id',
+      minWidth: 150,
+      truncate: false,
+      render: (_value, row) => (
+        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
+            {getSenderName(row)}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+            {getSenderPhone(row) || '-'}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      label: 'Receiver Details',
+      id: 'buyer_phone',
+      minWidth: 150,
+      truncate: false,
+      render: (_value, row) => (
+        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
+            {getReceiverName(row)}
+          </Typography>
+          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+            {getReceiverPhone(row) || '-'}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
+      label: 'Charged Weight',
+      id: 'weight',
+      minWidth: 110,
+      truncate: false,
+      render: (_value, row) => (
+        <Typography sx={{ fontSize: 12.1, color: 'text.primary', fontWeight: 700 }} noWrap>
+          {formatKg(getChargedWeight(row))}
+        </Typography>
+      ),
+    },
+    {
+      label: 'Updated At',
+      id: 'updated_at',
       minWidth: 118,
       truncate: false,
       render: (_value, row) => (
-        <Typography
-          sx={{
-            width: 'fit-content',
-            maxWidth: '100%',
-            fontSize: 12,
-            color: 'text.primary',
-            fontWeight: 500,
-            borderBottom: `1px dashed ${alpha('#0D1B4D', 0.28)}`,
-            lineHeight: 1.3,
-          }}
-          noWrap
-        >
-          {getPickupAddressName(row)}
+        <Typography sx={{ maxWidth: '100%', fontSize: 11.2, color: 'text.secondary', lineHeight: 1.3 }} noWrap>
+          {formatOrderDateTime(row.updated_at || row.order_date)}
         </Typography>
       ),
     },

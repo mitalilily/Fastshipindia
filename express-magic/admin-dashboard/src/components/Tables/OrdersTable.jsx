@@ -1,6 +1,5 @@
 import { Badge, Button, Flex, Icon, Stack, Text, Tooltip } from '@chakra-ui/react'
-import { FiCopy, FiMapPin, FiXCircle } from 'react-icons/fi'
-import { getCourierDisplayName } from 'utils/courierDisplay'
+import { FiCopy, FiXCircle } from 'react-icons/fi'
 import { GenericTable } from 'views/Dashboard/Tables/components/GenericTable'
 
 const statusColors = {
@@ -25,14 +24,126 @@ const formatStatus = (value) => {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-const formatDate = (value) => {
-  if (!value) return 'N/A'
-  return new Date(value).toLocaleDateString('en-IN', {
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   })
 }
+
+const formatCurrency = (value, decimals = 2) => `Rs ${Number(value || 0).toFixed(decimals)}`
+
+const normalizeKgValue = (value) => {
+  const numericValue = Number(value || 0)
+  if (!Number.isFinite(numericValue) || numericValue <= 0) return 0
+  return numericValue > 50 ? numericValue / 1000 : numericValue
+}
+
+const formatKg = (value) => `${normalizeKgValue(value).toFixed(1)} Kg`
+
+const parseMaybeJsonObject = (value) => {
+  if (!value) return {}
+  if (typeof value === 'object' && !Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    } catch {
+      return {}
+    }
+  }
+  return {}
+}
+
+const parseMaybeJsonArray = (value) => {
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+const getTrackingReference = (order) => {
+  const isB2B = String(order?.type || order?.source_type || order?.shipping_mode || '').toLowerCase() === 'b2b'
+  const references = isB2B
+    ? [order?.provider_reference, order?.shipment_id, order?.awb_number, order?.provider_request_id]
+    : [order?.awb_number, order?.shipment_id, order?.provider_reference, order?.provider_request_id]
+
+  return references.map((value) => String(value || '').trim()).find(Boolean) || ''
+}
+
+const getOrderProducts = (row) => parseMaybeJsonArray(row?.products)
+
+const getProductName = (row) => {
+  const products = getOrderProducts(row)
+  const firstProduct = products[0] || {}
+  const rawName = String(firstProduct.productName || firstProduct.name || firstProduct.box_name || '').trim()
+  if (!rawName) return '-'
+  return products.length > 1 ? `${rawName} +${products.length - 1}` : rawName
+}
+
+const getPickupDetails = (row) => parseMaybeJsonObject(row?.pickup_details)
+
+const getSenderName = (row) => {
+  const pickup = getPickupDetails(row)
+  return String(
+    pickup.warehouse_name ||
+      pickup.name ||
+      pickup.company_name ||
+      row?.seller_name ||
+      row?.merchantName ||
+      row?.merchant_name ||
+      row?.pickup_location_name ||
+      row?.pickup_location_id ||
+      '-',
+  ).trim() || '-'
+}
+
+const getSenderPhone = (row) => {
+  const pickup = getPickupDetails(row)
+  return String(pickup.phone || pickup.mobile || pickup.contact_number || row?.seller_phone || row?.merchantPhone || '').trim()
+}
+
+const getReceiverName = (row) => String(row?.buyer_name || row?.company_name || row?.receiver_name || '-').trim() || '-'
+
+const getReceiverPhone = (row) => String(row?.buyer_phone || row?.receiver_phone || '').trim()
+
+const getInvoiceDetails = (row) => {
+  const rawInvoices = row?.invoices || row?.invoice_details
+  const firstInvoice = parseMaybeJsonArray(rawInvoices)[0] || parseMaybeJsonObject(rawInvoices)
+  const invoiceNumber = String(
+    firstInvoice.invoiceNumber ||
+      firstInvoice.invoice_number ||
+      firstInvoice.invoiceNo ||
+      row?.invoice_number ||
+      row?.invoice_no ||
+      '-',
+  ).trim() || '-'
+  const amount = firstInvoice.invoiceValue || firstInvoice.invoice_amount || firstInvoice.amount || row?.order_amount
+  return { invoiceNumber, amount }
+}
+
+const getOrderTypeLabel = (row) =>
+  `Domestic - ${String(row?.type || row?.source_type || row?.shipping_mode || 'B2C').toUpperCase()}`
+
+const getPickedUpAt = (row) => {
+  const pickup = getPickupDetails(row)
+  return row?.picked_up_at || row?.pickup_date || row?.pickup_time || row?.provider_picked_up_at || pickup.picked_up_at
+}
+
+const getChargedWeight = (row) =>
+  row?.charged_weight ?? row?.selected_max_slab_weight ?? row?.chargeable_weight ?? row?.volumetric_weight ?? row?.weight
 
 const terminalStatuses = new Set(['cancelled', 'canceled', 'delivered', 'rto_delivered'])
 
@@ -54,104 +165,152 @@ const OrdersTable = ({
   onCancelOrder,
   cancellingOrderId,
 }) => {
-  const captions = ['Order', 'Status', 'Type', 'Destination', 'Provider', 'AWB', 'Charge', 'Created', 'Action']
+  const captions = [
+    'LRN / AWB',
+    'Order Type',
+    'Product Details',
+    'Invoice Details',
+    'Sender Details',
+    'Receiver Details',
+    'Charged Weight',
+    'Updated At',
+    'Status',
+    'Action',
+  ]
   const columnKeys = [
-    'order_summary',
-    'order_status',
-    'order_type',
-    'destination',
-    'courier_partner',
-    'awb_number',
-    'order_amount',
-    'order_date',
+    'tracking_summary',
+    'order_type_summary',
+    'product_summary',
+    'invoice_summary',
+    'sender_summary',
+    'receiver_summary',
+    'charged_weight_summary',
+    'updated_summary',
+    'status_summary',
     'actions',
   ]
 
   const renderers = {
-    order_summary: (_value, row) => (
-      <Stack spacing={1}>
-        <Text fontWeight="800" fontSize="lg" color="inherit">
-          {row.order_number || row.order_id || row.id || 'N/A'}
+    tracking_summary: (_value, row) => (
+      <Stack spacing={1} minW="0">
+        <Flex align="center" gap={2}>
+          <Text fontWeight="800" fontSize="sm" color="#0D3B8E" noOfLines={1}>
+            {getTrackingReference(row) || row.order_number || row.order_id || row.id || 'N/A'}
+          </Text>
+          {getTrackingReference(row) ? (
+            <Icon
+              as={FiCopy}
+              cursor="pointer"
+              color="gray.500"
+              _hover={{ color: '#0D3B8E' }}
+              onClick={(event) => {
+                event.stopPropagation()
+                navigator.clipboard.writeText(getTrackingReference(row))
+              }}
+            />
+          ) : null}
+        </Flex>
+        <Text color="gray.500" fontSize="xs" noOfLines={1}>
+          Created: {formatDateTime(row.created_at || row.order_date)}
         </Text>
-        <Text color="gray.500" fontSize="sm">
-          {row.buyer_name || row.merchantName || row.merchantEmail || 'N/A'}
+        <Text color="gray.600" fontSize="xs" noOfLines={1}>
+          Picked Up: {formatDateTime(getPickedUpAt(row))}
         </Text>
       </Stack>
     ),
-    order_status: (value) => (
+    order_type_summary: (_value, row) => (
       <Badge
-        colorScheme={statusColors[value] || 'gray'}
-        fontSize="sm"
+        bg="rgba(217, 70, 239, 0.14)"
+        color="#7C2D8E"
         px={2.5}
         py={1}
-        borderRadius="8px"
+        borderRadius="7px"
         textTransform="none"
+        fontSize="xs"
+        fontWeight="800"
       >
-        {formatStatus(value)}
+        {getOrderTypeLabel(row)}
       </Badge>
     ),
-    order_type: (value, row) => (
-      <Stack spacing={1} align="flex-start">
-        <Badge colorScheme="purple" fontSize="sm" px={2.5} py={1} borderRadius="8px">
-          {(row.shipping_mode || 'B2C').toUpperCase()}
-        </Badge>
-        <Badge colorScheme={value === 'cod' ? 'green' : 'green'} fontSize="xs" px={2.5} py={1} borderRadius="8px">
-          {(value || 'prepaid').toUpperCase()}
-        </Badge>
+    product_summary: (_value, row) => {
+      const isCod = String(row.order_type || '').toLowerCase() === 'cod'
+      return (
+        <Stack spacing={1} align="flex-start" minW="0">
+          <Text fontWeight="700" fontSize="sm" noOfLines={1}>
+            {getProductName(row)}
+          </Text>
+          <Badge
+            bg={isCod ? 'rgba(245, 158, 11, 0.14)' : 'rgba(16, 185, 129, 0.14)'}
+            color={isCod ? '#B45309' : '#047857'}
+            borderRadius="6px"
+            px={2}
+            py={0.5}
+            textTransform="none"
+            fontSize="xs"
+          >
+            {isCod ? 'COD' : 'Prepaid'}
+          </Badge>
+        </Stack>
+      )
+    },
+    invoice_summary: (_value, row) => {
+      const invoice = getInvoiceDetails(row)
+      return (
+        <Stack spacing={1} minW="0">
+          <Text fontWeight="800" fontSize="sm" noOfLines={1}>
+            {formatCurrency(invoice.amount, 2)}
+          </Text>
+          <Text color="gray.500" fontSize="xs" noOfLines={1}>
+            Invoice No: {invoice.invoiceNumber}
+          </Text>
+        </Stack>
+      )
+    },
+    sender_summary: (_value, row) => (
+      <Stack spacing={1} minW="0">
+        <Text fontWeight="700" fontSize="sm" noOfLines={1}>
+          {getSenderName(row)}
+        </Text>
+        <Text color="gray.500" fontSize="xs" noOfLines={1}>
+          {getSenderPhone(row) || '-'}
+        </Text>
       </Stack>
     ),
-    destination: (_value, row) => (
-      <Flex align="center" gap={2} minW="220px">
-        <Icon as={FiMapPin} color="gray.500" />
-        <Text fontWeight="600">
-          {[row.buyer_city, row.buyer_state].filter(Boolean).join(', ') || row.destination || 'N/A'}
+    receiver_summary: (_value, row) => (
+      <Stack spacing={1} minW="0">
+        <Text fontWeight="700" fontSize="sm" noOfLines={1}>
+          {getReceiverName(row)}
         </Text>
-      </Flex>
+        <Text color="gray.500" fontSize="xs" noOfLines={1}>
+          {getReceiverPhone(row) || '-'}
+        </Text>
+      </Stack>
     ),
-    courier_partner: (value, row) =>
-      value ? (
-        <Badge bg="rgba(249, 115, 22, 0.14)" color="#F97316" borderRadius="8px" px={2.5} py={1} textTransform="none">
-          {getCourierDisplayName(
-            {
-              name: value,
-              courier_id: row?.courier_id,
-              integration_type: row?.integration_type,
-            },
-            'Not Assigned',
-          )}
+    charged_weight_summary: (_value, row) => (
+      <Text fontWeight="800" fontSize="sm" whiteSpace="nowrap">
+        {formatKg(getChargedWeight(row))}
+      </Text>
+    ),
+    updated_summary: (_value, row) => (
+      <Text color="gray.500" fontSize="sm" whiteSpace="nowrap">
+        {formatDateTime(row.updated_at || row.order_date)}
+      </Text>
+    ),
+    status_summary: (_value, row) => {
+      const value = row.order_status
+      return (
+        <Badge
+          colorScheme={statusColors[value] || 'gray'}
+          fontSize="xs"
+          px={2.5}
+          py={1}
+          borderRadius="8px"
+          textTransform="none"
+        >
+          {formatStatus(value)}
         </Badge>
-      ) : (
-        <Text color="gray.500">Not Assigned</Text>
-      ),
-    awb_number: (value) => (
-      <Flex align="center" gap={2}>
-        <Text as="span" fontFamily="mono" fontSize="sm">
-          {value || 'N/A'}
-        </Text>
-        {value ? (
-          <Icon
-            as={FiCopy}
-            cursor="pointer"
-            color="gray.500"
-            _hover={{ color: '#6C5CE7' }}
-            onClick={(event) => {
-              event.stopPropagation()
-              navigator.clipboard.writeText(value)
-            }}
-          />
-        ) : null}
-      </Flex>
-    ),
-    order_amount: (value) => (
-      <Text fontWeight="800" fontSize="lg">
-        ₹{parseFloat(value || 0).toFixed(2)}
-      </Text>
-    ),
-    order_date: (value) => (
-      <Text color="gray.500" fontSize="lg">
-        {formatDate(value)}
-      </Text>
-    ),
+      )
+    },
     actions: (_value, row) => {
       const allowed = canCancelOrder(row)
       return (
@@ -198,14 +357,15 @@ const OrdersTable = ({
       setPerPage={setPerPage}
       perPageOptions={[10, 20, 50, 100]}
       columnWidths={{
-        order_summary: '260px',
-        order_status: '180px',
-        order_type: '120px',
-        destination: '280px',
-        courier_partner: '180px',
-        awb_number: '180px',
-        order_amount: '120px',
-        order_date: '140px',
+        tracking_summary: '230px',
+        order_type_summary: '140px',
+        product_summary: '150px',
+        invoice_summary: '170px',
+        sender_summary: '170px',
+        receiver_summary: '170px',
+        charged_weight_summary: '130px',
+        updated_summary: '150px',
+        status_summary: '150px',
         actions: '140px',
       }}
       onRowClick={onRowClick}
