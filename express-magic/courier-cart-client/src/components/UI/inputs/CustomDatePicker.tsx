@@ -48,6 +48,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
           orientation="landscape"
+          format="dd/MM/yyyy"
           value={value ? new Date(value as string) : null}
           onChange={(newValue: Date | null) => {
             if (onChange) {
