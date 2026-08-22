@@ -1,18 +1,22 @@
 import { alpha, Box, ButtonBase, Popover, Tooltip, Typography, useTheme } from '@mui/material'
-import { useState, type MouseEvent } from 'react'
+import { useState, type MouseEvent, type ReactNode } from 'react'
 import { AiTwotoneThunderbolt } from 'react-icons/ai'
+import {
+  TbBuildingBank,
+  TbBuildingWarehouse,
+  TbCalculator,
+  TbId,
+  TbPackageExport,
+  TbWallet,
+} from 'react-icons/tb'
 import { useNavigate } from 'react-router-dom'
-import addWarehouseImage from '../../assets/quick-actions/add-warehouse.png'
-import bookOrderImage from '../../assets/quick-actions/book-order.png'
-import earlyCodImage from '../../assets/quick-actions/early-cod.png'
-import rateCalculatorImage from '../../assets/quick-actions/rate-calculator.png'
-import rechargeWalletImage from '../../assets/quick-actions/recharge-wallet.png'
-import transporterIdImage from '../../assets/quick-actions/transporter-id.png'
 import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
 
 type QuickAction = {
   name: string
-  image: string
+  icon: ReactNode
+  accent: string
+  tint: string
   path?: string
   requiresMerchantReady?: boolean
 }
@@ -20,33 +24,45 @@ type QuickAction = {
 const actions: QuickAction[] = [
   {
     name: 'Rate Calculator',
-    image: rateCalculatorImage,
+    icon: <TbCalculator />,
+    accent: '#0D3B8E',
+    tint: '#EAF1FF',
     path: '/tools/rate_calculator',
   },
   {
     name: 'Add Warehouse',
-    image: addWarehouseImage,
+    icon: <TbBuildingWarehouse />,
+    accent: '#0F766E',
+    tint: '#E7F7F4',
     path: '/settings/manage_pickups',
   },
   {
     name: 'Recharge Wallet',
-    image: rechargeWalletImage,
+    icon: <TbWallet />,
+    accent: '#B45309',
+    tint: '#FFF4DE',
     path: '/billing/wallet_transactions?recharge=true',
   },
   {
     name: 'Early COD',
-    image: earlyCodImage,
+    icon: <TbBuildingBank />,
+    accent: '#BE123C',
+    tint: '#FFF0F3',
     path: '/cod-remittance',
   },
   {
     name: 'Book Order',
-    image: bookOrderImage,
+    icon: <TbPackageExport />,
+    accent: '#1D2842',
+    tint: '#EEF2F8',
     path: '/orders/create',
     requiresMerchantReady: true,
   },
   {
     name: 'Transporter ID',
-    image: transporterIdImage,
+    icon: <TbId />,
+    accent: '#7C3AED',
+    tint: '#F1ECFF',
     path: '/couriers/partners',
   },
 ]
@@ -136,7 +152,7 @@ export default function QuickActions() {
               mt: 1.15,
               width: { xs: 'calc(100vw - 24px)', sm: 600, md: 700 },
               maxWidth: 'calc(100vw - 24px)',
-              borderRadius: 2,
+              borderRadius: '10px',
               border: `1px solid ${border}`,
               bgcolor: surface,
               color: ink,
@@ -153,6 +169,9 @@ export default function QuickActions() {
             px: { xs: 1.5, sm: 2 },
             py: 1.25,
             borderBottom: `1px solid ${border}`,
+            background: isDark
+              ? 'linear-gradient(90deg, rgba(227,27,35,0.14), rgba(13,59,142,0.08))'
+              : 'linear-gradient(90deg, rgba(227,27,35,0.06), rgba(13,59,142,0.05))',
           }}
         >
           <Typography sx={{ color: ink, fontWeight: 700, fontSize: '0.95rem' }}>
@@ -181,46 +200,60 @@ export default function QuickActions() {
               onClick={() => handleAction(action)}
               sx={{
                 minWidth: 0,
-                minHeight: { xs: 126, md: 108 },
-                px: 1,
-                py: 1.2,
-                borderRadius: 1.5,
+                minHeight: { xs: 116, md: 106 },
+                px: 1.1,
+                py: 1.15,
+                borderRadius: '8px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
-                gap: 0.65,
+                gap: 0.8,
                 color: ink,
-                transition: 'background-color 160ms ease, transform 160ms ease',
+                border: `1px solid ${isDark ? alpha(action.accent, 0.3) : alpha(action.accent, 0.14)}`,
+                bgcolor: isDark ? alpha(action.accent, 0.1) : action.tint,
+                transition: 'background-color 160ms ease, border-color 160ms ease, transform 160ms ease',
                 '&:hover': {
-                  bgcolor: alpha(accent, isDark ? 0.11 : 0.07),
+                  bgcolor: alpha(action.accent, isDark ? 0.18 : 0.12),
+                  borderColor: alpha(action.accent, 0.34),
                   transform: 'translateY(-2px)',
                 },
                 '&:focus-visible': {
-                  outline: `2px solid ${accent}`,
+                  outline: `2px solid ${action.accent}`,
                   outlineOffset: -2,
                 },
               }}
             >
               <Box
-                component="img"
-                src={action.image}
-                alt=""
                 aria-hidden="true"
                 sx={{
-                  display: 'block',
-                  width: { xs: 72, md: 60 },
-                  height: { xs: 72, md: 60 },
-                  objectFit: 'contain',
-                  flexShrink: 0,
+                  width: 46,
+                  height: 46,
+                  borderRadius: '10px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: action.accent,
+                  bgcolor: isDark ? alpha('#FFFFFF', 0.06) : alpha('#FFFFFF', 0.72),
+                  border: `1px solid ${alpha(action.accent, isDark ? 0.28 : 0.18)}`,
+                  boxShadow: isDark
+                    ? 'none'
+                    : `0 10px 22px ${alpha(action.accent, 0.1)}`,
+                  '& svg': {
+                    width: 27,
+                    height: 27,
+                    strokeWidth: 1.9,
+                  },
                 }}
-              />
+              >
+                {action.icon}
+              </Box>
               <Typography
+                aria-hidden="true"
                 sx={{
                   width: '100%',
                   color: ink,
-                  fontSize: '0.83rem',
-                  lineHeight: 1.2,
-                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  lineHeight: 1.18,
+                  fontWeight: 700,
                   textAlign: 'center',
                   whiteSpace: 'normal',
                 }}
