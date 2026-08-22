@@ -11,9 +11,11 @@ import {
 } from "@chakra-ui/react";
 import {
   IconArrowBackUp,
+  IconBook,
   IconCalculator,
   IconChartBar,
   IconClipboardList,
+  IconCoinRupee,
   IconDashboard,
   IconDatabase,
   IconFileInvoice,
@@ -81,21 +83,51 @@ const sidebarItems = [
     icon: IconWallet,
     children: [
       {
-        label: "Invoices",
-        path: "/admin/billing-invoices",
-        icon: IconFileInvoice,
-      },
-      {
-        label: "Billing Preferences",
-        path: "/admin/billing-preferences",
-        icon: IconSettings,
+        label: "Passbook",
+        path: "/admin/passbook",
+        icon: IconBook,
       },
       {
         label: "COD Remittance",
         path: "/admin/cod-remittance",
         icon: IconWallet,
       },
-      { label: "Wallet", path: "/admin/wallet", icon: IconReceipt },
+      {
+        label: "Shipping Charges",
+        path: "/admin/shipping-charges",
+        icon: IconTruck,
+      },
+      {
+        label: "All Recharges",
+        path: "/admin/all-recharges",
+        icon: IconCoinRupee,
+      },
+      {
+        label: "Invoices",
+        path: "/admin/billing-invoices",
+        icon: IconFileInvoice,
+      },
+      {
+        label: "Credit Notes",
+        path: "/admin/credit-notes",
+        icon: IconReceipt,
+      },
+      {
+        label: "Debit Notes",
+        path: "/admin/debit-notes",
+        icon: IconClipboardList,
+      },
+      {
+        label: "Ledgers",
+        path: "/admin/ledgers",
+        icon: IconDatabase,
+      },
+      {
+        label: "Billing Preferences",
+        path: "/admin/billing-preferences",
+        icon: IconSettings,
+      },
+      { label: "Wallet Management", path: "/admin/wallet", icon: IconReceipt },
     ],
   },
   {

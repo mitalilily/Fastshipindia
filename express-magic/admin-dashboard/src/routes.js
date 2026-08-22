@@ -3,19 +3,24 @@ import {
   IconAlertTriangle,
   IconArrowBackUp,
   IconBell,
+  IconBook,
   IconChartBar,
+  IconClipboardList,
   IconCoinRupee,
   IconDashboard,
+  IconFileInvoice,
   IconHelpCircle,
   IconInfoCircle,
   IconKey,
   IconLogin2,
   IconPackageExport,
+  IconReceipt,
   IconSettings,
   IconStar,
   IconTools,
   IconTrack,
   IconTruck,
+  IconTruckDelivery,
   IconUser,
   IconUsers,
 } from "@tabler/icons-react";
@@ -32,6 +37,7 @@ import { MdGavel } from "react-icons/md";
 import { AdminRoute } from "views/Auth/AdminRoute";
 import SignIn from "views/Auth/SignIn";
 import AdminBillingInvoices from "views/Billing/AdminBillingInvoices";
+import AdminFinanceLedgerPage from "views/Billing/AdminFinanceLedgerPage";
 import AdminBillingPreferences from "views/Billing/AdminBillingPreferences";
 import Blogs from "views/Blogs/Blogs";
 import AdminCodRemittancePage from "views/CodRemittance/AdminCodRemittancePage";
@@ -317,7 +323,7 @@ const dashRoutes = [
   },
 
   // ========== FINANCIAL ==========
-  // Billing (Invoices, COD Remittance, Wallet)
+  // Billing (Passbook, COD Remittance, Charges, Invoices, Notes, Ledgers)
   {
     category: true,
     path: "/billing",
@@ -327,23 +333,12 @@ const dashRoutes = [
     layout: "/admin",
     views: [
       {
-        path: "/billing-invoices",
-        name: "Invoices",
-        icon: <MdAccountBalanceWallet />,
+        path: "/passbook",
+        name: "Passbook",
+        icon: <IconBook />,
         component: () => (
           <AdminRoute>
-            <AdminBillingInvoices />
-          </AdminRoute>
-        ),
-        layout: "/admin",
-      },
-      {
-        path: "/billing-preferences",
-        name: "Billing Preferences",
-        icon: <IconAdjustments />,
-        component: () => (
-          <AdminRoute>
-            <AdminBillingPreferences />
+            <AdminFinanceLedgerPage type="passbook" />
           </AdminRoute>
         ),
         layout: "/admin",
@@ -360,8 +355,85 @@ const dashRoutes = [
         layout: "/admin",
       },
       {
+        path: "/shipping-charges",
+        name: "Shipping Charges",
+        icon: <IconTruckDelivery />,
+        component: () => (
+          <AdminRoute>
+            <AdminFinanceLedgerPage type="shippingCharges" />
+          </AdminRoute>
+        ),
+        layout: "/admin",
+      },
+      {
+        path: "/all-recharges",
+        name: "All Recharges",
+        icon: <IconCoinRupee />,
+        component: () => (
+          <AdminRoute>
+            <AdminFinanceLedgerPage type="allRecharges" />
+          </AdminRoute>
+        ),
+        layout: "/admin",
+      },
+      {
+        path: "/billing-invoices",
+        name: "Invoices",
+        icon: <IconFileInvoice />,
+        component: () => (
+          <AdminRoute>
+            <AdminBillingInvoices />
+          </AdminRoute>
+        ),
+        layout: "/admin",
+      },
+      {
+        path: "/credit-notes",
+        name: "Credit Notes",
+        icon: <IconReceipt />,
+        component: () => (
+          <AdminRoute>
+            <AdminFinanceLedgerPage type="creditNotes" />
+          </AdminRoute>
+        ),
+        layout: "/admin",
+      },
+      {
+        path: "/debit-notes",
+        name: "Debit Notes",
+        icon: <IconClipboardList />,
+        component: () => (
+          <AdminRoute>
+            <AdminFinanceLedgerPage type="debitNotes" />
+          </AdminRoute>
+        ),
+        layout: "/admin",
+      },
+      {
+        path: "/ledgers",
+        name: "Ledgers",
+        icon: <IconFileInvoice />,
+        component: () => (
+          <AdminRoute>
+            <AdminFinanceLedgerPage type="ledgers" />
+          </AdminRoute>
+        ),
+        layout: "/admin",
+      },
+      {
+        path: "/billing-preferences",
+        name: "Billing Preferences",
+        icon: <IconAdjustments />,
+        component: () => (
+          <AdminRoute>
+            <AdminBillingPreferences />
+          </AdminRoute>
+        ),
+        layout: "/admin",
+      },
+      {
         path: "/wallet",
-        name: "Wallet",
+        name: "Wallet Management",
         icon: <IconCoinRupee />,
         component: () => (
           <AdminRoute>

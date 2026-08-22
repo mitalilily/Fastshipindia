@@ -1,7 +1,7 @@
 import apiClient from './axios'
 
-export const listAdminBillingInvoices = async ({ page = 1, limit = 20, status, sellerId } = {}) => {
-  const params = { page, limit, status, sellerId }
+export const listAdminBillingInvoices = async ({ page = 1, limit = 20, status, sellerId, search = '' } = {}) => {
+  const params = { page, limit, status, sellerId, search }
   const { data } = await apiClient.get('/admin/billing/invoices', { params })
   return data
 }

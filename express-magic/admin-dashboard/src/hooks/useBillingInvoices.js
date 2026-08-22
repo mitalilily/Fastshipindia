@@ -10,10 +10,10 @@ import {
 } from 'services/billingInvoices.service'
 
 export function useAdminBillingInvoices(params) {
-  const { page = 1, limit = 20, status, sellerId } = params || {}
+  const { page = 1, limit = 20, status, sellerId, search = '' } = params || {}
   return useQuery({
-    queryKey: ['admin-billing-invoices', page, limit, status, sellerId],
-    queryFn: () => listAdminBillingInvoices({ page, limit, status, sellerId }),
+    queryKey: ['admin-billing-invoices', page, limit, status, sellerId, search],
+    queryFn: () => listAdminBillingInvoices({ page, limit, status, sellerId, search }),
     keepPreviousData: true,
   })
 }
