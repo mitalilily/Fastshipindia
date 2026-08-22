@@ -517,7 +517,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                         sx={{
                           position: 'sticky',
                           top: 0,
-                          background: headerBg,
+                          background: isShipmentVariant ? '#FFFFFF' : headerBg,
                           borderBottom: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
                           zIndex: theme.zIndex.appBar + 1,
                           width: isShipmentVariant ? 38 : undefined,
@@ -525,6 +525,9 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                           maxWidth: isShipmentVariant ? 38 : undefined,
                           py: isShipmentVariant ? 0.95 : isCompact ? 0.75 : 1.4,
                           px: isShipmentVariant ? 0.45 : undefined,
+                          boxShadow: isShipmentVariant
+                            ? `inset 0 0 0 1px ${alpha(textPrimary, 0.08)}`
+                            : undefined,
                         }}
                       >
                         <CustomCheckbox
@@ -681,6 +684,8 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                                 minWidth: isShipmentVariant ? 38 : undefined,
                                 maxWidth: isShipmentVariant ? 38 : undefined,
                                 px: isShipmentVariant ? 0.45 : undefined,
+                                backgroundColor: isDark ? surface : '#FFFFFF',
+                                overflow: 'hidden',
                               }}
                             >
                               <CustomCheckbox

@@ -1,15 +1,15 @@
 import { Box } from '@mui/material'
 import Checkbox, { type CheckboxProps } from '@mui/material/Checkbox'
 
-// Improved tick SVG with animation - extends outside box
+// Compact tick stays inside the checkbox, so selected rows do not bleed into table edges.
 const CustomTick = ({ checked }: { checked?: boolean }) => (
   <svg
-    width="28"
-    height="28"
+    width="14"
+    height="14"
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#3DD598" // Green accent color
-    strokeWidth="3"
+    stroke="#FFFFFF"
+    strokeWidth="3.2"
     strokeLinecap="round"
     strokeLinejoin="round"
     style={{
@@ -59,18 +59,18 @@ export default function CustomCheckbox(props: CheckboxProps) {
             width: 20,
             height: 20,
             borderRadius: '6px',
-            border: '2px solid #333369',
+            border: '2px solid #0B3A78',
             boxSizing: 'border-box',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
-            backgroundColor: '#FFFFFF', // White background when checked
+            backgroundColor: '#0B3A78',
             transition: 'all 0.2s ease',
-            overflow: 'visible', // Allow tick to extend outside
+            overflow: 'hidden',
             '&:hover': {
-              borderColor: '#2F3B5F',
-              boxShadow: '0 0 0 3px rgba(51, 51, 105, 0.12)',
+              borderColor: '#0B3A78',
+              boxShadow: '0 0 0 3px rgba(11, 58, 120, 0.12)',
             },
           }}
         >
@@ -79,7 +79,7 @@ export default function CustomCheckbox(props: CheckboxProps) {
       }
       sx={{
         padding: '8px',
-        overflow: 'visible', // Allow tick to extend outside checkbox area
+        overflow: 'hidden',
         '&:hover': {
           backgroundColor: 'rgba(51, 51, 105, 0.04)',
         },
@@ -92,7 +92,7 @@ export default function CustomCheckbox(props: CheckboxProps) {
           color: 'rgba(51, 51, 105, 0.3)',
         },
         '& svg': {
-          overflow: 'visible', // Ensure SVG tick can extend beyond bounds
+          overflow: 'hidden',
         },
       }}
     />
