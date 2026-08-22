@@ -1,10 +1,24 @@
-import { Box, Button, HStack, Text } from '@chakra-ui/react'
+import {
+  Box,
+  Button,
+  HStack,
+  IconButton,
+  Input,
+  Select,
+  Stack,
+  Text,
+  useToast,
+} from '@chakra-ui/react'
 import {
   IconBook,
+  IconChevronLeft,
+  IconChevronRight,
   IconClipboardList,
   IconCoinRupee,
+  IconDownload,
   IconFileInvoice,
   IconReceipt,
+  IconRefresh,
   IconTruckDelivery,
 } from '@tabler/icons-react'
 import {
@@ -16,9 +30,8 @@ import {
   SoftBadge,
   ToolbarCard,
 } from 'components/AdminUI/AdminPage'
-import { useAdminBillingInvoices } from 'hooks/useBillingInvoices'
-import { useAdminWallets } from 'hooks/useWallet'
-import { useState } from 'react'
+import { useAdminWalletMisReport, useExportAdminWalletMisReport } from 'hooks/useWallet'
+import { useMemo, useState } from 'react'
 import { useHistory } from 'react-router-dom'
 
 const money = (value) =>
@@ -27,216 +40,126 @@ const money = (value) =>
     maximumFractionDigits: 2,
   })}`
 
-const formatDate = (value) => {
+const formatDateTime = (value) => {
   if (!value) return '-'
   const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? '-'
-    : date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('en-IN')
 }
-
-const sellerName = (row) =>
-  row?.userName ||
-  row?.companyInfo?.contactPerson ||
-  row?.companyInfo?.brandName ||
-  row?.companyInfo?.businessName ||
-  row?.userEmail ||
-  row?.userPhone ||
-  'Seller'
-
-const businessName = (row) =>
-  row?.businessName ||
-  row?.companyName ||
-  row?.companyInfo?.businessName ||
-  row?.companyInfo?.brandName ||
-  '-'
 
 const pageCopy = {
   passbook: {
     icon: IconBook,
     title: 'Passbook',
-    subtitle: 'Seller wallet balances, deductions, and finance activity in one place',
-    dataSource: 'wallets',
-    search: 'Search seller, email, or phone...',
+    subtitle: 'Complete seller wallet passbook across credits, debits, shipments, and adjustments',
+    search: 'Search seller, email, AWB, reason...',
+    params: {},
   },
   shippingCharges: {
     icon: IconTruckDelivery,
     title: 'Shipping Charges',
-    subtitle: 'Review shipment deductions generated through billing invoices',
-    dataSource: 'invoices',
-    search: 'Search invoice, seller, or business...',
+    subtitle: 'Shipment-related wallet deductions with AWB, courier, weight, and reference details',
+    search: 'Search AWB, seller, courier...',
+    params: { type: 'debit', shipmentOnly: true },
   },
   allRecharges: {
     icon: IconCoinRupee,
     title: 'All Recharges',
-    subtitle: 'Track recharge-ready wallets and seller wallet funding status',
-    dataSource: 'wallets',
-    search: 'Search recharge by seller, email, or phone...',
+    subtitle: 'Wallet recharge credits collected from sellers',
+    search: 'Search recharge by seller, email, reference...',
+    params: { type: 'credit', transactionAgainst: 'wallet recharge' },
   },
   creditNotes: {
     icon: IconReceipt,
     title: 'Credit Notes',
-    subtitle: 'Seller credits, refunds, COD offsets, and invoice adjustments',
-    dataSource: 'invoices',
-    search: 'Search credit note, invoice, or seller...',
+    subtitle: 'Credit note and waiver wallet credits issued to sellers',
+    search: 'Search credit note, seller, reference...',
+    params: { type: 'credit', transactionAgainst: 'Credit note' },
   },
   debitNotes: {
     icon: IconClipboardList,
     title: 'Debit Notes',
-    subtitle: 'Additional deductions, invoice adjustments, and wallet debits',
-    dataSource: 'invoices',
-    search: 'Search debit note, invoice, or seller...',
+    subtitle: 'Debit wallet entries such as penalties, chargebacks, weight disputes, and other charges',
+    search: 'Search debit note, seller, AWB, reason...',
+    params: { type: 'debit' },
   },
   ledgers: {
     icon: IconFileInvoice,
     title: 'Ledgers',
-    subtitle: 'Consolidated seller finance ledger for invoices and wallet balances',
-    dataSource: 'wallets',
-    search: 'Search ledger by seller, email, or phone...',
+    subtitle: 'Consolidated seller finance ledger with every classified wallet transaction',
+    search: 'Search ledger by seller, email, AWB, reason...',
+    params: {},
   },
 }
 
-function invoiceNumber(row) {
-  return row.invoiceNo || row.invoice_number || row.invoiceId || row.id || '-'
-}
+const transactionBadgeScheme = (rawType) =>
+  String(rawType || '').toLowerCase() === 'credit' ? 'green' : 'red'
 
-function invoiceTotal(row) {
-  return Number(row.totalAmount || row.netPayable || row.amount || row.shippingCharges || 0)
+const downloadBlob = (blob, filename) => {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
 }
 
 export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
   const history = useHistory()
+  const toast = useToast()
   const config = pageCopy[type] || pageCopy.passbook
   const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
-  const limit = 20
-  const walletsQuery = useAdminWallets(
-    config.dataSource === 'wallets'
-      ? {
-          page,
-          limit,
-          search,
-          sortBy: 'updatedAt',
-          sortOrder: 'desc',
-        }
-      : null,
-  )
-  const invoicesQuery = useAdminBillingInvoices(
-    config.dataSource === 'invoices'
-      ? {
-          page,
-          limit,
-          search,
-        }
-      : null,
+  const [transactionType, setTransactionType] = useState(config.params.type || '')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const requestParams = useMemo(
+    () => ({
+      page,
+      limit,
+      search,
+      ...config.params,
+      type: transactionType || config.params.type || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+    }),
+    [config.params, dateFrom, dateTo, limit, page, search, transactionType],
   )
 
-  const wallets = walletsQuery.data?.data || []
-  const invoices = invoicesQuery.data?.invoices || invoicesQuery.data?.data || []
-  const rows = config.dataSource === 'wallets' ? wallets : invoices
-  const totalCount =
-    config.dataSource === 'wallets'
-      ? walletsQuery.data?.totalCount || wallets.length
-      : invoicesQuery.data?.totalCount || invoices.length
-  const isLoading = config.dataSource === 'wallets' ? walletsQuery.isLoading : invoicesQuery.isLoading
-  const walletSummary = walletsQuery.data?.summary || {}
-  const invoiceTotalAmount = invoices.reduce((sum, row) => sum + invoiceTotal(row), 0)
+  const reportQuery = useAdminWalletMisReport(requestParams)
+  const exportReport = useExportAdminWalletMisReport()
+  const rows = reportQuery.data?.data || []
+  const totalCount = reportQuery.data?.totalCount || 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / limit))
+  const canChangeType = !config.params.type
 
-  const walletColumns = [
-    {
-      key: 'seller',
-      label: 'Seller',
-      render: (_value, row) => (
-        <Box>
-          <Text fontWeight="800">{sellerName(row)}</Text>
-          <Text color="#607397" fontSize="13px" noOfLines={1}>
-            {row.userEmail || row.userPhone || '-'}
-          </Text>
-        </Box>
-      ),
-    },
-    {
-      key: 'business',
-      label: 'Business',
-      render: (_value, row) => businessName(row),
-    },
-    {
-      key: 'balance',
-      label: type === 'allRecharges' ? 'Recharge Balance' : 'Current Balance',
-      align: 'right',
-      render: (value) => (
-        <Text fontWeight="800" color={Number(value || 0) > 0 ? '#047857' : '#607397'}>
-          {money(value)}
-        </Text>
-      ),
-    },
-    {
-      key: 'approved',
-      label: 'Status',
-      render: (value) => (
-        <SoftBadge colorScheme={value ? 'green' : 'orange'}>
-          {value ? 'Active' : 'Pending'}
-        </SoftBadge>
-      ),
-    },
-    {
-      key: 'updatedAt',
-      label: 'Last Activity',
-      render: (value, row) => formatDate(value || row.updated_at || row.createdAt),
-    },
-  ]
+  const visibleCredit = rows
+    .filter((row) => String(row.rawTransactionType).toLowerCase() === 'credit')
+    .reduce((sum, row) => sum + Number(row.walletTransactionAmount || 0), 0)
+  const visibleDebit = rows
+    .filter((row) => String(row.rawTransactionType).toLowerCase() === 'debit')
+    .reduce((sum, row) => sum + Number(row.walletTransactionAmount || 0), 0)
 
-  const invoiceColumns = [
-    {
-      key: 'invoiceNo',
-      label: type === 'shippingCharges' ? 'Charge Ref' : 'Document #',
-      render: (_value, row) => (
-        <Box>
-          <Text fontWeight="800">{invoiceNumber(row)}</Text>
-          <Text color="#607397" fontSize="13px">
-            {formatDate(row.createdAt || row.created_at)}
-          </Text>
-        </Box>
-      ),
-    },
-    {
-      key: 'user',
-      label: 'Seller',
-      render: (_value, row) => (
-        <Box>
-          <Text noOfLines={1}>{row.userEmail || row.email || '-'}</Text>
-          <Text color="#607397" fontSize="13px">
-            {businessName(row)}
-          </Text>
-        </Box>
-      ),
-    },
-    {
-      key: 'period',
-      label: 'Period',
-      render: (_value, row) => `${formatDate(row.periodFrom || row.startDate)} - ${formatDate(row.periodTo || row.endDate)}`,
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (value) => <SoftBadge colorScheme="blue">{String(value || 'Generated')}</SoftBadge>,
-    },
-    {
-      key: 'totalAmount',
-      label:
-        type === 'creditNotes'
-          ? 'Credit Amount'
-          : type === 'debitNotes'
-            ? 'Debit Amount'
-            : 'Amount',
-      align: 'right',
-      render: (_value, row) => <Text fontWeight="800">{money(invoiceTotal(row))}</Text>,
-    },
-  ]
+  const handleExport = async () => {
+    try {
+      const blob = await exportReport.mutateAsync({
+        ...requestParams,
+        page: 1,
+        limit: 5000,
+      })
+      downloadBlob(blob, `${config.title.toLowerCase().replace(/\s+/g, '-')}.csv`)
+      toast({ status: 'success', title: `${config.title} exported` })
+    } catch (error) {
+      toast({
+        status: 'error',
+        title: 'Export failed',
+        description: error?.response?.data?.message || error?.message || 'Please try again.',
+      })
+    }
+  }
 
   return (
     <AdminStack>
@@ -245,30 +168,16 @@ export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
         title={config.title}
         subtitle={config.subtitle}
         right={
-          <HStack spacing="28px" wrap="wrap">
+          <HStack spacing="24px" wrap="wrap">
             <Metric icon={config.icon} value={totalCount} label="records" color="#0D3B8E" />
-            <Metric
-              icon={IconCoinRupee}
-              value={
-                config.dataSource === 'wallets'
-                  ? money(walletSummary.totalBalance || 0)
-                  : money(invoiceTotalAmount)
-              }
-              label={config.dataSource === 'wallets' ? 'wallet balance' : 'visible amount'}
-              color="#C81E2B"
-            />
-            <Metric
-              icon={IconReceipt}
-              value={config.dataSource === 'wallets' ? walletSummary.withBalance || 0 : invoices.length}
-              label={config.dataSource === 'wallets' ? 'with balance' : 'loaded docs'}
-              color="#047857"
-            />
+            <Metric icon={IconCoinRupee} value={money(visibleCredit)} label="visible credits" color="#047857" />
+            <Metric icon={IconReceipt} value={money(visibleDebit)} label="visible debits" color="#C2410C" />
           </HStack>
         }
       />
 
       <ToolbarCard>
-        <HStack spacing="14px" align="end" wrap="wrap">
+        <Stack direction={{ base: 'column', xl: 'row' }} spacing="14px" align={{ base: 'stretch', xl: 'end' }}>
           <Box>
             <Text color="#41557A" fontSize="14px" mb="7px">
               Search
@@ -283,28 +192,212 @@ export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
               maxW="360px"
             />
           </Box>
-          <HStack ml="auto" mt="27px" spacing="10px">
-            <Button variant="outline" onClick={() => history.push('/admin/wallet')}>
-              Open Wallets
+          <Box>
+            <Text color="#41557A" fontSize="14px" mb="7px">
+              Type
+            </Text>
+            <Select
+              value={transactionType}
+              isDisabled={!canChangeType}
+              onChange={(event) => {
+                setTransactionType(event.target.value)
+                setPage(1)
+              }}
+              w={{ base: '100%', md: '170px' }}
+            >
+              <option value="">All types</option>
+              <option value="credit">Credit</option>
+              <option value="debit">Debit</option>
+            </Select>
+          </Box>
+          <Box>
+            <Text color="#41557A" fontSize="14px" mb="7px">
+              From
+            </Text>
+            <Input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(event) => {
+                setDateFrom(event.target.value)
+                setPage(1)
+              }}
+              w={{ base: '100%', md: '170px' }}
+            />
+          </Box>
+          <Box>
+            <Text color="#41557A" fontSize="14px" mb="7px">
+              To
+            </Text>
+            <Input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(event) => {
+                setDateTo(event.target.value)
+                setPage(1)
+              }}
+              w={{ base: '100%', md: '170px' }}
+            />
+          </Box>
+          <HStack ml={{ base: 0, xl: 'auto' }} spacing="10px">
+            <Button
+              leftIcon={<IconRefresh size={17} />}
+              variant="outline"
+              onClick={() => reportQuery.refetch()}
+              isLoading={reportQuery.isFetching}
+            >
+              Refresh
             </Button>
-            <Button variant="outline" onClick={() => history.push('/admin/billing-invoices')}>
-              Open Invoices
+            <Button
+              leftIcon={<IconDownload size={17} />}
+              colorScheme="blue"
+              onClick={handleExport}
+              isLoading={exportReport.isPending}
+            >
+              Export CSV
             </Button>
           </HStack>
-        </HStack>
+        </Stack>
       </ToolbarCard>
 
       <DataTable
-        loading={isLoading}
+        loading={reportQuery.isLoading}
         rows={rows}
         emptyText={`No ${config.title.toLowerCase()} records found`}
-        columns={config.dataSource === 'wallets' ? walletColumns : invoiceColumns}
+        rowKey="id"
+        columns={[
+          {
+            key: 'customerName',
+            label: 'Seller',
+            render: (_value, row) => (
+              <Box>
+                <Text fontWeight="800" noOfLines={1}>
+                  {row.customerName || 'Seller'}
+                </Text>
+                <Text color="#607397" fontSize="13px" noOfLines={1}>
+                  {row.customerEmail || row.customerId || '-'}
+                </Text>
+              </Box>
+            ),
+          },
+          {
+            key: 'transactionDate',
+            label: 'Date',
+            render: (value) => formatDateTime(value),
+          },
+          {
+            key: 'walletTransactionAmount',
+            label: 'Amount',
+            align: 'right',
+            render: (value, row) => (
+              <Text
+                fontWeight="800"
+                color={String(row.rawTransactionType).toLowerCase() === 'credit' ? '#047857' : '#C2410C'}
+              >
+                {String(row.rawTransactionType).toLowerCase() === 'credit' ? '+' : '-'}
+                {money(value)}
+              </Text>
+            ),
+          },
+          {
+            key: 'transactionAgainst',
+            label: 'Against',
+            render: (value) => <SoftBadge colorScheme="purple">{value || 'Ledger entry'}</SoftBadge>,
+          },
+          {
+            key: 'transactionType',
+            label: 'Type',
+            render: (value, row) => (
+              <SoftBadge colorScheme={transactionBadgeScheme(row.rawTransactionType)}>
+                {value || '-'}
+              </SoftBadge>
+            ),
+          },
+          {
+            key: 'awb',
+            label: 'AWB',
+            render: (value) => value || '-',
+          },
+          {
+            key: 'courierPartnerName',
+            label: 'Courier',
+            render: (value) => value || '-',
+          },
+          {
+            key: 'weight',
+            label: 'Weight',
+            align: 'right',
+            render: (value) => (value ? `${Number(value).toFixed(2)} kg` : '-'),
+          },
+          {
+            key: 'rawReason',
+            label: 'Reason',
+            render: (value, row) => (
+              <Box>
+                <Text noOfLines={1}>{value || row.reference || '-'}</Text>
+                {row.reference ? (
+                  <Text color="#607397" fontSize="12px" noOfLines={1}>
+                    Ref: {row.reference}
+                  </Text>
+                ) : null}
+              </Box>
+            ),
+          },
+        ]}
+        actions={(row) => (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              history.push(`/admin/users-management?search=${encodeURIComponent(row.customerEmail || row.customerName || '')}`)
+            }
+          >
+            Seller
+          </Button>
+        )}
         footer={
-          <Text color="#607397">
-            {Math.min(page * limit, totalCount)} of {totalCount}
-          </Text>
+          <HStack spacing="12px">
+            <Text color="#607397">
+              {totalCount
+                ? `${Math.min((page - 1) * limit + 1, totalCount)}-${Math.min(page * limit, totalCount)} of ${totalCount}`
+                : '0 records'}
+            </Text>
+            <Select
+              value={limit}
+              onChange={(event) => {
+                setLimit(Number(event.target.value))
+                setPage(1)
+              }}
+              w="120px"
+              size="sm"
+            >
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </Select>
+            <IconButton
+              aria-label="Previous page"
+              icon={<IconChevronLeft size={18} />}
+              size="sm"
+              variant="outline"
+              isDisabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            />
+            <Text fontSize="13px" color="#41557A">
+              {page} / {totalPages}
+            </Text>
+            <IconButton
+              aria-label="Next page"
+              icon={<IconChevronRight size={18} />}
+              size="sm"
+              variant="outline"
+              isDisabled={page >= totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            />
+          </HStack>
         }
-        minW={config.dataSource === 'wallets' ? '1040px' : '1120px'}
+        minW="1360px"
       />
     </AdminStack>
   )

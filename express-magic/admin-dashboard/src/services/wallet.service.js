@@ -17,6 +17,42 @@ export const getAdminWalletTransactions = async (userId, { page = 1, limit = 50,
   return data
 }
 
+export const listAdminWalletMisReport = async ({
+  page = 1,
+  limit = 20,
+  search = '',
+  type,
+  transactionAgainst,
+  dateFrom,
+  dateTo,
+  awb,
+  courier,
+  shipmentOnly,
+} = {}) => {
+  const params = {
+    page,
+    limit,
+    search,
+    type,
+    transactionAgainst,
+    dateFrom,
+    dateTo,
+    awb,
+    courier,
+    shipmentOnly,
+  }
+  const { data } = await apiClient.get('/admin/wallets/mis-report', { params })
+  return data
+}
+
+export const exportAdminWalletMisReport = async (params = {}) => {
+  const { data } = await apiClient.get('/admin/wallets/mis-report/export', {
+    params,
+    responseType: 'blob',
+  })
+  return data
+}
+
 export const adjustAdminWalletBalance = async (userId, { type, amount, reason, notes }) => {
   const { data } = await apiClient.post(`/admin/wallets/${userId}/adjust`, {
     type,
