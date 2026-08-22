@@ -10119,7 +10119,7 @@ export const createB2BShipmentService = async (
           breadth: Number(box?.breadth ?? box?.breadthCm ?? 0),
           height: Number(box?.height ?? box?.heightCm ?? 0),
           weight: Number(box?.weight ?? box?.weightKg ?? 0),
-          quantity: Number(box?.quantity ?? 1),
+          quantity: Number(box?.quantity ?? box?.box_count ?? 1),
         }))
         .filter(
           (box: any) =>
@@ -10275,7 +10275,11 @@ export const createB2BShipmentService = async (
       originPincode: params.pickup?.pincode ?? '',
       destinationPincode: params.consignee.pincode,
       weightKg:
-        inferredBoxes.reduce((sum: number, box: any) => sum + Number(box.weight ?? 0), 0) ||
+        inferredBoxes.reduce(
+          (sum: number, box: any) =>
+            sum + Number(box.weight ?? 0) * Math.max(1, Number(box.quantity || 1)),
+          0,
+        ) ||
         Number(params.package_weight ?? 0),
       length:
         (inferredBoxes.length
@@ -10493,10 +10497,16 @@ export const createB2BShipmentService = async (
 
   const boxes = inferredBoxes
 
-  const totalDeadWeight = boxes.reduce((sum: number, b: any) => sum + Number(b.weight ?? 0), 0)
+  const totalDeadWeight = boxes.reduce(
+    (sum: number, b: any) =>
+      sum + Number(b.weight ?? 0) * Math.max(1, Number(b.quantity || 1)),
+    0,
+  )
   const totalVolumetricWeight = boxes.reduce(
     (sum: number, b: any) =>
-      sum + (Number(b.length ?? 0) * Number(b.breadth ?? 0) * Number(b.height ?? 0)) / 5000,
+      sum +
+      ((Number(b.length ?? 0) * Number(b.breadth ?? 0) * Number(b.height ?? 0)) / 4500) *
+        Math.max(1, Number(b.quantity || 1)),
     0,
   )
 

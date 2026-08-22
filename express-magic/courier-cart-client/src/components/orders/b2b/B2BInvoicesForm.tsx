@@ -67,8 +67,9 @@ export default function B2BInvoicesForm() {
     if (!Array.isArray(boxes)) return 0
     return boxes.reduce((sum: number, box: unknown) => {
       if (box && typeof box === 'object' && box !== null && 'weightKg' in box) {
-        const boxWithWeight = box as { weightKg?: number }
-        return sum + b2bBoxWeightInputToKg(boxWithWeight.weightKg)
+        const boxWithWeight = box as { quantity?: number; weightKg?: number }
+        const quantity = Math.max(1, Math.floor(Number(boxWithWeight.quantity || 1)))
+        return sum + b2bBoxWeightInputToKg(boxWithWeight.weightKg) * quantity
       }
       return sum
     }, 0)

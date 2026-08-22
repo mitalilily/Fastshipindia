@@ -33,6 +33,8 @@ const calculateB2BVolumetricKg = (
   const volumeCm3 = length * breadth * height
   return factor <= 100 ? (volumeCm3 / 28316.846592) * factor : volumeCm3 / factor
 }
+const getB2BBoxQuantity = (box?: Partial<B2BBox>) =>
+  Math.max(1, Math.floor(Number(box?.quantity || 1)))
 
 const computeInsuranceChargePreview = ({
   enabled,
@@ -98,6 +100,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     // B2B uses flat boxes array, not nested in products
     if (b2bBoxes && Array.isArray(b2bBoxes)) {
       b2bBoxes.forEach((box: B2BBox) => {
+        const quantity = getB2BBoxQuantity(box)
         const actualWeightKg = b2bBoxWeightInputToKg(box.weightKg)
         const length = Number(box.lengthCm ?? 0) // in cm
         const breadth = Number(box.breadthCm ?? 0) // in cm
@@ -105,8 +108,8 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
 
         const volumetricWeightKg = calculateB2BVolumetricKg(length, breadth, height)
 
-        totalActualWeight += actualWeightKg * 1000
-        totalVolumetricWeight += volumetricWeightKg * 1000
+        totalActualWeight += actualWeightKg * quantity * 1000
+        totalVolumetricWeight += volumetricWeightKg * quantity * 1000
       })
     }
     totalActualWeight =
@@ -171,6 +174,10 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const b2bBreadth = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.breadthCm || 0)))
   const b2bHeight = Math.max(0, ...(b2bBoxes ?? []).map((box) => Number(box.heightCm || 0)))
   const courierRequestWeight = shipment_type === 'b2b' ? totalActualWeight / 1000 : totalWeight
+  const totalB2BBoxCount =
+    shipment_type === 'b2b'
+      ? (b2bBoxes ?? []).reduce((sum, box) => sum + getB2BBoxQuantity(box), 0)
+      : 0
 
   const courierPayload: UseAvailableCouriersParams = {
     pickupPincode,
@@ -279,7 +286,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     if (!b2bBoxes?.length) return Number(totalWeight || 0) / 1000
 
     const calculatedActualWeightKg = b2bBoxes.reduce(
-      (sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg),
+      (sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg) * getB2BBoxQuantity(box),
       0,
     )
     const actualWeightKg =
@@ -292,7 +299,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
         factor,
       )
 
-      return sum + volumetricWeightKg
+      return sum + volumetricWeightKg * getB2BBoxQuantity(box)
     }, 0)
 
     return Math.max(actualWeightKg, volumetricWeightKg)
@@ -574,7 +581,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
                 <BiPackage color={ACCENT} size={18} />
                 <Typography sx={{ color: TEXT_SECONDARY, fontSize: 14 }}>
                   {shipment_type === 'b2b'
-                    ? `${(watch('boxes') as B2BBox[] | undefined)?.length || 0} boxes`
+                    ? `${totalB2BBoxCount || 0} boxes`
                     : `${products?.length || 0} products`}
                 </Typography>
               </Stack>

@@ -39,6 +39,7 @@ const generateInvoiceNumber = () => `INV-${Date.now()}`
 
 // Box structure - top level array
 export type Box = {
+  quantity: number
   lengthCm: number
   breadthCm: number
   heightCm: number
@@ -166,6 +167,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
     defaultValues: {
       boxes: [
         {
+          quantity: 1,
           lengthCm: 0,
           breadthCm: 0,
           heightCm: 0,
@@ -254,7 +256,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   const getPackageSummary = (boxes: Box[] = [], totalWeight?: number) => {
     const validBoxes = boxes.filter(Boolean)
     const calculatedWeight = validBoxes.reduce(
-      (sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg),
+      (sum, box) =>
+        sum + b2bBoxWeightInputToKg(box.weightKg) * Math.max(1, Number(box.quantity || 1)),
       0,
     )
     const enteredWeight = Number(totalWeight || 0)
@@ -337,6 +340,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         // Boxes array
         boxes:
           data?.boxes?.map((box) => ({
+            quantity: Math.max(1, Math.floor(Number(box.quantity || 1))),
+            box_count: Math.max(1, Math.floor(Number(box.quantity || 1))),
             lengthCm: Number(box.lengthCm || 0),
             breadthCm: Number(box.breadthCm || 0),
             heightCm: Number(box.heightCm || 0),
@@ -429,6 +434,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         ]) ?? []
       const boxFields =
         values.boxes?.flatMap((_, index) => [
+          `boxes.${index}.quantity`,
           `boxes.${index}.lengthCm`,
           `boxes.${index}.breadthCm`,
           `boxes.${index}.heightCm`,
@@ -474,6 +480,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
   const getFieldLabel = (field: string) => {
     if (field.includes('.productName')) return 'Product name'
+    if (field.includes('.quantity') && field.includes('boxes.')) return 'No. of boxes'
     if (field.includes('.quantity')) return 'Product quantity'
     if (field.includes('.unitPrice')) return 'Product price'
     if (field.includes('.invoiceNumber')) return 'Invoice number'

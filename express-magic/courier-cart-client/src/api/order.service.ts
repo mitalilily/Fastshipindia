@@ -191,6 +191,8 @@ export type CreateB2BShipmentParams = {
 
   // Boxes array
   boxes: Array<{
+    quantity: number
+    box_count?: number
     lengthCm: number
     breadthCm: number
     heightCm: number

@@ -18,16 +18,19 @@ import CustomInput from '../../UI/inputs/CustomInput'
 import type { B2BFormData } from './B2BOrderForm'
 
 const emptyProduct = { productName: '', quantity: 1, unitPrice: 0 }
-const emptyBox = { lengthCm: 0, breadthCm: 0, heightCm: 0, weightKg: 0 }
+const emptyBox = { quantity: 1, lengthCm: 0, breadthCm: 0, heightCm: 0, weightKg: 0 }
 const DEFAULT_B2B_VOLUMETRIC_DIVISOR = 4500
 
 const roundWeight = (value: number) => Number(value.toFixed(2))
+const getBoxQuantity = (box?: Partial<B2BFormData['boxes'][number]>) =>
+  Math.max(1, Math.floor(Number(box?.quantity || 1)))
 
 const calculateTotalVolumetricWeight = (
   boxes: B2BFormData['boxes'] = [],
   cftFactor = DEFAULT_B2B_VOLUMETRIC_DIVISOR,
 ) =>
   boxes.reduce((sum, box) => {
+    const quantity = getBoxQuantity(box)
     const length = Number(box.lengthCm || 0)
     const breadth = Number(box.breadthCm || 0)
     const height = Number(box.heightCm || 0)
@@ -38,7 +41,7 @@ const calculateTotalVolumetricWeight = (
     const volumetricWeight =
       cftFactor <= 100 ? (volumeCm3 / 28316.846592) * cftFactor : volumeCm3 / cftFactor
 
-    return sum + volumetricWeight
+    return sum + volumetricWeight * quantity
   }, 0)
 
 const ProductBoxesForm = () => {
@@ -68,9 +71,9 @@ const ProductBoxesForm = () => {
   const totalWeight = useWatch({ control, name: 'weight' })
   const pickupPincode = watch('pickupLocationPincode')
   const deliveryPincode = watch('pincode')
-  const totalBoxes = boxes.length
+  const totalBoxes = boxes.reduce((sum, box) => sum + getBoxQuantity(box), 0)
   const automaticActualWeight = roundWeight(
-    boxes.reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg), 0),
+    boxes.reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg) * getBoxQuantity(box), 0),
   )
   const enteredActualWeight = Number(totalWeight || 0)
   const effectiveActualWeight = enteredActualWeight > 0 ? enteredActualWeight : automaticActualWeight
@@ -131,8 +134,9 @@ const ProductBoxesForm = () => {
             validDimensionBoxes,
             cftFactor,
           )
-          const totalVolumetricWeight = Number(
-            calculation.volumetricWeight || calculation.volumetric_weight || fallbackVolumetricWeight,
+          const totalVolumetricWeight = Math.max(
+            fallbackVolumetricWeight,
+            Number(calculation.volumetricWeight || calculation.volumetric_weight || 0),
           )
           const apiBillableWeight = Number(
             calculation.billableWeight || calculation.billable_weight || 0,
@@ -192,6 +196,7 @@ const ProductBoxesForm = () => {
         `boxes.${lastIndex}.breadthCm`,
         `boxes.${lastIndex}.heightCm`,
         `boxes.${lastIndex}.weightKg`,
+        `boxes.${lastIndex}.quantity`,
       ]))
     if (valid) appendBox(emptyBox)
   }
@@ -445,7 +450,7 @@ const ProductBoxesForm = () => {
                   display: 'grid',
                   gridTemplateColumns: {
                     xs: '1fr 1fr',
-                    md: 'repeat(4, minmax(110px, 1fr)) 40px',
+                    md: 'repeat(5, minmax(110px, 1fr)) 40px',
                   },
                   gap: 1.5,
                   alignItems: 'start',
@@ -453,6 +458,7 @@ const ProductBoxesForm = () => {
               >
                 {(
                   [
+                    ['quantity', 'No. of Boxes'],
                     ['weightKg', 'Per Box Weight (kg)'],
                     ['lengthCm', 'Length (cm)'],
                     ['breadthCm', 'Breadth (cm)'],
@@ -465,7 +471,15 @@ const ProductBoxesForm = () => {
                     control={control}
                     rules={{
                       required: `${label} is required`,
-                      min: { value: 0.01, message: 'Must be greater than 0' },
+                      min:
+                        name === 'quantity'
+                          ? { value: 1, message: 'Minimum 1 box' }
+                          : { value: 0.01, message: 'Must be greater than 0' },
+                      validate:
+                        name === 'quantity'
+                          ? (value) =>
+                              Number.isInteger(Number(value)) || 'Use a whole number'
+                          : undefined,
                     }}
                     render={({ field, fieldState }) => (
                       <CustomInput
@@ -476,7 +490,12 @@ const ProductBoxesForm = () => {
                         topMargin={false}
                         error={!!fieldState.error}
                         helperText={fieldState.error?.message}
-                        slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+                        slotProps={{
+                          htmlInput:
+                            name === 'quantity'
+                              ? { min: 1, step: 1 }
+                              : { min: 0.01, step: 0.01 },
+                        }}
                       />
                     )}
                   />
