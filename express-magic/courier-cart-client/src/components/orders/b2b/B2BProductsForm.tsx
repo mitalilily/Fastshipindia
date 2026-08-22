@@ -209,6 +209,22 @@ const ProductBoxesForm = () => {
     weightCalculations.cftFactor <= 100
       ? `max(Actual, Volumetric) - Volumetric uses CFT factor ${weightCalculations.cftFactor}`
       : `max(Actual, Volumetric) - Volumetric = (LxBxH) / ${weightCalculations.cftFactor}`
+  const boxInputFields = (
+    boxFields.length > 1
+      ? [
+          ['quantity', 'No. of Boxes'],
+          ['weightKg', 'Per Box Weight (kg)'],
+          ['lengthCm', 'Length (cm)'],
+          ['breadthCm', 'Breadth (cm)'],
+          ['heightCm', 'Height (cm)'],
+        ]
+      : [
+          ['weightKg', 'Per Box Weight (kg)'],
+          ['lengthCm', 'Length (cm)'],
+          ['breadthCm', 'Breadth (cm)'],
+          ['heightCm', 'Height (cm)'],
+        ]
+  ) as Array<['quantity' | 'weightKg' | 'lengthCm' | 'breadthCm' | 'heightCm', string]>
 
   return (
     <Stack spacing={2}>
@@ -355,21 +371,45 @@ const ProductBoxesForm = () => {
               alignItems: 'stretch',
             }}
           >
-            <Box
-              sx={{
-                p: 1.25,
-                border: '1px solid #D9E2EC',
-                borderRadius: 1.5,
-                background: '#FFFFFF',
-              }}
-            >
-              <Typography variant="caption" fontWeight={700} color="#64748B">
-                No. of Boxes
-              </Typography>
-              <Typography variant="h6" fontWeight={800} color="#102A54">
-                {totalBoxes}
-              </Typography>
-            </Box>
+            {boxFields.length === 1 ? (
+              <Controller
+                name="boxes.0.quantity"
+                control={control}
+                rules={{
+                  required: 'No. of boxes is required',
+                  min: { value: 1, message: 'Minimum 1 box' },
+                  validate: (value) => Number.isInteger(Number(value)) || 'Use a whole number',
+                }}
+                render={({ field, fieldState }) => (
+                  <CustomInput
+                    {...field}
+                    label="No. of Boxes"
+                    type="number"
+                    required
+                    topMargin={false}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message || 'Same dimensions? enter total boxes'}
+                    slotProps={{ htmlInput: { min: 1, step: 1 } }}
+                  />
+                )}
+              />
+            ) : (
+              <Box
+                sx={{
+                  p: 1.25,
+                  border: '1px solid #D9E2EC',
+                  borderRadius: 1.5,
+                  background: '#FFFFFF',
+                }}
+              >
+                <Typography variant="caption" fontWeight={700} color="#64748B">
+                  Total Boxes
+                </Typography>
+                <Typography variant="h6" fontWeight={800} color="#102A54">
+                  {totalBoxes}
+                </Typography>
+              </Box>
+            )}
 
             <Controller
               name="weight"
@@ -450,21 +490,16 @@ const ProductBoxesForm = () => {
                   display: 'grid',
                   gridTemplateColumns: {
                     xs: '1fr 1fr',
-                    md: 'repeat(5, minmax(110px, 1fr)) 40px',
+                    md:
+                      boxFields.length > 1
+                        ? 'repeat(5, minmax(110px, 1fr)) 40px'
+                        : 'repeat(4, minmax(110px, 1fr)) 40px',
                   },
                   gap: 1.5,
                   alignItems: 'start',
                 }}
               >
-                {(
-                  [
-                    ['quantity', 'No. of Boxes'],
-                    ['weightKg', 'Per Box Weight (kg)'],
-                    ['lengthCm', 'Length (cm)'],
-                    ['breadthCm', 'Breadth (cm)'],
-                    ['heightCm', 'Height (cm)'],
-                  ] as const
-                ).map(([name, label]) => (
+                {boxInputFields.map(([name, label]) => (
                   <Controller
                     key={name}
                     name={`boxes.${boxIndex}.${name}`}
