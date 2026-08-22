@@ -79,7 +79,7 @@ const sidebarItems = [
     path: "/admin/support",
   },
   {
-    label: "Finance",
+    label: "Billing",
     icon: IconWallet,
     children: [
       {
