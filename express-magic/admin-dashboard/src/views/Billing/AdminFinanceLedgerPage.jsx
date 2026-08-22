@@ -135,6 +135,7 @@ export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
   const totalCount = reportQuery.data?.totalCount || 0
   const totalPages = Math.max(1, Math.ceil(totalCount / limit))
   const canChangeType = !config.params.type
+  const hasFilters = Boolean(search || dateFrom || dateTo || (canChangeType && transactionType))
 
   const visibleCredit = rows
     .filter((row) => String(row.rawTransactionType).toLowerCase() === 'credit')
@@ -159,6 +160,14 @@ export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
         description: error?.response?.data?.message || error?.message || 'Please try again.',
       })
     }
+  }
+
+  const resetFilters = () => {
+    setSearch('')
+    setDateFrom('')
+    setDateTo('')
+    setTransactionType(config.params.type || '')
+    setPage(1)
   }
 
   return (
@@ -192,24 +201,25 @@ export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
               maxW="360px"
             />
           </Box>
-          <Box>
-            <Text color="#41557A" fontSize="14px" mb="7px">
-              Type
-            </Text>
-            <Select
-              value={transactionType}
-              isDisabled={!canChangeType}
-              onChange={(event) => {
-                setTransactionType(event.target.value)
-                setPage(1)
-              }}
-              w={{ base: '100%', md: '170px' }}
-            >
-              <option value="">All types</option>
-              <option value="credit">Credit</option>
-              <option value="debit">Debit</option>
-            </Select>
-          </Box>
+          {canChangeType ? (
+            <Box>
+              <Text color="#41557A" fontSize="14px" mb="7px">
+                Type
+              </Text>
+              <Select
+                value={transactionType}
+                onChange={(event) => {
+                  setTransactionType(event.target.value)
+                  setPage(1)
+                }}
+                w={{ base: '100%', md: '170px' }}
+              >
+                <option value="">All types</option>
+                <option value="credit">Credit</option>
+                <option value="debit">Debit</option>
+              </Select>
+            </Box>
+          ) : null}
           <Box>
             <Text color="#41557A" fontSize="14px" mb="7px">
               From
@@ -241,6 +251,11 @@ export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
             />
           </Box>
           <HStack ml={{ base: 0, xl: 'auto' }} spacing="10px">
+            {type === 'allRecharges' ? (
+              <Button variant="outline" onClick={() => history.push('/admin/wallet')}>
+                Wallet Management
+              </Button>
+            ) : null}
             <Button
               leftIcon={<IconRefresh size={17} />}
               variant="outline"
@@ -248,6 +263,9 @@ export default function AdminFinanceLedgerPage({ type = 'passbook' }) {
               isLoading={reportQuery.isFetching}
             >
               Refresh
+            </Button>
+            <Button variant="outline" onClick={resetFilters} isDisabled={!hasFilters}>
+              Reset
             </Button>
             <Button
               leftIcon={<IconDownload size={17} />}

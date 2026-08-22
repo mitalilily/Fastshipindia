@@ -360,6 +360,11 @@ WITH wallet_mis_base AS (
     wt.reason,
     wt.ref,
     wt.meta,
+    topup.id::text AS topup_id,
+    topup.gateway AS topup_gateway,
+    topup.status::text AS topup_status,
+    topup."gatewayOrderId" AS topup_order_id,
+    topup."gatewayPaymentId" AS topup_payment_id,
     lower(coalesce(wt.reason, '')) AS reason_lower,
     COALESCE(
       NULLIF(b2c.awb_number, ''),
@@ -399,6 +404,14 @@ WITH wallet_mis_base AS (
   INNER JOIN wallets w ON w.id = wt.wallet_id
   LEFT JOIN users u ON u.id = w."userId"
   LEFT JOIN user_profiles up ON up."userId" = w."userId"
+  LEFT JOIN wallet_topups topup ON topup."walletId" = w.id
+    AND (
+      topup.id::text = (wt.meta ->> 'topupId')
+      OR topup."gatewayPaymentId" = wt.ref
+      OR topup."gatewayOrderId" = wt.ref
+      OR topup."gatewayPaymentId" = (wt.meta ->> 'gatewayPaymentId')
+      OR topup."gatewayOrderId" = (wt.meta ->> 'gatewayOrderId')
+    )
   LEFT JOIN LATERAL (
     SELECT
       o.id::text,
@@ -484,7 +497,21 @@ wallet_mis_classified AS (
   SELECT
     *,
     CASE
-      WHEN reason_lower LIKE '%wallet recharge%' OR reason_lower LIKE '%wallet_topup%'
+      WHEN type = 'credit'
+        AND (
+          topup_id IS NOT NULL
+          OR reason_lower LIKE '%wallet recharge%'
+          OR reason_lower LIKE '%wallet_topup%'
+          OR reason_lower LIKE '%wallet topup%'
+          OR reason_lower LIKE '%wallet top-up%'
+          OR reason_lower LIKE '%topup%'
+          OR reason_lower LIKE '%top-up%'
+          OR reason_lower LIKE '%razorpay%'
+          OR COALESCE(ref, '') ILIKE 'pay_%'
+          OR COALESCE(meta ->> 'topupId', '') <> ''
+          OR COALESCE(meta ->> 'gatewayOrderId', '') <> ''
+          OR COALESCE(meta ->> 'gatewayPaymentId', '') <> ''
+        )
         THEN 'wallet recharge'
       WHEN type = 'debit'
         AND (
@@ -586,10 +613,12 @@ const buildWalletMisFilters = (params: WalletMisReportParams) => {
         OR customer_id ILIKE ?
         OR COALESCE(reason, '') ILIKE ?
         OR COALESCE(ref, '') ILIKE ?
+        OR COALESCE(topup_order_id, '') ILIKE ?
+        OR COALESCE(topup_payment_id, '') ILIKE ?
         OR COALESCE(awb, '') ILIKE ?
       )`,
       `%${params.search.trim()}%`,
-      6,
+      8,
     )
   }
   if (params.awb?.trim()) push('COALESCE(awb, \'\') ILIKE ?', `%${params.awb.trim()}%`)
@@ -632,7 +661,7 @@ const mapWalletMisRow = (row: any) => ({
   transactionType: String(row.type || '').toUpperCase(),
   rawTransactionType: row.type || '',
   rawReason: row.reason || '',
-  reference: row.ref || '',
+  reference: row.ref || row.topup_payment_id || row.topup_order_id || '',
   awb: row.awb || '',
   courierPartnerName: row.courier_partner_name || '',
   weight: normalizeWeight(row.weight),
@@ -664,6 +693,8 @@ export const getConsolidatedWalletMisReport = async (params: WalletMisReportPara
       type,
       reason,
       ref,
+      topup_order_id,
+      topup_payment_id,
       transaction_against,
       awb,
       courier_partner_name,
