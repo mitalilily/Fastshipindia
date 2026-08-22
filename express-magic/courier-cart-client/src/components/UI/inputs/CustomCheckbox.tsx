@@ -27,9 +27,11 @@ const CustomTick = ({ checked }: { checked?: boolean }) => (
 )
 
 export default function CustomCheckbox(props: CheckboxProps) {
+  const { sx, ...checkboxProps } = props
+
   return (
     <Checkbox
-      {...props}
+      {...checkboxProps}
       disableRipple={false}
       color="primary"
       icon={
@@ -77,24 +79,27 @@ export default function CustomCheckbox(props: CheckboxProps) {
           <CustomTick checked />
         </Box>
       }
-      sx={{
-        padding: '8px',
-        overflow: 'hidden',
-        '&:hover': {
-          backgroundColor: 'rgba(51, 51, 105, 0.04)',
-        },
-        '&.Mui-focusVisible': {
-          outline: '2px solid #333369',
-          outlineOffset: '2px',
-          borderRadius: '4px',
-        },
-        '& .MuiTouchRipple-root': {
-          color: 'rgba(51, 51, 105, 0.3)',
-        },
-        '& svg': {
+      sx={[
+        {
+          padding: '8px',
           overflow: 'hidden',
+          '&:hover': {
+            backgroundColor: 'rgba(51, 51, 105, 0.04)',
+          },
+          '&.Mui-focusVisible': {
+            outline: '2px solid #333369',
+            outlineOffset: '2px',
+            borderRadius: '4px',
+          },
+          '& .MuiTouchRipple-root': {
+            color: 'rgba(51, 51, 105, 0.3)',
+          },
+          '& svg': {
+            overflow: 'hidden',
+          },
         },
-      }}
+        ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+      ]}
     />
   )
 }

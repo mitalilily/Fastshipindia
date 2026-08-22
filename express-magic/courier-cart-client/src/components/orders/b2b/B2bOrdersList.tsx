@@ -235,6 +235,7 @@ const B2BOrdersList = ({
       id: 'shipment_id',
       minWidth: 214,
       truncate: false,
+      sticky: 'left',
       render: (_v, row) => (
         <Stack spacing={0.3} sx={{ minWidth: 0 }}>
           <Typography sx={{ maxWidth: '100%', fontSize: 12.2, fontWeight: 700, lineHeight: 1.25 }} noWrap>

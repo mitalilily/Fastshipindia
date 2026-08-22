@@ -110,6 +110,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
       ? '#1b2430'
       : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,242,236,0.98) 100%)'
   const tableBg = isDark ? '#101720' : isShipmentVariant ? '#F5F6F8' : '#FFFCF8'
+  const selectionColumnWidth = isShipmentVariant ? 42 : 48
   const rowHover = alpha(primary, 0.045)
   const mobileCardBg = isDark
     ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
@@ -517,23 +518,25 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                         sx={{
                           position: 'sticky',
                           top: 0,
-                          background: isShipmentVariant ? '#FFFFFF' : headerBg,
+                          left: 0,
+                          background: headerBg,
+                          color: isShipmentVariant ? '#FFFFFF' : alpha(textPrimary, 0.86),
                           borderBottom: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
-                          zIndex: theme.zIndex.appBar + 1,
-                          width: isShipmentVariant ? 38 : undefined,
-                          minWidth: isShipmentVariant ? 38 : undefined,
-                          maxWidth: isShipmentVariant ? 38 : undefined,
+                          zIndex: theme.zIndex.appBar + 5,
+                          width: selectionColumnWidth,
+                          minWidth: selectionColumnWidth,
+                          maxWidth: selectionColumnWidth,
                           py: isShipmentVariant ? 0.95 : isCompact ? 0.75 : 1.4,
-                          px: isShipmentVariant ? 0.45 : undefined,
-                          boxShadow: isShipmentVariant
-                            ? `inset 0 0 0 1px ${alpha(textPrimary, 0.08)}`
-                            : undefined,
+                          px: 0,
+                          textAlign: 'center',
+                          boxShadow: `6px 0 10px ${alpha(textPrimary, isShipmentVariant ? 0.05 : 0.08)}`,
                         }}
                       >
                         <CustomCheckbox
                           checked={isAllSelected}
                           onChange={(e) => handleSelectAll(e.target.checked)}
                           color="primary"
+                          sx={isShipmentVariant ? { p: '4px' } : undefined}
                         />
                       </TableCell>
                     )}
@@ -573,7 +576,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                               : {}),
                             ...(col.sticky === 'left'
                               ? {
-                                  left: col.stickyOffset ?? 0,
+                                  left: col.stickyOffset ?? (selectable ? selectionColumnWidth : 0),
                                   boxShadow: `6px 0 10px ${alpha(textPrimary, 0.08)}`,
                                 }
                               : {}),
@@ -680,18 +683,24 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                             <TableCell
                               padding="checkbox"
                               sx={{
-                                width: isShipmentVariant ? 38 : undefined,
-                                minWidth: isShipmentVariant ? 38 : undefined,
-                                maxWidth: isShipmentVariant ? 38 : undefined,
-                                px: isShipmentVariant ? 0.45 : undefined,
+                                position: 'sticky',
+                                left: 0,
+                                width: selectionColumnWidth,
+                                minWidth: selectionColumnWidth,
+                                maxWidth: selectionColumnWidth,
+                                px: 0,
+                                py: isShipmentVariant ? 1.05 : isCompact ? 0.85 : 1.45,
+                                textAlign: 'center',
                                 backgroundColor: isDark ? surface : '#FFFFFF',
                                 overflow: 'hidden',
+                                zIndex: 4,
+                                boxShadow: `6px 0 10px ${alpha(textPrimary, 0.05)}`,
                               }}
                             >
                               <CustomCheckbox
                                 checked={selectedIds.includes(row.id)}
                                 onChange={() => handleSelect(row.id)}
-                                sx={{ color: primary }}
+                                sx={isShipmentVariant ? { p: '4px', color: primary } : { color: primary }}
                               />
                             </TableCell>
                           )}
@@ -744,7 +753,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                                     : {}),
                                   ...(col.sticky === 'left'
                                     ? {
-                                        left: col.stickyOffset ?? 0,
+                                        left: col.stickyOffset ?? (selectable ? selectionColumnWidth : 0),
                                         boxShadow: `6px 0 10px ${alpha(textPrimary, 0.08)}`,
                                       }
                                     : {}),

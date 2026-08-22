@@ -1069,6 +1069,7 @@ const AllOrders = () => {
       label: 'LRN / AWB',
       minWidth: 214,
       truncate: false,
+      sticky: 'left',
       render: (_v, row) => (
         <Stack spacing={0.35} sx={{ minWidth: 0 }}>
           <Typography
