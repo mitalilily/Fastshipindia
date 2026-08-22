@@ -16,7 +16,6 @@ type QuickAction = {
   name: string
   icon: ReactNode
   accent: string
-  tint: string
   path?: string
   requiresMerchantReady?: boolean
 }
@@ -26,43 +25,37 @@ const actions: QuickAction[] = [
     name: 'Rate Calculator',
     icon: <TbCalculator />,
     accent: '#0D3B8E',
-    tint: '#EAF1FF',
     path: '/tools/rate_calculator',
   },
   {
     name: 'Add Warehouse',
     icon: <TbBuildingWarehouse />,
-    accent: '#0F766E',
-    tint: '#E7F7F4',
+    accent: '#C81E2B',
     path: '/settings/manage_pickups',
   },
   {
     name: 'Recharge Wallet',
     icon: <TbWallet />,
-    accent: '#B45309',
-    tint: '#FFF4DE',
+    accent: '#103B5F',
     path: '/billing/wallet_transactions?recharge=true',
   },
   {
     name: 'Early COD',
     icon: <TbBuildingBank />,
-    accent: '#BE123C',
-    tint: '#FFF0F3',
+    accent: '#44616C',
     path: '/cod-remittance',
   },
   {
     name: 'Book Order',
     icon: <TbPackageExport />,
     accent: '#1D2842',
-    tint: '#EEF2F8',
     path: '/orders/create',
     requiresMerchantReady: true,
   },
   {
     name: 'Transporter ID',
     icon: <TbId />,
-    accent: '#7C3AED',
-    tint: '#F1ECFF',
+    accent: '#6B7280',
     path: '/couriers/partners',
   },
 ]
@@ -153,7 +146,7 @@ export default function QuickActions() {
               width: { xs: 'calc(100vw - 24px)', sm: 600, md: 700 },
               maxWidth: 'calc(100vw - 24px)',
               borderRadius: '10px',
-              border: `1px solid ${border}`,
+              border: `1px solid ${isDark ? border : alpha('#0D3B8E', 0.16)}`,
               bgcolor: surface,
               color: ink,
               boxShadow: isDark
@@ -169,9 +162,8 @@ export default function QuickActions() {
             px: { xs: 1.5, sm: 2 },
             py: 1.25,
             borderBottom: `1px solid ${border}`,
-            background: isDark
-              ? 'linear-gradient(90deg, rgba(227,27,35,0.14), rgba(13,59,142,0.08))'
-              : 'linear-gradient(90deg, rgba(227,27,35,0.06), rgba(13,59,142,0.05))',
+            borderTop: `3px solid ${accent}`,
+            bgcolor: surface,
           }}
         >
           <Typography sx={{ color: ink, fontWeight: 700, fontSize: '0.95rem' }}>
@@ -204,17 +196,31 @@ export default function QuickActions() {
                 px: 1.1,
                 py: 1.15,
                 borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
                 gap: 0.8,
                 color: ink,
-                border: `1px solid ${isDark ? alpha(action.accent, 0.3) : alpha(action.accent, 0.14)}`,
-                bgcolor: isDark ? alpha(action.accent, 0.1) : action.tint,
-                transition: 'background-color 160ms ease, border-color 160ms ease, transform 160ms ease',
+                border: `1px solid ${isDark ? alpha('#FFFFFF', 0.1) : alpha('#0D3B8E', 0.12)}`,
+                bgcolor: isDark ? alpha('#FFFFFF', 0.035) : '#FFFFFF',
+                transition:
+                  'background-color 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  bgcolor: action.accent,
+                  opacity: 0.9,
+                },
                 '&:hover': {
-                  bgcolor: alpha(action.accent, isDark ? 0.18 : 0.12),
-                  borderColor: alpha(action.accent, 0.34),
+                  bgcolor: alpha(action.accent, isDark ? 0.13 : 0.045),
+                  borderColor: alpha(action.accent, isDark ? 0.42 : 0.24),
+                  boxShadow: isDark ? 'none' : `0 12px 26px ${alpha('#0D1B4D', 0.08)}`,
                   transform: 'translateY(-2px)',
                 },
                 '&:focus-visible': {
@@ -232,11 +238,9 @@ export default function QuickActions() {
                   display: 'grid',
                   placeItems: 'center',
                   color: action.accent,
-                  bgcolor: isDark ? alpha('#FFFFFF', 0.06) : alpha('#FFFFFF', 0.72),
-                  border: `1px solid ${alpha(action.accent, isDark ? 0.28 : 0.18)}`,
-                  boxShadow: isDark
-                    ? 'none'
-                    : `0 10px 22px ${alpha(action.accent, 0.1)}`,
+                  bgcolor: isDark ? alpha(action.accent, 0.12) : alpha(action.accent, 0.075),
+                  border: `1px solid ${alpha(action.accent, isDark ? 0.28 : 0.16)}`,
+                  boxShadow: 'none',
                   '& svg': {
                     width: 27,
                     height: 27,
