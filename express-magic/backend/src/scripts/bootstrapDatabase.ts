@@ -93,6 +93,14 @@ async function bootstrapDatabase() {
   }
 
   try {
+    run(process.execPath, [path.join(backendRoot, 'dist/scripts/seedLocations.js')])
+  } catch (error) {
+    // The serviceability screen needs the pincode master, but API startup should
+    // continue so admins can still add locations manually if the seed file is unavailable.
+    console.warn('Serviceability pincode seed failed during startup; continuing.', error)
+  }
+
+  try {
     run(process.execPath, [path.join(backendRoot, 'dist/scripts/seedB2BZones.js')])
   } catch (error) {
     // Zone catalog entries can still be managed from the admin panel. Do not

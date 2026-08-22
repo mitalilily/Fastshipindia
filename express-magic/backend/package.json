@@ -32,7 +32,7 @@
     "normalize:xpressbees-statuses": "tsx src/scripts/normalizeXpressbeesStatuses.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "drizzle-kit push",
-    "bootstrap:db": "npm run migrate && npm run seed:admin",
+    "bootstrap:db": "npm run migrate && npm run seed:admin && npm run seed:locations",
     "seed:admin": "node dist/scripts/ensureAdmin.js",
     "seed:admin:src": "tsx src/scripts/ensureAdmin.ts",
     "seedAdmin": "npm run seed:admin",

@@ -2,7 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import XLSX from 'xlsx'
-import { inArray } from 'drizzle-orm'
+import { count, inArray } from 'drizzle-orm'
 import { db } from '../models/client'
 import { locations } from '../schema/schema'
 
@@ -127,13 +127,32 @@ async function importXlsx(filename: string) {
   console.log(`Import finished. Total processed: ${processed}`)
 }
 
-;(async () => {
-  const arg = process.argv[2] || DEFAULT_FILE
+export async function ensureLocationsSeeded(
+  filename = DEFAULT_FILE,
+  options: { skipIfAnyRows?: boolean } = { skipIfAnyRows: true },
+) {
+  if (options.skipIfAnyRows !== false) {
+    const [existing] = await db.select({ total: count() }).from(locations)
+    const total = Number(existing?.total ?? 0)
 
-  try {
-    await importXlsx(arg)
-  } catch (err) {
-    console.error('Import failed:', (err as Error).message)
-    process.exitCode = 1
+    if (total > 0) {
+      console.log(`Location seed skipped: ${total} serviceability location(s) already exist`)
+      return
+    }
   }
-})()
+
+  await importXlsx(filename)
+}
+
+if (require.main === module) {
+  ;(async () => {
+    const arg = process.argv[2] || DEFAULT_FILE
+
+    try {
+      await ensureLocationsSeeded(arg, { skipIfAnyRows: true })
+    } catch (err) {
+      console.error('Import failed:', (err as Error).message)
+      process.exitCode = 1
+    }
+  })()
+}
