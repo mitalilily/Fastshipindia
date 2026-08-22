@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { BiCheckCircle } from 'react-icons/bi'
+import { useNavigate } from 'react-router-dom'
 import { usePickupAddresses } from '../../hooks/Pickup/usePickupAddresses'
 import { useInvoicePreferences } from '../../hooks/User/useInvoicePreferences'
 import type { B2BFormData } from './b2b/B2BOrderForm'
@@ -34,6 +35,7 @@ const normalizeTaxInput = (value: unknown) =>
     .toUpperCase()
 
 const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | 'b2c' }) => {
+  const navigate = useNavigate()
   const { control, setValue, watch } = useFormContext<B2BFormData | B2CFormData>()
   const {
     data: locations,
@@ -138,7 +140,34 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
   if (isLoading) return <Typography>Loading pickup locations...</Typography>
   if (isError) return <Typography color="error">Failed to load pickup locations</Typography>
   if (!locations?.pickupAddresses || locations.pickupAddresses.length === 0)
-    return <Typography>No pickup locations found</Typography>
+    return (
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 2, sm: 3 },
+          mb: 3,
+          borderRadius: 2,
+          borderColor: alpha(ACCENT, 0.18),
+          bgcolor: alpha(ACCENT, 0.025),
+        }}
+      >
+        <Stack spacing={1.5} alignItems="flex-start">
+          <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
+            No pickup address added yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Add a pickup warehouse first, then come back and select it for this order.
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/settings/manage_pickups?add=1')}
+            sx={{ textTransform: 'none', fontWeight: 800 }}
+          >
+            Add Pickup Address
+          </Button>
+        </Stack>
+      </Paper>
+    )
 
   return (
     <Controller

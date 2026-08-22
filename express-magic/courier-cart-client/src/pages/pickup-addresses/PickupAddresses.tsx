@@ -12,9 +12,10 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BiDownload, BiUpload } from 'react-icons/bi'
 import { FiMoreVertical, FiPlus } from 'react-icons/fi'
+import { useSearchParams } from 'react-router-dom'
 
 import { useQueryClient } from '@tanstack/react-query'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
@@ -107,6 +108,7 @@ const initialFilterValues = {
 }
 
 const PickupAddresses = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerType, setDrawerType] = useState<'filter' | 'add' | null>(null)
   const [page, setPage] = useState(0)
@@ -130,6 +132,14 @@ const PickupAddresses = () => {
     limit: rowsPerPage,
   })
   const showLoading = useFastLoading(isLoading)
+
+  useEffect(() => {
+    if (searchParams.get('add') !== '1') return
+
+    setDrawerType('add')
+    setDrawerOpen(true)
+    setSearchParams({}, { replace: true })
+  }, [searchParams, setSearchParams])
 
   // Action menu for mobile
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
