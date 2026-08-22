@@ -29,14 +29,17 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     const normalizedPincode = normalizePincode(pincode)
 
     if (pincode !== normalizedPincode) {
-      setValue('pincode', normalizedPincode, { shouldDirty: true, shouldValidate: true })
+      setValue('pincode', normalizedPincode, {
+        shouldDirty: Boolean(normalizedPincode),
+        shouldValidate: Boolean(normalizedPincode),
+      })
       return
     }
 
     if (!normalizedPincode || normalizedPincode.length < 6) {
-      clearErrors('pincode')
-      setValue('city', '', { shouldValidate: true })
-      setValue('state', '', { shouldValidate: true })
+      clearErrors(['pincode', 'city', 'state'])
+      setValue('city', '', { shouldDirty: false, shouldValidate: false })
+      setValue('state', '', { shouldDirty: false, shouldValidate: false })
       return
     }
 
