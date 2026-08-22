@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
 import axiosInstance from '../../../api/axiosInstance'
@@ -19,12 +19,36 @@ import type { B2BFormData } from './B2BOrderForm'
 
 const emptyProduct = { productName: '', quantity: 1, unitPrice: 0 }
 const emptyBox = { lengthCm: 0, breadthCm: 0, heightCm: 0, weightKg: 0 }
+const DEFAULT_B2B_VOLUMETRIC_DIVISOR = 4500
+
+const roundWeight = (value: number) => Number(value.toFixed(2))
+
+const calculateTotalVolumetricWeight = (
+  boxes: B2BFormData['boxes'] = [],
+  cftFactor = DEFAULT_B2B_VOLUMETRIC_DIVISOR,
+) =>
+  boxes.reduce((sum, box) => {
+    const length = Number(box.lengthCm || 0)
+    const breadth = Number(box.breadthCm || 0)
+    const height = Number(box.heightCm || 0)
+
+    if (length <= 0 || breadth <= 0 || height <= 0) return sum
+
+    const volumeCm3 = length * breadth * height
+    const volumetricWeight =
+      cftFactor <= 100 ? (volumeCm3 / 28316.846592) * cftFactor : volumeCm3 / cftFactor
+
+    return sum + volumetricWeight
+  }, 0)
 
 const ProductBoxesForm = () => {
-  const { control, trigger, watch } = useFormContext<B2BFormData>()
+  const { control, trigger, watch, setValue } = useFormContext<B2BFormData>()
+  const [isTotalWeightEdited, setIsTotalWeightEdited] = useState(false)
   const [weightCalculations, setWeightCalculations] = useState({
+    totalActualWeight: 0,
+    totalVolumetricWeight: 0,
     totalChargeableWeight: 0,
-    cftFactor: 5000,
+    cftFactor: DEFAULT_B2B_VOLUMETRIC_DIVISOR,
     loading: false,
   })
 
@@ -41,18 +65,30 @@ const ProductBoxesForm = () => {
 
   const boxes = useWatch({ control, name: 'boxes' }) || []
   const products = useWatch({ control, name: 'products' }) || []
+  const totalWeight = useWatch({ control, name: 'weight' })
   const pickupPincode = watch('pickupLocationPincode')
   const deliveryPincode = watch('pincode')
+  const totalBoxes = boxes.length
+  const automaticActualWeight = roundWeight(
+    boxes.reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg), 0),
+  )
+  const enteredActualWeight = Number(totalWeight || 0)
+  const effectiveActualWeight = enteredActualWeight > 0 ? enteredActualWeight : automaticActualWeight
+
+  useEffect(() => {
+    if (isTotalWeightEdited) return
+
+    setValue('weight', automaticActualWeight, {
+      shouldDirty: false,
+      shouldValidate: true,
+    })
+  }, [automaticActualWeight, isTotalWeightEdited, setValue])
 
   useDebouncedEffect(
     () => {
       const calculateWeights = async () => {
         if (!boxes.length) return
 
-        const totalActualWeight = boxes.reduce(
-          (sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg),
-          0,
-        )
         const validDimensionBoxes = boxes.filter(
           (box) =>
             Number(box.lengthCm || 0) > 0 &&
@@ -62,8 +98,10 @@ const ProductBoxesForm = () => {
 
         if (!validDimensionBoxes.length) {
           setWeightCalculations({
-            totalChargeableWeight: totalActualWeight,
-            cftFactor: 5000,
+            totalActualWeight: effectiveActualWeight,
+            totalVolumetricWeight: 0,
+            totalChargeableWeight: effectiveActualWeight,
+            cftFactor: DEFAULT_B2B_VOLUMETRIC_DIVISOR,
             loading: false,
           })
           return
@@ -79,30 +117,49 @@ const ProductBoxesForm = () => {
           const response = await axiosInstance.post('/couriers/b2b/calculate-rate', {
             originPincode: pickupPincode || '110001',
             destinationPincode: deliveryPincode || '110001',
-            weightKg: totalActualWeight,
+            weightKg: effectiveActualWeight,
             length,
             width,
             height,
           })
           const calculation = response.data?.data?.calculation || {}
           const config = response.data?.data?.config || {}
+          const cftFactor = Number(
+            config.cftFactor || calculation.cftFactor || DEFAULT_B2B_VOLUMETRIC_DIVISOR,
+          )
+          const fallbackVolumetricWeight = calculateTotalVolumetricWeight(
+            validDimensionBoxes,
+            cftFactor,
+          )
+          const totalVolumetricWeight = Number(
+            calculation.volumetricWeight || calculation.volumetric_weight || fallbackVolumetricWeight,
+          )
+          const apiBillableWeight = Number(
+            calculation.billableWeight || calculation.billable_weight || 0,
+          )
 
           setWeightCalculations({
-            totalChargeableWeight: Number(calculation.billableWeight || totalActualWeight),
-            cftFactor: Number(config.cftFactor || calculation.cftFactor || 5000),
+            totalActualWeight: effectiveActualWeight,
+            totalVolumetricWeight,
+            totalChargeableWeight: Math.max(
+              apiBillableWeight,
+              effectiveActualWeight,
+              totalVolumetricWeight,
+            ),
+            cftFactor,
             loading: false,
           })
         } catch (error: unknown) {
           console.error('Error calculating B2B package weight:', error)
-          const totalVolumetricWeight = validDimensionBoxes.reduce(
-            (sum, box) =>
-              sum +
-              (Number(box.lengthCm) * Number(box.breadthCm) * Number(box.heightCm)) / 5000,
-            0,
+          const totalVolumetricWeight = calculateTotalVolumetricWeight(
+            validDimensionBoxes,
+            DEFAULT_B2B_VOLUMETRIC_DIVISOR,
           )
           setWeightCalculations({
-            totalChargeableWeight: Math.max(totalActualWeight, totalVolumetricWeight),
-            cftFactor: 5000,
+            totalActualWeight: effectiveActualWeight,
+            totalVolumetricWeight,
+            totalChargeableWeight: Math.max(effectiveActualWeight, totalVolumetricWeight),
+            cftFactor: DEFAULT_B2B_VOLUMETRIC_DIVISOR,
             loading: false,
           })
         }
@@ -110,7 +167,7 @@ const ProductBoxesForm = () => {
 
       void calculateWeights()
     },
-    [boxes, pickupPincode, deliveryPincode],
+    [boxes, pickupPincode, deliveryPincode, effectiveActualWeight],
     500,
   )
 
@@ -271,6 +328,111 @@ const ProductBoxesForm = () => {
           </Typography>
         </Box>
 
+        <Paper
+          variant="outlined"
+          sx={{
+            mb: 1.5,
+            p: 1.5,
+            borderRadius: 2,
+            borderColor: '#D9E2EC',
+            background: '#F8FAFC',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                lg: 'repeat(4, minmax(0, 1fr))',
+              },
+              gap: 1.25,
+              alignItems: 'stretch',
+            }}
+          >
+            <Box
+              sx={{
+                p: 1.25,
+                border: '1px solid #D9E2EC',
+                borderRadius: 1.5,
+                background: '#FFFFFF',
+              }}
+            >
+              <Typography variant="caption" fontWeight={700} color="#64748B">
+                No. of Boxes
+              </Typography>
+              <Typography variant="h6" fontWeight={800} color="#102A54">
+                {totalBoxes}
+              </Typography>
+            </Box>
+
+            <Controller
+              name="weight"
+              control={control}
+              rules={{
+                required: 'Total actual weight is required',
+                min: { value: 0.01, message: 'Must be greater than 0' },
+              }}
+              render={({ field, fieldState }) => (
+                <CustomInput
+                  {...field}
+                  label="Total Actual Weight (kg)"
+                  type="number"
+                  required
+                  topMargin={false}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                  onChange={(event) => {
+                    const value = Number(event.target.value || 0)
+                    setIsTotalWeightEdited(value > 0 && value !== automaticActualWeight)
+                    field.onChange(event)
+                  }}
+                />
+              )}
+            />
+
+            <Box
+              sx={{
+                p: 1.25,
+                border: '1px solid #D9E2EC',
+                borderRadius: 1.5,
+                background: '#FFFFFF',
+              }}
+            >
+              <Typography variant="caption" fontWeight={700} color="#64748B">
+                Volumetric Weight
+              </Typography>
+              <Typography variant="h6" fontWeight={800} color="#102A54">
+                {weightCalculations.loading ? (
+                  <CircularProgress size={18} />
+                ) : (
+                  `${weightCalculations.totalVolumetricWeight.toFixed(2)} kg`
+                )}
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                p: 1.25,
+                border: '1px solid #D9E2EC',
+                borderRadius: 1.5,
+                background: '#FFFFFF',
+              }}
+            >
+              <Typography variant="caption" fontWeight={700} color="#64748B">
+                Chargeable Weight
+              </Typography>
+              <Typography variant="h6" fontWeight={800} color="#102A54">
+                {weightCalculations.loading ? (
+                  <CircularProgress size={18} />
+                ) : (
+                  `${weightCalculations.totalChargeableWeight.toFixed(2)} kg`
+                )}
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+
         <Stack spacing={1}>
           {boxFields.map((box, boxIndex) => (
             <Paper
@@ -291,10 +453,10 @@ const ProductBoxesForm = () => {
               >
                 {(
                   [
+                    ['weightKg', 'Per Box Weight (kg)'],
                     ['lengthCm', 'Length (cm)'],
                     ['breadthCm', 'Breadth (cm)'],
                     ['heightCm', 'Height (cm)'],
-                    ['weightKg', 'Weight (kg)'],
                   ] as const
                 ).map(([name, label]) => (
                   <Controller
@@ -346,7 +508,7 @@ const ProductBoxesForm = () => {
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Box>
               <Typography variant="body2" fontWeight={700} color="#333369">
-                Chargeable Weight
+                Actual vs Volumetric
               </Typography>
               <Typography variant="caption" color="#4A5568">
                 {volumetricFormula}

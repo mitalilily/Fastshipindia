@@ -19,8 +19,20 @@ const ACCENT = '#0D3B8E'
 const TEXT_PRIMARY = '#102A54'
 const TEXT_SECONDARY = '#4C6185'
 const SURFACE = '#F6F8FC'
+const DEFAULT_B2B_VOLUMETRIC_DIVISOR = 4500
 
 const roundMoney = (value: number) => Math.round(value * 100) / 100
+const calculateB2BVolumetricKg = (
+  length: number,
+  breadth: number,
+  height: number,
+  factor = DEFAULT_B2B_VOLUMETRIC_DIVISOR,
+) => {
+  if (length <= 0 || breadth <= 0 || height <= 0) return 0
+
+  const volumeCm3 = length * breadth * height
+  return factor <= 100 ? (volumeCm3 / 28316.846592) * factor : volumeCm3 / factor
+}
 
 const computeInsuranceChargePreview = ({
   enabled,
@@ -74,36 +86,32 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
   const courierCod = Number(watch('courierCod') || 0)
   const forwardCharges = Number(watch('forwardCharges') || 0)
   const otherCharges = Number(watch('otherCharges') || 0)
+  const enteredB2BTotalWeightKg = shipment_type === 'b2b' ? Number(watch('weight') || 0) : 0
 
   // COMPUTE TOTAL WEIGHT AND PRICE
   let totalWeight = 0
   let totalActualWeight = 0
+  let totalVolumetricWeight = 0
   let totalProductPrice = 0
 
   if (shipment_type === 'b2b') {
     // B2B uses flat boxes array, not nested in products
     if (b2bBoxes && Array.isArray(b2bBoxes)) {
       b2bBoxes.forEach((box: B2BBox) => {
-        // Calculate chargeable weight per box (max of actual and volumetric)
         const actualWeightKg = b2bBoxWeightInputToKg(box.weightKg)
         const length = Number(box.lengthCm ?? 0) // in cm
         const breadth = Number(box.breadthCm ?? 0) // in cm
         const height = Number(box.heightCm ?? 0) // in cm
 
-        const VOLUMETRIC_DIVISOR = 5000
-        const volumetricWeightKg =
-          length > 0 && breadth > 0 && height > 0
-            ? (length * breadth * height) / VOLUMETRIC_DIVISOR
-            : 0
-
-        // Chargeable weight per box = max(actual, volumetric) in kg, convert to grams
-        const chargeableWeightKg = Math.max(actualWeightKg, volumetricWeightKg)
-        const chargeableWeightGrams = chargeableWeightKg * 1000
+        const volumetricWeightKg = calculateB2BVolumetricKg(length, breadth, height)
 
         totalActualWeight += actualWeightKg * 1000
-        totalWeight += chargeableWeightGrams // Sum chargeable weights in grams
+        totalVolumetricWeight += volumetricWeightKg * 1000
       })
     }
+    totalActualWeight =
+      enteredB2BTotalWeightKg > 0 ? enteredB2BTotalWeightKg * 1000 : totalActualWeight
+    totalWeight = Math.max(totalActualWeight, totalVolumetricWeight)
     totalProductPrice = products?.reduce(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (sum, product: any) =>
@@ -265,19 +273,29 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     return Number.isFinite(parsed) ? parsed : 0
   }
   const getB2BChargeableWeightKg = (courier: (typeof availableCouriers)[number]) => {
-    const factor = toChargeNumber(courier?.localRates?.forward?.volumetricFactor) || 5000
+    const factor =
+      toChargeNumber(courier?.localRates?.forward?.volumetricFactor) ||
+      DEFAULT_B2B_VOLUMETRIC_DIVISOR
     if (!b2bBoxes?.length) return Number(totalWeight || 0) / 1000
 
-    return b2bBoxes.reduce((sum, box) => {
-      const actualWeightKg = b2bBoxWeightInputToKg(box.weightKg)
-      const volumetricWeightKg =
-        box.lengthCm && box.breadthCm && box.heightCm
-          ? (toChargeNumber(box.lengthCm) * toChargeNumber(box.breadthCm) * toChargeNumber(box.heightCm)) /
-            factor
-          : 0
+    const calculatedActualWeightKg = b2bBoxes.reduce(
+      (sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg),
+      0,
+    )
+    const actualWeightKg =
+      enteredB2BTotalWeightKg > 0 ? enteredB2BTotalWeightKg : calculatedActualWeightKg
+    const volumetricWeightKg = b2bBoxes.reduce((sum, box) => {
+      const volumetricWeightKg = calculateB2BVolumetricKg(
+        toChargeNumber(box.lengthCm),
+        toChargeNumber(box.breadthCm),
+        toChargeNumber(box.heightCm),
+        factor,
+      )
 
-      return sum + Math.max(actualWeightKg, volumetricWeightKg)
+      return sum + volumetricWeightKg
     }, 0)
+
+    return Math.max(actualWeightKg, volumetricWeightKg)
   }
   const getCourierFreightCharge = (courier: (typeof availableCouriers)[number]) => {
     const directRate = toChargeNumber(courier?.rate)
@@ -414,9 +432,7 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
               <Typography sx={{ mt: 0.75, opacity: 0.9, color: '#fff' }}>
                 {shipment_type.toUpperCase()} • {orderType.toUpperCase()} •{' '}
                 {shipment_type === 'b2b'
-                  ? `${(b2bBoxes ?? [])
-                      .reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg), 0)
-                      .toFixed(2)} kg`
+                  ? `${(totalActualWeight / 1000).toFixed(2)} kg`
                   : `${(Number(totalWeight) / 1000).toFixed(2)} kg`}
               </Typography>
             </Box>

@@ -14,7 +14,6 @@ import {
 } from '@mui/material'
 import { useEffect, useRef, useState } from 'react'
 import { FormProvider, useForm, type FieldErrors } from 'react-hook-form'
-import { BiRupee } from 'react-icons/bi'
 import { FaBox, FaFileInvoice, FaTruck, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { CreateB2BShipmentParams } from '../../../api/order.service'
@@ -24,7 +23,6 @@ import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import FormSectionAccordion from '../../UI/accordion/FormSectionAccordion'
 import AmountSummaryCard from '../AmountSummaryCard'
 import DeliveryDetailsForm from '../DeliveryDetailsForm'
-import OptionalChargesForm from '../OptionalChargesForm'
 import OrderDetailsForm from '../OrderDetailsForm'
 import PickupLocationForm from '../PickupLocationForm'
 import { SelectCourierForm } from '../SelectCourierForm'
@@ -220,6 +218,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
     transactionFee,
     discount,
     prepaidAmount,
+    weight: watch('weight'),
     boxes: watch('boxes'),
     invoices: watch('invoices'),
     products: watch('products'),
@@ -252,10 +251,16 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
   const totalOrderValue = subtotal + transactionFee - discount
   const totalCollectable = totalOrderValue - prepaidAmount
-  const getPackageSummary = (boxes: Box[] = []) => {
+  const getPackageSummary = (boxes: Box[] = [], totalWeight?: number) => {
     const validBoxes = boxes.filter(Boolean)
+    const calculatedWeight = validBoxes.reduce(
+      (sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg),
+      0,
+    )
+    const enteredWeight = Number(totalWeight || 0)
+
     return {
-      packageWeight: validBoxes.reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg), 0),
+      packageWeight: enteredWeight > 0 ? enteredWeight : calculatedWeight,
       packageLength: Math.max(0, ...validBoxes.map((box) => Number(box.lengthCm || 0))),
       packageBreadth: Math.max(0, ...validBoxes.map((box) => Number(box.breadthCm || 0))),
       packageHeight: Math.max(0, ...validBoxes.map((box) => Number(box.heightCm || 0))),
@@ -274,7 +279,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         return
       }
 
-      const packageSummary = getPackageSummary(data.boxes)
+      const packageSummary = getPackageSummary(data.boxes, data.weight)
       const billingPanNumber = String(data.billingPanNumber || '').trim().toUpperCase()
       const billingGstin = String(data.billingGstin || '').trim().toUpperCase()
 
@@ -440,6 +445,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         'city',
         'state',
         'address',
+        'weight',
         ...productFields,
         ...invoiceFields,
         ...boxFields,
@@ -728,15 +734,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
               {/* Products and package dimensions */}
               <FormSectionAccordion title="Products & Boxes" icon={<FaBox />} defaultExpanded compact>
                 <B2BProductsForm />
-              </FormSectionAccordion>
-
-              <FormSectionAccordion
-                title="Optional Charges & Summary"
-                icon={<BiRupee />}
-                defaultExpanded
-                compact
-              >
-                <OptionalChargesForm />
               </FormSectionAccordion>
 
               <AmountSummaryCard
