@@ -111,22 +111,17 @@ type PendingManifestRequest =
   | null
 
 const orderStatusFilterTabs = [
-  { label: 'New', value: 'new', statuses: ['pending'] },
-  { label: 'Ready To Ship', value: 'ready_to_ship', statuses: ['booked', 'shipment_created'] },
-  {
-    label: 'Pickup & Manifests',
-    value: 'pickup_manifests',
-    statuses: ['pickup_initiated', 'manifest_generated'],
-  },
+  { label: 'All', value: 'all', statuses: undefined },
+  { label: 'Scheduled', value: 'pickup_manifests', statuses: ['pickup_initiated', 'manifest_generated'] },
+  { label: 'Not Picked', value: 'ready_to_ship', statuses: ['pending', 'booked', 'shipment_created'] },
   { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
   { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
   { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
-  { label: 'Exception', value: 'exception', statuses: ['manifest_failed'] },
+  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'] },
+  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'] },
   { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'] },
-  { label: 'RTO', value: 'rto', statuses: ['rto_initiated', 'rto', 'rto_in_transit', 'rto_delivered'] },
-  { label: 'Lost', value: 'lost', statuses: ['lost'] },
   { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'cancellation_requested'] },
-  { label: 'All', value: 'all', statuses: undefined },
+  { label: 'Exception', value: 'exception', statuses: ['manifest_failed', 'lost', 'rto_initiated', 'rto'] },
 ] as const
 
 type OrderStatusFilterValue = (typeof orderStatusFilterTabs)[number]['value']
@@ -274,7 +269,7 @@ const B2COrdersList = () => {
     sortBy: 'created_at',
     sortOrder: 'desc',
   })
-  const [selectedTab, setSelectedTab] = useState<OrderStatusFilterValue>('new')
+  const [selectedTab, setSelectedTab] = useState<OrderStatusFilterValue>('all')
   const selectedStatusFilter = orderStatusFilterMap[selectedTab]
 
   const effectiveFilters: OrderFilters = {

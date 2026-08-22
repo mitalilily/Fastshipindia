@@ -1,4 +1,4 @@
-import { Button, CircularProgress, Stack, useMediaQuery, useTheme } from '@mui/material'
+import { alpha, Box, Button, CircularProgress, Stack, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { MdDownload } from 'react-icons/md'
 import { useLocation } from 'react-router-dom'
@@ -11,6 +11,41 @@ import B2BOrdersList from '../../components/orders/b2b/B2bOrdersList'
 import { statusColorMap } from '../../components/orders/b2c/B2COrdersList'
 import { downloadClientOrdersCsv } from '../../utils/orderCsvExport'
 
+const b2bStatusQuickFilters = [
+  { label: 'All', value: 'all', statuses: undefined },
+  { label: 'Scheduled', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'] },
+  { label: 'Not Picked', value: 'not_picked', statuses: ['pending', 'booked', 'shipment_created'] },
+  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
+  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
+  { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
+  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'] },
+  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'] },
+  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'] },
+  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'cancellation_requested'] },
+] as const
+
+const normalizeStatusFilterValue = (status: unknown) =>
+  String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+
+const normalizeStatusFilter = (status?: string | string[]) =>
+  (Array.isArray(status) ? status : status ? [status] : [])
+    .map(normalizeStatusFilterValue)
+    .filter(Boolean)
+
+const isSameStatusFilter = (
+  currentStatus: string | string[] | undefined,
+  quickStatuses: readonly string[] | undefined,
+) => {
+  const current = normalizeStatusFilter(currentStatus).sort()
+  const quick = [...(quickStatuses || [])].map(normalizeStatusFilterValue).sort()
+
+  if (current.length !== quick.length) return false
+  return current.every((value, index) => value === quick[index])
+}
+
 const B2bOrders = () => {
   const location = useLocation()
   const [page, setPage] = useState(1)
@@ -18,7 +53,7 @@ const B2bOrders = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [exportingCsv, setExportingCsv] = useState(false)
   const [filters, setFilters] = useState<{
-    status?: string
+    status?: string | string[]
     fromDate?: string
     toDate?: string
     search?: string
@@ -60,6 +95,15 @@ const B2bOrders = () => {
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isDark = theme.palette.mode === 'dark'
+  const surface = isDark ? '#151b23' : '#FFFFFF'
+  const borderColor = isDark ? alpha('#f8fafc', 0.12) : alpha('#1D2842', 0.1)
+  const textPrimary = isDark ? '#f8fafc' : '#1D2842'
+  const textSecondary = isDark ? '#9badc3' : '#64748B'
+  const quietSurface = isDark ? alpha('#ffffff', 0.05) : 'rgba(29, 40, 66, 0.04)'
+  const activeQuickStatus =
+    b2bStatusQuickFilters.find((tab) => isSameStatusFilter(filters.status, tab.statuses))?.value ||
+    'custom'
 
   useEffect(() => {
     setDrawerOpen(false)
@@ -67,6 +111,14 @@ const B2bOrders = () => {
 
   const handleCreateB2BOrder = () => {
     setDrawerOpen(true)
+  }
+
+  const applyQuickStatusFilter = (tab: (typeof b2bStatusQuickFilters)[number]) => {
+    setFilters((previous) => ({
+      ...previous,
+      status: tab.statuses ? [...tab.statuses] : undefined,
+    }))
+    setPage(1)
   }
 
   const handleExportCsv = async () => {
@@ -114,10 +166,65 @@ const B2bOrders = () => {
         </Button>
       </Stack>
 
+      <Box
+        sx={{
+          px: { xs: 0.8, md: 1 },
+          py: 0.9,
+          border: `1px solid ${borderColor}`,
+          borderRadius: 1,
+          bgcolor: surface,
+          overflowX: 'auto',
+          '&::-webkit-scrollbar': { height: 6 },
+          '&::-webkit-scrollbar-thumb': {
+            borderRadius: 999,
+            backgroundColor: isDark ? alpha('#ffffff', 0.18) : alpha('#1D2842', 0.18),
+          },
+        }}
+      >
+        <Stack direction="row" gap={0.75} sx={{ width: 'max-content', minWidth: '100%' }}>
+          {b2bStatusQuickFilters.map((tab) => {
+            const selected = activeQuickStatus === tab.value
+
+            return (
+              <Button
+                key={tab.value}
+                type="button"
+                onClick={() => applyQuickStatusFilter(tab)}
+                sx={{
+                  minHeight: 30,
+                  px: 1.15,
+                  borderRadius: 1,
+                  whiteSpace: 'nowrap',
+                  textTransform: 'none',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: selected ? '#FFFFFF' : textSecondary,
+                  bgcolor: selected ? '#1D2842' : 'transparent',
+                  border: `1px solid ${selected ? '#1D2842' : borderColor}`,
+                  '&:hover': {
+                    bgcolor: selected ? '#152038' : quietSurface,
+                    borderColor: selected ? '#152038' : alpha('#1D2842', 0.2),
+                  },
+                }}
+              >
+                <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', color: selected ? '#FFFFFF' : textPrimary }}>
+                  {tab.label}
+                </Typography>
+              </Button>
+            )
+          })}
+        </Stack>
+      </Box>
+
       <FilterBar
         fields={filterFields}
         onApply={handleApplyFilters}
-        defaultValues={{ status: '', fromDate: '', toDate: '', search: '' }}
+        defaultValues={{
+          status: Array.isArray(filters.status) ? filters.status[0] || '' : filters.status || '',
+          fromDate: filters.fromDate || '',
+          toDate: filters.toDate || '',
+          search: filters.search || '',
+        }}
         appliedCount={Object.values(filters).filter(Boolean).length}
       />
 
