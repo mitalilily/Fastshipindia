@@ -1,15 +1,16 @@
 import {
   alpha,
   Box,
+  Button,
   CircularProgress,
   ClickAwayListener,
   Grow,
-  IconButton,
-  InputAdornment,
   List,
   ListItem,
   ListItemButton,
   ListItemText,
+  Menu,
+  MenuItem,
   Paper,
   Popper,
   Stack,
@@ -17,7 +18,7 @@ import {
   Typography,
 } from '@mui/material'
 import React, { useRef, useState, type KeyboardEvent } from 'react'
-import { CiSearch } from 'react-icons/ci'
+import { FiChevronDown } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import type { GlobalSearchResult } from '../../api/globalSearch.api'
 import { useGlobalSearch } from '../../hooks/useGlobalSearch'
@@ -25,6 +26,13 @@ import { useGlobalSearch } from '../../hooks/useGlobalSearch'
 const INK = '#171310'
 const CLAY = '#D97943'
 const SURFACE = '#FFFDF8'
+type SearchMode = 'lrn' | 'mawb' | 'order_id'
+
+const SEARCH_MODES: Array<{ value: SearchMode; label: string; placeholder: string }> = [
+  { value: 'lrn', label: 'LRN', placeholder: 'Search up to 25 LRNs' },
+  { value: 'mawb', label: 'MAWB', placeholder: 'Search MAWB number' },
+  { value: 'order_id', label: 'Order ID', placeholder: 'Search Order ID' },
+]
 
 const getMetadataAwb = (metadata?: Record<string, unknown>) => {
   const value = metadata?.awb ?? metadata?.awb_number ?? metadata?.awbNumber
@@ -46,11 +54,14 @@ const getClientTrackingPathFromLegacyLink = (link: string) => {
 
 const GlobalSearch = () => {
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchMode, setSearchMode] = useState<SearchMode>('lrn')
   const [open, setOpen] = useState(false)
   const [popperReady, setPopperReady] = useState(false)
+  const [modeAnchor, setModeAnchor] = useState<HTMLElement | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
+  const activeMode = SEARCH_MODES.find((mode) => mode.value === searchMode) || SEARCH_MODES[0]
   const shouldSearch = open && searchQuery.trim().length >= 2
   const { data: searchResults, isLoading, isFetching } = useGlobalSearch(searchQuery, shouldSearch)
 
@@ -73,6 +84,13 @@ const GlobalSearch = () => {
   const handleClickAway = () => {
     setOpen(false)
   }
+
+  const normalizeSearchTokens = (value: string) =>
+    value
+      .split(/[\s,]+/)
+      .map((token) => token.trim())
+      .filter(Boolean)
+      .slice(0, 25)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -105,8 +123,13 @@ const GlobalSearch = () => {
       return
     }
 
-    if (trimmedQuery.length >= 8 && /^[A-Z0-9]+$/.test(trimmedQuery.toUpperCase())) {
-      navigate(`/tools/order_tracking?awb=${encodeURIComponent(trimmedQuery.toUpperCase())}`)
+    const searchTokens = normalizeSearchTokens(trimmedQuery)
+    const primaryTrackingId = (searchTokens[0] || trimmedQuery).toUpperCase()
+
+    if (searchMode === 'lrn' || searchMode === 'mawb') {
+      navigate(`/tools/order_tracking?awb=${encodeURIComponent(primaryTrackingId)}`)
+    } else if (searchMode === 'order_id') {
+      navigate(`/orders/list?search=${encodeURIComponent(trimmedQuery)}`)
     } else if (searchResults?.results && searchResults.results.length > 0) {
       handleResultClick(searchResults.results[0])
       return
@@ -150,8 +173,76 @@ const GlobalSearch = () => {
   }
 
   return (
-    <Box sx={{ position: 'relative', width: { xs: '100%', sm: '380px', md: '520px' } }}>
-      <div ref={anchorRef}>
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      <Box
+        ref={anchorRef}
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: '82px minmax(0, 1fr) 86px',
+          alignItems: 'center',
+          height: 44,
+          width: '100%',
+          bgcolor: '#FFFFFF',
+          border: `1px solid ${alpha(INK, 0.12)}`,
+          borderRadius: 1,
+          boxShadow: `0 8px 18px ${alpha(INK, 0.06)}`,
+          overflow: 'hidden',
+          '&:focus-within': {
+            borderColor: alpha('#4D63FF', 0.72),
+            boxShadow: `0 0 0 3px ${alpha('#4D63FF', 0.12)}`,
+          },
+        }}
+      >
+        <Button
+          type="button"
+          onClick={(event) => setModeAnchor(event.currentTarget)}
+          endIcon={<FiChevronDown size={14} />}
+          sx={{
+            height: '100%',
+            minWidth: 0,
+            borderRadius: 0,
+            borderRight: `1px solid ${alpha(INK, 0.1)}`,
+            color: INK,
+            bgcolor: alpha('#F8FAFC', 0.9),
+            fontSize: 13,
+            fontWeight: 700,
+            textTransform: 'none',
+            '&:hover': { bgcolor: '#F1F5F9' },
+          }}
+        >
+          {activeMode.label}
+        </Button>
+
+        <Menu
+          anchorEl={modeAnchor}
+          open={Boolean(modeAnchor)}
+          onClose={() => setModeAnchor(null)}
+          PaperProps={{
+            elevation: 0,
+            sx: {
+              mt: 0.5,
+              minWidth: 130,
+              borderRadius: 1,
+              border: `1px solid ${alpha(INK, 0.1)}`,
+              boxShadow: `0 16px 34px ${alpha(INK, 0.14)}`,
+            },
+          }}
+        >
+          {SEARCH_MODES.map((mode) => (
+            <MenuItem
+              key={mode.value}
+              selected={mode.value === searchMode}
+              onClick={() => {
+                setSearchMode(mode.value)
+                setModeAnchor(null)
+              }}
+              sx={{ fontSize: 14, fontWeight: 600 }}
+            >
+              {mode.label}
+            </MenuItem>
+          ))}
+        </Menu>
+
         <TextField
           value={searchQuery}
           onChange={handleInputChange}
@@ -159,65 +250,50 @@ const GlobalSearch = () => {
           onFocus={() => {
             setOpen(true)
           }}
-          placeholder="Search by Order ID, Order Number, AWB, Invoice..."
+          placeholder={activeMode.placeholder}
           size="small"
           fullWidth
           sx={{
             '& .MuiOutlinedInput-root': {
-              bgcolor: alpha(SURFACE, 0.96),
-              borderRadius: 999,
-              border: `1px solid ${alpha(INK, 0.1)}`,
-              boxShadow: `0 10px 24px ${alpha(INK, 0.05)}`,
-              transition: 'all 0.2s ease',
-              '& fieldset': {
-                borderColor: 'transparent',
-              },
-              '&:hover': {
-                bgcolor: '#ffffff',
-                borderColor: alpha(INK, 0.18),
-              },
-              '&.Mui-focused': {
-                bgcolor: '#ffffff',
-                borderColor: INK,
-                boxShadow: `0 0 0 3px ${alpha(INK, 0.08)}`,
-              },
+              height: 42,
+              bgcolor: '#FFFFFF',
+              borderRadius: 0,
+              '& fieldset': { borderColor: 'transparent' },
+              '&:hover fieldset': { borderColor: 'transparent' },
+              '&.Mui-focused fieldset': { borderColor: 'transparent' },
             },
             '& .MuiOutlinedInput-input': {
-              py: 1.1,
+              py: 0,
+              px: 1.5,
               fontSize: '14px',
               fontWeight: 600,
               color: INK,
               '&::placeholder': {
-                color: alpha(INK, 0.48),
+                color: alpha(INK, 0.42),
                 opacity: 1,
               },
             },
           }}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                {isLoading || isFetching ? (
-                  <CircularProgress size={20} sx={{ color: INK }} />
-                ) : (
-                  <IconButton
-                    onClick={runSearch}
-                    edge="end"
-                    sx={{
-                      color: INK,
-                      '&:hover': {
-                        bgcolor: alpha(CLAY, 0.1),
-                        color: INK,
-                      },
-                    }}
-                  >
-                    <CiSearch size={20} />
-                  </IconButton>
-                )}
-              </InputAdornment>
-            ),
-          }}
         />
-      </div>
+
+        <Button
+          type="button"
+          onClick={runSearch}
+          disabled={isLoading || isFetching}
+          sx={{
+            height: '100%',
+            minWidth: 0,
+            borderRadius: 0,
+            color: '#4D63FF',
+            fontSize: 13,
+            fontWeight: 800,
+            textTransform: 'none',
+            '&:hover': { bgcolor: alpha('#4D63FF', 0.08) },
+          }}
+        >
+          {isLoading || isFetching ? <CircularProgress size={16} /> : 'Search'}
+        </Button>
+      </Box>
 
       <Popper
         open={popperReady && shouldSearch}
