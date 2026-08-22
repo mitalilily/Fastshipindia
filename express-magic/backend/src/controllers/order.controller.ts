@@ -43,6 +43,23 @@ const isOperationalTimeoutError = (error: any) => {
 const BULK_LABEL_DOWNLOAD_TIMEOUT_MS = 30000
 const BULK_LABEL_ORDER_FETCH_CHUNK_SIZE = 500
 
+const normalizeStatusQueryValue = (value: unknown) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+
+const getStatusFilterFromQuery = (query: Record<string, unknown>) => {
+  const rawStatus = query['status[]'] ?? query.status
+  const values = (Array.isArray(rawStatus) ? rawStatus : [rawStatus])
+    .flatMap((value) => String(value || '').split(','))
+    .map(normalizeStatusQueryValue)
+    .filter(Boolean)
+
+  if (values.length === 0) return undefined
+  return values.length === 1 ? values[0] : values
+}
+
 const sanitizeBulkPdfFileName = (value: string) =>
   value
     .trim()
@@ -367,7 +384,7 @@ export const getAllOrdersController = async (req: any, res: Response) => {
 
     // Filters from query
     const filters = {
-      status: req.query.status as string | undefined,
+      status: getStatusFilterFromQuery(req.query as Record<string, unknown>),
       businessType: req.query.businessType as string | undefined,
       paymentType: req.query.paymentType as string | undefined,
       courier: req.query.courier as string | undefined,
@@ -408,17 +425,9 @@ export const getB2COrdersController = async (req: Request, res: Response) => {
       ? Math.min(parseInt(req.query.limit as string, 10) || 5000, 5000)
       : Math.min(parseInt(req.query.limit as string, 10) || 10, 100)
 
-    const rawStatus = (req.query.status as string | undefined) || undefined
-    const normalizedStatus = rawStatus
-      ? rawStatus
-          .trim()
-          .toLowerCase()
-          .replace(/[\s-]+/g, '_')
-      : undefined
-
     // Filters from query
     const filters = {
-      status: normalizedStatus || undefined,
+      status: getStatusFilterFromQuery(req.query as Record<string, unknown>),
       type: req.query.type as string | undefined,
       paymentType: req.query.paymentType as string | undefined,
       courier: req.query.courier as string | undefined,
@@ -483,7 +492,7 @@ export const getB2BOrdersController = async (req: any, res: Response) => {
 
     // Filters from query
     const filters = {
-      status: req.query.status as string | undefined,
+      status: getStatusFilterFromQuery(req.query as Record<string, unknown>),
       type: req.query.type as string | undefined,
       paymentType: req.query.paymentType as string | undefined,
       courier: req.query.courier as string | undefined,

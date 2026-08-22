@@ -15138,7 +15138,7 @@ export interface PaginationParams {
 }
 
 export interface IOrderFilters {
-  status?: string
+  status?: string | string[]
   businessType?: 'b2c' | 'b2b' | string
   paymentType?: string
   courier?: string

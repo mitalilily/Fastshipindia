@@ -378,7 +378,7 @@ export const useCreateReverseShipment = () => {
 export interface FetchOrdersParams {
   page?: number
   limit?: number
-  status?: string
+  status?: string | string[]
   businessType?: 'b2c' | 'b2b' | string
   paymentType?: string
   courier?: string

@@ -16,6 +16,23 @@ import {
   toAdminOrderExportRow,
 } from '../../utils/adminOrderExportCsv'
 
+const normalizeStatusQueryValue = (value: unknown) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+
+const getStatusFilterFromQuery = (query: Record<string, unknown>) => {
+  const rawStatus = query['status[]'] ?? query.status
+  const values = (Array.isArray(rawStatus) ? rawStatus : [rawStatus])
+    .flatMap((value) => String(value || '').split(','))
+    .map(normalizeStatusQueryValue)
+    .filter(Boolean)
+
+  if (values.length === 0) return undefined
+  return values.length === 1 ? values[0] : values
+}
+
 export const getAllOrdersControllerAdmin = async (req: any, res: Response) => {
   try {
     // Pagination params
@@ -24,7 +41,7 @@ export const getAllOrdersControllerAdmin = async (req: any, res: Response) => {
 
     // Filters from query
     const filters = {
-      status: req.query.status as string | undefined,
+      status: getStatusFilterFromQuery(req.query as Record<string, unknown>),
       businessType: req.query.businessType as string | undefined,
       paymentType: req.query.paymentType as string | undefined,
       courier: req.query.courier as string | undefined,
@@ -56,7 +73,7 @@ export const exportOrdersControllerAdmin = async (req: any, res: Response) => {
   try {
     // Filters from query
     const filters = {
-      status: req.query.status as string | undefined,
+      status: getStatusFilterFromQuery(req.query as Record<string, unknown>),
       businessType: req.query.businessType as string | undefined,
       paymentType: req.query.paymentType as string | undefined,
       courier: req.query.courier as string | undefined,

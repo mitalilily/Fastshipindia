@@ -23,6 +23,36 @@ import { FiChevronDown, FiDownload, FiPackage, FiPlus, FiSearch } from 'react-ic
 import { useLocation } from 'react-router-dom'
 import { exportOrdersToCSV } from 'services/order.service'
 
+const ORDER_STATUS_FILTERS = [
+  { label: 'All', value: 'all', statuses: undefined },
+  { label: 'Scheduled', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'] },
+  { label: 'Not Picked', value: 'not_picked', statuses: ['pending', 'booked', 'shipment_created'] },
+  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
+  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
+  { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
+  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'] },
+  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'] },
+  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'] },
+  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'cancellation_requested'] },
+]
+
+const normalizeStatus = (status) =>
+  String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+
+const normalizeStatusFilter = (status) =>
+  (Array.isArray(status) ? status : status ? [status] : []).map(normalizeStatus).filter(Boolean)
+
+const isSameStatusFilter = (currentStatus, quickStatuses) => {
+  const current = normalizeStatusFilter(currentStatus).sort()
+  const quick = [...(quickStatuses || [])].map(normalizeStatus).sort()
+
+  if (current.length !== quick.length) return false
+  return current.every((value, index) => value === quick[index])
+}
+
 const Orders = () => {
   const location = useLocation()
   const initialSearch = new URLSearchParams(location.search).get('search') || ''
@@ -61,10 +91,22 @@ const Orders = () => {
   const textColor = useColorModeValue('#0F172A', '#E6EDF3')
   const mutedColor = useColorModeValue('#64748B', '#8B949E')
   const inputBg = useColorModeValue('#FFFFFF', '#161B22')
+  const statusHoverBg = useColorModeValue('#F8FAFC', '#1F2937')
+  const statusBadgeBg = useColorModeValue('#EEF2F7', '#27313F')
   const totalCount = ordersData?.totalCount || 0
+  const activeStatusFilter =
+    ORDER_STATUS_FILTERS.find((filter) => isSameStatusFilter(filters.status, filter.statuses))?.value ||
+    'custom'
 
   const stats = useMemo(() => {
     const orders = ordersData?.orders || []
+    const statusCounts = orders.reduce((counts, order) => {
+      const status = normalizeStatus(order.order_status)
+      if (!status) return counts
+      counts[status] = (counts[status] || 0) + 1
+      return counts
+    }, {})
+
     return {
       total: totalCount,
       inTransit: orders.filter((o) => ['shipment_created', 'in_transit', 'pickup_initiated'].includes(o.order_status)).length,
@@ -72,6 +114,7 @@ const Orders = () => {
       cancelled: orders.filter((o) => o.order_status === 'cancelled').length,
       rto: orders.filter((o) => String(o.order_status || '').includes('rto')).length,
       revenue: orders.reduce((sum, order) => sum + Number(order.order_amount || 0), 0),
+      statusCounts,
     }
   }, [ordersData, totalCount])
 
@@ -95,6 +138,19 @@ const Orders = () => {
 
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
+    setPage(1)
+  }
+
+  const getStatusFilterCount = (filter) => {
+    if (!filter.statuses || filter.value === activeStatusFilter) return totalCount
+    return filter.statuses.reduce((sum, status) => sum + (stats.statusCounts[normalizeStatus(status)] || 0), 0)
+  }
+
+  const applyStatusFilter = (filter) => {
+    setFilters((prev) => ({
+      ...prev,
+      status: filter.statuses ? [...filter.statuses] : '',
+    }))
     setPage(1)
   }
 
@@ -182,6 +238,60 @@ const Orders = () => {
 
         <Box h="1px" bg={borderColor} my="20px" />
 
+        <Box
+          overflowX="auto"
+          pb="10px"
+          css={{
+            '&::-webkit-scrollbar': { height: '6px' },
+            '&::-webkit-scrollbar-thumb': {
+              background: 'rgba(15, 23, 42, 0.18)',
+              borderRadius: '999px',
+            },
+          }}
+        >
+          <HStack spacing={2} minW="max-content">
+            {ORDER_STATUS_FILTERS.map((filter) => {
+              const selected = activeStatusFilter === filter.value
+              return (
+                <Button
+                  key={filter.value}
+                  size="sm"
+                  h="34px"
+                  px="12px"
+                  borderRadius="10px"
+                  variant="outline"
+                  borderColor={selected ? '#0B3A78' : borderColor}
+                  bg={selected ? '#0B3A78' : inputBg}
+                  color={selected ? '#FFFFFF' : textColor}
+                  fontWeight="700"
+                  fontSize="13px"
+                  _hover={{
+                    bg: selected ? '#082E60' : statusHoverBg,
+                    borderColor: selected ? '#082E60' : '#0B3A78',
+                  }}
+                  onClick={() => applyStatusFilter(filter)}
+                >
+                  <HStack spacing={2}>
+                    <Text>{filter.label}</Text>
+                    <Text
+                      as="span"
+                      px="7px"
+                      py="1px"
+                      borderRadius="999px"
+                      bg={selected ? '#FFFFFF' : statusBadgeBg}
+                      color={selected ? '#0B3A78' : mutedColor}
+                      fontSize="11px"
+                      fontWeight="800"
+                    >
+                      {getStatusFilterCount(filter)}
+                    </Text>
+                  </HStack>
+                </Button>
+              )
+            })}
+          </HStack>
+        </Box>
+
         <Flex justify="space-between" align={{ base: 'stretch', lg: 'flex-end' }} gap={4} wrap="wrap">
           <Stack direction={{ base: 'column', md: 'row' }} spacing={4} flex="1">
             <Box minW={{ base: '100%', md: '300px' }}>
@@ -207,7 +317,7 @@ const Orders = () => {
               <Text color={mutedColor} fontSize="14px" mb="8px">
                 Status
               </Text>
-              <Select value={filters.status} onChange={(event) => updateFilter('status', event.target.value)} bg={inputBg} borderColor={borderColor} color={textColor}>
+              <Select value={Array.isArray(filters.status) ? '' : filters.status} onChange={(event) => updateFilter('status', event.target.value)} bg={inputBg} borderColor={borderColor} color={textColor}>
                 <option value="">All statuses</option>
                 <option value="pending">Pending</option>
                 <option value="shipment_created">Shipment Created</option>

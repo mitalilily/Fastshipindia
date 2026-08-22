@@ -20,7 +20,7 @@ import {
   useTheme,
 } from '@mui/material'
 import moment from 'moment'
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import {
   MdAssignment,
   MdDelete,
@@ -85,7 +85,7 @@ interface Order {
 }
 
 type OrdersFilters = {
-  status?: string
+  status?: string | string[]
   businessType?: 'b2c' | 'b2b' | string
   paymentType?: string
   courier?: string
@@ -210,6 +210,41 @@ const shippingStatusMap: Record<string, string> = {
   rto_delivered: 'RTO Delivered',
   cancellation_requested: 'Cancellation Requested',
   cancelled: 'Cancelled',
+}
+
+const orderStatusQuickFilters = [
+  { label: 'All', value: 'all', statuses: undefined },
+  { label: 'Scheduled', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'] },
+  { label: 'Not Picked', value: 'not_picked', statuses: ['pending', 'booked', 'shipment_created'] },
+  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
+  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
+  { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
+  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'] },
+  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'] },
+  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'] },
+  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'cancellation_requested'] },
+] as const
+
+type OrderStatusQuickFilter = (typeof orderStatusQuickFilters)[number]
+
+const normalizeOrderStatus = (status: unknown) =>
+  String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+
+const normalizeStatusFilter = (status?: string | string[]) =>
+  (Array.isArray(status) ? status : status ? [status] : []).map(normalizeOrderStatus).filter(Boolean)
+
+const isSameStatusFilter = (
+  currentStatus: string | string[] | undefined,
+  quickStatuses: readonly string[] | undefined,
+) => {
+  const current = normalizeStatusFilter(currentStatus).sort()
+  const quick = [...(quickStatuses || [])].map(normalizeOrderStatus).sort()
+
+  if (current.length !== quick.length) return false
+  return current.every((value, index) => value === quick[index])
 }
 
 const isManifestEligible = (order: Order) => {
@@ -348,6 +383,17 @@ const AllOrders = () => {
   }))
   const orders: Order[] = normalizedOrders
   const totalCount = activeQuery.data?.totalCount ?? 0
+  const activeQuickStatus =
+    orderStatusQuickFilters.find((tab) => isSameStatusFilter(filters.status, tab.statuses))?.value ||
+    'custom'
+  const statusCounts = useMemo(() => {
+    return orders.reduce<Record<string, number>>((counts, order) => {
+      const status = normalizeOrderStatus(order.order_status)
+      if (!status) return counts
+      counts[status] = (counts[status] || 0) + 1
+      return counts
+    }, {})
+  }, [orders])
   const selectedOrders: Order[] = orders.filter((order) => selectedOrderIds.includes(order.id))
   const manifestValidationMessage =
     selectedOrders.length === 0
@@ -847,6 +893,21 @@ const AllOrders = () => {
     }
 
     navigate(`/tools/order_tracking?awb=${encodeURIComponent(trackingReference)}`)
+  }
+
+  const getQuickStatusCount = (tab: OrderStatusQuickFilter) => {
+    if (!tab.statuses || tab.value === activeQuickStatus) return totalCount
+    return tab.statuses.reduce((sum, status) => sum + (statusCounts[normalizeOrderStatus(status)] || 0), 0)
+  }
+
+  const applyQuickStatusFilter = (tab: OrderStatusQuickFilter) => {
+    setFilters((previous) => ({
+      ...previous,
+      status: tab.statuses ? [...tab.statuses] : undefined,
+    }))
+    setPage(1)
+    clearSelection()
+    setBulkFeedback(null)
   }
 
   const handleSyncLiveStatus = (order: Order) => {
@@ -1550,11 +1611,78 @@ const AllOrders = () => {
           </Stack>
         </Stack>
 
+        <Box
+          sx={{
+            px: { xs: 1.15, md: 1.5 },
+            py: 0.9,
+            borderBottom: `1px solid ${borderColor}`,
+            bgcolor: isDark ? alpha('#ffffff', 0.03) : '#F8FAFC',
+            overflowX: 'auto',
+            '&::-webkit-scrollbar': { height: 6 },
+            '&::-webkit-scrollbar-thumb': {
+              borderRadius: 999,
+              backgroundColor: isDark ? alpha('#ffffff', 0.18) : alpha('#1D2842', 0.18),
+            },
+          }}
+        >
+          <Stack direction="row" gap={0.75} sx={{ width: 'max-content', minWidth: '100%' }}>
+            {orderStatusQuickFilters.map((tab) => {
+              const selected = activeQuickStatus === tab.value
+              const count = getQuickStatusCount(tab)
+
+              return (
+                <Button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => applyQuickStatusFilter(tab)}
+                  sx={{
+                    minHeight: 30,
+                    px: 1.15,
+                    borderRadius: 1,
+                    gap: 0.65,
+                    whiteSpace: 'nowrap',
+                    textTransform: 'none',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: selected ? '#FFFFFF' : textSecondary,
+                    bgcolor: selected ? '#1D2842' : 'transparent',
+                    border: `1px solid ${selected ? '#1D2842' : borderColor}`,
+                    '&:hover': {
+                      bgcolor: selected ? '#152038' : quietSurface,
+                      borderColor: selected ? '#152038' : alpha('#1D2842', 0.2),
+                    },
+                  }}
+                >
+                  {tab.label}
+                  <Box
+                    component="span"
+                    sx={{
+                      minWidth: 22,
+                      px: 0.65,
+                      py: 0.1,
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: selected ? '#1D2842' : textPrimary,
+                      bgcolor: selected ? '#FFFFFF' : alpha('#1D2842', 0.08),
+                    }}
+                  >
+                    {count}
+                  </Box>
+                </Button>
+              )
+            })}
+          </Stack>
+        </Box>
+
         <Collapse in={isFilterPanelOpen} timeout="auto" unmountOnExit>
           <Box sx={{ px: { xs: 1.15, md: 1.5 }, py: 1 }} id="orders-filter-bar">
             <FilterBar
               fields={filterFields}
-              defaultValues={filters}
+              defaultValues={{
+                ...filters,
+                status: Array.isArray(filters.status) ? filters.status[0] || '' : filters.status,
+              }}
               appliedCount={activeFilterCount}
               onApply={(appliedFilters) => {
                 setFilters(appliedFilters)
