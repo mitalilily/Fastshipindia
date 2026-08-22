@@ -171,19 +171,22 @@ export default function RateCalculatorPage() {
               <HStack>
                 <Input
                   h="41px"
-                  placeholder="L"
+                  placeholder="Length"
+                  aria-label="Length in centimetres"
                   value={form.length}
                   onChange={(event) => update("length", event.target.value)}
                 />
                 <Input
                   h="41px"
-                  placeholder="B"
+                  placeholder="Breadth"
+                  aria-label="Breadth in centimetres"
                   value={form.width}
                   onChange={(event) => update("width", event.target.value)}
                 />
                 <Input
                   h="41px"
-                  placeholder="H"
+                  placeholder="Height"
+                  aria-label="Height in centimetres"
                   value={form.height}
                   onChange={(event) => update("height", event.target.value)}
                 />

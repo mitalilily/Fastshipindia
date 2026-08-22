@@ -1071,34 +1071,37 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                     />
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
-                    <Typography sx={estimatorLabelSx}>Dimensions - optional</Typography>
+                    <Typography sx={estimatorLabelSx}>Dimensions (cm) - optional</Typography>
                     <Grid container spacing={1.4}>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <RateTextInput
-                          label=""
+                          label="Length"
                           name="length"
-                          placeholder="L"
+                          placeholder="e.g. 20"
                           icon={<TbRulerMeasure />}
+                          endLabel="cm"
                           type="number"
                           register={register}
                         />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <RateTextInput
-                          label=""
+                          label="Breadth"
                           name="breadth"
-                          placeholder="W"
+                          placeholder="e.g. 15"
                           icon={<TbRulerMeasure />}
+                          endLabel="cm"
                           type="number"
                           register={register}
                         />
                       </Grid>
                       <Grid size={{ xs: 12, sm: 4 }}>
                         <RateTextInput
-                          label=""
+                          label="Height"
                           name="height"
-                          placeholder="H"
+                          placeholder="e.g. 10"
                           icon={<TbRulerMeasure />}
+                          endLabel="cm"
                           type="number"
                           register={register}
                         />
@@ -1874,24 +1877,26 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
 
                 <Stack spacing={0.9}>
                   <Typography sx={{ fontSize: '0.79rem', fontWeight: 900, color: ui.ink }}>
-                    Dimensions (cm)
+                    Dimensions (L x B x H in cm)
                   </Typography>
                   <Grid container spacing={1.05}>
                     {[
-                      { name: 'length' as const, label: 'Length is required' },
-                      { name: 'breadth' as const, label: 'Breadth is required' },
-                      { name: 'height' as const, label: 'Height is required' },
+                      { name: 'length' as const, label: 'Length (cm)', error: 'Length is required', placeholder: 'Length' },
+                      { name: 'breadth' as const, label: 'Breadth (cm)', error: 'Breadth is required', placeholder: 'Breadth' },
+                      { name: 'height' as const, label: 'Height (cm)', error: 'Height is required', placeholder: 'Height' },
                     ].map((field) => (
                       <Grid key={field.name} size={{ xs: 12, sm: 4 }}>
                         <TextField
+                          label={field.label}
                           type="number"
+                          placeholder={field.placeholder}
                           {...register(field.name, {
-                            required: field.label,
+                            required: field.error,
                             min: { value: 1, message: 'Must be greater than 0' },
                           })}
                           fullWidth
                           error={!!errors[field.name]}
-                          helperText={String(errors[field.name]?.message || '')}
+                          helperText={String(errors[field.name]?.message || 'Enter in cm')}
                           sx={inputSx}
                         />
                       </Grid>
