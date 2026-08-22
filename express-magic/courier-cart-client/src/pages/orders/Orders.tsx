@@ -70,7 +70,7 @@ export default function Orders() {
   ]
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 1.5, md: 2.4 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 1, md: 1.45 } }}>
       {!isReady && (
         <Alert
           severity="warning"
@@ -94,7 +94,7 @@ export default function Orders() {
 
       <Box
         sx={{
-          mb: 2.2,
+          mb: 1.25,
           borderRadius: 2.5,
           overflow: 'hidden',
           border: `1px solid ${borderColor}`,
@@ -106,11 +106,11 @@ export default function Orders() {
           direction={{ xs: 'column', md: 'row' }}
           alignItems={{ xs: 'flex-start', md: 'center' }}
           justifyContent="space-between"
-          gap={2}
+          gap={1.25}
           sx={{
-            px: { xs: 1.5, md: 2.2 },
-            py: { xs: 1.35, md: 1.6 },
-            borderTop: `14px solid ${topStripe}`,
+            px: { xs: 1.25, md: 1.7 },
+            py: { xs: 1, md: 1.15 },
+            borderTop: `10px solid ${topStripe}`,
           }}
         >
           <Stack direction="row" alignItems="center" spacing={1.4}>
@@ -124,7 +124,7 @@ export default function Orders() {
                 bgcolor: textPrimary,
               }}
             />
-            <Typography sx={{ fontSize: { xs: '1.5rem', md: '1.9rem' }, fontWeight: 700, color: textPrimary }}>
+            <Typography sx={{ fontSize: { xs: '1.35rem', md: '1.65rem' }, fontWeight: 700, color: textPrimary }}>
               Orders
             </Typography>
           </Stack>
@@ -161,8 +161,8 @@ export default function Orders() {
           flexWrap="wrap"
           gap={0}
           sx={{
-            px: { xs: 1.25, md: 1.8 },
-            py: 1.8,
+            px: { xs: 1, md: 1.35 },
+            py: 1.05,
             borderTop: `1px solid ${borderColor}`,
             bgcolor: nestedSurface,
           }}
@@ -177,8 +177,8 @@ export default function Orders() {
                 to={tab.path}
                 sx={{
                   borderRadius: 0,
-                  px: 2.2,
-                  py: 1.3,
+                  px: 1.8,
+                  py: 1,
                   mr: -0.5,
                   minWidth: 'unset',
                   border: `1px solid ${strongBorder}`,
@@ -197,7 +197,7 @@ export default function Orders() {
         </Stack>
       </Box>
 
-      <Box sx={{ mt: 1.5 }}>
+      <Box sx={{ mt: 0 }}>
         <AllOrders />
       </Box>
 

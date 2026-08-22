@@ -248,17 +248,17 @@ export default function DataTable<T extends { id: string | number }>(props: Data
           position: 'relative',
           zIndex: 2,
           p: isShipmentVariant
-            ? { xs: 0.65, sm: 0.75, md: 0.85 }
+            ? { xs: 0.45, sm: 0.5, md: 0.55 }
             : isCompact ? { xs: 1, sm: 1.15, md: 1.25 } : { xs: 1.6, sm: 2.1, md: 2.4 },
         }}
       >
         {(title || subTitle || pagination) && (
           <Stack
-            mb={isShipmentVariant ? 0.45 : isCompact ? 1 : 2}
+            mb={isShipmentVariant ? 0.3 : isCompact ? 1 : 2}
             direction={{ xs: 'column', sm: 'row' }}
             alignItems={{ xs: 'flex-start', sm: 'center' }}
             justifyContent="space-between"
-            spacing={isShipmentVariant ? 0.45 : isCompact ? 0.75 : 1.5}
+            spacing={isShipmentVariant ? 0.35 : isCompact ? 0.75 : 1.5}
             sx={{
               px: isShipmentVariant ? { xs: 0, sm: 0.05 } : isCompact ? { xs: 0.1, sm: 0.2 } : { xs: 0.4, sm: 0.6 },
               py: isShipmentVariant ? 0 : isCompact ? { xs: 0.1, sm: 0.25 } : { xs: 0.5, sm: 0.8 },
@@ -309,7 +309,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                   border: `1px solid ${borderColor}`,
                   boxShadow: isCompact ? 'none' : `0 10px 24px ${alpha(textPrimary, 0.05)}`,
                   '& .MuiToolbar-root': {
-                    minHeight: isShipmentVariant ? 30 : isCompact ? 34 : undefined,
+                    minHeight: isShipmentVariant ? 28 : isCompact ? 34 : undefined,
                     px: isCompact ? 0.5 : undefined,
                   },
                   '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {

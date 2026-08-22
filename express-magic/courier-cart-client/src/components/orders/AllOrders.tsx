@@ -1561,7 +1561,7 @@ const AllOrders = () => {
   ).length
 
   return (
-    <Stack gap={1.2}>
+    <Stack gap={0.8}>
       {activeQuery.isError && (
         <Alert severity="warning">
           Live orders are temporarily unavailable. The table remains open and will update on the next refresh.
@@ -1580,10 +1580,10 @@ const AllOrders = () => {
           direction={{ xs: 'column', lg: 'row' }}
           alignItems={{ xs: 'flex-start', lg: 'center' }}
           justifyContent="space-between"
-          gap={1}
+          gap={0.75}
           sx={{
             px: { xs: 1.15, md: 1.5 },
-            py: 1,
+            py: 0.75,
             borderBottom: `1px solid ${borderColor}`,
             bgcolor: surface,
           }}
@@ -1658,7 +1658,7 @@ const AllOrders = () => {
         <Box
           sx={{
             px: { xs: 1.15, md: 1.5 },
-            py: 0.9,
+            py: 0.65,
             borderBottom: `1px solid ${borderColor}`,
             bgcolor: isDark ? alpha('#ffffff', 0.03) : '#F8FAFC',
             overflowX: 'auto',
