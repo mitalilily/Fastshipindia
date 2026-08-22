@@ -171,8 +171,8 @@ export default function Layout() {
                   height: '100%',
                   transform: 'scaleX(0)',
                   transformOrigin: 'left center',
-                  background: 'linear-gradient(90deg, #0B3A78 0%, #E31B23 100%)',
-                  boxShadow: '0 0 8px rgba(227, 27, 35, 0.26)',
+                  background: isDark ? 'rgba(226,232,240,0.72)' : '#DDE7F5',
+                  boxShadow: '0 0 8px rgba(11, 58, 120, 0.12)',
                   transition: 'transform 80ms linear',
                   willChange: 'transform',
                 }}

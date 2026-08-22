@@ -179,6 +179,33 @@ const actionMenuIconSx = {
   },
 }
 
+const shipNowButtonSx = {
+  minWidth: 78,
+  minHeight: 31,
+  px: 0.9,
+  borderRadius: '8px',
+  border: '1px solid #C9D6E6',
+  background: '#FFFFFF',
+  color: '#0B3A78',
+  fontSize: 11.4,
+  fontWeight: 700,
+  textTransform: 'none',
+  whiteSpace: 'nowrap',
+  boxShadow: '0 8px 18px rgba(11, 58, 120, 0.08)',
+  '&:hover': {
+    background: '#F6FAFF',
+    borderColor: '#9EB4D0',
+    boxShadow: '0 10px 22px rgba(11, 58, 120, 0.11)',
+  },
+  '&.Mui-disabled': {
+    borderColor: '#E1E8F0',
+    background: '#F8FAFC',
+    color: '#8A9AAF',
+    boxShadow: 'none',
+    opacity: 1,
+  },
+}
+
 const documentGenerationStatuses = new Set([
   'booked',
   'shipment_created',
@@ -1295,16 +1322,7 @@ const AllOrders = () => {
                 setSelectCourierOrder(row)
               }}
               disabled={isCancelled || !canSelectCourier}
-              sx={{
-                minWidth: 78,
-                minHeight: 31,
-                px: 0.9,
-                borderRadius: '8px',
-                fontSize: 11.4,
-                fontWeight: 600,
-                textTransform: 'none',
-                whiteSpace: 'nowrap',
-              }}
+              sx={shipNowButtonSx}
             >
               Ship Now
             </Button>

@@ -42,7 +42,7 @@ export const brandGradients = {
     radial-gradient(circle at 100% 0%, rgba(215, 226, 243, 0.72), transparent 32%),
     linear-gradient(180deg, #E8EEF8 0%, #F6F8FC 52%, #EEF2FA 100%)
   `,
-  button: 'linear-gradient(135deg, #0B3A78 0%, #E31B23 100%)',
+  button: '#0B3A78',
   hero: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(234,240,249,0.94) 58%, rgba(216,226,241,0.9) 100%)',
   surface: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,254,0.98) 100%)',
   softSurface: 'linear-gradient(180deg, rgba(250,252,255,0.98) 0%, rgba(240,245,252,0.98) 100%)',
