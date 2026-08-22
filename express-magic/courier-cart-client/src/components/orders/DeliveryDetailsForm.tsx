@@ -1,12 +1,15 @@
 import { CircularProgress, Grid } from '@mui/material'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, type FieldErrors, useFormContext } from 'react-hook-form'
-import { useLocations } from '../../hooks/useLocations'
+import { lookupPincodeLocation } from '../../api/locations'
 import CustomInput from '../UI/inputs/CustomInput'
 import type { B2BFormData } from './b2b/B2BOrderForm'
 import type { B2CFormData } from './b2c/B2COrderForm'
 
 type FormType = 'b2b' | 'b2c'
+
+const PINCODE_REGEX = /^[1-9][0-9]{5}$/
+const normalizePincode = (value: unknown) => String(value ?? '').replace(/\D/g, '').slice(0, 6)
 
 const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
   const isCompactB2B = type === 'b2b'
@@ -16,51 +19,75 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     watch,
     setError,
     clearErrors,
-    getValues,
     formState: { errors },
   } = useFormContext<B2CFormData | B2BFormData>()
 
   const pincode = watch('pincode')
-  const normalizedPincode = String(pincode ?? '').trim()
-
-  const {
-    data: locationData,
-    isFetching: pinFetching,
-    isError,
-  } = useLocations(
-    { pincode: normalizedPincode, limit: 1 },
-    Boolean(/^[1-9][0-9]{5}$/.test(normalizedPincode)), // only when valid pincode
-    ['locationLookup', normalizedPincode],
-  )
+  const [pinFetching, setPinFetching] = useState(false)
 
   useEffect(() => {
-    if (!/^[1-9][0-9]{5}$/.test(normalizedPincode)) return
+    const normalizedPincode = normalizePincode(pincode)
 
-    if (isError) {
-      setError('pincode', { type: 'manual', message: 'PIN lookup failed' })
+    if (pincode !== normalizedPincode) {
+      setValue('pincode', normalizedPincode, { shouldDirty: true, shouldValidate: true })
       return
     }
 
-    if (locationData) {
-      const city = locationData?.data?.[0]?.city
-      const state = locationData?.data?.[0]?.state
+    if (!normalizedPincode || normalizedPincode.length < 6) {
+      clearErrors('pincode')
+      setValue('city', '', { shouldValidate: true })
+      setValue('state', '', { shouldValidate: true })
+      return
+    }
 
-      if (!city || !state) {
-        setError('pincode', { type: 'manual', message: 'Invalid pincode' })
-      } else {
+    if (!PINCODE_REGEX.test(normalizedPincode)) {
+      setError('pincode', { type: 'manual', message: 'Enter a valid 6-digit pincode' })
+      setValue('city', '', { shouldValidate: true })
+      setValue('state', '', { shouldValidate: true })
+      return
+    }
+
+    let isCurrentLookup = true
+
+    const fetchPin = async () => {
+      setPinFetching(true)
+      try {
+        const location = await lookupPincodeLocation(normalizedPincode)
+        if (!isCurrentLookup) return
+
+        if (!location) {
+          setError('pincode', { type: 'manual', message: 'Invalid pincode' })
+          setValue('city', '', { shouldValidate: true })
+          setValue('state', '', { shouldValidate: true })
+          return
+        }
+
         clearErrors('pincode')
-
-        // ✅ only autofill if empty (don’t override manual preset values)
-        setValue('city', city, { shouldValidate: true })
-        setValue('state', state, { shouldValidate: true })
+        setValue('city', location.city ?? '', { shouldDirty: true, shouldValidate: true })
+        setValue('state', location.state ?? '', { shouldDirty: true, shouldValidate: true })
+      } catch {
+        if (!isCurrentLookup) return
+        setError('pincode', { type: 'manual', message: 'PIN lookup failed' })
+        setValue('city', '', { shouldValidate: true })
+        setValue('state', '', { shouldValidate: true })
+      } finally {
+        if (isCurrentLookup) {
+          setPinFetching(false)
+        }
       }
     }
-  }, [locationData, isError, normalizedPincode, setError, clearErrors, setValue, getValues])
+
+    fetchPin()
+
+    return () => {
+      isCurrentLookup = false
+    }
+  }, [pincode, setError, clearErrors, setValue])
 
   const fields = [
     { name: 'buyerName', label: 'Name' },
     { name: 'buyerPhone', label: 'Phone' },
-    { name: 'buyerEmail', label: 'Email' }, // 👈 will stay optional
+    { name: 'buyerEmail', label: 'Email' },
     { name: 'pincode', label: 'Pincode' },
     { name: 'city', label: 'City' },
     { name: 'state', label: 'State' },
@@ -106,20 +133,20 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
               name={fieldItem.name as keyof (B2CFormData & B2BFormData)}
               control={control}
               rules={{
-                ...(fieldItem.name !== 'gstin' && fieldItem.name !== 'buyerEmail' // 👈 skip required for buyerEmail
+                ...(fieldItem.name !== 'gstin' && fieldItem.name !== 'buyerEmail'
                   ? { required: `${fieldItem.label} is required` }
                   : {}),
                 ...(fieldItem.name === 'buyerPhone' && {
                   pattern: { value: /^[0-9]{10}$/, message: 'Enter valid 10-digit phone' },
                 }),
                 ...(fieldItem.name === 'pincode' && {
-                  pattern: { value: /^\d{6}$/, message: 'Enter 6-digit pincode' },
+                  pattern: { value: PINCODE_REGEX, message: 'Enter valid 6-digit pincode' },
                 }),
               }}
               render={({ field }) => (
                 <CustomInput
                   label={fieldItem.label}
-                  required={fieldItem?.name !== 'buyerEmail' && fieldItem?.name !== 'gstin'} // 👈 not required for email
+                  required={fieldItem?.name !== 'buyerEmail' && fieldItem?.name !== 'gstin'}
                   {...field}
                   topMargin={!isCompactB2B}
                   multiline={fieldItem.name === 'address'}
