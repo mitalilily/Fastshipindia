@@ -84,21 +84,28 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     }
   }, [pincode, setError, clearErrors, setValue])
 
-  const fields = [
-    { name: 'buyerName', label: 'Name' },
-    { name: 'buyerPhone', label: 'Phone' },
-    { name: 'buyerEmail', label: 'Email' },
-    { name: 'pincode', label: 'Pincode' },
-    { name: 'city', label: 'City' },
-    { name: 'state', label: 'State' },
-    { name: 'address', label: 'Address' },
-    ...(type === 'b2b'
-      ? [
+  const fields =
+    type === 'b2b'
+      ? ([
           { name: 'companyName', label: 'Company Name' },
+          { name: 'buyerPhone', label: 'Phone' },
+          { name: 'buyerName', label: 'Name (Optional)' },
+          { name: 'buyerEmail', label: 'Email' },
+          { name: 'pincode', label: 'Pincode' },
+          { name: 'city', label: 'City' },
+          { name: 'state', label: 'State' },
           { name: 'gstin', label: 'GSTIN (Optional)' },
-        ]
-      : []),
-  ] as const
+          { name: 'address', label: 'Address' },
+        ] as const)
+      : ([
+          { name: 'buyerName', label: 'Name' },
+          { name: 'buyerPhone', label: 'Phone' },
+          { name: 'buyerEmail', label: 'Email' },
+          { name: 'pincode', label: 'Pincode' },
+          { name: 'city', label: 'City' },
+          { name: 'state', label: 'State' },
+          { name: 'address', label: 'Address' },
+        ] as const)
 
   const getFieldError = (fieldName: string) => {
     return (errors as FieldErrors<B2CFormData & B2BFormData>)[
@@ -115,6 +122,10 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
       {fields.map((fieldItem) => {
         const isNonEditable = fieldItem.name === 'city' || fieldItem.name === 'state'
         const showLoader = fieldItem.name === 'pincode' ? pinFetching : false
+        const isOptional =
+          fieldItem.name === 'gstin' ||
+          fieldItem.name === 'buyerEmail' ||
+          (type === 'b2b' && fieldItem.name === 'buyerName')
 
         return (
           <Grid
@@ -133,9 +144,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
               name={fieldItem.name as keyof (B2CFormData & B2BFormData)}
               control={control}
               rules={{
-                ...(fieldItem.name !== 'gstin' && fieldItem.name !== 'buyerEmail'
-                  ? { required: `${fieldItem.label} is required` }
-                  : {}),
+                ...(!isOptional ? { required: `${fieldItem.label} is required` } : {}),
                 ...(fieldItem.name === 'buyerPhone' && {
                   pattern: { value: /^[0-9]{10}$/, message: 'Enter valid 10-digit phone' },
                 }),
@@ -146,7 +155,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
               render={({ field }) => (
                 <CustomInput
                   label={fieldItem.label}
-                  required={fieldItem?.name !== 'buyerEmail' && fieldItem?.name !== 'gstin'}
+                  required={!isOptional}
                   {...field}
                   topMargin={!isCompactB2B}
                   multiline={fieldItem.name === 'address'}
