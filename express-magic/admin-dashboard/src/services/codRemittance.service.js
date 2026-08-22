@@ -11,9 +11,9 @@ export const getCodPlatformStats = async () => {
  * Get all COD remittances (all users)
  */
 export const getAllCodRemittances = async (params = {}) => {
-  const { page = 1, limit = 50, status, fromDate, toDate, search } = params
+  const { page = 1, limit = 50, status, fromDate, toDate, search, courierPartner } = params
   const response = await apiClient.get('/admin/cod-remittance/remittances', {
-    params: { page, limit, status, fromDate, toDate, search },
+    params: { page, limit, status, fromDate, toDate, search, courierPartner },
   })
   return response.data
 }
@@ -36,7 +36,7 @@ export const manualCreditWallet = async ({
   settledAmount,
   notes,
 }) => {
-  const response = await apiClient.post(`/admin/cod-remittance/remittances/${remittanceId}/credit`, {
+  const response = await apiClient.post(`/admin/cod-remittance/remittances/${remittanceId}/settle`, {
     settledDate,
     utrNumber,
     settledAmount,
@@ -62,9 +62,9 @@ export const updateRemittanceNotes = async (remittanceId, notes) => {
  * Export all COD remittances as CSV
  */
 export const exportAllCodRemittances = async (params = {}) => {
-  const { status, fromDate, toDate } = params
+  const { status, fromDate, toDate, courierPartner } = params
   const response = await apiClient.get('/admin/cod-remittance/remittances/export', {
-    params: { status, fromDate, toDate },
+    params: { status, fromDate, toDate, courierPartner },
     responseType: 'blob',
   })
 

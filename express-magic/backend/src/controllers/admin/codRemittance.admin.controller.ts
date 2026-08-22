@@ -44,7 +44,7 @@ const parseCodPayableQuery = (query: any) => {
  */
 export const getAllCodRemittances = async (req: any, res: Response): Promise<any> => {
   try {
-    const { status, fromDate, toDate, search, page = 1, limit = 50 } = req.query
+    const { status, fromDate, toDate, search, courierPartner, page = 1, limit = 50 } = req.query
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
     const conditions = []
@@ -61,6 +61,10 @@ export const getAllCodRemittances = async (req: any, res: Response): Promise<any
       const inclusiveToDate = new Date(toDate as string)
       inclusiveToDate.setHours(23, 59, 59, 999)
       conditions.push(lte(codRemittances.collectedAt, inclusiveToDate))
+    }
+
+    if (courierPartner) {
+      conditions.push(like(codRemittances.courierPartner, `%${courierPartner}%`))
     }
 
     if (search) {
@@ -355,7 +359,7 @@ export const updateRemittanceNotes = async (req: any, res: Response): Promise<an
  */
 export const exportAllCodRemittances = async (req: any, res: Response): Promise<any> => {
   try {
-    const { status, fromDate, toDate } = req.query
+    const { status, fromDate, toDate, courierPartner } = req.query
 
     const conditions = []
 
@@ -371,6 +375,10 @@ export const exportAllCodRemittances = async (req: any, res: Response): Promise<
       const inclusiveToDate = new Date(toDate as string)
       inclusiveToDate.setHours(23, 59, 59, 999)
       conditions.push(lte(codRemittances.collectedAt, inclusiveToDate))
+    }
+
+    if (courierPartner) {
+      conditions.push(like(codRemittances.courierPartner, `%${courierPartner}%`))
     }
 
     const remittances = await db
