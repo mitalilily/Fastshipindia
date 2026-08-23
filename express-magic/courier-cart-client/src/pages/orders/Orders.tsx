@@ -1,6 +1,7 @@
 import { alpha, Alert, Box, Button, Container, Fade, Popover, Stack, Typography, useTheme } from '@mui/material'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { MdAdd } from 'react-icons/md'
+import { MdAdd, MdRefresh } from 'react-icons/md'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import AllOrders from '../../components/orders/AllOrders'
 import B2BOrderForm from '../../components/orders/b2b/B2BOrderForm'
@@ -12,7 +13,9 @@ export default function Orders() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [orderType, setOrderType] = useState<'b2c' | 'b2b' | null>(null)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const theme = useTheme()
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
   const { isReady, progress, firstIncompleteStep } = useMerchantReadiness()
@@ -37,6 +40,19 @@ export default function Orders() {
 
   const closePopover = () => {
     setAnchorEl(null)
+  }
+
+  const handleRefreshOrders = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.allSettled([
+        queryClient.invalidateQueries({ queryKey: ['b2cOrdersByUser'] }),
+        queryClient.invalidateQueries({ queryKey: ['b2bOrdersByUser'] }),
+        queryClient.invalidateQueries({ queryKey: ['orders'] }),
+      ])
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const handleSelectOrderType = (type: 'b2c' | 'b2b') => {
@@ -130,8 +146,14 @@ export default function Orders() {
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
-            <Button variant="outlined" onClick={() => window.location.reload()} sx={{ borderRadius: 1.2 }}>
-              Refresh
+            <Button
+              variant="outlined"
+              startIcon={<MdRefresh />}
+              onClick={handleRefreshOrders}
+              disabled={isRefreshing}
+              sx={{ borderRadius: 1.2 }}
+            >
+              {isRefreshing ? 'Refreshing' : 'Refresh'}
             </Button>
             <Button
               startIcon={<MdAdd />}

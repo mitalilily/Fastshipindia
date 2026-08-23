@@ -25,13 +25,13 @@ export default function AdminRto() {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(20)
 
-  const { data, isLoading } = useAdminRto({
+  const { data, isLoading, isFetching, refetch } = useAdminRto({
     page,
     limit: perPage,
     search: filters.search,
     status: filters.status || undefined,
   })
-  const { data: kpisData } = useAdminRtoKpis({ search: filters.search })
+  const { data: kpisData, isFetching: isKpisFetching, refetch: refetchKpis } = useAdminRtoKpis({ search: filters.search })
   const rows = data?.data || []
   const totalCount = data?.totalCount || 0
 
@@ -43,6 +43,11 @@ export default function AdminRto() {
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
     setPage(1)
+  }
+
+  const refreshRto = () => {
+    refetch()
+    refetchKpis()
   }
 
   const captions = ['Order ID', 'AWB', 'RTO Phase', 'Customer', 'Courier', 'Amount', 'Actions']
@@ -65,12 +70,23 @@ export default function AdminRto() {
               </Text>
             </Box>
           </HStack>
-          <HStack color={mutedColor}>
-            <Icon as={FiRefreshCw} color="#F97316" />
-            <Text color={textColor} fontWeight="800">
-              {kpisData?.data?.total ?? totalCount}
-            </Text>
-            <Text>Total RTO</Text>
+          <HStack color={mutedColor} spacing={3} wrap="wrap">
+            <HStack>
+              <Icon as={FiRefreshCw} color="#F97316" />
+              <Text color={textColor} fontWeight="800">
+                {kpisData?.data?.total ?? totalCount}
+              </Text>
+              <Text>Total RTO</Text>
+            </HStack>
+            <Button
+              size="sm"
+              variant="outline"
+              leftIcon={<FiRefreshCw />}
+              onClick={refreshRto}
+              isLoading={isFetching || isKpisFetching}
+            >
+              Refresh
+            </Button>
           </HStack>
         </Flex>
       </Card>

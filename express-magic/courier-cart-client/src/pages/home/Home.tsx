@@ -1,5 +1,6 @@
 import { alpha, Box, Button, LinearProgress, Stack, Typography, useTheme } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   TbAlertTriangle,
@@ -60,13 +61,15 @@ const formatCurrency = (value: number) =>
 export default function Home() {
   const navigate = useNavigate()
   const theme = useTheme()
-  const { walletBalance, user } = useAuth()
+  const queryClient = useQueryClient()
+  const { walletBalance, user, refetchUser } = useAuth()
   const { checklist } = useMerchantReadiness()
   const { preferences: labelPreferences } = useLabelPreferences()
   const dashboardDate = useMemo(() => toLocalDateInput(), [])
-  const { data: dashboardStats, isLoading: dashboardLoading } =
+  const { data: dashboardStats, isLoading: dashboardLoading, isRefetching, refetch } =
     useMerchantDashboardStats(dashboardDate)
   const [showKycBanner, setShowKycBanner] = useState(true)
+  const [isHomeRefreshing, setIsHomeRefreshing] = useState(false)
   const isDark = theme.palette.mode === 'dark'
   const pageBg = isDark ? '#0f141b' : '#f4f7fb'
   const cardBg = isDark ? '#151b23' : '#ffffff'
@@ -198,6 +201,23 @@ export default function Home() {
   const maxStatusCount = Math.max(1, ...statusBreakdown.map((item) => Number(item.count || 0)))
   const recentOrders = dashboardStats?.recentActivity?.recentOrders?.slice(0, 4) || []
 
+  const handleRefreshHome = useCallback(async () => {
+    setIsHomeRefreshing(true)
+    try {
+      await Promise.allSettled([
+        refetch(),
+        Promise.resolve(refetchUser()),
+        queryClient.invalidateQueries({ queryKey: ['walletBalance'] }),
+        queryClient.invalidateQueries({ queryKey: ['pickupAddresses'] }),
+        queryClient.invalidateQueries({ queryKey: ['labelPreferences'] }),
+        queryClient.invalidateQueries({ queryKey: ['paymentOptions'] }),
+        queryClient.invalidateQueries({ queryKey: ['client-notifications'] }),
+      ])
+    } finally {
+      setIsHomeRefreshing(false)
+    }
+  }, [queryClient, refetch, refetchUser])
+
   const quickActions = [
     { title: 'Create Order', text: 'Ship a new package', icon: <TbPlus />, color: PURPLE, path: '/orders/create' },
     { title: 'All Orders', text: 'View all shipments', icon: <TbTruckDelivery />, color: BLUE, path: '/orders/list' },
@@ -288,13 +308,45 @@ export default function Home() {
           </Box>
         ) : null}
 
-        <Box>
-          <Typography sx={{ color: text, fontSize: { xs: '1.35rem', md: '1.18rem' }, fontWeight: 700 }}>
-            {greeting}, {displayName}!
-          </Typography>
-          <Typography sx={{ color: muted, mt: 0.2, fontSize: { xs: '0.9rem', md: '0.8rem' } }}>
-            Here's your daily overview.
-          </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            justifyContent: 'space-between',
+            gap: 1.25,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ color: text, fontSize: { xs: '1.35rem', md: '1.18rem' }, fontWeight: 700 }}>
+              {greeting}, {displayName}!
+            </Typography>
+            <Typography sx={{ color: muted, mt: 0.2, fontSize: { xs: '0.9rem', md: '0.8rem' } }}>
+              Here's your daily overview.
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            startIcon={<TbRefresh size={17} />}
+            onClick={handleRefreshHome}
+            disabled={isHomeRefreshing || isRefetching}
+            sx={{
+              borderRadius: 1.5,
+              minHeight: 36,
+              px: 1.6,
+              color: PURPLE,
+              borderColor: alpha(PURPLE, 0.28),
+              fontWeight: 700,
+              textTransform: 'none',
+              bgcolor: isDark ? alpha(PURPLE, 0.08) : '#ffffff',
+              '&:hover': {
+                borderColor: alpha(PURPLE, 0.48),
+                bgcolor: alpha(PURPLE, isDark ? 0.12 : 0.05),
+              },
+            }}
+          >
+            {isHomeRefreshing || isRefetching ? 'Refreshing' : 'Refresh'}
+          </Button>
         </Box>
 
         <Box

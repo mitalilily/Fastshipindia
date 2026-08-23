@@ -71,7 +71,7 @@ export default function ActivityLogPage() {
               color="#FF9C1A"
             />
             <Metric icon={IconUsers} value={0} label="actors" color="#00A881" />
-            <Button leftIcon={<IconRefresh size={18} />} variant="outline">
+            <Button leftIcon={<IconRefresh size={18} />} variant="outline" onClick={() => window.location.reload()}>
               Refresh
             </Button>
           </HStack>
