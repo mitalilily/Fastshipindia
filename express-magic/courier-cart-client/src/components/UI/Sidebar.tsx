@@ -160,7 +160,7 @@ const navSections: NavSection[] = [
       {
         text: 'Pickup',
         icon: <TbBuildingWarehouse size={STANDARD_ICON_SIZE} />,
-        path: '/settings/manage_pickups?add=1',
+        path: '/settings/manage_pickups',
         roles: ['customer', 'admin'],
       },
       {
