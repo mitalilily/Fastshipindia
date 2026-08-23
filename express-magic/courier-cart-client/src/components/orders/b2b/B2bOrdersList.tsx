@@ -233,11 +233,11 @@ const B2BOrdersList = ({
     {
       label: 'LRN / AWB',
       id: 'shipment_id',
-      minWidth: 176,
+      minWidth: 230,
       truncate: false,
       sticky: 'left',
       render: (_v, row) => (
-        <Stack spacing={0.3} sx={{ minWidth: 0 }}>
+        <Stack spacing={0.3} sx={{ minWidth: 0, maxWidth: 218, pr: 1 }}>
           <Typography sx={{ maxWidth: '100%', fontSize: 12.2, fontWeight: 700, lineHeight: 1.25 }} noWrap>
             {renderTrackingLink(getB2BTrackingReference(row))}
           </Typography>
@@ -253,7 +253,7 @@ const B2BOrdersList = ({
     {
       label: 'Order Type',
       id: 'order_number',
-      minWidth: 128,
+      minWidth: 144,
       truncate: false,
       render: () => (
         <Chip

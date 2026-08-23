@@ -728,7 +728,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                                   fontSize: isShipmentVariant ? '12.4px' : '13px',
                                   fontWeight: 400,
                                   width: isShipmentVariant ? col.minWidth || 100 : undefined,
-                                  minWidth: isShipmentVariant ? 0 : undefined,
+                                  minWidth: isShipmentVariant ? col.minWidth || 100 : undefined,
                                   maxWidth: isShipmentVariant
                                     ? col.minWidth || 100
                                     : shouldTruncate
@@ -761,10 +761,10 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                               >
                                 {tooltipTitle ? (
                                   <Tooltip title={tooltipTitle} arrow disableInteractive>
-                                    <Box component="span">{cellContent}</Box>
+                                    <Box component="div" sx={{ maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}>{cellContent}</Box>
                                   </Tooltip>
                                 ) : (
-                                  <Box component="span">{cellContent}</Box>
+                                  <Box component="div" sx={{ maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}>{cellContent}</Box>
                                 )}
                               </TableCell>
                             )
