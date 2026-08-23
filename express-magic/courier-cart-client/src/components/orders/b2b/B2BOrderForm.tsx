@@ -35,7 +35,6 @@ const getTodayDate = () => {
   const today = new Date()
   return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
 }
-const generateInvoiceNumber = () => `INV-${Date.now()}`
 
 // Box structure - top level array
 export type Box = {
@@ -183,7 +182,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       ],
       invoices: [
         {
-          invoiceNumber: generateInvoiceNumber(),
+          invoiceNumber: '',
           invoiceDate: getTodayDate(),
           invoiceValue: 0,
           invoiceFileUrl: '',

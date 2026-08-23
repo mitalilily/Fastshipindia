@@ -17,7 +17,8 @@ const getTodayDate = () => {
   const today = new Date()
   return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
 }
-const generateOrderId = () => `ORD-${Date.now()}`
+const generateOrderId = () =>
+  `ORD-${String(Math.floor(10000000 + Math.random() * 90000000))}`
 const allOrderTypes = [
   { key: 'prepaid', label: 'Prepaid' },
   { key: 'cod', label: 'Cash on Delivery' },
