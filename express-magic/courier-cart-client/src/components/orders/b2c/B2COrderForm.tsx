@@ -4,7 +4,6 @@ import {
   FormProvider,
   useFieldArray,
   useForm,
-  type FieldErrors,
   type FieldPath,
 } from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
@@ -17,7 +16,7 @@ import { usePaymentOptions } from '../../../hooks/usePaymentOptions'
 import { normalizeParcelWeightInputToGrams } from '../../../utils/weight'
 import FormSectionAccordion from '../../UI/accordion/FormSectionAccordion'
 import { toast } from '../../UI/Toast'
-import AmountSummaryCard from '../AmountSummaryCard'
+import BookingReviewSummary from '../BookingReviewSummary'
 import DeliveryDetailsForm from '../DeliveryDetailsForm'
 import OptionalChargesForm from '../OptionalChargesForm'
 import OrderDetailsForm from '../OrderDetailsForm'
@@ -171,7 +170,6 @@ export default function B2COrderFormSteps({
     setValue,
     handleSubmit,
     trigger,
-    formState: { errors },
   } = methods
   const { fields, append, remove } = useFieldArray({ control, name: 'products' })
 
@@ -690,11 +688,11 @@ export default function B2COrderFormSteps({
             <Stack gap={2} mb={2}>
               <PickupLocationForm />
               <FormSectionAccordion title="Booking Review" icon={<BiRupee />} defaultExpanded>
-                <AmountSummaryCard
+                <BookingReviewSummary
+                  shipmentType="b2c"
                   subtotal={subtotal}
                   totalCollectable={totalCollectable}
                   totalOrderValue={totalOrderValue}
-                  errors={errors as FieldErrors<B2CFormData>}
                 />
               </FormSectionAccordion>
             </Stack>
@@ -702,7 +700,7 @@ export default function B2COrderFormSteps({
 
           {currentStep === 2 && (
             <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded>
-              <SelectCourierForm shipment_type="b2c" />
+              <SelectCourierForm shipment_type="b2c" showSummary={false} />
             </FormSectionAccordion>
           )}
           {stepError ? (

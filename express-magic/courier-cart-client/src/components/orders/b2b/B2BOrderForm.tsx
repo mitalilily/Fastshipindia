@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useRef, useState } from 'react'
-import { FormProvider, useForm, type FieldErrors } from 'react-hook-form'
+import { FormProvider, useForm } from 'react-hook-form'
 import { FaBox, FaFileInvoice, FaTruck, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { CreateB2BShipmentParams } from '../../../api/order.service'
@@ -21,7 +21,7 @@ import { useCreateB2BShipment } from '../../../hooks/Orders/useOrders'
 import { usePaymentOptions } from '../../../hooks/usePaymentOptions'
 import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import FormSectionAccordion from '../../UI/accordion/FormSectionAccordion'
-import AmountSummaryCard from '../AmountSummaryCard'
+import BookingReviewSummary from '../BookingReviewSummary'
 import DeliveryDetailsForm from '../DeliveryDetailsForm'
 import OrderDetailsForm from '../OrderDetailsForm'
 import PickupLocationForm from '../PickupLocationForm'
@@ -204,7 +204,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
     getFieldState,
     setFocus,
     getValues,
-    formState: { errors },
   } = methods
 
   const transactionFee = Number(watch('transactionFee') || 0)
@@ -745,11 +744,11 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
             <Stack gap={1.5} mb={1}>
               <PickupLocationForm shipmentType="b2b" />
               <FormSectionAccordion title="Booking Review" icon={<FaFileInvoice />} defaultExpanded compact>
-                <AmountSummaryCard
+                <BookingReviewSummary
+                  shipmentType="b2b"
                   subtotal={subtotal}
                   totalCollectable={totalCollectable}
                   totalOrderValue={totalOrderValue}
-                  errors={errors as FieldErrors<B2BFormData>}
                 />
               </FormSectionAccordion>
             </Stack>
@@ -757,7 +756,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
           {currentStep === 2 && (
             <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded compact>
-              <SelectCourierForm shipment_type="b2b" />
+              <SelectCourierForm shipment_type="b2b" showSummary={false} />
             </FormSectionAccordion>
           )}
 

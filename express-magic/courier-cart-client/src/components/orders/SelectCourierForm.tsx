@@ -56,7 +56,13 @@ const computeInsuranceChargePreview = ({
   return roundMoney(baseAmount + (Math.max(0, normalizedValue - threshold) * percentage) / 100)
 }
 
-export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b2c' }) => {
+export const SelectCourierForm = ({
+  shipment_type,
+  showSummary = true,
+}: {
+  shipment_type: 'b2b' | 'b2c'
+  showSummary?: boolean
+}) => {
   const { watch, setValue, clearErrors } = useFormContext<B2BFormData | B2CFormData>()
   const { data: paymentOptions } = usePaymentOptions()
 
@@ -409,7 +415,8 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
     : 0
 
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={showSummary ? 3 : 0}>
+      {showSummary && (
       <Grid size={{ md: 4.5, xs: 12 }}>
         <Stack spacing={2.5} sx={{ position: { md: 'sticky' }, top: { md: 16 } }}>
           <Paper
@@ -637,8 +644,9 @@ export const SelectCourierForm = ({ shipment_type }: { shipment_type: 'b2b' | 'b
           </Paper>
         </Stack>
       </Grid>
+      )}
 
-      <Grid size={{ md: 7.5, xs: 12 }}>
+      <Grid size={showSummary ? { md: 7.5, xs: 12 } : { xs: 12 }}>
         <Paper
           sx={{
             p: 2.5,
