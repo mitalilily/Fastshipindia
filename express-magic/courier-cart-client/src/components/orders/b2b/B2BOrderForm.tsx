@@ -470,8 +470,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         'pickupState',
         'pickupDate',
         'pickupTime',
-        'billingPanNumber',
-        'billingGstin',
       ]
     }
 

@@ -30,8 +30,6 @@ const getLocalDateInputValue = () => {
   return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
 }
 
-const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
-const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
 const normalizeTaxInput = (value: unknown) =>
   String(value ?? '')
     .trim()
@@ -53,9 +51,6 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
   const pickupTime = watch('pickupTime') as string | undefined
   const billingPanNumber = watch('billingPanNumber' as any) as string | undefined
   const billingGstin = watch('billingGstin' as any) as string | undefined
-  const hasBillingTaxId = Boolean(
-    normalizeTaxInput(billingPanNumber) || normalizeTaxInput(billingGstin),
-  )
 
   const toggleRto = (id: string) => {
     setOpenRto((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -397,78 +392,6 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
               </Grid>
             )
           })}
-            {shipmentType === 'b2b' && (
-              <>
-                <Grid size={12}>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
-                    Seller Billing Tax Details
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Required for live Delhivery B2B booking. Enter either PAN or GSTIN.
-                  </Typography>
-                </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Controller
-                  name={'billingPanNumber' as any}
-                  control={control}
-                  rules={{
-                    validate: (value) => {
-                      const pan = normalizeTaxInput(value)
-                      const gstin = normalizeTaxInput(billingGstin)
-                      if (!pan && !gstin) return 'Enter seller PAN or GSTIN'
-                      if (pan && !PAN_REGEX.test(pan)) return 'Enter valid PAN, e.g. ABCDE1234F'
-                      return true
-                    },
-                  }}
-                  render={({ field: panField, fieldState: panState }) => (
-                    <TextField
-                      {...panField}
-                      value={panField.value || ''}
-                      onChange={(event) => panField.onChange(normalizeTaxInput(event.target.value))}
-                      label="Seller PAN"
-                      fullWidth
-                      error={!!panState.error}
-                      helperText={panState.error?.message || 'Use consignor/seller PAN'}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Controller
-                  name={'billingGstin' as any}
-                  control={control}
-                  rules={{
-                    validate: (value) => {
-                      const gstin = normalizeTaxInput(value)
-                      const pan = normalizeTaxInput(billingPanNumber)
-                      if (!gstin && !pan) return 'Enter seller PAN or GSTIN'
-                      if (gstin && !GSTIN_REGEX.test(gstin)) return 'Enter valid 15-character GSTIN'
-                      return true
-                    },
-                  }}
-                  render={({ field: gstField, fieldState: gstState }) => (
-                    <TextField
-                      {...gstField}
-                      value={gstField.value || ''}
-                      onChange={(event) => gstField.onChange(normalizeTaxInput(event.target.value))}
-                      label="Seller GSTIN"
-                      fullWidth
-                      error={!!gstState.error}
-                      helperText={gstState.error?.message || 'GSTIN is optional if PAN is entered'}
-                    />
-                  )}
-                />
-              </Grid>
-              {!hasBillingTaxId && (
-                <Grid size={12}>
-                  <Typography color="error" fontSize={12}>
-                    Seller PAN or GSTIN is required before live booking.
-                  </Typography>
-                </Grid>
-              )}
-              </>
-            )}
             <Grid size={{ xs: 12, md: 6 }}>
             <Controller
               name="pickupDate"
