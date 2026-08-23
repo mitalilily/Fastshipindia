@@ -1232,7 +1232,6 @@ const B2COrdersList = () => {
       id: 'order_number',
       minWidth: 176,
       truncate: false,
-      sticky: 'left',
       render: (_v, row) => (
         <Stack spacing={0.25} sx={{ minWidth: 0 }}>
           <Typography
