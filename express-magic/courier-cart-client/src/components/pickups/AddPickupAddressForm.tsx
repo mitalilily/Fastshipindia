@@ -4,6 +4,7 @@ import {
   AccordionDetails,
   AccordionSummary,
   Alert,
+  alpha,
   Box,
   FormControlLabel,
   Stack,
@@ -187,6 +188,32 @@ const AddPickupAddressForm = ({
             loading={
               isEdit ? updatePickupAddressMutation?.isPending : createPickupAddressMutation?.isPending
             }
+            loadingText={isEdit ? 'Updating address...' : 'Saving address...'}
+            textColor="#ffffff"
+            styles={{
+              minWidth: 184,
+              minHeight: 56,
+              px: 3.5,
+              bgcolor: '#0D3B8E',
+              background: '#0D3B8E',
+              color: '#ffffff',
+              boxShadow: '0 18px 34px rgba(13,59,142,0.28)',
+              '&:hover': {
+                bgcolor: '#082f72',
+                background: '#082f72',
+              },
+              '&:disabled': {
+                bgcolor: alpha('#0D3B8E', 0.62),
+                background: alpha('#0D3B8E', 0.62),
+                color: '#ffffff',
+                opacity: 1,
+              },
+              '& .MuiTypography-root': {
+                color: '#ffffff',
+                fontSize: '0.95rem',
+                fontWeight: 800,
+              },
+            }}
           />
         </Stack>
       </Box>
