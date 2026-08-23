@@ -44,6 +44,7 @@ export * from '../models/schema/zones'
 // Newly added schemas
 export * from '../models/schema/ndr'
 export * from '../models/schema/paymentOptions'
+export * from '../models/schema/refundApprovalRequests'
 export * from '../models/schema/rto'
 export * from '../models/schema/trackingEvents'
 export * from '../models/schema/apiKeys'

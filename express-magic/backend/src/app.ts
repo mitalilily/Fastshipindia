@@ -46,6 +46,7 @@ import locationRoutes from './routes/adminRoutes/location.routes'
 import adminOrderRoutes from './routes/adminRoutes/order.routes'
 import adminOpsAnalyticsRoutes from './routes/adminRoutes/opsAnalytics.routes'
 import adminPaymentOptionsRoutes from './routes/adminRoutes/paymentOptions.admin.routes'
+import adminRefundApprovalRoutes from './routes/adminRoutes/refundApproval.routes'
 import planRoutes from './routes/adminRoutes/plan.routes'
 import adminWeightReconciliationRoutes from './routes/adminRoutes/weightReconciliation.admin.routes'
 import zoneRoutes from './routes/adminRoutes/zone.routes'
@@ -265,6 +266,7 @@ app.use('/api/admin/cod-remittance', adminCodRemittanceRoutes)
 app.use('/api/admin/weight-reconciliation', adminWeightReconciliationRoutes)
 app.use('/api/admin/wallets', adminWalletRoutes)
 app.use('/api/admin/payment-options', adminPaymentOptionsRoutes)
+app.use('/api/admin/refund-approvals', adminRefundApprovalRoutes)
 app.use('/api/admin/billing-preferences', adminBillingPreferencesRoutes)
 app.use('/api/payment-options', paymentOptionsRoutes)
 app.use('/api/weight-reconciliation', weightReconciliationRoutes)

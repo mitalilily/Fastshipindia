@@ -55,6 +55,7 @@ import { formatPickupAddress, loadInvoiceAssets, normalizePickupDetails } from '
 import { resolveInvoiceNumber } from './invoiceNumber.service'
 import { createNotificationService } from './notifications.service'
 import { getPaymentOptions } from './paymentOptions.service'
+import { createCancellationRefundApprovalRequest } from './refundApproval.service'
 import { presignDownload, uploadBufferToStorage } from './upload.service'
 import { logTrackingEvent } from './trackingEvents.service'
 import { createWalletTransaction } from './wallet.service'
@@ -16327,21 +16328,19 @@ const runB2CLiveTrackingSideEffects = async ({
       )
       if (outstandingRefund <= 0) return
 
-      await createWalletTransaction({
-        walletId: wallet.id,
+      await createCancellationRefundApprovalRequest({
+        tx,
+        order: syncedOrder,
+        wallet,
         amount: outstandingRefund,
-        type: 'credit',
-        ref: syncedOrder.id,
         reason: getCancellationRefundReason(syncedOrder.order_number),
-        currency: wallet.currency ?? 'INR',
+        source: 'live_tracking_cancelled',
         meta: {
-          source: 'live_tracking_cancelled',
           order_id: syncedOrder.id,
           order_number: syncedOrder.order_number,
           awb_number: syncedOrder.awb_number,
           previous_status: previousStatus,
         },
-        tx: tx as any,
       })
     })
   }

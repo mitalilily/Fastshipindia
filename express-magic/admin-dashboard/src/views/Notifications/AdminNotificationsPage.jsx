@@ -8,6 +8,7 @@ import {
   Stack,
   Switch,
   Text,
+  useToast,
 } from "@chakra-ui/react";
 import {
   IconBell,
@@ -30,6 +31,11 @@ import {
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from "services/notification.service";
+import {
+  approveRefundRequest,
+  declineRefundRequest,
+  getRefundApprovalRequests,
+} from "services/refundApproval.service";
 import { useNotificationsStore } from "store/useNotificationsStore";
 
 const fallbackNotifications = [
@@ -424,6 +430,7 @@ function NotificationSettingsPage() {
 
 function NotificationsListPage() {
   const history = useHistory();
+  const toast = useToast();
   const {
     notifications,
     unreadCount,
@@ -433,6 +440,9 @@ function NotificationsListPage() {
   } = useNotificationsStore();
   const [isLoading, setIsLoading] = useState(false);
   const [activeId, setActiveId] = useState(null);
+  const [refundRequests, setRefundRequests] = useState([]);
+  const [refundsLoading, setRefundsLoading] = useState(false);
+  const [refundActionId, setRefundActionId] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -452,6 +462,22 @@ function NotificationsListPage() {
       mounted = false;
     };
   }, [setNotifications]);
+
+  const loadRefundRequests = async () => {
+    setRefundsLoading(true);
+    try {
+      const data = await getRefundApprovalRequests({ status: "pending" });
+      setRefundRequests(Array.isArray(data?.data) ? data.data : []);
+    } catch (error) {
+      setRefundRequests([]);
+    } finally {
+      setRefundsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRefundRequests();
+  }, []);
 
   const rows = useMemo(
     () => (notifications.length ? notifications : fallbackNotifications),
@@ -476,6 +502,34 @@ function NotificationsListPage() {
       markAllAsRead();
     } finally {
       setActiveId(null);
+    }
+  };
+
+  const handleRefundAction = async (request, action) => {
+    setRefundActionId(`${action}-${request.id}`);
+    try {
+      if (action === "approve") {
+        await approveRefundRequest(request.id);
+      } else {
+        await declineRefundRequest(request.id);
+      }
+      toast({
+        title: action === "approve" ? "Refund approved" : "Refund declined",
+        status: "success",
+        duration: 2500,
+        isClosable: true,
+      });
+      await loadRefundRequests();
+    } catch (error) {
+      toast({
+        title: "Action failed",
+        description: error?.response?.data?.message || error.message,
+        status: "error",
+        duration: 3500,
+        isClosable: true,
+      });
+    } finally {
+      setRefundActionId(null);
     }
   };
 
@@ -523,6 +577,110 @@ function NotificationsListPage() {
           </Button>
         </HStack>
       </Flex>
+
+      <AdminCard overflow="hidden">
+        <Flex
+          px="22px"
+          py="16px"
+          justify="space-between"
+          align="center"
+          borderBottom="1px solid"
+          borderColor={adminUi.border}
+          gap={4}
+          wrap="wrap"
+        >
+          <Box>
+            <Text fontSize="18px" fontWeight="800" color={adminUi.text}>
+              Pending refund approvals
+            </Text>
+            <Text fontSize="13px" color={adminUi.muted} mt="3px">
+              Cancelled order refunds wait here until admin approves or declines.
+            </Text>
+          </Box>
+          <Button
+            variant="outline"
+            h="34px"
+            fontSize="13px"
+            borderColor={adminUi.border}
+            bg="#FFFFFF"
+            onClick={loadRefundRequests}
+            isLoading={refundsLoading}
+          >
+            Refresh
+          </Button>
+        </Flex>
+        {refundsLoading ? (
+          <Flex py="34px" justify="center">
+            <Spinner />
+          </Flex>
+        ) : refundRequests.length ? (
+          <Stack spacing="0">
+            {refundRequests.map((request) => (
+              <Flex
+                key={request.id}
+                px="22px"
+                py="16px"
+                borderTop="1px solid"
+                borderColor={adminUi.border}
+                align="center"
+                justify="space-between"
+                gap="14px"
+                wrap="wrap"
+              >
+                <Box minW="240px" flex="1">
+                  <HStack spacing="9px" align="center" wrap="wrap">
+                    <Text fontSize="15px" fontWeight="800" color={adminUi.text}>
+                      {request.orderNumber || request.orderId}
+                    </Text>
+                    <SoftBadge bg="#FFF1DB" color="#B45309">
+                      Rs {Number(request.amount || 0).toFixed(2)}
+                    </SoftBadge>
+                    <SoftBadge bg="#DDFBEC" color="#00945F">
+                      Pending
+                    </SoftBadge>
+                  </HStack>
+                  <Text fontSize="13px" color={adminUi.muted} mt="5px">
+                    {request.customerName || request.customerPhone || request.userId}
+                    {request.awbNumber ? ` - AWB ${request.awbNumber}` : ""}
+                    {request.courierPartner ? ` - ${request.courierPartner}` : ""}
+                  </Text>
+                  <Text fontSize="12px" color={adminUi.muted} mt="3px">
+                    {request.createdAt
+                      ? new Date(request.createdAt).toLocaleString()
+                      : "Pending review"}
+                  </Text>
+                </Box>
+                <HStack spacing="10px">
+                  <Button
+                    h="34px"
+                    fontSize="13px"
+                    colorScheme="green"
+                    onClick={() => handleRefundAction(request, "approve")}
+                    isLoading={refundActionId === `approve-${request.id}`}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    h="34px"
+                    fontSize="13px"
+                    variant="outline"
+                    borderColor="#FCA5A5"
+                    color="#B91C1C"
+                    onClick={() => handleRefundAction(request, "decline")}
+                    isLoading={refundActionId === `decline-${request.id}`}
+                  >
+                    Decline
+                  </Button>
+                </HStack>
+              </Flex>
+            ))}
+          </Stack>
+        ) : (
+          <Text px="22px" py="24px" color={adminUi.muted} fontSize="14px">
+            No pending refund approvals.
+          </Text>
+        )}
+      </AdminCard>
 
       <AdminCard overflow="hidden">
         {isLoading ? (

@@ -20,6 +20,7 @@ import { sendOrderStatusUpdateEmail, sendTaxInvoiceGeneratedEmail } from './even
 import { generateInvoicePDF } from './invoice.service'
 import { recordNdrEvent } from './ndr.service'
 import { createNotificationService } from './notifications.service'
+import { createCancellationRefundApprovalRequest } from './refundApproval.service'
 import { recordRtoEvent } from './rto.service'
 import { logTrackingEvent } from './trackingEvents.service'
 import { presignDownload, uploadBufferToStorage } from './upload.service'
@@ -658,15 +659,14 @@ export async function applyCancellationRefundOnce(
     total_refund: refundAmount,
   })
 
-  await createWalletTransaction({
-    walletId: wallet.id,
+  await createCancellationRefundApprovalRequest({
+    tx,
+    order,
+    wallet,
     amount: refundAmount,
-    type: 'credit',
-    ref: order.id,
     reason: refundReason,
-    currency: wallet.currency ?? 'INR',
+    source,
     meta: {
-      source,
       order_id: order.id,
       order_number: order.order_number,
       order_type: order.order_type,
@@ -674,10 +674,9 @@ export async function applyCancellationRefundOnce(
       other_charges: otherCharges,
       cod_charges: order.order_type === 'cod' ? codCharges : 0,
     },
-    tx: tx as any,
   })
 
-  console.log(`✅ Wallet refunded ₹${refundAmount} for ${order.user_id}`)
+  console.log(`Refund approval request queued for Rs ${refundAmount} and user ${order.user_id}`)
   return refundAmount
 }
 
