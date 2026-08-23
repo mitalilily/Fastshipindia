@@ -1,8 +1,9 @@
-import { Alert, Button, Chip, Link, Stack, Typography, alpha } from '@mui/material'
+import { Alert, Box, Button, Chip, Link, Stack, Tooltip, Typography, alpha } from '@mui/material'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import moment from 'moment'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
+import { MdInfoOutline } from 'react-icons/md'
 import { useB2BOrdersByUser, useGenerateManifest } from '../../../hooks/Orders/useOrders'
 import { useFastLoading } from '../../../hooks/useFastLoading'
 import type { B2BOrder } from '../../../types/generic.types'
@@ -184,6 +185,113 @@ const B2BOrdersList = ({
     ).trim()
   }
 
+  const joinAddressParts = (...parts: unknown[]) =>
+    parts
+      .map((part) => String(part ?? '').trim())
+      .filter(Boolean)
+      .join(', ')
+
+  const getSenderAddress = (row: B2BOrder) => {
+    const pickup = getPickupDetails(row)
+    return joinAddressParts(
+      pickup.address,
+      pickup.addressLine1,
+      pickup.address_line_1,
+      pickup.addressLine2,
+      pickup.address_line_2,
+      pickup.city,
+      pickup.state,
+      pickup.country,
+      pickup.pincode,
+    )
+  }
+
+  const getReceiverAddress = (row: B2BOrder) =>
+    joinAddressParts(row.address, row.city, row.state, row.country, row.pincode)
+
+  const renderPartyDetails = ({
+    name,
+    phone,
+    address,
+  }: {
+    name?: string
+    phone?: string
+    address?: string
+  }) => {
+    const displayName = String(name || '-').trim() || '-'
+    const displayPhone = String(phone || '-').trim() || '-'
+    const displayAddress = String(address || '-').trim() || '-'
+
+    return (
+      <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={0.45} alignItems="center" sx={{ minWidth: 0 }}>
+          <Typography
+            sx={{
+              maxWidth: '100%',
+              minWidth: 0,
+              fontSize: 12.1,
+              fontWeight: 600,
+              color: 'text.primary',
+              lineHeight: 1.28,
+            }}
+            noWrap
+          >
+            {displayName}
+          </Typography>
+          <Tooltip
+            arrow
+            placement="top"
+            title={
+              <Box sx={{ p: 0.8, maxWidth: 360 }}>
+                <Typography sx={{ fontWeight: 900, fontSize: 13.5, mb: 0.5 }}>
+                  {displayName}
+                </Typography>
+                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                  <Box component="span" sx={{ fontWeight: 800 }}>
+                    Mobile Number:
+                  </Box>{' '}
+                  {displayPhone}
+                </Typography>
+                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                  <Box component="span" sx={{ fontWeight: 800 }}>
+                    Address:
+                  </Box>{' '}
+                  {displayAddress}
+                </Typography>
+              </Box>
+            }
+          >
+            <Box
+              component="span"
+              onClick={(event) => event.stopPropagation()}
+              sx={{
+                width: 17,
+                height: 17,
+                borderRadius: '50%',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.secondary',
+                cursor: 'help',
+                flexShrink: 0,
+                '& svg': { fontSize: 15 },
+                '&:hover': {
+                  color: 'primary.main',
+                  bgcolor: alpha('#0D3B8E', 0.08),
+                },
+              }}
+            >
+              <MdInfoOutline />
+            </Box>
+          </Tooltip>
+        </Stack>
+        <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+          {displayPhone}
+        </Typography>
+      </Stack>
+    )
+  }
+
   const getInvoiceDetails = (row: B2BOrder) => {
     const extendedRow = row as B2BOrder & { invoices?: unknown; invoice_details?: unknown; invoice_number?: string; invoice_no?: string }
     const rawInvoices: unknown = extendedRow.invoices || extendedRow.invoice_details
@@ -325,14 +433,11 @@ const B2BOrdersList = ({
       minWidth: 150,
       truncate: false,
       render: (_value, row) => (
-        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
-            {getSenderName(row)}
-          </Typography>
-          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
-            {getSenderPhone(row) || '-'}
-          </Typography>
-        </Stack>
+        renderPartyDetails({
+          name: getSenderName(row),
+          phone: getSenderPhone(row),
+          address: getSenderAddress(row),
+        })
       ),
     },
     {
@@ -341,14 +446,11 @@ const B2BOrdersList = ({
       minWidth: 150,
       truncate: false,
       render: (_value, row) => (
-        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
-            {row.buyer_name || '-'}
-          </Typography>
-          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
-            {row.buyer_phone || '-'}
-          </Typography>
-        </Stack>
+        renderPartyDetails({
+          name: row.buyer_name,
+          phone: row.buyer_phone,
+          address: getReceiverAddress(row),
+        })
       ),
     },
     {
