@@ -151,7 +151,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
   const [currentStep, setCurrentStep] = useState(0)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
   const [stepError, setStepError] = useState('')
-  const steps = ['Order & Delivery', 'Pickup Location', 'Courier Selection']
+  const steps = ['Order & Delivery', 'Pickup & Review', 'Courier Selection']
   const { data: paymentOptions } = usePaymentOptions()
 
   // Determine default order type based on enabled payment options
@@ -738,16 +738,22 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                 <B2BProductsForm />
               </FormSectionAccordion>
 
-              <AmountSummaryCard
-                subtotal={subtotal}
-                totalCollectable={totalCollectable}
-                totalOrderValue={totalOrderValue}
-                errors={errors as FieldErrors<B2BFormData>}
-              />
             </Stack>
           )}
 
-          {currentStep === 1 && <PickupLocationForm shipmentType="b2b" />}
+          {currentStep === 1 && (
+            <Stack gap={1.5} mb={1}>
+              <PickupLocationForm shipmentType="b2b" />
+              <FormSectionAccordion title="Booking Review" icon={<FaFileInvoice />} defaultExpanded compact>
+                <AmountSummaryCard
+                  subtotal={subtotal}
+                  totalCollectable={totalCollectable}
+                  totalOrderValue={totalOrderValue}
+                  errors={errors as FieldErrors<B2BFormData>}
+                />
+              </FormSectionAccordion>
+            </Stack>
+          )}
 
           {currentStep === 2 && (
             <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded compact>
@@ -791,7 +797,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                   color="primary"
                   loading={createShipmentMutation?.isPending}
                 >
-                  Review Delhivery Booking
+                  Book Shipment
                 </Button>
               )}
             </Stack>

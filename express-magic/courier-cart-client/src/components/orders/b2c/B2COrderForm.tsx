@@ -8,7 +8,7 @@ import {
   type FieldPath,
 } from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
-import { FaBox, FaUser } from 'react-icons/fa'
+import { FaBox, FaTruck, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fetchLocations } from '../../../api/locations'
 import type { CreateShipmentParams } from '../../../api/order.service'
@@ -22,6 +22,7 @@ import DeliveryDetailsForm from '../DeliveryDetailsForm'
 import OptionalChargesForm from '../OptionalChargesForm'
 import OrderDetailsForm from '../OrderDetailsForm'
 import PickupLocationForm from '../PickupLocationForm'
+import { SelectCourierForm } from '../SelectCourierForm'
 import PackageDetailsForm from './PackageDetailsForm'
 import PackageDimensionsForm from './PackageDimensionsForm'
 
@@ -124,9 +125,11 @@ export default function B2COrderFormSteps({
   const [isAdvancing, setIsAdvancing] = useState(false)
   const [stepError, setStepError] = useState('')
   const formScrollRef = useRef<HTMLFormElement>(null)
-  const steps = ['Order & Delivery', 'Pickup Location']
-  const { data: paymentOptions } = usePaymentOptions()
   const isEditMode = mode === 'edit'
+  const steps = isEditMode
+    ? ['Order & Delivery', 'Pickup & Review']
+    : ['Order & Delivery', 'Pickup & Review', 'Courier Selection']
+  const { data: paymentOptions } = usePaymentOptions()
 
   const defaultPickupDate = getLocalDateInputValue()
 
@@ -301,6 +304,18 @@ export default function B2COrderFormSteps({
             }
           : {}),
       }
+      if (!isEditMode && !data.courierPartnerId) {
+        const message = 'Please select a courier partner before creating the order.'
+        methods.setError('courierPartnerId', {
+          type: 'manual',
+          message,
+        })
+        setStepError(message)
+        toast.open({ message, severity: 'warning' })
+        setCurrentStep(2)
+        return
+      }
+
       if (isEditMode) {
         if (!existingOrderId) {
           throw new Error('Missing order ID for update')
@@ -422,6 +437,21 @@ export default function B2COrderFormSteps({
       return true
     }
 
+    if (currentStep === 1) {
+      const pickupFields: FieldPath<B2CFormData>[] = ['pickupLocationId']
+      const pickupValid = await trigger(pickupFields, { shouldFocus: true })
+      if (pickupValid) {
+        setStepError('')
+        return true
+      }
+
+      const message = 'Please select a pickup address before moving to courier selection.'
+      setStepError(message)
+      toast.open({ message, severity: 'warning' })
+      methods.setFocus('pickupLocationId')
+      return false
+    }
+
     return true
   }
 
@@ -455,7 +485,10 @@ export default function B2COrderFormSteps({
 
   const stepLabels = [
     { title: 'Order & Delivery', caption: 'Customer, products and package details' },
-    { title: 'Pickup Location', caption: 'Pickup and RTO warehouse details' },
+    { title: 'Pickup & Review', caption: 'Pickup warehouse and booking summary' },
+    ...(!isEditMode
+      ? [{ title: 'Courier Selection', caption: 'Choose courier rate only' }]
+      : []),
   ]
 
   const stepCompletion = ((currentStep + 1) / stepLabels.length) * 100
@@ -650,16 +683,28 @@ export default function B2COrderFormSteps({
                 <OptionalChargesForm />
               </FormSectionAccordion>
 
-              <AmountSummaryCard
-                subtotal={subtotal}
-                totalCollectable={totalCollectable}
-                totalOrderValue={totalOrderValue}
-                errors={errors as FieldErrors<B2CFormData>}
-              />
             </Stack>
           )}
 
-          {currentStep === 1 && <PickupLocationForm />}
+          {currentStep === 1 && (
+            <Stack gap={2} mb={2}>
+              <PickupLocationForm />
+              <FormSectionAccordion title="Booking Review" icon={<BiRupee />} defaultExpanded>
+                <AmountSummaryCard
+                  subtotal={subtotal}
+                  totalCollectable={totalCollectable}
+                  totalOrderValue={totalOrderValue}
+                  errors={errors as FieldErrors<B2CFormData>}
+                />
+              </FormSectionAccordion>
+            </Stack>
+          )}
+
+          {currentStep === 2 && (
+            <FormSectionAccordion title="Courier Selection" icon={<FaTruck />} defaultExpanded>
+              <SelectCourierForm shipment_type="b2c" />
+            </FormSectionAccordion>
+          )}
           {stepError ? (
             <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
               {stepError}
