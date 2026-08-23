@@ -263,13 +263,61 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                 justifyContent="space-between"
                 spacing={1.5}
               >
-                <Box>
+                <Box sx={{ flex: 1, width: '100%', minWidth: 0 }}>
                   <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
                     Select Pickup Address
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Need a different pickup warehouse? Add it here without leaving this order.
                   </Typography>
+                  <Autocomplete
+                    options={locations.pickupAddresses}
+                    value={
+                      locations.pickupAddresses.find((loc) => loc.pickupId === field.value) ?? null
+                    }
+                    onChange={(_, value) => {
+                      if (value) {
+                        applyPickupLocation(value, field.onChange)
+                      }
+                    }}
+                    getOptionLabel={getPickupLabel}
+                    isOptionEqualToValue={(option, value) => option.pickupId === value.pickupId}
+                    noOptionsText="No pickup address found"
+                    sx={{ mt: 1.4, maxWidth: 760 }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Search Pickup Address"
+                        placeholder="Select address"
+                        size="small"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            minHeight: 48,
+                            borderRadius: '10px',
+                            bgcolor: '#FFFFFF',
+                            '&.Mui-focused fieldset': {
+                              borderColor: ACCENT,
+                              boxShadow: `0 0 0 3px ${alpha(ACCENT, 0.09)}`,
+                            },
+                          },
+                        }}
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props} key={option.pickupId}>
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
+                            {getPickupLabel(option)}
+                          </Typography>
+                          <Typography sx={{ color: 'text.secondary', fontSize: 12 }} noWrap>
+                            {getPickupDescription(option)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+                  />
                 </Box>
                 <Button
                   variant="contained"
@@ -284,59 +332,6 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                 >
                   Add Pickup Address
                 </Button>
-              </Stack>
-            </Grid>
-            <Grid size={12}>
-              <Stack spacing={0.8}>
-                <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 700, fontSize: 13 }}>
-                  Search and select your pickup address
-                </Typography>
-                <Autocomplete
-                  options={locations.pickupAddresses}
-                  value={
-                    locations.pickupAddresses.find((loc) => loc.pickupId === field.value) ?? null
-                  }
-                  onChange={(_, value) => {
-                    if (value) {
-                      applyPickupLocation(value, field.onChange)
-                    }
-                  }}
-                  getOptionLabel={getPickupLabel}
-                  isOptionEqualToValue={(option, value) => option.pickupId === value.pickupId}
-                  noOptionsText="No pickup address found"
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder="Select address"
-                      size="small"
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          minHeight: 48,
-                          borderRadius: '10px',
-                          bgcolor: '#FFFFFF',
-                          '&.Mui-focused fieldset': {
-                            borderColor: ACCENT,
-                            boxShadow: `0 0 0 3px ${alpha(ACCENT, 0.09)}`,
-                          },
-                        },
-                      }}
-                    />
-                  )}
-                  renderOption={(props, option) => (
-                    <Box component="li" {...props} key={option.pickupId}>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
-                          {getPickupLabel(option)}
-                        </Typography>
-                        <Typography sx={{ color: 'text.secondary', fontSize: 12 }} noWrap>
-                          {getPickupDescription(option)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
-                />
               </Stack>
             </Grid>
 
