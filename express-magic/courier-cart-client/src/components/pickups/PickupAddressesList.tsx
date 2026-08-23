@@ -21,6 +21,7 @@ import { BiCheckCircle } from 'react-icons/bi'
 import { CiEdit } from 'react-icons/ci'
 import { MdOutlineWarehouse } from 'react-icons/md'
 import { useUpdatePickupAddress } from '../../hooks/Pickup/usePickupAddresses'
+import { brand } from '../../theme/brand'
 import type { HydratedPickup } from '../../types/generic.types'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
 import CustomSwitch from '../UI/inputs/CustomSwitch'
@@ -72,9 +73,6 @@ const PickupAddressesList = ({
   const isMd = useMediaQuery(theme.breakpoints.between('md', 'lg'))
   const isLgUp = useMediaQuery(theme.breakpoints.up('lg'))
   const isDark = theme.palette.mode === 'dark'
-  const borderColor = isDark
-    ? alpha(theme.palette.common.white, 0.12)
-    : alpha(theme.palette.text.primary, 0.1)
 
   let drawerWidth: string | number = '100%'
   if (isXs) drawerWidth = '100%'
@@ -102,10 +100,10 @@ const PickupAddressesList = ({
     <>
       <Box
         sx={{
-          borderRadius: '8px',
-          border: `1px solid ${borderColor}`,
+          borderRadius: '14px',
+          border: `1px solid ${alpha(brand.navy, 0.1)}`,
           bgcolor: theme.palette.background.paper,
-          boxShadow: `0 16px 36px ${alpha(theme.palette.text.primary, 0.06)}`,
+          boxShadow: `0 18px 42px ${alpha(brand.navy, 0.07)}`,
           overflow: 'hidden',
         }}
       >
@@ -117,8 +115,8 @@ const PickupAddressesList = ({
           sx={{
             px: { xs: 1.6, sm: 2.2 },
             py: 1.4,
-            borderBottom: `1px solid ${borderColor}`,
-            bgcolor: isDark ? alpha(theme.palette.common.white, 0.04) : '#fbfcfd',
+            borderBottom: `1px solid ${alpha(brand.navy, 0.1)}`,
+            bgcolor: isDark ? alpha(theme.palette.common.white, 0.04) : alpha(brand.aqua, 0.46),
           }}
         >
           <Stack spacing={0.2}>
@@ -136,8 +134,8 @@ const PickupAddressesList = ({
             onPageChange={(_, nextPage) => onPageChange(nextPage)}
             onRowsPerPageChange={(event) => onRowsPerPageChange(Number(event.target.value))}
             sx={{
-              borderRadius: '8px',
-              border: `1px solid ${borderColor}`,
+              borderRadius: '10px',
+              border: `1px solid ${alpha(brand.navy, 0.12)}`,
               bgcolor: theme.palette.background.paper,
               '& .MuiToolbar-root': { minHeight: 36, px: 1 },
               '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
@@ -180,21 +178,21 @@ const PickupAddressesList = ({
                         height: '100%',
                         minHeight: 216,
                         cursor: 'pointer',
-                        borderRadius: '8px',
+                        borderRadius: '12px',
                         border: `1px solid ${
-                          isSelected ? '#0f8bab' : alpha(theme.palette.text.primary, 0.11)
+                          isSelected ? brand.navy : alpha(brand.navy, 0.12)
                         }`,
                         bgcolor: isDark ? alpha(theme.palette.common.white, 0.03) : '#fff',
                         boxShadow: isSelected
-                          ? `0 0 0 2px ${alpha('#0f8bab', 0.16)}, 0 16px 34px ${alpha(
-                              '#0f8bab',
+                          ? `0 0 0 2px ${alpha(brand.navy, 0.12)}, 0 16px 34px ${alpha(
+                              brand.navy,
                               0.13,
                             )}`
-                          : `0 10px 24px ${alpha(theme.palette.text.primary, 0.05)}`,
+                          : `0 10px 24px ${alpha(brand.navy, 0.05)}`,
                         transition: 'border-color .18s ease, box-shadow .18s ease, transform .18s ease',
                         '&:hover': {
-                          borderColor: '#0f8bab',
-                          boxShadow: `0 16px 34px ${alpha('#0f8bab', 0.12)}`,
+                          borderColor: brand.navy,
+                          boxShadow: `0 16px 34px ${alpha(brand.navy, 0.11)}`,
                           transform: 'translateY(-1px)',
                         },
                       }}
@@ -244,10 +242,15 @@ const PickupAddressesList = ({
                             <Tooltip title="Primary pickup address">
                               <Chip
                                 label="Primary"
-                                color="success"
                                 size="small"
                                 icon={<BiCheckCircle style={{ fontSize: 15 }} />}
-                                sx={{ borderRadius: '8px', fontWeight: 800 }}
+                                sx={{
+                                  borderRadius: '8px',
+                                  fontWeight: 800,
+                                  color: brand.red,
+                                  bgcolor: alpha(brand.red, 0.1),
+                                  '& .MuiChip-icon': { color: brand.red },
+                                }}
                               />
                             </Tooltip>
                           )}
@@ -317,9 +320,9 @@ const PickupAddressesList = ({
                                   handleEdit(address)
                                 }}
                                 sx={{
-                                  color: '#0f8bab',
-                                  border: `1px solid ${alpha('#0f8bab', 0.24)}`,
+                                  border: `1px solid ${alpha(brand.navy, 0.22)}`,
                                   borderRadius: '8px',
+                                  color: brand.navy,
                                 }}
                               >
                                 <CiEdit />

@@ -34,6 +34,7 @@ import {
   useImportPickupAddresses,
   usePickupAddresses,
 } from '../../hooks/Pickup/usePickupAddresses'
+import { brand } from '../../theme/brand'
 import type { PickupAddressFilters } from '../../api/pickups'
 import type { HydratedPickup } from '../../types/generic.types'
 import { useFastLoading } from '../../hooks/useFastLoading'
@@ -284,10 +285,10 @@ const PickupAddresses = () => {
       <Box
         sx={{
           overflow: 'hidden',
-          borderRadius: '8px',
-          border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
-          bgcolor: theme.palette.background.paper,
-          boxShadow: `0 14px 32px ${alpha(theme.palette.text.primary, 0.06)}`,
+          borderRadius: '14px',
+          border: `1px solid ${alpha(brand.navy, 0.12)}`,
+          bgcolor: '#ffffff',
+          boxShadow: `0 18px 42px ${alpha(brand.navy, 0.08)}`,
         }}
       >
         <Stack
@@ -295,7 +296,10 @@ const PickupAddresses = () => {
           alignItems="center"
           justifyContent="space-between"
           sx={{
-            bgcolor: '#0f8bab',
+            background: `linear-gradient(135deg, ${brand.navy} 0%, #123F80 72%, ${alpha(
+              brand.red,
+              0.9,
+            )} 160%)`,
             color: '#fff',
             px: { xs: 1.8, sm: 2.4 },
             py: 1.35,
@@ -304,7 +308,19 @@ const PickupAddresses = () => {
           <Typography sx={{ fontWeight: 800, fontSize: { xs: '0.92rem', sm: '1rem' } }}>
             Warehouse/Pickup Address
           </Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1 }}>⌃</Typography>
+          <Typography
+            sx={{
+              px: 1.2,
+              py: 0.35,
+              borderRadius: '999px',
+              bgcolor: alpha('#ffffff', 0.14),
+              border: `1px solid ${alpha('#ffffff', 0.24)}`,
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            Manage
+          </Typography>
         </Stack>
 
         <Stack spacing={2} sx={{ p: { xs: 1.6, sm: 2.2 } }}>
@@ -339,8 +355,12 @@ const PickupAddresses = () => {
                     maxWidth: { md: 560 },
                     '& .MuiOutlinedInput-root': {
                       minHeight: 48,
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       bgcolor: '#fff',
+                      '&.Mui-focused fieldset': {
+                        borderColor: brand.navy,
+                        boxShadow: `0 0 0 3px ${alpha(brand.navy, 0.1)}`,
+                      },
                     },
                   }}
                 />
@@ -366,10 +386,11 @@ const PickupAddresses = () => {
               sx={{
                 minHeight: 48,
                 px: 2.5,
-                borderRadius: '8px',
+                borderRadius: '10px',
                 whiteSpace: 'nowrap',
-                bgcolor: '#0f8bab',
-                '&:hover': { bgcolor: '#0b7894' },
+                bgcolor: brand.navy,
+                boxShadow: `0 14px 26px ${alpha(brand.navy, 0.2)}`,
+                '&:hover': { bgcolor: '#082f72' },
               }}
             >
               Add Address
