@@ -15,10 +15,17 @@ export const createPickupAddress = async (payload: CreatePickupAddressPayload) =
 }
 
 // ✅ Enhance API util
-export interface PickupAddressFilters extends Partial<HydratedPickup> {
+export interface PickupAddressFilters
+  extends Omit<Partial<HydratedPickup>, 'isPickupEnabled' | 'isPrimary'> {
   page?: number
   limit?: number
   sortBy?: string
+  name?: string
+  city?: string
+  state?: string
+  pincode?: string
+  isPickupEnabled?: boolean | 'active' | 'inactive' | ''
+  isPrimary?: boolean | ''
 }
 
 export const getPickupAddresses = async (filters?: PickupAddressFilters) => {

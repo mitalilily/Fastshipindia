@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Alert,
+  alpha,
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -9,6 +11,8 @@ import {
   Menu,
   MenuItem,
   Stack,
+  TextField,
+  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material'
@@ -30,6 +34,7 @@ import {
   useImportPickupAddresses,
   usePickupAddresses,
 } from '../../hooks/Pickup/usePickupAddresses'
+import type { PickupAddressFilters } from '../../api/pickups'
 import type { HydratedPickup } from '../../types/generic.types'
 import { useFastLoading } from '../../hooks/useFastLoading'
 
@@ -122,7 +127,9 @@ const PickupAddresses = () => {
 
   const { mutateAsync: importAddresses, isPending } = useImportPickupAddresses()
 
-  const [filters, setFilters] = useState<Partial<HydratedPickup>>({})
+  const [filters, setFilters] = useState<PickupAddressFilters>({})
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null)
+  const [warehouseSearch, setWarehouseSearch] = useState('')
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -196,8 +203,9 @@ const PickupAddresses = () => {
   }
 
   const handleFilterApply = (filters: Partial<HydratedPickup>) => {
-    setFilters({ ...filters })
+    setFilters({ ...(filters as PickupAddressFilters) })
     setPage(0)
+    setSelectedWarehouseId(null)
   }
   const handleOpenAddDrawer = () => {
     setDrawerType('add')
@@ -214,6 +222,46 @@ const PickupAddresses = () => {
     return Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined && v !== null)
       .length
   }, [filters])
+
+  const warehouseOptions = data?.pickupAddresses ?? []
+  const selectedWarehouse =
+    warehouseOptions.find((address) => address.pickupId === selectedWarehouseId) ?? null
+
+  const getWarehouseLabel = (address: HydratedPickup) =>
+    address.pickup?.addressNickname ||
+    address.pickup?.contactName ||
+    `${address.pickup?.city || 'Pickup'} ${address.pickup?.pincode || ''}`.trim()
+
+  const getWarehouseDescription = (address: HydratedPickup) =>
+    [
+      address.pickup?.addressLine1,
+      address.pickup?.addressLine2,
+      address.pickup?.city,
+      address.pickup?.state,
+      address.pickup?.pincode,
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+  const handleWarehouseSearch = (value: string, reason: string) => {
+    setWarehouseSearch(value)
+
+    if (reason === 'clear') {
+      setSelectedWarehouseId(null)
+      setFilters((current) => {
+        const { name: _name, ...rest } = current
+        return rest
+      })
+      setPage(0)
+      return
+    }
+
+    if (reason !== 'input') return
+
+    setSelectedWarehouseId(null)
+    setFilters((current) => ({ ...current, name: value || undefined }))
+    setPage(0)
+  }
 
   return (
     <Stack
@@ -233,26 +281,125 @@ const PickupAddresses = () => {
           Live pickup addresses are temporarily unavailable. The address list remains open and will update on refresh.
         </Alert>
       )}
+      <Box
+        sx={{
+          overflow: 'hidden',
+          borderRadius: '8px',
+          border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
+          bgcolor: theme.palette.background.paper,
+          boxShadow: `0 14px 32px ${alpha(theme.palette.text.primary, 0.06)}`,
+        }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{
+            bgcolor: '#0f8bab',
+            color: '#fff',
+            px: { xs: 1.8, sm: 2.4 },
+            py: 1.35,
+          }}
+        >
+          <Typography sx={{ fontWeight: 800, fontSize: { xs: '0.92rem', sm: '1rem' } }}>
+            Warehouse/Pickup Address
+          </Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: 18, lineHeight: 1 }}>⌃</Typography>
+        </Stack>
+
+        <Stack spacing={2} sx={{ p: { xs: 1.6, sm: 2.2 } }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'text.secondary' }}>
+            Search and select your warehouse <Box component="span" sx={{ color: 'error.main' }}>*</Box>
+          </Typography>
+
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.2}
+            alignItems={{ xs: 'stretch', md: 'flex-start' }}
+          >
+            <Autocomplete
+              fullWidth
+              options={warehouseOptions}
+              value={selectedWarehouse}
+              inputValue={warehouseSearch}
+              loading={showLoading}
+              getOptionLabel={getWarehouseLabel}
+              isOptionEqualToValue={(option, value) => option.pickupId === value.pickupId}
+              onInputChange={(_, value, reason) => handleWarehouseSearch(value, reason)}
+              onChange={(_, value) => {
+                setSelectedWarehouseId(value?.pickupId ?? null)
+                setWarehouseSearch(value ? getWarehouseLabel(value) : '')
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Select address"
+                  size="small"
+                  sx={{
+                    maxWidth: { md: 560 },
+                    '& .MuiOutlinedInput-root': {
+                      minHeight: 48,
+                      borderRadius: '8px',
+                      bgcolor: '#fff',
+                    },
+                  }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <Box component="li" {...props} key={option.pickupId}>
+                  <Box>
+                    <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
+                      {getWarehouseLabel(option)}
+                    </Typography>
+                    <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>
+                      {getWarehouseDescription(option)}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+              noOptionsText={showLoading ? 'Loading addresses...' : 'No address found'}
+            />
+            <Button
+              variant="contained"
+              startIcon={<FiPlus size={18} />}
+              onClick={() => handleOpenAddDrawer()}
+              sx={{
+                minHeight: 48,
+                px: 2.5,
+                borderRadius: '8px',
+                whiteSpace: 'nowrap',
+                bgcolor: '#0f8bab',
+                '&:hover': { bgcolor: '#0b7894' },
+              }}
+            >
+              Add Address
+            </Button>
+          </Stack>
+
+          <Typography sx={{ fontWeight: 700, color: 'text.secondary' }}>OR - Select From</Typography>
+        </Stack>
+      </Box>
+
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         alignItems={{ xs: 'stretch', md: 'center' }}
-        justifyContent="space-between"
+        justifyContent="flex-end"
         gap={2}
         sx={{ width: '100%', minWidth: 0 }}
       >
-        <FilterBar<Partial<HydratedPickup>>
-          fields={filterFields}
-          defaultValues={initialFilterValues as unknown as Partial<HydratedPickup>}
-          onApply={handleFilterApply}
-          appliedCount={
-            Object.entries(filters)?.filter(([_, v]) => v !== '' && v !== undefined && v !== null)
-              .length
-          }
-          loading={showLoading}
-        />
-        {/* Right side: Actions */}
+        <Box sx={{ display: { xs: 'none', md: 'block' }, mr: 'auto' }}>
+          <FilterBar<Partial<HydratedPickup>>
+            fields={filterFields}
+            defaultValues={initialFilterValues as unknown as Partial<HydratedPickup>}
+            onApply={handleFilterApply}
+            appliedCount={
+              Object.entries(filters)?.filter(([_, v]) => v !== '' && v !== undefined && v !== null)
+                .length
+            }
+            loading={showLoading}
+          />
+        </Box>
         <Stack
-          ml={!isMobile ? '50px' : 0}
           direction="row"
           spacing={1}
           alignItems="center"
@@ -359,6 +506,8 @@ const PickupAddresses = () => {
           totalCount={data?.totalCount ?? 0}
           page={page}
           rowsPerPage={rowsPerPage}
+          selectedPickupId={selectedWarehouseId}
+          onSelectAddress={setSelectedWarehouseId}
           onPageChange={setPage}
           onRowsPerPageChange={(limit) => {
             setRowsPerPage(limit)
