@@ -19,6 +19,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { BiDownload, BiUpload } from 'react-icons/bi'
 import { FiMoreVertical, FiPlus } from 'react-icons/fi'
+import { MdOutlineWarehouse } from 'react-icons/md'
 import { useSearchParams } from 'react-router-dom'
 
 import { useQueryClient } from '@tanstack/react-query'
@@ -286,52 +287,88 @@ const PickupAddresses = () => {
         sx={{
           overflow: 'hidden',
           borderRadius: '14px',
-          border: `1px solid ${alpha(brand.navy, 0.12)}`,
+          border: `1px solid ${alpha(brand.navy, 0.1)}`,
           bgcolor: '#ffffff',
-          boxShadow: `0 18px 42px ${alpha(brand.navy, 0.08)}`,
+          boxShadow: `0 18px 42px ${alpha(brand.navy, 0.06)}`,
         }}
       >
         <Stack
-          direction="row"
-          alignItems="center"
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
           justifyContent="space-between"
+          spacing={1.2}
           sx={{
-            background: `linear-gradient(135deg, ${brand.navy} 0%, #123F80 72%, ${alpha(
-              brand.red,
-              0.9,
-            )} 160%)`,
-            color: '#fff',
-            px: { xs: 1.8, sm: 2.4 },
+            px: { xs: 1.6, sm: 2 },
             py: 1.35,
+            borderBottom: `1px solid ${alpha(brand.navy, 0.08)}`,
+            bgcolor: alpha(brand.aqua, 0.35),
           }}
         >
-          <Typography sx={{ fontWeight: 800, fontSize: { xs: '0.92rem', sm: '1rem' } }}>
-            Warehouse/Pickup Address
-          </Typography>
-          <Typography
-            sx={{
-              px: 1.2,
-              py: 0.35,
-              borderRadius: '999px',
-              bgcolor: alpha('#ffffff', 0.14),
-              border: `1px solid ${alpha('#ffffff', 0.24)}`,
-              fontSize: 12,
-              fontWeight: 800,
-            }}
-          >
-            Manage
-          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: '10px',
+                display: 'grid',
+                placeItems: 'center',
+                color: brand.navy,
+                bgcolor: alpha(brand.navy, 0.08),
+                flexShrink: 0,
+              }}
+            >
+              <MdOutlineWarehouse size={20} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 900, color: brand.navy, fontSize: '1rem' }}>
+                Warehouse / Pick-up Addresses
+              </Typography>
+              <Typography sx={{ color: 'text.secondary', fontSize: 12.5 }}>
+                Search, add, import and manage pickup locations.
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<BiUpload size={18} />}
+              onClick={handleImport}
+              sx={{ display: { xs: 'none', sm: 'inline-flex' }, borderRadius: '9px' }}
+            >
+              Bulk Upload
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<BiDownload size={18} />}
+              onClick={handleExport}
+              sx={{ display: { xs: 'none', md: 'inline-flex' }, borderRadius: '9px' }}
+            >
+              Export
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<FiPlus size={18} />}
+              onClick={handleOpenAddDrawer}
+              sx={{
+                borderRadius: '9px',
+                bgcolor: brand.navy,
+                '&:hover': { bgcolor: '#082f72' },
+              }}
+            >
+              Add New
+            </Button>
+          </Stack>
         </Stack>
 
-        <Stack spacing={2} sx={{ p: { xs: 1.6, sm: 2.2 } }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'text.secondary' }}>
-            Search and select your warehouse <Box component="span" sx={{ color: 'error.main' }}>*</Box>
-          </Typography>
-
+        <Stack spacing={1.6} sx={{ p: { xs: 1.4, sm: 1.8 } }}>
           <Stack
-            direction={{ xs: 'column', md: 'row' }}
+            direction={{ xs: 'column', lg: 'row' }}
             spacing={1.2}
-            alignItems={{ xs: 'stretch', md: 'flex-start' }}
+            alignItems={{ xs: 'stretch', lg: 'center' }}
           >
             <Autocomplete
               fullWidth
@@ -349,17 +386,17 @@ const PickupAddresses = () => {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  placeholder="Select address"
+                  placeholder="Search by address title"
                   size="small"
                   sx={{
-                    maxWidth: { md: 560 },
+                    maxWidth: { lg: 420 },
                     '& .MuiOutlinedInput-root': {
-                      minHeight: 48,
+                      minHeight: 44,
                       borderRadius: '10px',
                       bgcolor: '#fff',
                       '&.Mui-focused fieldset': {
                         borderColor: brand.navy,
-                        boxShadow: `0 0 0 3px ${alpha(brand.navy, 0.1)}`,
+                        boxShadow: `0 0 0 3px ${alpha(brand.navy, 0.09)}`,
                       },
                     },
                   }}
@@ -379,128 +416,83 @@ const PickupAddresses = () => {
               )}
               noOptionsText={showLoading ? 'Loading addresses...' : 'No address found'}
             />
-            <Button
-              variant="contained"
-              startIcon={<FiPlus size={18} />}
-              onClick={() => handleOpenAddDrawer()}
-              sx={{
-                minHeight: 48,
-                px: 2.5,
-                borderRadius: '10px',
-                whiteSpace: 'nowrap',
-                bgcolor: brand.navy,
-                boxShadow: `0 14px 26px ${alpha(brand.navy, 0.2)}`,
-                '&:hover': { bgcolor: '#082f72' },
-              }}
-            >
-              Add Address
-            </Button>
+            <Box sx={{ display: { xs: 'none', md: 'block' }, flex: 1, minWidth: 0 }}>
+              <FilterBar<Partial<HydratedPickup>>
+                fields={filterFields}
+                defaultValues={initialFilterValues as unknown as Partial<HydratedPickup>}
+                onApply={handleFilterApply}
+                appliedCount={appliedFilterCount}
+                loading={showLoading}
+              />
+            </Box>
           </Stack>
-
-          <Typography sx={{ fontWeight: 700, color: 'text.secondary' }}>OR - Select From</Typography>
         </Stack>
       </Box>
 
       <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        alignItems={{ xs: 'stretch', md: 'center' }}
+        direction="row"
+        alignItems="center"
         justifyContent="flex-end"
-        gap={2}
-        sx={{ width: '100%', minWidth: 0 }}
+        gap={1}
+        sx={{ width: '100%', minWidth: 0, display: { xs: 'flex', md: 'none' } }}
       >
-        <Box sx={{ display: { xs: 'none', md: 'block' }, mr: 'auto' }}>
-          <FilterBar<Partial<HydratedPickup>>
-            fields={filterFields}
-            defaultValues={initialFilterValues as unknown as Partial<HydratedPickup>}
-            onApply={handleFilterApply}
-            appliedCount={
-              Object.entries(filters)?.filter(([_, v]) => v !== '' && v !== undefined && v !== null)
-                .length
-            }
-            loading={showLoading}
-          />
-        </Box>
-        <Stack
-          direction="row"
-          spacing={1}
-          alignItems="center"
-          sx={{ flexShrink: 0, alignSelf: { xs: 'flex-end', md: 'center' } }}
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => {
+            setDrawerType('filter')
+            setDrawerOpen(true)
+          }}
         >
-          {/* Mobile menu icon */}
-          {isMobile ? (
-            <>
-              <IconButton onClick={openMenu}>
-                <FiMoreVertical />
-              </IconButton>
-              <Menu
-                slotProps={{
-                  paper: {
-                    sx: {
-                      mt: 1,
-                      width: 200,
-                      bgcolor: 'primary.dark',
-                      backdropFilter: 'blur(10px)',
-                      WebkitBackdropFilter: 'blur(10px)',
-                      color: '#fff',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
-                      position: 'relative',
-                    },
-                  },
-                }}
-                anchorEl={menuAnchor}
-                open={!!menuAnchor}
-                onClose={closeMenu}
-              >
-                <MenuItem
-                  sx={{ display: 'flex', alignItems: 'center', gap: '13px' }}
-                  onClick={handleImport}
-                >
-                  {' '}
-                  <BiUpload />
-                  Import
-                </MenuItem>
-                <MenuItem
-                  sx={{ display: 'flex', alignItems: 'center', gap: '13px' }}
-                  onClick={handleExport}
-                >
-                  {isExporting ? (
-                    <>
-                      {' '}
-                      <CircularProgress /> Exporting...{' '}
-                    </>
-                  ) : (
-                    <>
-                      <BiDownload size={18} /> Export{' '}
-                    </>
-                  )}
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
-            // Desktop actions
-            <>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<BiUpload size={18} />}
-                onClick={handleImport}
-              >
-                Import
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<BiDownload size={18} />}
-                onClick={handleExport}
-              >
-                Export
-              </Button>
-            </>
-          )}
-        </Stack>
+          More Filters
+        </Button>
+        <IconButton onClick={openMenu}>
+          <FiMoreVertical />
+        </IconButton>
+        <Menu
+          slotProps={{
+            paper: {
+              sx: {
+                mt: 1,
+                width: 200,
+                bgcolor: 'primary.dark',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
+                position: 'relative',
+              },
+            },
+          }}
+          anchorEl={menuAnchor}
+          open={!!menuAnchor}
+          onClose={closeMenu}
+        >
+          <MenuItem
+            sx={{ display: 'flex', alignItems: 'center', gap: '13px' }}
+            onClick={handleImport}
+          >
+            <BiUpload />
+            Bulk Upload
+          </MenuItem>
+          <MenuItem
+            sx={{ display: 'flex', alignItems: 'center', gap: '13px' }}
+            onClick={handleExport}
+          >
+            {isExporting ? (
+              <>
+                <CircularProgress size={16} /> Exporting...
+              </>
+            ) : (
+              <>
+                <BiDownload size={18} /> Export
+              </>
+            )}
+          </MenuItem>
+        </Menu>
       </Stack>
 
       <Divider sx={{ display: { xs: 'block', md: 'none' } }} />

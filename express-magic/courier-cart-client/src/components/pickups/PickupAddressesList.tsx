@@ -9,7 +9,13 @@ import {
   Grid,
   IconButton,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
   TablePagination,
+  TableRow,
   Tooltip,
   Typography,
   useMediaQuery,
@@ -56,6 +62,11 @@ const formatFullAddress = (address: HydratedPickup) =>
     .filter(Boolean)
     .join(', ')
 
+const formatShortId = (value?: string) => {
+  if (!value) return '-'
+  return value.length > 8 ? value.slice(0, 8).toUpperCase() : value.toUpperCase()
+}
+
 const PickupAddressesList = ({
   listData,
   totalCount,
@@ -72,6 +83,7 @@ const PickupAddressesList = ({
   const isSm = useMediaQuery(theme.breakpoints.between('sm', 'md'))
   const isMd = useMediaQuery(theme.breakpoints.between('md', 'lg'))
   const isLgUp = useMediaQuery(theme.breakpoints.up('lg'))
+  const showTable = useMediaQuery(theme.breakpoints.up('md'))
   const isDark = theme.palette.mode === 'dark'
 
   let drawerWidth: string | number = '100%'
@@ -155,6 +167,237 @@ const PickupAddressesList = ({
               Add a warehouse address to start creating shipments.
             </Typography>
           </Stack>
+        ) : showTable ? (
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table
+              size="small"
+              sx={{
+                minWidth: 1180,
+                '& th': {
+                  bgcolor: isDark ? alpha(theme.palette.common.white, 0.05) : alpha(brand.navy, 0.06),
+                  color: brand.navy,
+                  fontSize: 12,
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0,
+                  py: 1.25,
+                  whiteSpace: 'nowrap',
+                },
+                '& td': {
+                  borderColor: alpha(brand.navy, 0.08),
+                  py: 1.35,
+                  verticalAlign: 'top',
+                },
+              }}
+            >
+              <TableHead>
+                <TableRow>
+                  <TableCell width={58}>S.No.</TableCell>
+                  <TableCell width={96}>ID</TableCell>
+                  <TableCell width={190}>Title</TableCell>
+                  <TableCell width={220}>Contact Details</TableCell>
+                  <TableCell width={98}>Pincode</TableCell>
+                  <TableCell>Address</TableCell>
+                  <TableCell width={170}>Created By</TableCell>
+                  <TableCell width={128}>Created At</TableCell>
+                  <TableCell width={132}>Status</TableCell>
+                  <TableCell width={128} align="center">
+                    Action
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {listData.map((address, index) => {
+                  const isSelected = selectedPickupId === address.pickupId
+                  const fullAddress = formatFullAddress(address)
+                  const createdBy = address.pickup?.contactName || '-'
+
+                  return (
+                    <TableRow
+                      hover
+                      key={address.pickupId}
+                      onClick={() => onSelectAddress?.(address.pickupId)}
+                      sx={{
+                        cursor: 'pointer',
+                        bgcolor: isSelected
+                          ? alpha(brand.navy, isDark ? 0.18 : 0.05)
+                          : 'transparent',
+                        '&:hover': {
+                          bgcolor: isSelected
+                            ? alpha(brand.navy, isDark ? 0.22 : 0.08)
+                            : alpha(brand.navy, isDark ? 0.12 : 0.035),
+                        },
+                      }}
+                    >
+                      <TableCell>
+                        <Typography sx={{ fontSize: 12.5, color: 'text.secondary', fontWeight: 700 }}>
+                          {page * rowsPerPage + index + 1}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: brand.navy }}>
+                          {formatShortId(address.pickupId)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Stack spacing={0.7} alignItems="flex-start">
+                          <Typography
+                            sx={{
+                              fontSize: 12.5,
+                              fontWeight: 900,
+                              color: brand.navy,
+                              textTransform: 'uppercase',
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            {formatWarehouseName(address)}
+                          </Typography>
+                          {address.isPrimary && (
+                            <Chip
+                              label="Primary"
+                              size="small"
+                              icon={<BiCheckCircle style={{ fontSize: 14 }} />}
+                              sx={{
+                                height: 23,
+                                borderRadius: '999px',
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: brand.red,
+                                bgcolor: alpha(brand.red, 0.1),
+                                '& .MuiChip-icon': { color: brand.red },
+                              }}
+                            />
+                          )}
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <Stack spacing={0.25}>
+                          <Typography sx={{ fontSize: 12.5, fontWeight: 800 }}>
+                            {address.pickup?.contactName || '-'}
+                          </Typography>
+                          <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                            {address.pickup?.contactEmail || '-'}
+                          </Typography>
+                          <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                            {address.pickup?.contactPhone || '-'}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <Typography sx={{ fontSize: 12.5, fontWeight: 700 }}>
+                          {address.pickup?.pincode || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={fullAddress} arrow disableInteractive>
+                          <Typography
+                            sx={{
+                              color: 'text.secondary',
+                              fontSize: 12.5,
+                              lineHeight: 1.45,
+                              display: '-webkit-box',
+                              overflow: 'hidden',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
+                            {fullAddress || '-'}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          sx={{
+                            fontSize: 12.5,
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            color: 'text.primary',
+                          }}
+                        >
+                          {createdBy}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography sx={{ fontSize: 12.5, color: 'text.secondary', fontWeight: 700 }}>
+                          {moment(address.createdAt).format('DD MMM YYYY')}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={0.7} alignItems="center">
+                          <Chip
+                            label={address.isPickupEnabled ? 'Active' : 'Inactive'}
+                            size="small"
+                            sx={{
+                              height: 24,
+                              borderRadius: '999px',
+                              fontSize: 11.5,
+                              fontWeight: 900,
+                              color: address.isPickupEnabled ? '#047857' : brand.red,
+                              bgcolor: address.isPickupEnabled
+                                ? alpha('#10b981', 0.12)
+                                : alpha(brand.red, 0.1),
+                            }}
+                          />
+                          <Box
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <CustomSwitch
+                              onChange={(event) =>
+                                handleStatusToggle(address.pickupId, event.target.checked)
+                              }
+                              checked={Boolean(address.isPickupEnabled)}
+                            />
+                          </Box>
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Stack direction="row" spacing={0.6} justifyContent="center">
+                          {!address.isPrimary && (
+                            <Tooltip title="Make primary">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleMakePrimary(address.pickupId)
+                                }}
+                                sx={{
+                                  minWidth: 0,
+                                  px: 0.9,
+                                  borderRadius: '8px',
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                }}
+                              >
+                                Primary
+                              </Button>
+                            </Tooltip>
+                          )}
+                          <Tooltip title="Edit address">
+                            <IconButton
+                              size="small"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleEdit(address)
+                              }}
+                              sx={{
+                                border: `1px solid ${alpha(brand.navy, 0.22)}`,
+                                borderRadius: '8px',
+                                color: brand.navy,
+                              }}
+                            >
+                              <CiEdit />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
           <Box sx={{ p: { xs: 1.4, sm: 2 } }}>
             <Grid container spacing={2}>
