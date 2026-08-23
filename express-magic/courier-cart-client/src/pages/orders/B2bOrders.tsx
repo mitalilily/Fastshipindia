@@ -13,8 +13,7 @@ import { downloadClientOrdersCsv } from '../../utils/orderCsvExport'
 
 const b2bStatusQuickFilters = [
   { label: 'All', value: 'all', statuses: undefined },
-  { label: 'Scheduled', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'] },
-  { label: 'Not Picked', value: 'not_picked', statuses: ['pending', 'booked', 'shipment_created'] },
+  { label: 'Pickups & Manifests', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'] },
   { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
   { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
   { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },

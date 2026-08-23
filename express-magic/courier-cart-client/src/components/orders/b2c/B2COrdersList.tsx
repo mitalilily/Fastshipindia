@@ -112,8 +112,7 @@ type PendingManifestRequest =
 
 const orderStatusFilterTabs = [
   { label: 'All', value: 'all', statuses: undefined },
-  { label: 'Scheduled', value: 'pickup_manifests', statuses: ['pickup_initiated', 'manifest_generated'] },
-  { label: 'Not Picked', value: 'ready_to_ship', statuses: ['pending', 'booked', 'shipment_created'] },
+  { label: 'Pickups & Manifests', value: 'pickup_manifests', statuses: ['pickup_initiated', 'manifest_generated'] },
   { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
   { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
   { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
