@@ -619,3 +619,20 @@ footer::after {
   .home-stack .campaign-card,
   .home-stack .shipping-story-card { box-shadow:0 12px 25px rgba(8,42,61,.1); }
 }
+
+/* Keep the floating navbar above the sticky home sections while scrolling. */
+.site-header {
+  position:sticky;
+  top:12px;
+  z-index:10000;
+  isolation:isolate;
+  transform:translateZ(0);
+}
+
+.home-stack-card {
+  z-index:0;
+}
+
+@media (max-width:900px) {
+  .site-header { top:8px; }
+}
