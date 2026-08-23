@@ -481,7 +481,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
               }}
             >
               <Table
-                stickyHeader
+                stickyHeader={!isShipmentVariant}
                 size="small"
                 sx={
                   isShipmentVariant
