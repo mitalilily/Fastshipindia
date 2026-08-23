@@ -65,7 +65,7 @@ export default function KeyboardShortcuts() {
     'ctrl+shift+i, cmd+shift+i',
     (e) => {
       e.preventDefault()
-      navigate('/billing/invoice_management')
+      navigate('/billing/invoices')
     },
     { enableOnFormTags: false },
   )
@@ -74,7 +74,7 @@ export default function KeyboardShortcuts() {
     'ctrl+shift+w, cmd+shift+w',
     (e) => {
       e.preventDefault()
-      navigate('/billing/wallet_transactions')
+      navigate('/billing/passbook')
     },
     { enableOnFormTags: false },
   )
@@ -83,7 +83,7 @@ export default function KeyboardShortcuts() {
     'ctrl+shift+m, cmd+shift+m',
     (e) => {
       e.preventDefault()
-      navigate('/cod-remittance')
+      navigate('/billing/cod-remittance')
     },
     { enableOnFormTags: false },
   )

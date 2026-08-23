@@ -202,7 +202,7 @@ export default function RecentActivityCard({
                 <Button
                   size="small"
                   endIcon={<MdArrowForward size={16} />}
-                  onClick={() => navigate('/billing/wallet_transactions')}
+                  onClick={() => navigate('/billing/passbook')}
                   sx={{
                     textTransform: 'none',
                     fontSize: '0.75rem',
@@ -247,7 +247,7 @@ export default function RecentActivityCard({
                       )}`,
                     },
                   }}
-                  onClick={() => navigate('/billing/wallet_transactions')}
+                  onClick={() => navigate('/billing/passbook')}
                 >
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1 }}>

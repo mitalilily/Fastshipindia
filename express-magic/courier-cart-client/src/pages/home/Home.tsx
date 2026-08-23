@@ -139,7 +139,7 @@ export default function Home() {
         icon: <TbWallet />,
         color: PURPLE,
         action: 'Recharge wallet',
-        path: '/billing/wallet_transactions?recharge=true',
+        path: '/billing/passbook?recharge=true',
       },
     ],
     [dashboardStats, formattedWalletBalance],
@@ -202,7 +202,7 @@ export default function Home() {
     { title: 'Create Order', text: 'Ship a new package', icon: <TbPlus />, color: PURPLE, path: '/orders/create' },
     { title: 'All Orders', text: 'View all shipments', icon: <TbTruckDelivery />, color: BLUE, path: '/orders/list' },
     { title: 'NDR Actions', text: 'Handle failed deliveries', icon: <TbRefresh />, color: RED, path: '/ops/ndr' },
-    { title: 'COD Remittance', text: 'Track COD payouts', icon: <TbCreditCard />, color: RED, path: '/cod-remittance' },
+    { title: 'COD Remittance', text: 'Track COD payouts', icon: <TbCreditCard />, color: RED, path: '/billing/cod-remittance' },
     { title: 'Rate Calculator', text: 'Compare courier rates', icon: <TbCalculator />, color: NAVY, path: '/tools/rate_calculator' },
     { title: 'Analytics', text: 'Shipping insights', icon: <TbChartBar />, color: PURPLE, path: '/dashboard' },
   ]

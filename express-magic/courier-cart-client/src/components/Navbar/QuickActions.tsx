@@ -37,13 +37,13 @@ const actions: QuickAction[] = [
     name: 'Recharge Wallet',
     icon: <TbWallet />,
     accent: '#103B5F',
-    path: '/billing/wallet_transactions?recharge=true',
+    path: '/billing/passbook?recharge=true',
   },
   {
     name: 'Early COD',
     icon: <TbBuildingBank />,
     accent: '#44616C',
-    path: '/cod-remittance',
+    path: '/billing/cod-remittance',
   },
   {
     name: 'Book Order',

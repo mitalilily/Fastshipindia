@@ -77,7 +77,7 @@ export default function QuickStatsCards({
       statusIcon: walletLow ? <TbAlertCircle /> : <TbCircleCheck />,
       color: '#C2410C',
       action: 'Manage wallet',
-      onClick: () => navigate('/billing/wallet_transactions'),
+      onClick: () => navigate('/billing/passbook'),
     },
     {
       title: 'COD Remittance',
@@ -88,7 +88,7 @@ export default function QuickStatsCards({
       statusIcon: hasCodDue ? <TbClock /> : <TbCircleCheck />,
       color: '#6D28D9',
       action: 'View remittances',
-      onClick: () => navigate('/cod-remittance'),
+      onClick: () => navigate('/billing/cod-remittance'),
     },
   ]
 

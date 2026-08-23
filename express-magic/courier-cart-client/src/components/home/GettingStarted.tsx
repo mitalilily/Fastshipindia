@@ -61,7 +61,7 @@ const GettingStarted = () => {
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={() => navigate('/billing/wallet_transactions')}
+                  onClick={() => navigate('/billing/passbook')}
                   sx={{
                     bgcolor: DE_BLUE,
                     '&:hover': { bgcolor: '#082A57' },

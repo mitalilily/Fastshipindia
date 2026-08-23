@@ -64,7 +64,7 @@ const InvoiceStatus = () => {
             <Typography color="gray.500" fontSize="14px" mb={2}>
               No invoices yet
             </Typography>
-            <Button variant="contained" size="small" onClick={() => navigate('/billing/invoice_management')}>
+            <Button variant="contained" size="small" onClick={() => navigate('/billing/invoices')}>
               View Invoices
             </Button>
           </Box>
@@ -115,7 +115,7 @@ const InvoiceStatus = () => {
             <Button
               variant="outlined"
               fullWidth
-              onClick={() => navigate('/billing/invoice_management')}
+              onClick={() => navigate('/billing/invoices')}
               sx={{
                 borderColor: '#333369',
                 color: '#333369',

@@ -45,7 +45,7 @@ export default function ActionItemsCard({ actions, formatCurrency }: ActionItems
           subtitle: `Due: ${formatCurrency(actions.pendingInvoiceAmount || 0)}`,
           icon: <TbInvoice size={18} />,
           color: dashboardPalette.blue,
-          path: '/billing/invoice_management',
+          path: '/billing/invoices',
         }
       : null,
   ].filter(Boolean) as Array<{

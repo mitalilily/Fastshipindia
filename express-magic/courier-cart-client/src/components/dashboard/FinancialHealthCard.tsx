@@ -88,7 +88,7 @@ export default function FinancialHealthCard({
               border: `1px solid ${alpha(dashboardPalette.blue, 0.16)}`,
               cursor: 'pointer',
             }}
-            onClick={() => navigate('/billing/wallet_transactions')}
+            onClick={() => navigate('/billing/passbook')}
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box sx={{ minWidth: 0 }}>
@@ -114,7 +114,7 @@ export default function FinancialHealthCard({
               border: `1px solid ${alpha(dashboardPalette.amber, 0.18)}`,
               cursor: 'pointer',
             }}
-            onClick={() => navigate('/cod-remittance')}
+            onClick={() => navigate('/billing/cod-remittance')}
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box sx={{ minWidth: 0 }}>

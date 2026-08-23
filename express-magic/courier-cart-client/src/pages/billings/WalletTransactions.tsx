@@ -16,9 +16,9 @@ import {
   Typography,
 } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { FaArrowDown, FaArrowUp } from 'react-icons/fa'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import AddMoneyDialog from '../../components/AddMoneyDialog'
 import { FilterBar, type FilterField } from '../../components/FilterBar'
 import PageHeading from '../../components/UI/heading/PageHeading'
@@ -43,13 +43,81 @@ const WALLET_DEBIT_FILTER_OPTIONS = [
   { label: 'Dispute Rejected', value: 'Dispute rejected by admin' },
 ]
 
+const BILLING_PAGE_CONFIG: Record<
+  string,
+  {
+    title: string
+    subtitle: string
+    tableTitle: string
+    presetFilters: WalletFilter
+    lockType?: boolean
+  }
+> = {
+  '/billing/passbook': {
+    title: 'Passbook',
+    subtitle: 'View every wallet credit, debit, recharge, refund, and shipment charge in one place.',
+    tableTitle: 'Passbook Entries',
+    presetFilters: {},
+  },
+  '/billing/wallet_transactions': {
+    title: 'Passbook',
+    subtitle: 'View every wallet credit, debit, recharge, refund, and shipment charge in one place.',
+    tableTitle: 'Passbook Entries',
+    presetFilters: {},
+  },
+  '/billing/shipping-charges': {
+    title: 'Shipping Charges',
+    subtitle: 'Review wallet debits for courier charges, COD service fees, reverse shipments, and shipment billing.',
+    tableTitle: 'Shipping Charge Entries',
+    presetFilters: { type: 'debit' },
+    lockType: true,
+  },
+  '/billing/all-recharges': {
+    title: 'All Recharges',
+    subtitle: 'Track wallet recharge credits and payment top-ups from the client panel.',
+    tableTitle: 'Recharge Entries',
+    presetFilters: { type: 'credit', reason: 'wallet recharge' },
+    lockType: true,
+  },
+  '/billing/credit-notes': {
+    title: 'Credit Notes',
+    subtitle: 'See refund, waiver, credit note, and other credit entries applied to your wallet.',
+    tableTitle: 'Credit Note Entries',
+    presetFilters: { type: 'credit' },
+    lockType: true,
+  },
+  '/billing/debit-notes': {
+    title: 'Debit Notes',
+    subtitle: 'See debit note entries, penalties, disputes, and other deductions applied to your wallet.',
+    tableTitle: 'Debit Note Entries',
+    presetFilters: { type: 'debit' },
+    lockType: true,
+  },
+  '/billing/ledgers': {
+    title: 'Ledgers',
+    subtitle: 'Audit the full wallet ledger with references, reasons, dates, and order links.',
+    tableTitle: 'Ledger Entries',
+    presetFilters: {},
+  },
+}
+
 const WalletTransactions = () => {
   const theme = useTheme()
+  const location = useLocation()
   const isDark = theme.palette.mode === 'dark'
+  const pageConfig = useMemo(
+    () => BILLING_PAGE_CONFIG[location.pathname] || BILLING_PAGE_CONFIG['/billing/passbook'],
+    [location.pathname],
+  )
   const [page, setPage] = useState(1)
-  const [filters, setFilters] = useState<WalletFilter>({})
+  const [filters, setFilters] = useState<WalletFilter>(() => pageConfig.presetFilters)
   const [searchParams, setSearchParams] = useSearchParams()
   const rechargeDialogOpen = searchParams.get('recharge') === 'true'
+
+  useEffect(() => {
+    setFilters(pageConfig.presetFilters)
+    setPage(1)
+  }, [pageConfig])
 
   const setRechargeDialogOpen = (open: boolean) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -67,7 +135,7 @@ const WalletTransactions = () => {
     limit: 10,
     page,
     type: filters.type || undefined,
-    reason: filters.type === 'debit' ? filters.reason || undefined : undefined,
+    reason: filters.reason || undefined,
     dateFrom: filters.dateFrom || undefined,
     dateTo: filters.dateTo || undefined,
   })
@@ -80,8 +148,10 @@ const WalletTransactions = () => {
   const borderColor = isDark ? alpha('#f8fafc', 0.1) : '#E2E8F0'
   const cardShadow = isDark ? '0 14px 34px rgba(0,0,0,0.18)' : '0 2px 8px rgba(0,0,0,0.06)'
 
-  const filterFields: FilterField[] = [
-    {
+  const filterFields: FilterField[] = []
+
+  if (!pageConfig.lockType) {
+    filterFields.push({
       name: 'type',
       label: 'Transaction Type',
       type: 'select',
@@ -90,24 +160,30 @@ const WalletTransactions = () => {
         { label: 'Credit', value: 'credit' },
         { label: 'Debit', value: 'debit' },
       ],
-    },
-    {
+    })
+  }
+
+  if (filters.type === 'debit' && !pageConfig.lockType) {
+    filterFields.push({
       name: 'reason',
       label: 'Debit Type',
       type: 'select',
       options: WALLET_DEBIT_FILTER_OPTIONS,
-    },
+    })
+  }
+
+  filterFields.push(
     { name: 'dateFrom', label: 'From Date', type: 'date' },
     { name: 'dateTo', label: 'To Date', type: 'date' },
-  ]
+  )
 
   return (
     <>
       <Stack gap={3} p={4}>
       <PageHeading
         eyebrow="Billing Panel"
-        title="Wallet Transactions"
-        subtitle="Track balance movement, filter credits and debits, and review recharge activity in the same billing workspace."
+        title={pageConfig.title}
+        subtitle={pageConfig.subtitle}
       />
       {isError && (
         <Alert severity="warning">
@@ -168,6 +244,17 @@ const WalletTransactions = () => {
           boxShadow: cardShadow,
         }}
       >
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ px: 3, py: 2, borderBottom: `1px solid ${borderColor}` }}
+        >
+          <Typography fontWeight={800} color="text.primary">
+            {pageConfig.tableTitle}
+          </Typography>
+          <Chip size="small" label={`${totalCount} entries`} />
+        </Stack>
         {showLoading ? (
           <Stack gap={1.5} p={3}>
             {Array.from({ length: 5 }).map((_, idx) => (
@@ -247,7 +334,7 @@ const WalletTransactions = () => {
           </List>
         ) : (
           <Typography textAlign="center" p={4} color="text.secondary">
-            No transactions found.
+            No entries found.
           </Typography>
         )}
       </Paper>

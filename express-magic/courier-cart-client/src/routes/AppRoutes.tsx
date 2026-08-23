@@ -301,8 +301,17 @@ function RoutedApp() {
           >
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/manage_pickups" element={<PickupAddresses />} />
+            <Route path="/billing" element={<Navigate to="/billing/passbook" replace />} />
             <Route path="/billing/wallet_transactions" element={<WalletTransactions />} />
             <Route path="/billing/invoice_management" element={<Invoices />} />
+            <Route path="/billing/passbook" element={<WalletTransactions />} />
+            <Route path="/billing/shipping-charges" element={<WalletTransactions />} />
+            <Route path="/billing/all-recharges" element={<WalletTransactions />} />
+            <Route path="/billing/credit-notes" element={<WalletTransactions />} />
+            <Route path="/billing/debit-notes" element={<WalletTransactions />} />
+            <Route path="/billing/ledgers" element={<WalletTransactions />} />
+            <Route path="/billing/invoices" element={<Invoices />} />
+            <Route path="/billing/cod-remittance" element={<CodRemittancesList />} />
             <Route path="/orders/list" element={<Orders />} />
             <Route
               path="/orders/create"
@@ -346,7 +355,7 @@ function RoutedApp() {
             <Route path="/support/tickets/:id" element={<TicketDetailsPage />} />
             <Route path="/home" element={<Home />} />
             <Route path="/couriers/partners" element={<Couriers />} />
-            <Route path="/cod-remittance" element={<CodRemittancesList />} />
+            <Route path="/cod-remittance" element={<Navigate to="/billing/cod-remittance" replace />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/reconciliation/weight" element={<WeightReconciliation />} />
