@@ -504,42 +504,6 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
               </Grid>
             )
           })}
-            <Grid size={{ xs: 12, md: 6 }}>
-            <Controller
-              name="pickupDate"
-              control={control}
-              rules={{ required: 'Pickup date is required' }}
-              render={({ field: dateField, fieldState: dateState }) => (
-                <TextField
-                  {...dateField}
-                  type="date"
-                  label="Preferred Pickup Date"
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                  error={!!dateState.error}
-                  helperText={dateState.error?.message}
-                />
-              )}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Controller
-              name="pickupTime"
-              control={control}
-              rules={{ required: 'Pickup time window is required' }}
-              render={({ field: timeField, fieldState: timeState }) => (
-                <TextField
-                  {...timeField}
-                  type="time"
-                  label="Preferred Pickup Time"
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                  error={!!timeState.error}
-                  helperText={timeState.error?.message ?? 'Use local warehouse timezone'}
-                />
-              )}
-            />
-          </Grid>
             {fieldState.error && (
               <Grid size={12}>
                 <Typography color="error" fontSize={12}>

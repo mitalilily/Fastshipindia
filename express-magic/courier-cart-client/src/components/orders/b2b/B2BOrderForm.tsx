@@ -468,8 +468,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         'pickupAddress',
         'pickupCity',
         'pickupState',
-        'pickupDate',
-        'pickupTime',
       ]
     }
 
