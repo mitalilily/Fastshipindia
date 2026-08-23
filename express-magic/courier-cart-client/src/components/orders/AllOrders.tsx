@@ -1066,11 +1066,11 @@ const AllOrders = () => {
     {
       id: 'order_number',
       label: 'LRN / AWB',
-      minWidth: 176,
+      minWidth: 230,
       truncate: false,
       sticky: 'left',
       render: (_v, row) => (
-        <Stack spacing={0.35} sx={{ minWidth: 0 }}>
+        <Stack spacing={0.35} sx={{ minWidth: 0, maxWidth: 218, pr: 1 }}>
           <Typography
             component="button"
             type="button"
@@ -1109,7 +1109,7 @@ const AllOrders = () => {
     {
       id: 'awb_number',
       label: 'Order Type',
-      minWidth: 128,
+      minWidth: 144,
       truncate: false,
       render: (_value, row) => (
         <Chip

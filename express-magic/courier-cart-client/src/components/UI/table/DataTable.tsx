@@ -110,7 +110,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
       ? '#1b2430'
       : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,242,236,0.98) 100%)'
   const tableBg = isDark ? '#101720' : isShipmentVariant ? '#F5F6F8' : '#FFFCF8'
-  const selectionColumnWidth = isShipmentVariant ? 30 : 48
+  const selectionColumnWidth = isShipmentVariant ? 44 : 48
   const rowHover = alpha(primary, 0.045)
   const mobileCardBg = isDark
     ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
