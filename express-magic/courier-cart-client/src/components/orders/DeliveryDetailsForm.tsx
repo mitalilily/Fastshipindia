@@ -67,6 +67,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     watch,
     setError,
     clearErrors,
+    trigger,
     formState: { errors },
   } = useFormContext<B2CFormData | B2BFormData>()
 
@@ -155,22 +156,22 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
       ? ([
           { name: 'companyName', label: 'Company Name' },
           { name: 'buyerPhone', label: 'Phone' },
-          { name: 'buyerName', label: 'Name (Optional)' },
-          { name: 'buyerEmail', label: 'Email' },
-          { name: 'gstin', label: 'GSTIN (Optional)' },
           { name: 'address', label: 'Address' },
           { name: 'pincode', label: 'Pincode' },
           { name: 'city', label: 'City' },
           { name: 'state', label: 'State' },
+          { name: 'buyerName', label: 'Name (Optional)' },
+          { name: 'buyerEmail', label: 'Email' },
+          { name: 'gstin', label: 'GSTIN (Optional)' },
         ] as const)
       : ([
           { name: 'buyerName', label: 'Name' },
           { name: 'buyerPhone', label: 'Phone' },
-          { name: 'buyerEmail', label: 'Email' },
           { name: 'address', label: 'Address' },
           { name: 'pincode', label: 'Pincode' },
           { name: 'city', label: 'City' },
           { name: 'state', label: 'State' },
+          { name: 'buyerEmail', label: 'Email' },
         ] as const)
 
   const getFieldError = (fieldName: string) => {
@@ -229,6 +230,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     fieldsToApply.forEach((fieldName) => {
       setValue(fieldName as DeliveryFieldName, String(savedAddress[fieldName] || ''), {
         shouldDirty: true,
+        shouldTouch: true,
         shouldValidate: true,
       })
     })
@@ -236,14 +238,28 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     if (type === 'b2b') {
       setValue('companyName' as DeliveryFieldName, savedAddress.companyName || '', {
         shouldDirty: true,
+        shouldTouch: true,
         shouldValidate: true,
       })
       setValue('gstin' as DeliveryFieldName, savedAddress.gstin || '', {
         shouldDirty: true,
+        shouldTouch: true,
         shouldValidate: true,
       })
     }
 
+    void trigger(
+      [
+        'buyerName',
+        'buyerPhone',
+        'buyerEmail',
+        'address',
+        'pincode',
+        'city',
+        'state',
+        ...(type === 'b2b' ? (['companyName', 'gstin'] as const) : []),
+      ] as DeliveryFieldName[],
+    )
     setSaveMessage('Saved delivery address applied.')
   }
 
