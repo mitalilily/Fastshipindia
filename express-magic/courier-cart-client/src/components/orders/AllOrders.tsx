@@ -29,6 +29,7 @@ import {
   MdLocalOffer,
   MdMoreHoriz,
   MdReceipt,
+  MdInfoOutline,
   MdSync,
   MdTrackChanges,
   MdVisibility,
@@ -884,6 +885,100 @@ const AllOrders = () => {
 
   const getReceiverPhone = (row: Order) => String(row.buyer_phone || row.receiver_phone || '').trim()
 
+  const joinPartyAddress = (...parts: unknown[]) =>
+    parts
+      .map((part) => String(part || '').trim())
+      .filter(Boolean)
+      .join(', ')
+
+  const getSenderAddress = (row: Order) => {
+    const pickup = getPickupDetails(row)
+    return (
+      joinPartyAddress(
+        pickup.address || row.pickup_address,
+        pickup.city || row.pickup_city,
+        pickup.state || row.pickup_state,
+        pickup.pincode || row.pickup_pincode,
+      ) || '-'
+    )
+  }
+
+  const getReceiverAddress = (row: Order) =>
+    joinPartyAddress(row.address || row.receiver_address, row.city, row.state, row.country, row.pincode) || '-'
+
+  const renderPartyDetails = ({
+    name,
+    phone,
+    address,
+  }: {
+    name?: string | null
+    phone?: string | null
+    address?: string | null
+  }) => {
+    const displayName = String(name || '-').trim() || '-'
+    const displayPhone = String(phone || '-').trim() || '-'
+    const displayAddress = String(address || '-').trim() || '-'
+
+    return (
+      <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={0.45} alignItems="center" sx={{ minWidth: 0 }}>
+          <Typography sx={{ maxWidth: '100%', minWidth: 0, fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
+            {displayName}
+          </Typography>
+          <Tooltip
+            arrow
+            placement="top"
+            title={
+              <Box sx={{ p: 0.8, maxWidth: 360 }}>
+                <Typography sx={{ fontWeight: 900, fontSize: 13.5, mb: 0.5 }}>
+                  {displayName}
+                </Typography>
+                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                  <Box component="span" sx={{ fontWeight: 800 }}>
+                    Mobile Number:
+                  </Box>{' '}
+                  {displayPhone}
+                </Typography>
+                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                  <Box component="span" sx={{ fontWeight: 800 }}>
+                    Address:
+                  </Box>{' '}
+                  {displayAddress}
+                </Typography>
+              </Box>
+            }
+          >
+            <Box
+              component="span"
+              onClick={(event) => event.stopPropagation()}
+              sx={{
+                width: 17,
+                height: 17,
+                borderRadius: '50%',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.secondary',
+                cursor: 'help',
+                flexShrink: 0,
+                '& svg': { fontSize: 15 },
+                '&:hover': {
+                  color: 'primary.main',
+                  bgcolor: alpha('#0D3B8E', 0.08),
+                },
+              }}
+            >
+              <MdInfoOutline />
+            </Box>
+          </Tooltip>
+        </Stack>
+        <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
+          {displayPhone}
+        </Typography>
+      </Stack>
+    )
+  }
+
   const getInvoiceDetails = (row: Order) => {
     const rawInvoices: unknown = row.invoices || row.invoice_details
     let firstInvoice: Record<string, unknown> = {}
@@ -1180,14 +1275,11 @@ const AllOrders = () => {
       minWidth: 150,
       truncate: false,
       render: (_value, row) => (
-        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
-            {getSenderName(row)}
-          </Typography>
-          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
-            {getSenderPhone(row) || '-'}
-          </Typography>
-        </Stack>
+        renderPartyDetails({
+          name: getSenderName(row),
+          phone: getSenderPhone(row),
+          address: getSenderAddress(row),
+        })
       ),
     },
     {
@@ -1196,14 +1288,11 @@ const AllOrders = () => {
       minWidth: 150,
       truncate: false,
       render: (_value, row) => (
-        <Stack spacing={0.25} sx={{ minWidth: 0 }}>
-          <Typography sx={{ maxWidth: '100%', fontSize: 12.1, fontWeight: 600, color: 'text.primary', lineHeight: 1.28 }} noWrap>
-            {getReceiverName(row)}
-          </Typography>
-          <Typography sx={{ maxWidth: '100%', fontSize: 10.8, color: 'text.secondary', lineHeight: 1.28 }} noWrap>
-            {getReceiverPhone(row) || '-'}
-          </Typography>
-        </Stack>
+        renderPartyDetails({
+          name: getReceiverName(row),
+          phone: getReceiverPhone(row),
+          address: getReceiverAddress(row),
+        })
       ),
     },
     {

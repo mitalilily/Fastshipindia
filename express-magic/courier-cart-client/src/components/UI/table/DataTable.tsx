@@ -516,20 +516,22 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                       <TableCell
                         padding="checkbox"
                         sx={{
-                          position: 'sticky',
-                          top: 0,
-                          left: 0,
+                          position: isShipmentVariant ? 'static' : 'sticky',
+                          top: isShipmentVariant ? undefined : 0,
+                          left: isShipmentVariant ? undefined : 0,
                           background: headerBg,
                           color: isShipmentVariant ? '#FFFFFF' : alpha(textPrimary, 0.86),
                           borderBottom: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
-                          zIndex: theme.zIndex.appBar + 5,
+                          zIndex: isShipmentVariant ? theme.zIndex.appBar + 1 : theme.zIndex.appBar + 5,
                           width: selectionColumnWidth,
                           minWidth: selectionColumnWidth,
                           maxWidth: selectionColumnWidth,
                           py: isShipmentVariant ? 0.95 : isCompact ? 0.75 : 1.4,
                           px: 0,
                           textAlign: 'center',
-                          boxShadow: `6px 0 10px ${alpha(textPrimary, isShipmentVariant ? 0.05 : 0.08)}`,
+                          boxShadow: isShipmentVariant
+                            ? 'none'
+                            : `6px 0 10px ${alpha(textPrimary, 0.08)}`,
                         }}
                       >
                         <CustomCheckbox
@@ -683,8 +685,8 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                             <TableCell
                               padding="checkbox"
                               sx={{
-                                position: 'sticky',
-                                left: 0,
+                                position: isShipmentVariant ? 'static' : 'sticky',
+                                left: isShipmentVariant ? undefined : 0,
                                 width: selectionColumnWidth,
                                 minWidth: selectionColumnWidth,
                                 maxWidth: selectionColumnWidth,
@@ -693,8 +695,10 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                                 textAlign: 'center',
                                 backgroundColor: isDark ? surface : '#FFFFFF',
                                 overflow: 'hidden',
-                                zIndex: 4,
-                                boxShadow: `6px 0 10px ${alpha(textPrimary, 0.05)}`,
+                                zIndex: isShipmentVariant ? 1 : 4,
+                                boxShadow: isShipmentVariant
+                                  ? 'none'
+                                  : `6px 0 10px ${alpha(textPrimary, 0.05)}`,
                               }}
                             >
                               <CustomCheckbox
