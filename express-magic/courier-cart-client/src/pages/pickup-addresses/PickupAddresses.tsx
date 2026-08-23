@@ -368,14 +368,19 @@ const PickupAddresses = () => {
           <Stack
             direction={{ xs: 'column', lg: 'row' }}
             spacing={1.2}
-            alignItems={{ xs: 'stretch', lg: 'center' }}
+            alignItems={{ xs: 'stretch', lg: 'flex-start' }}
+            sx={{ width: '100%', minWidth: 0 }}
           >
             <Autocomplete
-              fullWidth
               options={warehouseOptions}
               value={selectedWarehouse}
               inputValue={warehouseSearch}
               loading={showLoading}
+              sx={{
+                width: { xs: '100%', lg: 420 },
+                flex: { lg: '0 0 420px' },
+                maxWidth: '100%',
+              }}
               getOptionLabel={getWarehouseLabel}
               isOptionEqualToValue={(option, value) => option.pickupId === value.pickupId}
               onInputChange={(_, value, reason) => handleWarehouseSearch(value, reason)}
@@ -389,7 +394,6 @@ const PickupAddresses = () => {
                   placeholder="Search by address title"
                   size="small"
                   sx={{
-                    maxWidth: { lg: 420 },
                     '& .MuiOutlinedInput-root': {
                       minHeight: 44,
                       borderRadius: '10px',
@@ -423,6 +427,7 @@ const PickupAddresses = () => {
                 onApply={handleFilterApply}
                 appliedCount={appliedFilterCount}
                 loading={showLoading}
+                compact
               />
             </Box>
           </Stack>
