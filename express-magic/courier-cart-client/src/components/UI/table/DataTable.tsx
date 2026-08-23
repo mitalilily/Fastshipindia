@@ -543,7 +543,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                       </TableCell>
                     )}
 
-                    {columns.map((col) =>
+                    {columns.map((col, colIndex) =>
                       col.hiddenOnMobile && isMobile ? null : (
                         <TableCell
                           key={col.id as string}
@@ -567,6 +567,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                             borderBottom: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
                             py: isShipmentVariant ? 0.95 : isCompact ? 0.75 : 1.4,
                             px: isShipmentVariant ? 0.55 : isCompact ? 1 : 2,
+                            pl: isShipmentVariant && selectable && colIndex === 0 ? 2.6 : undefined,
                             ...(col.sticky === 'right'
                               ? {
                                   right: col.stickyOffset ?? 0,
@@ -709,7 +710,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                             </TableCell>
                           )}
 
-                          {columns.map((col) => {
+                          {columns.map((col, colIndex) => {
                             if (col.hiddenOnMobile && isMobile) return null
                             const value = row[col.id]
                             const cellContent = col.render ? col.render(value, row) : (value as React.ReactNode)
@@ -743,6 +744,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                                   textOverflow: shouldTruncate || isShipmentVariant ? 'ellipsis' : 'clip',
                                   py: isShipmentVariant ? 1.05 : isCompact ? 0.85 : 1.45,
                                   px: isShipmentVariant ? 0.55 : isCompact ? 1 : 2,
+                                  pl: isShipmentVariant && selectable && colIndex === 0 ? 2.6 : undefined,
                                   borderBottom: 'none',
                                   backgroundColor: col.sticky || isShipmentVariant ? (isDark ? surface : '#FFFFFF') : undefined,
                                   zIndex: col.sticky ? 2 : 1,
