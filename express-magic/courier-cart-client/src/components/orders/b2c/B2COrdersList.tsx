@@ -1231,7 +1231,7 @@ const B2COrdersList = () => {
     {
       label: 'AWB / Order',
       id: 'order_number',
-      minWidth: 214,
+      minWidth: 176,
       truncate: false,
       sticky: 'left',
       render: (_v, row) => (

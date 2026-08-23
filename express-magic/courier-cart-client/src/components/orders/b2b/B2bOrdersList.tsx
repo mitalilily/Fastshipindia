@@ -233,7 +233,7 @@ const B2BOrdersList = ({
     {
       label: 'LRN / AWB',
       id: 'shipment_id',
-      minWidth: 214,
+      minWidth: 176,
       truncate: false,
       sticky: 'left',
       render: (_v, row) => (

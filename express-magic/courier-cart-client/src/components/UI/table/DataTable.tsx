@@ -110,7 +110,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
       ? '#1b2430'
       : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,242,236,0.98) 100%)'
   const tableBg = isDark ? '#101720' : isShipmentVariant ? '#F5F6F8' : '#FFFCF8'
-  const selectionColumnWidth = isShipmentVariant ? 42 : 48
+  const selectionColumnWidth = isShipmentVariant ? 30 : 48
   const rowHover = alpha(primary, 0.045)
   const mobileCardBg = isDark
     ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
@@ -536,7 +536,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                           checked={isAllSelected}
                           onChange={(e) => handleSelectAll(e.target.checked)}
                           color="primary"
-                          sx={isShipmentVariant ? { p: '4px' } : undefined}
+                          sx={isShipmentVariant ? { p: '2px' } : undefined}
                         />
                       </TableCell>
                     )}
@@ -564,7 +564,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                             zIndex: col.sticky ? theme.zIndex.appBar + 3 : theme.zIndex.appBar + 1,
                             borderBottom: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
                             py: isShipmentVariant ? 0.95 : isCompact ? 0.75 : 1.4,
-                            px: isShipmentVariant ? 0.85 : isCompact ? 1 : 2,
+                            px: isShipmentVariant ? 0.55 : isCompact ? 1 : 2,
                             ...(col.sticky === 'right'
                               ? {
                                   right: col.stickyOffset ?? 0,
@@ -700,7 +700,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                               <CustomCheckbox
                                 checked={selectedIds.includes(row.id)}
                                 onChange={() => handleSelect(row.id)}
-                                sx={isShipmentVariant ? { p: '4px', color: primary } : { color: primary }}
+                                sx={isShipmentVariant ? { p: '2px', color: primary } : { color: primary }}
                               />
                             </TableCell>
                           )}
@@ -738,7 +738,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                                   overflow: shouldTruncate || isShipmentVariant ? 'hidden' : 'visible',
                                   textOverflow: shouldTruncate || isShipmentVariant ? 'ellipsis' : 'clip',
                                   py: isShipmentVariant ? 1.05 : isCompact ? 0.85 : 1.45,
-                                  px: isShipmentVariant ? 0.85 : isCompact ? 1 : 2,
+                                  px: isShipmentVariant ? 0.55 : isCompact ? 1 : 2,
                                   borderBottom: 'none',
                                   backgroundColor: col.sticky || isShipmentVariant ? (isDark ? surface : '#FFFFFF') : undefined,
                                   zIndex: col.sticky ? 2 : 1,

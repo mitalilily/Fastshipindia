@@ -1067,7 +1067,7 @@ const AllOrders = () => {
     {
       id: 'order_number',
       label: 'LRN / AWB',
-      minWidth: 214,
+      minWidth: 176,
       truncate: false,
       sticky: 'left',
       render: (_v, row) => (
