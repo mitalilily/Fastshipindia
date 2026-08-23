@@ -1,5 +1,6 @@
 import {
   alpha,
+  Box,
   Button,
   Chip,
   Collapse,
@@ -13,11 +14,13 @@ import {
 import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { BiCheckCircle } from 'react-icons/bi'
-import { useNavigate } from 'react-router-dom'
+import { FiPlus } from 'react-icons/fi'
 import { usePickupAddresses } from '../../hooks/Pickup/usePickupAddresses'
 import { useInvoicePreferences } from '../../hooks/User/useInvoicePreferences'
 import type { B2BFormData } from './b2b/B2BOrderForm'
 import type { B2CFormData } from './b2c/B2COrderForm'
+import CustomDrawer from '../UI/drawer/CustomDrawer'
+import AddPickupAddressForm from '../pickups/AddPickupAddressForm'
 
 const ACCENT = '#0D3B8E'
 const TEXT_PRIMARY = '#102A54'
@@ -35,7 +38,6 @@ const normalizeTaxInput = (value: unknown) =>
     .toUpperCase()
 
 const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | 'b2c' }) => {
-  const navigate = useNavigate()
   const { control, setValue, watch } = useFormContext<B2BFormData | B2CFormData>()
   const {
     data: locations,
@@ -45,6 +47,7 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
   const { preferences } = useInvoicePreferences()
 
   const [openRto, setOpenRto] = useState<Record<string, boolean>>({})
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false)
 
   const pickupDate = watch('pickupDate') as string | undefined
   const pickupTime = watch('pickupTime') as string | undefined
@@ -137,36 +140,53 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
     shipmentType,
   ])
 
+  const addAddressDrawer = (
+    <CustomDrawer
+      open={addDrawerOpen}
+      onClose={() => setAddDrawerOpen(false)}
+      width="clamp(360px, 92vw, 1100px)"
+      title="Add New Pickup Address"
+      showBackButton
+      backLabel="Back to order"
+    >
+      <AddPickupAddressForm setDrawer={setAddDrawerOpen} />
+    </CustomDrawer>
+  )
+
   if (isLoading) return <Typography>Loading pickup locations...</Typography>
   if (isError) return <Typography color="error">Failed to load pickup locations</Typography>
   if (!locations?.pickupAddresses || locations.pickupAddresses.length === 0)
     return (
-      <Paper
-        variant="outlined"
-        sx={{
-          p: { xs: 2, sm: 3 },
-          mb: 3,
-          borderRadius: 2,
-          borderColor: alpha(ACCENT, 0.18),
-          bgcolor: alpha(ACCENT, 0.025),
-        }}
-      >
-        <Stack spacing={1.5} alignItems="flex-start">
-          <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
-            No pickup address added yet
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Add a pickup warehouse first, then come back and select it for this order.
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => navigate('/settings/manage_pickups?add=1')}
-            sx={{ textTransform: 'none', fontWeight: 800 }}
-          >
-            Add Pickup Address
-          </Button>
-        </Stack>
-      </Paper>
+      <>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: { xs: 2, sm: 3 },
+            mb: 3,
+            borderRadius: 2,
+            borderColor: alpha(ACCENT, 0.18),
+            bgcolor: alpha(ACCENT, 0.025),
+          }}
+        >
+          <Stack spacing={1.5} alignItems="flex-start">
+            <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
+              No pickup address added yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Add a pickup warehouse here. Your order details will stay on this step.
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<FiPlus />}
+              onClick={() => setAddDrawerOpen(true)}
+              sx={{ textTransform: 'none', fontWeight: 800 }}
+            >
+              Add Pickup Address
+            </Button>
+          </Stack>
+        </Paper>
+        {addAddressDrawer}
+      </>
     )
 
   return (
@@ -175,8 +195,40 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
       control={control}
       rules={{ required: 'Please select a pickup location' }}
       render={({ field, fieldState }) => (
-        <Grid container spacing={3} mb={4}>
-          {locations.pickupAddresses.map((loc) => {
+        <>
+          <Grid container spacing={3} mb={4}>
+            <Grid size={12}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                justifyContent="space-between"
+                spacing={1.5}
+              >
+                <Box>
+                  <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
+                    Select Pickup Address
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Need a different pickup warehouse? Add it here without leaving this order.
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  startIcon={<FiPlus />}
+                  onClick={() => setAddDrawerOpen(true)}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    bgcolor: ACCENT,
+                    '&:hover': { bgcolor: '#082f72' },
+                  }}
+                >
+                  Add Pickup Address
+                </Button>
+              </Stack>
+            </Grid>
+
+            {locations.pickupAddresses.map((loc) => {
             const isSelected = field.value === loc.pickupId
             const isOpen = openRto[loc.id] || false
             const pickupGst = normalizeTaxInput(
@@ -345,17 +397,17 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
               </Grid>
             )
           })}
-          {shipmentType === 'b2b' && (
-            <>
-              <Grid size={12}>
-                <Divider sx={{ my: 1 }} />
-                <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
-                  Seller Billing Tax Details
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Required for live Delhivery B2B booking. Enter either PAN or GSTIN.
-                </Typography>
-              </Grid>
+            {shipmentType === 'b2b' && (
+              <>
+                <Grid size={12}>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
+                    Seller Billing Tax Details
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Required for live Delhivery B2B booking. Enter either PAN or GSTIN.
+                  </Typography>
+                </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Controller
                   name={'billingPanNumber' as any}
@@ -415,9 +467,9 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                   </Typography>
                 </Grid>
               )}
-            </>
-          )}
-          <Grid size={{ xs: 12, md: 6 }}>
+              </>
+            )}
+            <Grid size={{ xs: 12, md: 6 }}>
             <Controller
               name="pickupDate"
               control={control}
@@ -453,14 +505,16 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
               )}
             />
           </Grid>
-          {fieldState.error && (
-            <Grid size={12}>
-              <Typography color="error" fontSize={12}>
-                {fieldState.error.message}
-              </Typography>
-            </Grid>
-          )}
-        </Grid>
+            {fieldState.error && (
+              <Grid size={12}>
+                <Typography color="error" fontSize={12}>
+                  {fieldState.error.message}
+                </Typography>
+              </Grid>
+            )}
+          </Grid>
+          {addAddressDrawer}
+        </>
       )}
     />
   )
