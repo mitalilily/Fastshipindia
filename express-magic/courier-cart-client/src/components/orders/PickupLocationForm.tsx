@@ -1,5 +1,6 @@
 import {
   alpha,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -17,6 +18,7 @@ import { BiCheckCircle } from 'react-icons/bi'
 import { FiPlus } from 'react-icons/fi'
 import { usePickupAddresses } from '../../hooks/Pickup/usePickupAddresses'
 import { useInvoicePreferences } from '../../hooks/User/useInvoicePreferences'
+import type { HydratedPickup } from '../../types/generic.types'
 import type { B2BFormData } from './b2b/B2BOrderForm'
 import type { B2CFormData } from './b2c/B2COrderForm'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
@@ -34,6 +36,20 @@ const normalizeTaxInput = (value: unknown) =>
   String(value ?? '')
     .trim()
     .toUpperCase()
+
+const getPickupLabel = (loc: HydratedPickup | null) =>
+  String(loc?.pickup?.addressNickname || loc?.pickup?.contactName || loc?.pickupId || '').trim()
+
+const getPickupDescription = (loc: HydratedPickup) =>
+  [
+    loc.pickup?.addressLine1,
+    loc.pickup?.addressLine2,
+    loc.pickup?.city,
+    loc.pickup?.state,
+    loc.pickup?.pincode,
+  ]
+    .filter(Boolean)
+    .join(', ')
 
 const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | 'b2c' }) => {
   const { control, setValue, watch } = useFormContext<B2BFormData | B2CFormData>()
@@ -54,6 +70,54 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
 
   const toggleRto = (id: string) => {
     setOpenRto((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const applyPickupLocation = (loc: HydratedPickup, onChange?: (value: string) => void) => {
+    onChange?.(loc.pickupId)
+    setValue('pickupLocationId', loc.pickupId)
+    setValue('pickupLocationPincode', loc.pickup?.pincode)
+    setValue('pickupLocationName', loc.pickup?.addressNickname)
+    setValue('pickupLocationPOCName', loc.pickup?.contactName)
+    setValue('pickupLocationPOCPhone', loc.pickup?.contactPhone)
+    setValue('pickupAddress', loc.pickup?.addressLine1)
+    setValue('pickupCity', loc.pickup?.city)
+    setValue('pickupState', loc.pickup?.state)
+
+    const pickupGst = normalizeTaxInput(
+      (loc.pickup as any)?.gstNumber || (loc.pickup as any)?.gst_number,
+    )
+    if (shipmentType === 'b2b' && !normalizeTaxInput(billingGstin) && pickupGst) {
+      setValue('billingGstin' as any, pickupGst, { shouldValidate: true })
+    }
+
+    if (loc.isRTOSame) {
+      setValue('isRtoSame', true)
+      setValue('rtoLocationPincode', loc.pickup?.pincode)
+      setValue('rtoLocationName', loc.pickup?.addressNickname)
+      setValue('rtoLocationPOCName', loc.pickup?.contactName)
+      setValue('rtoLocationPOCPhone', loc.pickup?.contactPhone)
+      setValue('rtoAddress', loc.pickup?.addressLine1)
+      setValue('rtoCity', loc.pickup?.city)
+      setValue('rtoState', loc.pickup?.state)
+    } else if (loc.rto) {
+      setValue('isRtoSame', false)
+      setValue('rtoLocationPincode', loc.rto?.pincode)
+      setValue('rtoLocationName', loc.rto?.addressNickname)
+      setValue('rtoLocationPOCName', loc.rto?.contactName)
+      setValue('rtoLocationPOCPhone', loc.rto?.contactPhone)
+      setValue('rtoAddress', loc.rto?.addressLine1)
+      setValue('rtoCity', loc.rto?.city)
+      setValue('rtoState', loc.rto?.state)
+    } else {
+      setValue('isRtoSame', false)
+      setValue('rtoLocationPincode', '')
+      setValue('rtoLocationName', '')
+      setValue('rtoLocationPOCName', '')
+      setValue('rtoLocationPOCPhone', '')
+      setValue('rtoAddress', '')
+      setValue('rtoCity', '')
+      setValue('rtoState', '')
+    }
   }
 
   const primaryLocation = locations?.pickupAddresses?.find((l) => l.isPrimary)
@@ -220,6 +284,59 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                 >
                   Add Pickup Address
                 </Button>
+              </Stack>
+            </Grid>
+            <Grid size={12}>
+              <Stack spacing={0.8}>
+                <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 700, fontSize: 13 }}>
+                  Search and select your pickup address
+                </Typography>
+                <Autocomplete
+                  options={locations.pickupAddresses}
+                  value={
+                    locations.pickupAddresses.find((loc) => loc.pickupId === field.value) ?? null
+                  }
+                  onChange={(_, value) => {
+                    if (value) {
+                      applyPickupLocation(value, field.onChange)
+                    }
+                  }}
+                  getOptionLabel={getPickupLabel}
+                  isOptionEqualToValue={(option, value) => option.pickupId === value.pickupId}
+                  noOptionsText="No pickup address found"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Select address"
+                      size="small"
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          minHeight: 48,
+                          borderRadius: '10px',
+                          bgcolor: '#FFFFFF',
+                          '&.Mui-focused fieldset': {
+                            borderColor: ACCENT,
+                            boxShadow: `0 0 0 3px ${alpha(ACCENT, 0.09)}`,
+                          },
+                        },
+                      }}
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props} key={option.pickupId}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
+                          {getPickupLabel(option)}
+                        </Typography>
+                        <Typography sx={{ color: 'text.secondary', fontSize: 12 }} noWrap>
+                          {getPickupDescription(option)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                />
               </Stack>
             </Grid>
 
