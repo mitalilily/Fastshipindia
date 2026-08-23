@@ -435,13 +435,6 @@ const PickupAddresses = () => {
               >
                 <MenuItem
                   sx={{ display: 'flex', alignItems: 'center', gap: '13px' }}
-                  onClick={() => handleOpenAddDrawer()}
-                >
-                  <FiPlus size={18} />
-                  Add
-                </MenuItem>
-                <MenuItem
-                  sx={{ display: 'flex', alignItems: 'center', gap: '13px' }}
                   onClick={handleImport}
                 >
                   {' '}
@@ -468,14 +461,6 @@ const PickupAddresses = () => {
           ) : (
             // Desktop actions
             <>
-              <Button
-                size="small"
-                variant="contained"
-                startIcon={<FiPlus size={18} />}
-                onClick={() => handleOpenAddDrawer()}
-              >
-                Add
-              </Button>
               <Button
                 size="small"
                 variant="outlined"
