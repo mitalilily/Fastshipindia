@@ -83,6 +83,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
   const [pinFetching, setPinFetching] = useState(false)
   const [savedAddresses, setSavedAddresses] = useState<SavedDeliveryAddress[]>([])
   const [selectedSavedAddress, setSelectedSavedAddress] = useState<SavedDeliveryAddress | null>(null)
+  const [savedAddressOpen, setSavedAddressOpen] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
 
   useEffect(() => {
@@ -181,7 +182,10 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
   }
 
   const savedAddressOptions = useMemo(
-    () => savedAddresses.filter((savedAddress) => savedAddress.type === type),
+    () => [
+      ...savedAddresses.filter((savedAddress) => savedAddress.type === type),
+      ...savedAddresses.filter((savedAddress) => savedAddress.type !== type),
+    ],
     [savedAddresses, type],
   )
 
@@ -214,6 +218,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
   )
 
   const applySavedAddress = (savedAddress: SavedDeliveryAddress | null) => {
+    setSavedAddressOpen(false)
     setSelectedSavedAddress(savedAddress)
     if (!savedAddress) return
 
@@ -236,7 +241,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     })
 
     if (type === 'b2b') {
-      setValue('companyName' as DeliveryFieldName, savedAddress.companyName || '', {
+      setValue('companyName' as DeliveryFieldName, savedAddress.companyName || savedAddress.buyerName || savedAddress.label || '', {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true,
@@ -315,17 +320,30 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
           <Autocomplete
             size="small"
             fullWidth
+            open={savedAddressOpen && savedAddressOptions.length > 0}
+            onOpen={() => {
+              if (savedAddressOptions.length > 0) {
+                setSavedAddressOpen(true)
+              }
+            }}
+            onClose={() => setSavedAddressOpen(false)}
             options={savedAddressOptions}
             value={selectedSavedAddress}
             onChange={(_, value) => applySavedAddress(value)}
+            blurOnSelect
+            filterOptions={(options) => options}
             getOptionLabel={(option) => option.label || buildAddressLabel(option)}
             isOptionEqualToValue={(option, value) => option.id === value.id}
-            noOptionsText="No saved delivery address"
+            noOptionsText=""
             renderInput={(params) => (
               <TextField
                 {...params}
                 label="Saved Delivery Address"
                 placeholder="Select saved address"
+                inputProps={{
+                  ...params.inputProps,
+                  autoComplete: 'new-password',
+                }}
               />
             )}
             renderOption={(props, option) => (
