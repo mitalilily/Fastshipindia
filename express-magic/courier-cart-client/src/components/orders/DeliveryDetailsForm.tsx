@@ -181,6 +181,29 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
     ]?.message
   }
 
+  const fieldOrder: Record<string, number> =
+    type === 'b2b'
+      ? {
+          companyName: 1,
+          buyerPhone: 2,
+          address: 3,
+          pincode: 4,
+          city: 5,
+          state: 6,
+          buyerName: 7,
+          buyerEmail: 8,
+          gstin: 9,
+        }
+      : {
+          buyerName: 1,
+          buyerPhone: 2,
+          address: 3,
+          pincode: 4,
+          city: 5,
+          state: 6,
+          buyerEmail: 7,
+        }
+
   const savedAddressOptions = useMemo(
     () => [
       ...savedAddresses.filter((savedAddress) => savedAddress.type === type),
@@ -390,6 +413,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
         return (
           <Grid
             key={fieldItem.name}
+            sx={{ order: fieldOrder[fieldItem.name] }}
             size={{
               xs: 12,
               md:
