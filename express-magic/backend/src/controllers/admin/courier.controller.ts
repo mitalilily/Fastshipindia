@@ -1180,12 +1180,17 @@ export const testBigshipCredentialsController = async (_req: Request, res: Respo
       })
     }
 
+    const apiBase = (saved.apiBase || 'https://api.bigship.direct').trim()
+    const username = normalizeBigshipLoginCredential(saved.username) || ''
+    const password = normalizeBigshipLoginCredential(saved.password) || ''
+    const accessKey = (saved.apiKey || '').trim()
+
     testedCredentials = {
-      apiBase: saved.apiBase || 'https://api.bigship.direct',
-      username: saved.username || '',
+      apiBase,
+      username,
     }
 
-    if (!saved.username || !saved.password || !saved.apiKey) {
+    if (!username || !password || !accessKey) {
       return res.status(400).json({
         success: false,
         message: 'Save Bigship username, password and access key before testing',
@@ -1193,7 +1198,14 @@ export const testBigshipCredentialsController = async (_req: Request, res: Respo
     }
 
     BigshipService.clearCachedConfig()
-    const result = await new BigshipService().testCredentials()
+    const result = await new BigshipService({
+      configOverrides: {
+        apiBase,
+        username,
+        password,
+        accessKey,
+      },
+    }).testCredentials()
     return res.json({
       success: true,
       data: {
