@@ -36,6 +36,11 @@ const cardStyles = {
 const getErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback
 
+const cleanOptionalSecret = (value = '') => {
+  const trimmed = value.trim()
+  return trimmed && !trimmed.includes('*') ? trimmed : ''
+}
+
 const CourierCredentials = () => {
   const toast = useToast()
   const { data, isLoading, error } = useCourierCredentials()
@@ -173,12 +178,14 @@ const CourierCredentials = () => {
       return
     }
 
+    const cleanAccessKey = cleanOptionalSecret(bigshipForm.accessKey)
+
     updateBigship.mutate(
       {
         apiBase: bigshipForm.apiBase.trim(),
         username: bigshipForm.username.trim(),
         ...(bigshipForm.password.trim() ? { password: bigshipForm.password.trim() } : {}),
-        ...(bigshipForm.accessKey.trim() ? { accessKey: bigshipForm.accessKey.trim() } : {}),
+        ...(cleanAccessKey ? { accessKey: cleanAccessKey } : {}),
       },
       {
         onSuccess: () => {
@@ -213,7 +220,14 @@ const CourierCredentials = () => {
   }
 
   const handleTestBigship = () => {
-    testBigship.mutate(undefined, {
+    const cleanAccessKey = cleanOptionalSecret(bigshipForm.accessKey)
+
+    testBigship.mutate({
+      apiBase: bigshipForm.apiBase.trim(),
+      username: bigshipForm.username.trim(),
+      ...(bigshipForm.password.trim() ? { password: bigshipForm.password.trim() } : {}),
+      ...(cleanAccessKey ? { accessKey: cleanAccessKey } : {}),
+    }, {
       onSuccess: (result) =>
         toast({
           title: 'Bigship authentication successful',
@@ -310,7 +324,7 @@ const CourierCredentials = () => {
           </Button>
         </Flex>
         <Text fontSize="xs" color="gray.500">
-          Save changes before testing. Password and access key are never returned by the API.
+          Fill password/access key to test new values, or leave blank to test saved values.
         </Text>
       </VStack>
     </Box>

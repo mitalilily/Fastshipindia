@@ -152,9 +152,9 @@ export const updateBigshipCredentials = async (payload) => {
   return data.data
 }
 
-export const testBigshipCredentials = async () => {
+export const testBigshipCredentials = async (payload = {}) => {
   try {
-    const { data } = await api.post('/admin/couriers/credentials/bigship/test')
+    const { data } = await api.post('/admin/couriers/credentials/bigship/test', payload)
     if (!data?.success) {
       throw new Error(data?.message || data?.error || 'Bigship authentication failed')
     }

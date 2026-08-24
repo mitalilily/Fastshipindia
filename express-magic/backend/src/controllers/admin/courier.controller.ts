@@ -1083,6 +1083,12 @@ export const testDelhiveryB2BCredentialsController = async (_req: Request, res: 
 const normalizeBigshipLoginCredential = (value?: string) =>
   typeof value === 'string' ? value.trim().replace(/\\@/g, '@') : undefined
 
+const normalizeBigshipAccessKey = (value?: string) => {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed.includes('*') ? undefined : trimmed
+}
+
 export const updateBigshipCredentialsController = async (req: Request, res: Response) => {
   const { apiBase, username, password, accessKey } = req.body || {}
 
@@ -1090,7 +1096,7 @@ export const updateBigshipCredentialsController = async (req: Request, res: Resp
     const nextApiBase = typeof apiBase === 'string' ? apiBase.trim() : undefined
     const nextUsername = normalizeBigshipLoginCredential(username)
     const nextPassword = normalizeBigshipLoginCredential(password)
-    const nextAccessKey = typeof accessKey === 'string' ? accessKey.trim() : undefined
+    const nextAccessKey = normalizeBigshipAccessKey(accessKey)
     const hasNewPassword = Boolean(nextPassword)
     const hasNewAccessKey = Boolean(nextAccessKey)
 
@@ -1153,7 +1159,7 @@ export const updateBigshipCredentialsController = async (req: Request, res: Resp
   }
 }
 
-export const testBigshipCredentialsController = async (_req: Request, res: Response) => {
+export const testBigshipCredentialsController = async (req: Request, res: Response) => {
   let testedCredentials:
     | {
         apiBase: string
@@ -1180,10 +1186,15 @@ export const testBigshipCredentialsController = async (_req: Request, res: Respo
       })
     }
 
-    const apiBase = (saved.apiBase || 'https://api.bigship.direct').trim()
-    const username = normalizeBigshipLoginCredential(saved.username) || ''
-    const password = normalizeBigshipLoginCredential(saved.password) || ''
-    const accessKey = (saved.apiKey || '').trim()
+    const requestApiBase = typeof req.body?.apiBase === 'string' ? req.body.apiBase.trim() : ''
+    const requestUsername = normalizeBigshipLoginCredential(req.body?.username)
+    const requestPassword = normalizeBigshipLoginCredential(req.body?.password)
+    const requestAccessKey = normalizeBigshipAccessKey(req.body?.accessKey)
+
+    const apiBase = requestApiBase || (saved.apiBase || 'https://api.bigship.direct').trim()
+    const username = requestUsername || normalizeBigshipLoginCredential(saved.username) || ''
+    const password = requestPassword || normalizeBigshipLoginCredential(saved.password) || ''
+    const accessKey = requestAccessKey || (saved.apiKey || '').trim()
 
     testedCredentials = {
       apiBase,
@@ -1210,7 +1221,7 @@ export const testBigshipCredentialsController = async (_req: Request, res: Respo
       success: true,
       data: {
         authenticated: true,
-        source: 'saved_credentials',
+        source: requestPassword || requestAccessKey ? 'provided_or_saved_credentials' : 'saved_credentials',
         apiBase: result.apiBase,
         username: result.username,
         expiresAt: result.tokenExpiresAt,
