@@ -322,6 +322,10 @@ export class BigshipService {
     const fallbackAddress = `${address} ${city} ${state}`
     const warehousePayload = {
       segment_type: 'local',
+      warehouseName: limitWords(
+        normalizeText(pickup.warehouse_name || pickup.name || contactPerson, 'Pickup Warehouse'),
+        20,
+      ),
       warehouseContactPerson: limitWords(contactPerson, 20) || 'Pickup Contact',
       warehouseAddressPhone: phone,
       warehouseCountry: 'India',
