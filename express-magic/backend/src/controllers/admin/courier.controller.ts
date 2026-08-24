@@ -64,10 +64,10 @@ export interface ShippingRateFilters {
 
 const BIGSHIP_DEFAULT_COURIER = {
   id: 1,
-  name: 'Bigship B2B',
+  name: 'Bigship',
   serviceProvider: 'bigship',
   isEnabled: true,
-  businessType: ['b2b'] as ('b2c' | 'b2b')[],
+  businessType: ['b2b', 'b2c'] as ('b2c' | 'b2b')[],
 }
 
 const ensureDefaultBigshipCourier = async () => {
@@ -1128,6 +1128,72 @@ export const updateBigshipCredentialsController = async (req: Request, res: Resp
   } catch (err) {
     console.error(err)
     res.status(500).json({ success: false, message: 'Failed to update Bigship credentials' })
+  }
+}
+
+export const testBigshipCredentialsController = async (_req: Request, res: Response) => {
+  let testedCredentials:
+    | {
+        apiBase: string
+        username: string
+      }
+    | null = null
+
+  try {
+    const [saved] = await db
+      .select({
+        apiBase: courier_credentials.apiBase,
+        username: courier_credentials.username,
+        password: courier_credentials.password,
+        apiKey: courier_credentials.apiKey,
+      })
+      .from(courier_credentials)
+      .where(eq(courier_credentials.provider, 'bigship'))
+      .limit(1)
+
+    if (!saved) {
+      return res.status(400).json({
+        success: false,
+        message: 'Save Bigship credentials before testing',
+      })
+    }
+
+    testedCredentials = {
+      apiBase: saved.apiBase || 'https://api.bigship.direct',
+      username: saved.username || '',
+    }
+
+    if (!saved.username || !saved.password || !saved.apiKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Save Bigship username, password and access key before testing',
+      })
+    }
+
+    BigshipService.clearCachedConfig()
+    const result = await new BigshipService().testCredentials()
+    return res.json({
+      success: true,
+      data: {
+        authenticated: true,
+        source: 'saved_credentials',
+        apiBase: result.apiBase,
+        username: result.username,
+        expiresAt: result.tokenExpiresAt,
+      },
+    })
+  } catch (error: any) {
+    const statusCode = Number(error?.statusCode || 500)
+    const rejectedLogin = statusCode === 401 || statusCode === 403
+    const message =
+      rejectedLogin && testedCredentials
+        ? `Bigship rejected the saved credentials for ${testedCredentials.username} at ${testedCredentials.apiBase}. Check the API base URL, password and access key.`
+        : error?.message || 'Bigship credential test failed'
+
+    return res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
+      success: false,
+      message,
+    })
   }
 }
 

@@ -10,6 +10,7 @@ import {
   fetchAvailableCouriers,
   fetchServiceProviders,
   fetchShippingRates,
+  testBigshipCredentials,
   testDelhiveryB2BCredentials,
   updateBigshipCredentials,
   updateDelhiveryB2BCredentials,
@@ -154,6 +155,9 @@ export const useUpdateBigshipCredentials = () => {
     },
   })
 }
+
+export const useTestBigshipCredentials = () =>
+  useMutation({ mutationFn: testBigshipCredentials })
 
 export const useTestDelhiveryB2BCredentials = () =>
   useMutation({ mutationFn: testDelhiveryB2BCredentials })

@@ -7,6 +7,7 @@ import {
   getAllCouriersController,
   getShippingRatesController,
   importShippingRatesController,
+  testBigshipCredentialsController,
   testDelhiveryB2BCredentialsController,
   testXpressbeesCredentialsController,
   updateAmazonCredentialsController,
@@ -96,6 +97,12 @@ router.put(
   requireAuth,
   isAdminMiddleware,
   updateBigshipCredentialsController,
+)
+router.post(
+  '/credentials/bigship/test',
+  requireAuth,
+  isAdminMiddleware,
+  testBigshipCredentialsController,
 )
 router.put(
   '/credentials/amazon',

@@ -17,6 +17,7 @@ import {
 import { useEffect, useState } from 'react'
 import {
   useCourierCredentials,
+  useTestBigshipCredentials,
   useTestDelhiveryB2BCredentials,
   useUpdateBigshipCredentials,
   useUpdateDelhiveryB2BCredentials,
@@ -42,6 +43,7 @@ const CourierCredentials = () => {
   const updateDelhiveryB2B = useUpdateDelhiveryB2BCredentials()
   const updateBigship = useUpdateBigshipCredentials()
   const testDelhiveryB2B = useTestDelhiveryB2BCredentials()
+  const testBigship = useTestBigshipCredentials()
 
   const [b2cForm, setB2CForm] = useState({
     apiBase: 'https://track.delhivery.com',
@@ -210,6 +212,23 @@ const CourierCredentials = () => {
     })
   }
 
+  const handleTestBigship = () => {
+    testBigship.mutate(undefined, {
+      onSuccess: (result) =>
+        toast({
+          title: 'Bigship authentication successful',
+          description: result?.expiresAt ? `Token expires: ${result.expiresAt}` : undefined,
+          status: 'success',
+        }),
+      onError: (testError) =>
+        toast({
+          title: 'Bigship authentication failed',
+          description: getErrorMessage(testError, 'Check the saved username, password and access key.'),
+          status: 'error',
+        }),
+    })
+  }
+
   if (isLoading) return <Spinner size="md" />
   if (error) return <Text color="red.500">Failed to load courier credentials</Text>
 
@@ -359,8 +378,8 @@ const CourierCredentials = () => {
           <VStack spacing={4} align="stretch">
             <Flex justify="space-between" align="center" gap={3}>
               <Box>
-                <Text fontSize="lg" fontWeight="700">Bigship B2B</Text>
-                <Text fontSize="sm" color="gray.500">B2B username/password/access key authentication</Text>
+                <Text fontSize="lg" fontWeight="700">Bigship B2B/B2C</Text>
+                <Text fontSize="sm" color="gray.500">B2B and B2C username/password/access key authentication</Text>
               </Box>
               <Badge colorScheme={data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'green' : 'orange'}>
                 {data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'Configured' : 'Setup required'}
@@ -416,14 +435,27 @@ const CourierCredentials = () => {
               <FormHelperText>Leave blank to keep the existing access key.</FormHelperText>
             </FormControl>
 
-            <Button
-              colorScheme="blue"
-              onClick={handleSaveBigship}
-              isLoading={updateBigship.isPending}
-              alignSelf={{ base: 'stretch', sm: 'flex-start' }}
-            >
-              Save Bigship Credentials
-            </Button>
+            <Flex gap={3} direction={{ base: 'column', sm: 'row' }}>
+              <Button
+                colorScheme="blue"
+                onClick={handleSaveBigship}
+                isLoading={updateBigship.isPending}
+              >
+                Save Bigship Credentials
+              </Button>
+              <Button
+                variant="outline"
+                colorScheme="blue"
+                onClick={handleTestBigship}
+                isLoading={testBigship.isPending}
+                isDisabled={!data?.bigship?.hasPassword || !data?.bigship?.hasAccessKey}
+              >
+                Test Bigship Credentials
+              </Button>
+            </Flex>
+            <Text fontSize="xs" color="gray.500">
+              Save changes before testing. Password and access key are never returned by the API.
+            </Text>
           </VStack>
         </Box>
       </SimpleGrid>

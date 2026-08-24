@@ -152,6 +152,23 @@ export const updateBigshipCredentials = async (payload) => {
   return data.data
 }
 
+export const testBigshipCredentials = async () => {
+  try {
+    const { data } = await api.post('/admin/couriers/credentials/bigship/test')
+    if (!data?.success) {
+      throw new Error(data?.message || data?.error || 'Bigship authentication failed')
+    }
+    return data.data
+  } catch (error) {
+    throw new Error(
+      error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Bigship authentication failed',
+    )
+  }
+}
+
 export const testDelhiveryB2BCredentials = async () => {
   try {
     const { data } = await api.post('/admin/couriers/credentials/delhivery-b2b/test')

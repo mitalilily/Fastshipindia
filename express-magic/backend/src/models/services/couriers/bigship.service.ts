@@ -427,6 +427,16 @@ export class BigshipService {
     return this.createShipmentForSegment(params, 'domestic_b2b')
   }
 
+  async testCredentials() {
+    const token = await this.ensureToken()
+    return {
+      authenticated: Boolean(token),
+      apiBase: this.apiBase,
+      username: this.username,
+      tokenExpiresAt: this.tokenExpiresAt ? new Date(this.tokenExpiresAt).toISOString() : null,
+    }
+  }
+
   async cancelShipment(orderId: string) {
     return this.request('post', '/api/outbound/cancel-order', {
       CustomGlobalOrderId: orderId,
