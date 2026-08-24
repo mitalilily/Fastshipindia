@@ -13,6 +13,9 @@ type BigshipServiceOptions = {
 const normalizeText = (value: unknown, fallback = '') =>
   String(value ?? fallback).trim()
 
+const normalizeLoginCredential = (value: unknown, fallback = '') =>
+  normalizeText(value, fallback).replace(/\\@/g, '@')
+
 const toNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
@@ -130,15 +133,15 @@ export class BigshipService {
     const cfg = BigshipService.cachedConfig
     if (cfg) {
       this.apiBase = cfg.apiBase || this.apiBase
-      this.username = cfg.username || this.username
-      this.password = cfg.password || this.password
+      this.username = normalizeLoginCredential(cfg.username || this.username)
+      this.password = normalizeLoginCredential(cfg.password || this.password)
       this.accessKey = cfg.accessKey || this.accessKey
     }
 
     if (this.runtimeConfigOverrides) {
       this.apiBase = this.runtimeConfigOverrides.apiBase || this.apiBase
-      this.username = this.runtimeConfigOverrides.username || this.username
-      this.password = this.runtimeConfigOverrides.password || this.password
+      this.username = normalizeLoginCredential(this.runtimeConfigOverrides.username || this.username)
+      this.password = normalizeLoginCredential(this.runtimeConfigOverrides.password || this.password)
       this.accessKey = this.runtimeConfigOverrides.accessKey || this.accessKey
     }
 

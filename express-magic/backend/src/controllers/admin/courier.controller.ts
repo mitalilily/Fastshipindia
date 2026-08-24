@@ -1080,13 +1080,16 @@ export const testDelhiveryB2BCredentialsController = async (_req: Request, res: 
   }
 }
 
+const normalizeBigshipLoginCredential = (value?: string) =>
+  typeof value === 'string' ? value.trim().replace(/\\@/g, '@') : undefined
+
 export const updateBigshipCredentialsController = async (req: Request, res: Response) => {
   const { apiBase, username, password, accessKey } = req.body || {}
 
   try {
     const nextApiBase = typeof apiBase === 'string' ? apiBase.trim() : undefined
-    const nextUsername = typeof username === 'string' ? username.trim() : undefined
-    const nextPassword = typeof password === 'string' ? password.trim() : undefined
+    const nextUsername = normalizeBigshipLoginCredential(username)
+    const nextPassword = normalizeBigshipLoginCredential(password)
     const nextAccessKey = typeof accessKey === 'string' ? accessKey.trim() : undefined
     const hasNewPassword = Boolean(nextPassword)
     const hasNewAccessKey = Boolean(nextAccessKey)
