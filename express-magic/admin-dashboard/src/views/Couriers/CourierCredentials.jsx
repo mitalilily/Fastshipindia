@@ -359,8 +359,8 @@ const CourierCredentials = () => {
           <VStack spacing={4} align="stretch">
             <Flex justify="space-between" align="center" gap={3}>
               <Box>
-                <Text fontSize="lg" fontWeight="700">Bigship B2C</Text>
-                <Text fontSize="sm" color="gray.500">Username/password/access key authentication</Text>
+                <Text fontSize="lg" fontWeight="700">Bigship B2B</Text>
+                <Text fontSize="sm" color="gray.500">B2B username/password/access key authentication</Text>
               </Box>
               <Badge colorScheme={data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'green' : 'orange'}>
                 {data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'Configured' : 'Setup required'}

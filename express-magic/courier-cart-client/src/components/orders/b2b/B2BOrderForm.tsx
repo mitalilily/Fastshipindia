@@ -111,7 +111,7 @@ export type B2BFormData = {
   chargeableWeight?: number | null
   volumetricWeight?: number | null
   slabs?: number | null
-  integrationType?: 'delhivery'
+  integrationType?: 'delhivery' | 'bigship'
   shippingMode?: string
 
   // Pickup location (optional)
@@ -368,7 +368,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           })) ?? [],
         courier_id: Number(data.courierPartnerId),
         courier_partner: data.courierPartner,
-        integration_type: 'delhivery',
+        integration_type: data.integrationType || 'delhivery',
         is_insurance: !!data.isInsurance,
         is_rto_different: data.isRtoSame === false ? 'yes' : 'no',
         request_auto_pickup: 'no',
@@ -565,10 +565,13 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
       .trim()
       .toLowerCase()
 
-    if (!data.courierPartnerId || !selectedProvider.includes('delhivery')) {
+    const supportedB2BProvider =
+      selectedProvider.includes('delhivery') || selectedProvider.includes('bigship')
+
+    if (!data.courierPartnerId || !supportedB2BProvider) {
       methods.setError('courierPartnerId', {
         type: 'manual',
-        message: 'Select an available Delhivery B2B rate before booking.',
+        message: 'Select an available B2B courier rate before booking.',
       })
       return
     }
@@ -576,7 +579,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
     setConfirmationOpen(true)
   })
 
-  const confirmDelhiveryBooking = handleSubmit((data) => {
+  const confirmB2BBooking = handleSubmit((data) => {
     setConfirmationOpen(false)
     return onSubmit(data)
   })
@@ -808,12 +811,12 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           fullWidth
           maxWidth="sm"
         >
-          <DialogTitle sx={{ fontWeight: 800 }}>Confirm Delhivery B2B Booking</DialogTitle>
+          <DialogTitle sx={{ fontWeight: 800 }}>Confirm B2B Booking</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 0.5 }}>
               <Alert severity="warning">
-                This is a live booking. Confirming will send the shipment to Delhivery and create
-                its LR/AWB; it is not a preview.
+                This is a live booking. Confirming will send the shipment to the selected courier
+                and create its LR/AWB; it is not a preview.
               </Alert>
               <Box>
                 <Typography color="text.secondary" variant="body2">
@@ -826,7 +829,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                   Courier
                 </Typography>
                 <Typography sx={{ fontWeight: 800 }}>
-                  {watch('courierPartner') || 'Delhivery B2B'}
+                  {watch('courierPartner') || 'Selected B2B courier'}
                 </Typography>
               </Box>
               <Box>
@@ -849,10 +852,10 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
             </Button>
             <Button
               variant="contained"
-              onClick={confirmDelhiveryBooking}
+              onClick={confirmB2BBooking}
               loading={createShipmentMutation.isPending}
             >
-              Confirm & Book with Delhivery
+              Confirm & Book
             </Button>
           </DialogActions>
         </Dialog>

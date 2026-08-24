@@ -39,6 +39,45 @@ const firstOrderItem = (params: ShipmentParams) =>
     ? params.order_items[0]
     : null
 
+const normalizeBoxes = (params: ShipmentParams) => {
+  const sourceBoxes = Array.isArray(params.boxes) ? params.boxes : []
+  const boxes = sourceBoxes
+    .map((box: any) => ({
+      noOfBoxes: Math.max(1, Math.floor(toNumber(box?.quantity ?? box?.box_count ?? 1, 1))),
+      dimensions: [
+        {
+          length: toPositiveDimension(
+            box?.length ?? box?.lengthCm ?? params.package_length ?? params.length,
+          ),
+          breadth: toPositiveDimension(
+            box?.breadth ?? box?.breadthCm ?? params.package_breadth ?? params.breadth,
+          ),
+          height: toPositiveDimension(
+            box?.height ?? box?.heightCm ?? params.package_height ?? params.height,
+          ),
+          weight: toKg(box?.weight ?? box?.weightKg ?? params.package_weight ?? params.weight),
+        },
+      ],
+    }))
+    .filter((box) => box.noOfBoxes > 0 && box.dimensions[0].weight > 0)
+
+  if (boxes.length) return boxes
+
+  return [
+    {
+      noOfBoxes: 1,
+      dimensions: [
+        {
+          length: toPositiveDimension(params.package_length ?? params.length),
+          breadth: toPositiveDimension(params.package_breadth ?? params.breadth),
+          height: toPositiveDimension(params.package_height ?? params.height),
+          weight: toKg(params.package_weight ?? params.weight),
+        },
+      ],
+    },
+  ]
+}
+
 const extractBigshipError = (value: any): string => {
   if (!value) return ''
   if (typeof value === 'string') return value
@@ -166,7 +205,10 @@ export class BigshipService {
     }
   }
 
-  private buildCreateOrderPayload(params: ShipmentParams) {
+  private buildCreateOrderPayload(
+    params: ShipmentParams,
+    segmentType: 'domestic_b2b' | 'domestic_b2c' = 'domestic_b2c',
+  ) {
     const item = firstOrderItem(params)
     const orderAmount = Math.max(0, toNumber(params.order_amount ?? item?.price))
     const paymentMode = params.payment_type === 'cod' ? 2 : 1
@@ -187,8 +229,21 @@ export class BigshipService {
       )
     }
 
-    return {
-      segment_type: 'domestic_b2c',
+    const normalizedBoxes = normalizeBoxes(params).map((box) => ({
+      weight_unit: 'kg',
+      dimension_unit: 'cm',
+      noOfBoxes: box.noOfBoxes,
+      dimensions: box.dimensions,
+    }))
+    const totalNumOfBoxes = normalizedBoxes.reduce((sum, box) => sum + box.noOfBoxes, 0)
+    const productName =
+      normalizeText((params as any).category_of_goods) ||
+      normalizeText(item?.name) ||
+      normalizeText(params.courier_partner) ||
+      'Goods'
+
+    const payload: Record<string, any> = {
+      segment_type: segmentType,
       MasterOrderPickUpLocation: Number(pickupLocation),
       MasterOrderReturnLocation: Number(pickupLocation),
       MasterOrderDate: new Date(params.order_date || new Date())
@@ -212,34 +267,34 @@ export class BigshipService {
       MasterOrderShippingCountry: normalizeText(params.consignee?.country, 'India') || 'India',
       MasterOrderShippingState: normalizeText(params.consignee?.state),
       MasterOrderShippingCity: normalizeText(params.consignee?.city),
-      totalNumOfBoxes: 1,
-      boxes: [
-        {
-          weight_unit: 'kg',
-          dimension_unit: 'cm',
-          noOfBoxes: 1,
-          dimensions: [
-            {
-              length: toPositiveDimension(params.package_length ?? params.length),
-              breadth: toPositiveDimension(params.package_breadth ?? params.breadth),
-              height: toPositiveDimension(params.package_height ?? params.height),
-              weight: toKg(params.package_weight ?? params.weight),
-            },
-          ],
-          products: [
-            {
-              productName: normalizeText(item?.name, 'Product') || 'Product',
-              hsn: normalizeText(item?.hsn ?? item?.hsnCode),
-              qty: String(toNumber(item?.qty ?? item?.quantity, 1) || 1),
-              amount: String(toNumber(item?.price, orderAmount)),
-              totalAmount: orderAmount,
-              collectableAmount,
-              categoryId: normalizeText((item as any)?.categoryId, '1') || '1',
-            },
-          ],
-        },
-      ],
+      totalNumOfBoxes: segmentType === 'domestic_b2c' ? 1 : totalNumOfBoxes,
+      boxes:
+        segmentType === 'domestic_b2c'
+          ? [
+              {
+                ...normalizedBoxes[0],
+                noOfBoxes: 1,
+                products: [
+                  {
+                    productName,
+                    hsn: normalizeText(item?.hsn ?? item?.hsnCode),
+                    qty: String(toNumber(item?.qty ?? item?.quantity, 1) || 1),
+                    amount: String(toNumber(item?.price, orderAmount)),
+                    totalAmount: orderAmount,
+                    collectableAmount,
+                    categoryId: normalizeText((item as any)?.categoryId, '1') || '1',
+                  },
+                ],
+              },
+            ]
+          : normalizedBoxes,
     }
+
+    if (segmentType === 'domestic_b2b') {
+      payload.ProductName = productName
+    }
+
+    return payload
   }
 
   private pickRate(rates: any[], courierId?: unknown) {
@@ -252,8 +307,34 @@ export class BigshipService {
     return rates[0]
   }
 
-  async createShipment(params: ShipmentParams) {
-    const draftPayload = this.buildCreateOrderPayload(params)
+  private buildPlaceOrderForm(
+    params: ShipmentParams,
+    customGlobalOrderId: string,
+    selectedCourierId: string,
+  ) {
+    const placePayload: Record<string, string> = {
+      MasterCustomOrderId: customGlobalOrderId,
+      courierId: selectedCourierId,
+      riskTypeId: normalizeText((params as any).bigship_risk_type_id, '2') || '2',
+    }
+
+    const ewaybillNo = normalizeText(
+      params.ewaybill_number || params.ewbn_number || params.ewbn || params.ewb,
+    )
+    if (ewaybillNo) placePayload.EwaybillNo = ewaybillNo
+    const invoiceType = normalizeText((params as any).bigship_invoice_type)
+    if (invoiceType) placePayload.invoiceType = invoiceType
+
+    const form = new FormData()
+    for (const [key, value] of Object.entries(placePayload)) form.append(key, value)
+    return form
+  }
+
+  private async createShipmentForSegment(
+    params: ShipmentParams,
+    segmentType: 'domestic_b2b' | 'domestic_b2c',
+  ) {
+    const draftPayload = this.buildCreateOrderPayload(params, segmentType)
     const draft = await this.request('post', '/api/outbound/create-order', draftPayload)
     const customGlobalOrderId = normalizeText(draft?.data?.CustomGlobalOrderId)
     if (draft?.status === false || !customGlobalOrderId) {
@@ -272,13 +353,7 @@ export class BigshipService {
       throw new HttpError(502, 'Bigship did not return a courier rate for this order')
     }
 
-    const placePayload: Record<string, string> = {
-      MasterCustomOrderId: customGlobalOrderId,
-      courierId: selectedCourierId,
-      riskTypeId: normalizeText((params as any).bigship_risk_type_id, '2') || '2',
-    }
-    const form = new FormData()
-    for (const [key, value] of Object.entries(placePayload)) form.append(key, value)
+    const form = this.buildPlaceOrderForm(params, customGlobalOrderId, selectedCourierId)
 
     const token = await this.ensureToken()
     let placeResponse: any
@@ -336,11 +411,20 @@ export class BigshipService {
       provider_service: selectedRate?.courierType || selectedRate?.planName || undefined,
       provider_mode: selectedRate?.courierType || undefined,
       bigship: {
+        segment_type: segmentType,
         draft,
         rate: selectedRate,
         place: placeResponse,
       },
     }
+  }
+
+  async createShipment(params: ShipmentParams) {
+    return this.createShipmentForSegment(params, 'domestic_b2c')
+  }
+
+  async createB2BShipment(params: ShipmentParams) {
+    return this.createShipmentForSegment(params, 'domestic_b2b')
   }
 
   async cancelShipment(orderId: string) {

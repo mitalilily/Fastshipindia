@@ -107,7 +107,6 @@ import {
   hasUsableXpressbeesCredentials,
   type XpressbeesConfig,
 } from './courierCredentials.service'
-import { getDelhiveryB2BCredentials } from './delhiveryB2BCredentials.service'
 import { DelhiveryService } from './couriers/delhivery.service'
 import {
   DelhiveryB2BService,
@@ -5307,13 +5306,6 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         : (userOrOptions ?? {})
 
     const { userId, planIdOverride, planFallbackName } = options
-    const delhiveryCredentials = await getDelhiveryB2BCredentials()
-    if (!delhiveryCredentials.username || !delhiveryCredentials.password) {
-      throw new HttpError(
-        503,
-        'Delhivery B2B credentials are not configured. Ask an admin to save and test the B2B username and password in Courier Credentials.',
-      )
-    }
     const normalizeProviderKey = (value?: string | null) => {
       const normalized = String(value || '')
         .trim()
@@ -5437,7 +5429,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         .join(' and ')
       throw new HttpError(
         422,
-        `Delhivery B2B zone mapping is missing for ${missingPincodes}. Ask an admin to add the pincode mapping and zone rate.`,
+        `B2B zone mapping is missing for ${missingPincodes}. Ask an admin to add the pincode mapping and zone rate.`,
       )
     }
 
@@ -5485,14 +5477,15 @@ export const fetchAvailableCouriersWithRatesB2B = async (
           sql`${couriers.businessType} @> '["b2b"]'::jsonb`,
         ),
       )
-    const systemCourierRows = enabledB2BCourierRows.filter(
-      (row) => normalizeProviderKey(row.serviceProvider) === 'delhivery',
+    const supportedB2BProviders = ['delhivery', 'bigship']
+    const systemCourierRows = enabledB2BCourierRows.filter((row) =>
+      supportedB2BProviders.includes(normalizeProviderKey(row.serviceProvider)),
     )
 
     if (!systemCourierRows.length) {
       throw new HttpError(
         422,
-        'No enabled Delhivery B2B courier is configured. Ask an admin to enable a Delhivery courier for B2B.',
+        'No enabled B2B courier is configured. Ask an admin to enable a B2B courier.',
       )
     }
 
@@ -5551,7 +5544,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
     if (!zoneToZoneRates.length) {
       throw new HttpError(
         422,
-        'No active Delhivery B2B rate is configured for this zone pair and plan. Ask an admin to add a zone-to-zone rate.',
+        'No active B2B rate is configured for this zone pair and plan. Ask an admin to add a zone-to-zone rate.',
       )
     }
 
@@ -5628,7 +5621,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
     if (!combined.length) {
       throw new HttpError(
         422,
-        'No matching Delhivery B2B courier rate is enabled for this route. Check the courier and zone-rate configuration.',
+        'No matching B2B courier rate is enabled for this route. Check the courier and zone-rate configuration.',
       )
     }
 
@@ -10261,9 +10254,26 @@ export const createB2BShipmentService = async (
     params.courier_id !== undefined && params.courier_id !== null
       ? Number(params.courier_id)
       : undefined
+  const normalizeB2BProviderKey = (value?: string | null) => {
+    const normalized = String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+
+    if (normalized.startsWith('delhivery')) return 'delhivery'
+    if (normalized.includes('bigship')) return 'bigship'
+    return normalized
+  }
+  const requestedProvider = normalizeB2BProviderKey(
+    params.integration_type || params.courier_partner || null,
+  )
+  let effectiveIntegrationType: string =
+    requestedProvider && ['delhivery', 'bigship'].includes(requestedProvider)
+      ? requestedProvider
+      : 'delhivery'
 
   if (courierId !== undefined) {
-    const [courierRow] = await db
+    const courierRows = await db
       .select({
         serviceProvider: couriers.serviceProvider,
         isEnabled: couriers.isEnabled,
@@ -10271,11 +10281,18 @@ export const createB2BShipmentService = async (
       })
       .from(couriers)
       .where(eq(couriers.id, courierId))
-      .limit(1)
+    const eligibleRows = courierRows.filter((row) => {
+      const supportsB2B = Array.isArray(row.businessType)
+        ? row.businessType.some((type) => String(type).toLowerCase() === 'b2b')
+        : false
+      const provider = normalizeB2BProviderKey(row.serviceProvider)
+      return Boolean(row.isEnabled && supportsB2B && ['delhivery', 'bigship'].includes(provider))
+    })
+    const courierRow =
+      eligibleRows.find((row) => normalizeB2BProviderKey(row.serviceProvider) === requestedProvider) ||
+      eligibleRows[0]
 
-    const selectedProvider = String(courierRow?.serviceProvider || '')
-      .trim()
-      .toLowerCase()
+    const selectedProvider = normalizeB2BProviderKey(courierRow?.serviceProvider)
     const supportsB2B = Array.isArray(courierRow?.businessType)
       ? courierRow.businessType.some((type) => String(type).toLowerCase() === 'b2b')
       : false
@@ -10284,18 +10301,15 @@ export const createB2BShipmentService = async (
       !courierRow ||
       !courierRow.isEnabled ||
       !supportsB2B ||
-      !['delhivery', 'delhivery_b2b'].includes(selectedProvider)
+      !['delhivery', 'bigship'].includes(selectedProvider)
     ) {
       throw new HttpError(
         400,
-        'B2B bookings are currently available through Delhivery only. Please select a Delhivery B2B rate.',
+        'Please select an enabled B2B courier rate before booking.',
       )
     }
+    effectiveIntegrationType = selectedProvider
   }
-
-  // B2B is intentionally locked to Delhivery for now. Never trust a client-supplied
-  // integration_type here: the server is the final authority for the live LR booking.
-  const effectiveIntegrationType: string = 'delhivery'
 
   const invoiceValue = Number(
     primaryInvoice?.invoiceValue ?? params.invoice_amount ?? params.order_amount ?? 0,
@@ -10864,6 +10878,138 @@ export const createB2BShipmentService = async (
           updated_at: new Date(),
         } as any)
         .where(eq(b2b_orders.id, pendingOrder.id))
+      throw error
+    }
+  }
+
+  if (effectiveIntegrationType === 'bigship') {
+    try {
+      await debitB2BWalletForPendingOrder()
+
+      const payload: ShipmentParams = {
+        ...params,
+        order_number: normalizedOrderNumber,
+        integration_type: 'bigship',
+        payment_type: params.payment_type === 'cod' ? 'cod' : 'prepaid',
+        request_auto_pickup: params.request_auto_pickup ?? 'no',
+        is_insurance: params.is_insurance ?? 0,
+        is_rto_different: params.is_rto_different ?? 'no',
+        package_weight,
+        package_length,
+        package_breadth,
+        package_height,
+        boxes,
+        order_items: normalizedOrderItems,
+        invoices: normalizedInvoices,
+        invoice_number: primaryInvoice?.invoiceNumber ?? params.invoice_number,
+        invoice_date: primaryInvoice?.invoiceDate ?? params.invoice_date,
+        invoice_amount: primaryInvoice?.invoiceValue ?? params.invoice_amount,
+        company: {
+          name: params.consignee?.company_name || params.company?.name || '',
+          gst: params.consignee?.gstin || params.company?.gst || '',
+        },
+      }
+
+      const bigship = new BigshipService()
+      const shipmentData = await bigship.createB2BShipment(payload)
+      const bigshipAwb =
+        shipmentData?.awb_number ||
+        shipmentData?.bigship?.place?.data?.awb_assigned ||
+        shipmentData?.bigship?.place?.data?.awb ||
+        null
+
+      if (!bigshipAwb) {
+        console.error('Invalid Bigship B2B shipment:', shipmentData)
+        throw new HttpError(500, 'Bigship B2B shipment creation failed')
+      }
+
+      const providerReference =
+        String(shipmentData?.provider_reference ?? shipmentData?.order_id ?? bigshipAwb).trim() ||
+        bigshipAwb
+      const providerRequestId =
+        String(shipmentData?.provider_request_id ?? shipmentData?.shipment_id ?? bigshipAwb).trim() ||
+        bigshipAwb
+
+      await db
+        .update(b2b_orders)
+        .set({
+          integration_type: 'bigship',
+          order_status: 'pickup_initiated',
+          order_id: String(shipmentData?.order_id || '').trim() || null,
+          shipment_id: String(shipmentData?.shipment_id || providerReference).trim(),
+          awb_number: String(bigshipAwb),
+          courier_partner: shipmentData?.courier_name || params.courier_partner || 'Bigship B2B',
+          courier_id: courierId ?? null,
+          label: typeof shipmentData?.label === 'string' ? shipmentData.label : null,
+          courier_cost:
+            shipmentData?.courier_cost ??
+            shipmentData?.bigship?.rate?.total ??
+            shipmentData?.bigship?.rate?.total_freight ??
+            params?.courier_cost ??
+            null,
+          weight: package_weight,
+          length: package_length || null,
+          breadth: package_breadth || null,
+          height: package_height || null,
+          volumetric_weight: Number(totalVolumetricWeight || 0) || null,
+          charged_weight:
+            Number(shipmentData?.bigship?.rate?.charged_weight ?? 0) || package_weight,
+          provider_reference: providerReference,
+          provider_request_id: providerRequestId,
+          provider_mode: shipmentData?.provider_mode || 'surface',
+          provider_service: shipmentData?.provider_service || 'ltl',
+          provider_last_status: 'manifested',
+          provider_meta: shipmentData,
+          updated_at: new Date(),
+        } as any)
+        .where(eq(b2b_orders.id, pendingOrder.id))
+
+      sendWebhookEvent(userId, 'order.created', {
+        order_id: pendingOrder.id,
+        order_number: normalizedOrderNumber,
+        awb_number: bigshipAwb,
+        status: 'pickup_initiated',
+        courier_partner: shipmentData?.courier_name || 'Bigship B2B',
+        courier_id: courierId ?? null,
+        shipment_id: providerReference,
+        integration_type: 'bigship',
+        payment_type: params.payment_type,
+        created_at: new Date().toISOString(),
+        order_type: 'b2b',
+      }).catch((err) => console.error('Failed to send Bigship B2B order.created webhook:', err))
+
+      return {
+        order: {
+          id: pendingOrder.id,
+          order_number: normalizedOrderNumber,
+          awb_number: bigshipAwb,
+          lrn: providerReference,
+          provider_reference: providerReference,
+          provider_request_id: providerRequestId,
+        },
+        shipment: shipmentData,
+      }
+    } catch (error: any) {
+      await refundB2BWalletDebitForFailedBooking(error).catch((refundError: any) => {
+        console.error(
+          `Failed to reverse B2B wallet debit for ${normalizedOrderNumber}:`,
+          refundError?.message || refundError,
+        )
+      })
+
+      await db
+        .update(b2b_orders)
+        .set({
+          integration_type: 'bigship',
+          order_status: 'failed',
+          provider_last_status: 'booking_failed',
+          provider_meta: {
+            error: error?.message || 'Bigship B2B shipment creation failed',
+          },
+          updated_at: new Date(),
+        } as any)
+        .where(eq(b2b_orders.id, pendingOrder.id))
+
       throw error
     }
   }

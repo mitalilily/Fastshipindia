@@ -64,18 +64,24 @@ export interface ShippingRateFilters {
 
 const BIGSHIP_DEFAULT_COURIER = {
   id: 1,
-  name: 'Bigship B2C',
+  name: 'Bigship B2B',
   serviceProvider: 'bigship',
   isEnabled: true,
-  businessType: ['b2c'] as ('b2c' | 'b2b')[],
+  businessType: ['b2b'] as ('b2c' | 'b2b')[],
 }
 
 const ensureDefaultBigshipCourier = async () => {
   await db
     .insert(couriers)
     .values(BIGSHIP_DEFAULT_COURIER)
-    .onConflictDoNothing({
+    .onConflictDoUpdate({
       target: [couriers.id, couriers.serviceProvider],
+      set: {
+        name: sql`excluded.name`,
+        isEnabled: true,
+        businessType: sql`excluded.business_type`,
+        updatedAt: new Date(),
+      },
     })
 }
 
@@ -303,6 +309,8 @@ export const updateCourierStatusController = async (req: Request, res: Response)
 
 export const getServiceProvidersController = async (req: Request, res: Response) => {
   try {
+    await ensureDefaultBigshipCourier()
+
     // Keep the curated provider set visible even before courier rows are created.
     const allowedProviders = ['delhivery', 'bigship']
 

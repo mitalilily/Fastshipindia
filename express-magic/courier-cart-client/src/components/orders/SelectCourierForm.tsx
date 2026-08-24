@@ -243,12 +243,12 @@ export const SelectCourierForm = ({
     const errorMessage =
       error instanceof Error && error.message
         ? error.message
-        : 'Failed to fetch Delhivery B2B couriers. Please try again.'
+        : 'Failed to fetch B2B couriers. Please try again.'
 
     return (
       <Paper sx={{ p: 2.5, border: '1px solid', borderColor: 'error.light' }}>
         <Typography color="error" fontWeight={700}>
-          {shipment_type === 'b2b' ? 'Delhivery B2B setup required' : 'Failed to fetch couriers'}
+          {shipment_type === 'b2b' ? 'B2B courier setup required' : 'Failed to fetch couriers'}
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 0.75 }}>
           {errorMessage}
@@ -260,7 +260,7 @@ export const SelectCourierForm = ({
     return (
       <Typography color={shipment_type === 'b2b' ? 'warning.main' : 'text.primary'}>
         {shipment_type === 'b2b'
-          ? 'Delhivery B2B is not available for this route. Check the pickup and delivery pincodes.'
+          ? 'No B2B courier is available for this route. Check the pickup and delivery pincodes.'
           : 'No couriers available'}
       </Typography>
     )
@@ -668,7 +668,7 @@ export const SelectCourierForm = ({
               </Typography>
               <Typography sx={{ mt: 0.5, color: TEXT_SECONDARY }}>
                 {shipment_type === 'b2b'
-                  ? 'B2B bookings are currently fulfilled through Delhivery. Select the available Delhivery rate.'
+                  ? 'Select an available B2B courier rate for this route.'
                   : 'Compare freight, speed and chargeable weight before locking the shipment.'}
               </Typography>
             </Box>

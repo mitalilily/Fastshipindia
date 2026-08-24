@@ -216,7 +216,7 @@ const ServiceProviders = () => {
             >
               <HStack spacing="6px">
                 <Icon as={IconLink} boxSize="15px" />
-                <Text>Uses B2C</Text>
+                <Text>Shared credentials</Text>
               </HStack>
             </SoftBadge>
           ) : null}
