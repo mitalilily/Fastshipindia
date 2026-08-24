@@ -229,6 +229,93 @@ const CourierCredentials = () => {
     })
   }
 
+  const renderBigshipCredentialCard = ({ title, subtitle }) => (
+    <Box {...cardStyles}>
+      <VStack spacing={4} align="stretch">
+        <Flex justify="space-between" align="center" gap={3}>
+          <Box>
+            <Text fontSize="lg" fontWeight="700">{title}</Text>
+            <Text fontSize="sm" color="gray.500">{subtitle}</Text>
+          </Box>
+          <Badge colorScheme={data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'green' : 'orange'}>
+            {data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'Configured' : 'Setup required'}
+          </Badge>
+        </Flex>
+        <Divider />
+
+        <FormControl isRequired>
+          <FormLabel>API Base URL</FormLabel>
+          <Input
+            value={bigshipForm.apiBase}
+            onChange={(event) =>
+              setBigshipForm((previous) => ({ ...previous, apiBase: event.target.value }))
+            }
+            placeholder="https://api.bigship.direct"
+          />
+        </FormControl>
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+          <FormControl isRequired>
+            <FormLabel>Username</FormLabel>
+            <Input
+              autoComplete="username"
+              value={bigshipForm.username}
+              onChange={(event) =>
+                setBigshipForm((previous) => ({ ...previous, username: event.target.value }))
+              }
+              placeholder="Bigship username"
+            />
+          </FormControl>
+          <FormControl isRequired>
+            <FormLabel>Password</FormLabel>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={bigshipForm.password}
+              onChange={(event) =>
+                setBigshipForm((previous) => ({ ...previous, password: event.target.value }))
+              }
+              placeholder="Leave blank to keep saved password"
+            />
+          </FormControl>
+        </SimpleGrid>
+        <FormControl isRequired>
+          <FormLabel>Access Key</FormLabel>
+          <Input
+            type="password"
+            value={bigshipForm.accessKey}
+            onChange={(event) =>
+              setBigshipForm((previous) => ({ ...previous, accessKey: event.target.value }))
+            }
+            placeholder={data?.bigship?.accessKeyMasked || 'Enter Bigship access key'}
+          />
+          <FormHelperText>Leave blank to keep the existing access key.</FormHelperText>
+        </FormControl>
+
+        <Flex gap={3} direction={{ base: 'column', sm: 'row' }}>
+          <Button
+            colorScheme="blue"
+            onClick={handleSaveBigship}
+            isLoading={updateBigship.isPending}
+          >
+            Save Bigship Credentials
+          </Button>
+          <Button
+            variant="outline"
+            colorScheme="blue"
+            onClick={handleTestBigship}
+            isLoading={testBigship.isPending}
+            isDisabled={!data?.bigship?.hasPassword || !data?.bigship?.hasAccessKey}
+          >
+            Test Bigship Credentials
+          </Button>
+        </Flex>
+        <Text fontSize="xs" color="gray.500">
+          Save changes before testing. Password and access key are never returned by the API.
+        </Text>
+      </VStack>
+    </Box>
+  )
+
   if (isLoading) return <Spinner size="md" />
   if (error) return <Text color="red.500">Failed to load courier credentials</Text>
 
@@ -374,90 +461,14 @@ const CourierCredentials = () => {
           </VStack>
         </Box>
 
-        <Box {...cardStyles}>
-          <VStack spacing={4} align="stretch">
-            <Flex justify="space-between" align="center" gap={3}>
-              <Box>
-                <Text fontSize="lg" fontWeight="700">Bigship B2B/B2C</Text>
-                <Text fontSize="sm" color="gray.500">B2B and B2C username/password/access key authentication</Text>
-              </Box>
-              <Badge colorScheme={data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'green' : 'orange'}>
-                {data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'Configured' : 'Setup required'}
-              </Badge>
-            </Flex>
-            <Divider />
-
-            <FormControl isRequired>
-              <FormLabel>API Base URL</FormLabel>
-              <Input
-                value={bigshipForm.apiBase}
-                onChange={(event) =>
-                  setBigshipForm((previous) => ({ ...previous, apiBase: event.target.value }))
-                }
-                placeholder="https://api.bigship.direct"
-              />
-            </FormControl>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Username</FormLabel>
-                <Input
-                  autoComplete="username"
-                  value={bigshipForm.username}
-                  onChange={(event) =>
-                    setBigshipForm((previous) => ({ ...previous, username: event.target.value }))
-                  }
-                  placeholder="Bigship username"
-                />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Password</FormLabel>
-                <Input
-                  type="password"
-                  autoComplete="new-password"
-                  value={bigshipForm.password}
-                  onChange={(event) =>
-                    setBigshipForm((previous) => ({ ...previous, password: event.target.value }))
-                  }
-                  placeholder="Leave blank to keep saved password"
-                />
-              </FormControl>
-            </SimpleGrid>
-            <FormControl isRequired>
-              <FormLabel>Access Key</FormLabel>
-              <Input
-                type="password"
-                value={bigshipForm.accessKey}
-                onChange={(event) =>
-                  setBigshipForm((previous) => ({ ...previous, accessKey: event.target.value }))
-                }
-                placeholder={data?.bigship?.accessKeyMasked || 'Enter Bigship access key'}
-              />
-              <FormHelperText>Leave blank to keep the existing access key.</FormHelperText>
-            </FormControl>
-
-            <Flex gap={3} direction={{ base: 'column', sm: 'row' }}>
-              <Button
-                colorScheme="blue"
-                onClick={handleSaveBigship}
-                isLoading={updateBigship.isPending}
-              >
-                Save Bigship Credentials
-              </Button>
-              <Button
-                variant="outline"
-                colorScheme="blue"
-                onClick={handleTestBigship}
-                isLoading={testBigship.isPending}
-                isDisabled={!data?.bigship?.hasPassword || !data?.bigship?.hasAccessKey}
-              >
-                Test Bigship Credentials
-              </Button>
-            </Flex>
-            <Text fontSize="xs" color="gray.500">
-              Save changes before testing. Password and access key are never returned by the API.
-            </Text>
-          </VStack>
-        </Box>
+        {renderBigshipCredentialCard({
+          title: 'Bigship B2C',
+          subtitle: 'B2C username/password/access key authentication',
+        })}
+        {renderBigshipCredentialCard({
+          title: 'Bigship B2B',
+          subtitle: 'B2B username/password/access key authentication',
+        })}
       </SimpleGrid>
     </Flex>
   )

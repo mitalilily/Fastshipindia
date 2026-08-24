@@ -62,18 +62,32 @@ export interface ShippingRateFilters {
   business_type?: 'b2b' | 'b2c'
 }
 
-const BIGSHIP_DEFAULT_COURIER = {
-  id: 1,
-  name: 'Bigship',
-  serviceProvider: 'bigship',
-  isEnabled: true,
-  businessType: ['b2b', 'b2c'] as ('b2c' | 'b2b')[],
-}
+const BIGSHIP_COURIER_IDS = {
+  B2C: 1,
+  B2B: 102,
+} as const
+
+const BIGSHIP_DEFAULT_COURIERS = [
+  {
+    id: BIGSHIP_COURIER_IDS.B2C,
+    name: 'Bigship B2C',
+    serviceProvider: 'bigship',
+    isEnabled: true,
+    businessType: ['b2c'] as ('b2c' | 'b2b')[],
+  },
+  {
+    id: BIGSHIP_COURIER_IDS.B2B,
+    name: 'Bigship B2B',
+    serviceProvider: 'bigship',
+    isEnabled: true,
+    businessType: ['b2b'] as ('b2c' | 'b2b')[],
+  },
+]
 
 const ensureDefaultBigshipCourier = async () => {
   await db
     .insert(couriers)
-    .values(BIGSHIP_DEFAULT_COURIER)
+    .values(BIGSHIP_DEFAULT_COURIERS)
     .onConflictDoUpdate({
       target: [couriers.id, couriers.serviceProvider],
       set: {
@@ -416,7 +430,12 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
     if (isEnabled && normalizedProvider === 'bigship') {
       await db
         .insert(couriers)
-        .values({ ...BIGSHIP_DEFAULT_COURIER, serviceProvider: normalizedProvider })
+        .values(
+          BIGSHIP_DEFAULT_COURIERS.map((courier) => ({
+            ...courier,
+            serviceProvider: normalizedProvider,
+          })),
+        )
         .onConflictDoUpdate({
           target: [couriers.id, couriers.serviceProvider],
           set: {
