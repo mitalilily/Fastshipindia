@@ -2,6 +2,10 @@ import { and, count, eq, ilike, or } from 'drizzle-orm'
 import { db } from '../client'
 import { locations } from '../schema/locations'
 
+const isMissingActiveColumnError = (error: any) =>
+  error?.code === '42703' &&
+  String(error?.message || '').toLowerCase().includes('active')
+
 export const LocationService = {
   create: async (data: {
     pincode: string
@@ -53,6 +57,7 @@ export const LocationService = {
     const offset = (page - 1) * limit
 
     const conditions = []
+    let activeCondition
     if (params.filters) {
       const { search, pincode, city, state, active } = params.filters
       const normalizedSearch = String(search || '').trim()
@@ -76,22 +81,61 @@ export const LocationService = {
       }
       if (city) conditions.push(ilike(locations.city, `%${city}%`))
       if (state) conditions.push(ilike(locations.state, `%${state}%`))
-      if (typeof active === 'boolean') conditions.push(eq(locations.active, active))
+      if (typeof active === 'boolean') activeCondition = eq(locations.active, active)
     }
 
-    const whereCondition = conditions.length ? and(...conditions) : undefined
+    const whereCondition =
+      conditions.length || activeCondition
+        ? and(...conditions, activeCondition)
+        : undefined
 
-    const data = await db
-      .select()
-      .from(locations)
-      .where(whereCondition)
-      .limit(limit)
-      .offset(offset)
+    try {
+      const data = await db
+        .select()
+        .from(locations)
+        .where(whereCondition)
+        .limit(limit)
+        .offset(offset)
 
-    const totalRes = await db.select({ count: count() }).from(locations).where(whereCondition)
+      const totalRes = await db.select({ count: count() }).from(locations).where(whereCondition)
 
-    const total = Number(totalRes[0]?.count ?? 0)
-    return { data, total, page, limit }
+      const total = Number(totalRes[0]?.count ?? 0)
+      return { data, total, page, limit }
+    } catch (error: any) {
+      if (!isMissingActiveColumnError(error)) throw error
+
+      if (params.filters?.active === false) {
+        return { data: [], total: 0, page, limit }
+      }
+
+      const legacyWhereCondition = conditions.length ? and(...conditions) : undefined
+      const legacyData = await db
+        .select({
+          id: locations.id,
+          pincode: locations.pincode,
+          city: locations.city,
+          state: locations.state,
+          country: locations.country,
+          tags: locations.tags,
+          created_at: locations.created_at,
+        })
+        .from(locations)
+        .where(legacyWhereCondition)
+        .limit(limit)
+        .offset(offset)
+
+      const totalRes = await db
+        .select({ count: count() })
+        .from(locations)
+        .where(legacyWhereCondition)
+      const total = Number(totalRes[0]?.count ?? 0)
+      return {
+        data: legacyData.map((location) => ({ ...location, active: true })),
+        total,
+        page,
+        limit,
+      }
+    }
   },
 
   getById: async (id: string) => {
