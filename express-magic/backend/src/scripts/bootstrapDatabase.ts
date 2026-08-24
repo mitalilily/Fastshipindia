@@ -53,6 +53,26 @@ const ensureSupportTicketMessagesTable = async () => {
   }
 }
 
+const ensureLocationsTableShape = async () => {
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: env === 'production' ? { rejectUnauthorized: false } : false,
+  })
+
+  try {
+    const tableResult = await pool.query(
+      "select to_regclass('public.shiplifi_locations') as table_name",
+    )
+    if (!tableResult.rows[0]?.table_name) return
+
+    const migrationPath = path.join(backendRoot, 'migration_add_active_to_locations.sql')
+    await pool.query(fs.readFileSync(migrationPath, 'utf8'))
+    console.log('Serviceability locations schema is ready')
+  } finally {
+    await pool.end()
+  }
+}
+
 async function bootstrapDatabase() {
   const hasUsersTable = await usersTableExists()
 
@@ -67,6 +87,7 @@ async function bootstrapDatabase() {
 
   if (hasUsersTable) {
     await ensureSupportTicketMessagesTable()
+    await ensureLocationsTableShape()
   }
 
   try {
