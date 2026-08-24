@@ -53,6 +53,36 @@ const ensureWords = (value: unknown, fallback: string) => {
 const limitWords = (value: unknown, maxWords: number) =>
   normalizeText(value).split(/\s+/).filter(Boolean).slice(0, maxWords).join(' ')
 
+const normalizeBigshipLocation = (value: unknown) =>
+  normalizeText(value)
+    .replace(/[^a-zA-Z\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase()
+
+const BIGSHIP_CITY_ALIASES: Record<string, string[]> = {
+  BENGALURU: ['BANGALORE'],
+  BANGALORE: ['BENGALURU'],
+  GURUGRAM: ['GURGAON'],
+  GURGAON: ['GURUGRAM'],
+  'NEW DELHI': ['DELHI'],
+  DELHI: ['NEW DELHI'],
+  'NAVI MUMBAI': ['MUMBAI'],
+  'MUMBAI SUBURBAN': ['MUMBAI'],
+  NOIDA: ['GAUTAM BUDDHA NAGAR'],
+  'GAUTAM BUDDHA NAGAR': ['NOIDA'],
+}
+
+const uniqueTexts = (values: string[]) => {
+  const seen = new Set<string>()
+  return values.filter((value) => {
+    const normalized = normalizeBigshipLocation(value)
+    if (!normalized || seen.has(normalized)) return false
+    seen.add(normalized)
+    return true
+  })
+}
+
 const firstOrderItem = (params: ShipmentParams) =>
   Array.isArray(params.order_items) && params.order_items.length
     ? params.order_items[0]
@@ -282,6 +312,25 @@ export class BigshipService {
     })
   }
 
+  private pickPincodeWarehouse(warehouses: any[], pincode: string) {
+    const match = warehouses.find(
+      (warehouse) => normalizeText(warehouse?.pincode) === pincode && /^\d+$/.test(normalizeText(warehouse?.warehouseId)),
+    )
+    return normalizeText(match?.warehouseId)
+  }
+
+  private buildCityCandidates(city: string, state: string) {
+    const normalizedCity = normalizeBigshipLocation(city)
+    const normalizedState = normalizeBigshipLocation(state)
+    return uniqueTexts([
+      normalizedCity,
+      ...(BIGSHIP_CITY_ALIASES[normalizedCity] || []),
+      normalizedCity.replace(/\b(CITY|DISTRICT|URBAN|RURAL)\b/g, '').trim(),
+      normalizedState,
+      ...(BIGSHIP_CITY_ALIASES[normalizedState] || []),
+    ])
+  }
+
   private async resolveWarehouseId(params: ShipmentParams) {
     const explicitWarehouseId = normalizeText(
       (params as any).bigship_warehouse_id || (params as any).bigshipWarehouseId,
@@ -317,39 +366,55 @@ export class BigshipService {
       const match = this.findMatchingWarehouse(warehouses, params)
       const warehouseId = normalizeText(match?.warehouseId)
       if (/^\d+$/.test(warehouseId)) return warehouseId
+      if (filterType === 'warehouse_pin') {
+        const pincodeWarehouseId = this.pickPincodeWarehouse(warehouses, pincode)
+        if (/^\d+$/.test(pincodeWarehouseId)) return pincodeWarehouseId
+      }
     }
 
     const fallbackAddress = `${address} ${city} ${state}`
-    const warehousePayload = {
-      segment_type: 'local',
-      warehouseName: limitWords(
-        normalizeText(pickup.warehouse_name || pickup.name || contactPerson, 'Pickup Warehouse'),
-        20,
-      ),
-      warehouseContactPerson: limitWords(contactPerson, 20) || 'Pickup Contact',
-      warehouseAddressPhone: phone,
-      warehouseCountry: 'India',
-      warehouseState: state,
-      warehouseCity: city,
-      warehousePinCode: pincode,
-      warehouseAddressLine1: limitWords(ensureWords(address, fallbackAddress), 75),
-      warehouseAddressLine2: limitWords(ensureWords((pickup as any).address_2, fallbackAddress), 75),
-      warehouseAddressLandMark: limitWords(
-        ensureWords((params as any).pickup_landmark || city, `${city} ${state} ${pincode}`),
-        50,
-      ),
+    const cityCandidates = this.buildCityCandidates(city, state)
+    let lastError: any
+
+    for (const warehouseCity of cityCandidates) {
+      const warehousePayload = {
+        segment_type: 'local',
+        warehouseName: limitWords(
+          normalizeText(pickup.warehouse_name || pickup.name || contactPerson, 'Pickup Warehouse'),
+          20,
+        ),
+        warehouseContactPerson: limitWords(contactPerson, 20) || 'Pickup Contact',
+        warehouseAddressPhone: phone,
+        warehouseCountry: 'India',
+        warehouseState: normalizeBigshipLocation(state),
+        warehouseCity,
+        warehousePinCode: pincode,
+        warehouseAddressLine1: limitWords(ensureWords(address, fallbackAddress), 75),
+        warehouseAddressLine2: limitWords(ensureWords((pickup as any).address_2, fallbackAddress), 75),
+        warehouseAddressLandMark: limitWords(
+          ensureWords((params as any).pickup_landmark || city, `${city} ${state} ${pincode}`),
+          50,
+        ),
+      }
+
+      try {
+        const response = await this.request('post', '/api/outbound/save-warehouse-data', warehousePayload)
+        const createdWarehouseId = normalizeText(response?.data?.warehouseId)
+        if (/^\d+$/.test(createdWarehouseId)) return createdWarehouseId
+        throw new HttpError(
+          Number(response?.status_code || 502),
+          extractBigshipError(response) || 'Bigship warehouse creation failed',
+        )
+      } catch (error: any) {
+        lastError = error
+        const message = String(error?.message || '').toLowerCase()
+        if (!message.includes('warehouse city') && !message.includes('city is invalid')) {
+          throw error
+        }
+      }
     }
 
-    const response = await this.request('post', '/api/outbound/save-warehouse-data', warehousePayload)
-    const createdWarehouseId = normalizeText(response?.data?.warehouseId)
-    if (!/^\d+$/.test(createdWarehouseId)) {
-      throw new HttpError(
-        Number(response?.status_code || 502),
-        extractBigshipError(response) || 'Bigship warehouse creation failed',
-      )
-    }
-
-    return createdWarehouseId
+    throw lastError || new HttpError(422, 'Bigship warehouse creation failed')
   }
 
   private buildCreateOrderPayload(
