@@ -243,7 +243,12 @@ const CourierCredentials = () => {
     })
   }
 
-  const renderBigshipCredentialCard = ({ title, subtitle }) => (
+  const renderBigshipCredentialCard = ({ title, subtitle }) => {
+    const hasPasswordForTest = data?.bigship?.hasPassword || Boolean(bigshipForm.password.trim())
+    const hasAccessKeyForTest =
+      data?.bigship?.hasAccessKey || Boolean(cleanOptionalSecret(bigshipForm.accessKey))
+
+    return (
     <Box {...cardStyles}>
       <VStack spacing={4} align="stretch">
         <Flex justify="space-between" align="center" gap={3}>
@@ -300,9 +305,15 @@ const CourierCredentials = () => {
             onChange={(event) =>
               setBigshipForm((previous) => ({ ...previous, accessKey: event.target.value }))
             }
-            placeholder={data?.bigship?.accessKeyMasked || 'Enter Bigship access key'}
+            placeholder={
+              data?.bigship?.hasAccessKey
+                ? 'Saved access key hidden - paste full key to replace'
+                : 'Enter full Bigship access key'
+            }
           />
-          <FormHelperText>Leave blank to keep the existing access key.</FormHelperText>
+          <FormHelperText>
+            Paste the full access key to replace or test a new value.
+          </FormHelperText>
         </FormControl>
 
         <Flex gap={3} direction={{ base: 'column', sm: 'row' }}>
@@ -318,7 +329,7 @@ const CourierCredentials = () => {
             colorScheme="blue"
             onClick={handleTestBigship}
             isLoading={testBigship.isPending}
-            isDisabled={!data?.bigship?.hasPassword || !data?.bigship?.hasAccessKey}
+            isDisabled={!hasPasswordForTest || !hasAccessKeyForTest}
           >
             Test Bigship Credentials
           </Button>
@@ -328,7 +339,8 @@ const CourierCredentials = () => {
         </Text>
       </VStack>
     </Box>
-  )
+    )
+  }
 
   if (isLoading) return <Spinner size="md" />
   if (error) return <Text color="red.500">Failed to load courier credentials</Text>

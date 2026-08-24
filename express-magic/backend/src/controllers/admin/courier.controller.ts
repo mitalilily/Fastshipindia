@@ -84,6 +84,8 @@ const BIGSHIP_DEFAULT_COURIERS = [
   },
 ]
 
+const isMaskedSecretValue = (value?: string | null) => Boolean(String(value || '').includes('*'))
+
 const ensureDefaultBigshipCourier = async () => {
   await db
     .insert(couriers)
@@ -801,13 +803,14 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
         }
       } else if (provider === 'bigship') {
         const accessKey = row.apiKey || ''
+        const hasAccessKey = Boolean(accessKey.trim()) && !isMaskedSecretValue(accessKey)
         acc.bigship = {
           provider: 'bigship',
           apiBase: row.apiBase || 'https://api.bigship.direct',
           username: row.username || '',
           hasPassword: Boolean((row.password || '').trim()),
-          hasAccessKey: Boolean(accessKey.trim()),
-          accessKeyMasked: accessKey
+          hasAccessKey,
+          accessKeyMasked: hasAccessKey
             ? `${accessKey.slice(0, 4)}${'*'.repeat(Math.max(accessKey.length - 8, 0))}${accessKey.slice(-4)}`
             : '',
         }
@@ -1086,7 +1089,7 @@ const normalizeBigshipLoginCredential = (value?: string) =>
 const normalizeBigshipAccessKey = (value?: string) => {
   if (typeof value !== 'string') return undefined
   const trimmed = value.trim()
-  return trimmed.includes('*') ? undefined : trimmed
+  return isMaskedSecretValue(trimmed) ? undefined : trimmed
 }
 
 export const updateBigshipCredentialsController = async (req: Request, res: Response) => {
@@ -1194,7 +1197,8 @@ export const testBigshipCredentialsController = async (req: Request, res: Respon
     const apiBase = requestApiBase || (saved.apiBase || 'https://api.bigship.direct').trim()
     const username = requestUsername || normalizeBigshipLoginCredential(saved.username) || ''
     const password = requestPassword || normalizeBigshipLoginCredential(saved.password) || ''
-    const accessKey = requestAccessKey || (saved.apiKey || '').trim()
+    const savedAccessKey = (saved.apiKey || '').trim()
+    const accessKey = requestAccessKey || (isMaskedSecretValue(savedAccessKey) ? '' : savedAccessKey)
 
     testedCredentials = {
       apiBase,
