@@ -83,6 +83,19 @@ const uniqueTexts = (values: string[]) => {
   })
 }
 
+const inferBigshipLocationFromPincode = (pincode: string) => {
+  const pin = normalizeText(pincode).replace(/\D/g, '')
+
+  if (/^110\d{3}$/.test(pin)) {
+    return {
+      city: 'DELHI',
+      state: 'DELHI',
+    }
+  }
+
+  return null
+}
+
 const firstOrderItem = (params: ShipmentParams) =>
   Array.isArray(params.order_items) && params.order_items.length
     ? params.order_items[0]
@@ -372,8 +385,10 @@ export class BigshipService {
       }
     }
 
-    const fallbackAddress = `${address} ${city} ${state}`
-    const cityCandidates = this.buildCityCandidates(city, state)
+    const inferredLocation = inferBigshipLocationFromPincode(pincode)
+    const warehouseState = normalizeBigshipLocation(inferredLocation?.state || state)
+    const fallbackAddress = `${address} ${inferredLocation?.city || city} ${warehouseState}`
+    const cityCandidates = this.buildCityCandidates(inferredLocation?.city || city, warehouseState)
     let lastError: any
 
     for (const warehouseCity of cityCandidates) {
@@ -386,7 +401,7 @@ export class BigshipService {
         warehouseContactPerson: limitWords(contactPerson, 20) || 'Pickup Contact',
         warehouseAddressPhone: phone,
         warehouseCountry: 'India',
-        warehouseState: normalizeBigshipLocation(state),
+        warehouseState,
         warehouseCity,
         warehousePinCode: pincode,
         warehouseAddressLine1: limitWords(ensureWords(address, fallbackAddress), 75),
