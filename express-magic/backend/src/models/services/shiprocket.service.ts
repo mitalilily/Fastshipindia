@@ -118,6 +118,7 @@ import {
 import { EkartService } from './couriers/ekart.service'
 import { ShadowfaxService } from './couriers/shadowfax.service'
 import { XpressbeesService } from './couriers/xpressbees.service'
+import { BigshipService } from './couriers/bigship.service'
 import { calculateOrderWeights } from './courierWeightCalculation.service'
 import { generateLabelForOrder } from './generateCustomLabelService'
 import { recordNdrEvent } from './ndr.service'
@@ -1009,6 +1010,14 @@ const resolveCourierBookingLifecycle = (
       orderStatus: 'pickup_initiated',
       pickupStatus: 'pickup_initiated',
       providerLastStatus: 'shipment_purchased',
+    }
+  }
+
+  if (provider === 'bigship') {
+    return {
+      orderStatus: 'pickup_initiated',
+      pickupStatus: 'pickup_requested',
+      providerLastStatus: 'shipment_created',
     }
   }
 
@@ -3498,7 +3507,7 @@ export const fetchAvailableCouriersWithRates = async (
 
     // Build registry of enabled couriers by service provider
     // Filter by business type: check if business_type JSONB array contains 'b2c'
-    const SUPPORTED_PROVIDERS = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon']
+    const SUPPORTED_PROVIDERS = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship']
     const allSystemCourierRows = await db
       .select({
         id: couriers.id,
@@ -3878,6 +3887,7 @@ export const fetchAvailableCouriersWithRates = async (
       if (courierName.includes('ekart')) return 'ekart'
       if (courierName.includes('shadowfax')) return 'shadowfax'
       if (courierName.includes('xpress')) return 'xpressbees'
+      if (courierName.includes('bigship')) return 'bigship'
       return ''
     }
 
@@ -4553,6 +4563,7 @@ export const fetchAvailableCouriersWithRates = async (
       xpressbees: 'Xpressbees',
       shadowfax: 'Shadowfax',
       amazon: 'Amazon Shipping',
+      bigship: 'Bigship',
     }
 
     const fallbackProviderDetails: Array<{
@@ -7533,10 +7544,10 @@ export const createB2CShipmentService = async (
   try {
     // 1️⃣ CREATE SHIPMENT
     const requestedIntegrationType = String(params.integration_type || '').toLowerCase()
-    const allowedIntegrationTypes = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon']
+    const allowedIntegrationTypes = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship']
     if (!requestedIntegrationType || !allowedIntegrationTypes.includes(requestedIntegrationType)) {
       throw new Error(
-        `Invalid integration_type: ${params.integration_type}. Supported values: delhivery, ekart, xpressbees, shadowfax, amazon.`,
+        `Invalid integration_type: ${params.integration_type}. Supported values: delhivery, ekart, xpressbees, shadowfax, amazon, bigship.`,
       )
     }
 
@@ -7546,6 +7557,7 @@ export const createB2CShipmentService = async (
       | 'xpressbees'
       | 'shadowfax'
       | 'amazon'
+      | 'bigship'
     const providerName =
       integrationType === 'delhivery'
         ? 'Delhivery'
@@ -7555,7 +7567,9 @@ export const createB2CShipmentService = async (
             ? 'Xpressbees'
             : integrationType === 'shadowfax'
               ? 'Shadowfax'
-              : 'Amazon Shipping'
+              : integrationType === 'amazon'
+                ? 'Amazon Shipping'
+                : 'Bigship'
 
     if (!isReverseShipment) {
       const orderDateRaw =
@@ -8201,6 +8215,60 @@ export const createB2CShipmentService = async (
         }
         ;(shipmentMeta as any).provider_mode = resolvedShadowfaxMode
         ;(shipmentMeta as any).provider_service = resolvedShadowfaxService
+      }
+    } else if (integrationType === 'bigship') {
+      if (isReverseShipment) {
+        throw new HttpError(400, 'Bigship reverse shipments are not supported yet.')
+      }
+
+      console.log('Using Bigship API...')
+      const bigship = new BigshipService()
+      shipmentData = await bigship.createShipment(params)
+
+      const bigshipAwb =
+        shipmentData?.awb_number ??
+        shipmentData?.data?.awb_assigned ??
+        shipmentData?.data?.awb ??
+        null
+
+      if (!bigshipAwb) {
+        console.error('Invalid Bigship shipment:', shipmentData)
+        throw new HttpError(500, 'Bigship shipment creation failed')
+      }
+
+      providerCourierCost =
+        shipmentData?.courier_cost ??
+        shipmentData?.bigship?.rate?.total ??
+        shipmentData?.bigship?.rate?.total_freight ??
+        params?.courier_cost ??
+        null
+      providerSortCode = null
+
+      shipmentMeta = {
+        shipment_id:
+          shipmentData?.shipment_id ??
+          shipmentData?.provider_reference ??
+          shipmentData?.order_id ??
+          bigshipAwb ??
+          undefined,
+        awb_number: bigshipAwb,
+        courier_name: shipmentData?.courier_name ?? 'Bigship',
+        courier_id: shipmentData?.courier_id
+          ? Number(shipmentData.courier_id)
+          : params.courier_id
+            ? Number(params.courier_id)
+            : null,
+        label: shipmentData?.label ?? undefined,
+        manifest: undefined,
+        courier_cost: providerCourierCost,
+        sort_code: providerSortCode,
+        provider_reference:
+          shipmentData?.provider_reference ?? shipmentData?.order_id ?? bigshipAwb ?? undefined,
+        provider_request_id:
+          shipmentData?.provider_request_id ?? shipmentData?.shipment_id ?? undefined,
+        provider_service: shipmentData?.provider_service ?? undefined,
+        provider_mode: shipmentData?.provider_mode ?? undefined,
+        provider_flow: 'bigship_draft_rate_place',
       }
     } else if (integrationType === 'amazon') {
       console.log('Using Amazon Shipping API...')
@@ -15846,6 +15914,102 @@ const mapEkartTracking = (raw: any, order: OrderSummary): ProviderNormalizedTrac
   }
 }
 
+const mapBigshipTracking = (raw: any, order: OrderSummary): ProviderNormalizedTracking => {
+  const history: TrackingHistoryItem[] = []
+  const payload = raw?.data || raw?.payload || raw || {}
+  const tracking = payload?.tracking || payload?.track || payload?.shipment || payload
+  const rawEvents =
+    tracking?.history ||
+    tracking?.tracking_history ||
+    tracking?.trackingHistory ||
+    tracking?.events ||
+    tracking?.scans ||
+    payload?.history ||
+    payload?.tracking_history ||
+    payload?.events ||
+    payload?.scans ||
+    []
+  const events = Array.isArray(rawEvents)
+    ? rawEvents
+    : rawEvents && typeof rawEvents === 'object'
+      ? [rawEvents]
+      : []
+
+  events.forEach((entry: any) => {
+    pushHistoryEvent(history, {
+      statusCode:
+        entry?.status_code ||
+        entry?.statusCode ||
+        entry?.status ||
+        entry?.scan_status ||
+        entry?.event,
+      message:
+        entry?.message ||
+        entry?.remarks ||
+        entry?.description ||
+        entry?.scan ||
+        entry?.status ||
+        entry?.event,
+      location:
+        entry?.location ||
+        entry?.current_location ||
+        entry?.scan_location ||
+        entry?.city,
+      time:
+        entry?.event_time ||
+        entry?.eventTime ||
+        entry?.status_time ||
+        entry?.created_at ||
+        entry?.updated_at ||
+        entry?.timestamp,
+    })
+  })
+
+  const status = sanitizeString(
+    tracking?.current_status ||
+      tracking?.status ||
+      payload?.current_status ||
+      payload?.status ||
+      findProviderValue(payload, ['currentStatus', 'shipmentStatus', 'statusName']) ||
+      history[0]?.message ||
+      order.order_status,
+    order.order_status || 'In Transit',
+  )
+
+  if (!history.length && status) {
+    pushHistoryEvent(history, {
+      statusCode: status,
+      message: status,
+      location: tracking?.current_location || payload?.current_location || payload?.location,
+      time: tracking?.updated_at || payload?.updated_at || payload?.created_at,
+    })
+  }
+
+  sortHistoryDescending(history)
+
+  return {
+    history,
+    status,
+    courier_name: sanitizeString(
+      tracking?.courierName || tracking?.courier_name || payload?.courierName || payload?.courier_name,
+      'Bigship',
+    ),
+    edd:
+      sanitizeString(
+        tracking?.edd ||
+          tracking?.expected_delivery_date ||
+          payload?.edd ||
+          payload?.expected_delivery_date ||
+          '',
+      ) || undefined,
+    shipment_info:
+      sanitizeString(
+        tracking?.message || tracking?.remarks || payload?.message || payload?.remarks || '',
+        '',
+      ) || undefined,
+  }
+}
+
 const normalizeLiveTrackingStatusText = (value: unknown) =>
   sanitizeString(value)
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
@@ -16917,6 +17081,13 @@ export const trackByAwbService = async (awb: string): Promise<TrackingServiceRes
       const ekartService = new EkartService()
       const raw = await ekartService.track(awb)
       providerData = mapEkartTracking(raw, order)
+    } else if (providerKey === 'bigship') {
+      const bigshipService = new BigshipService()
+      const customGlobalOrderId = sanitizeString(
+        order.provider_reference || order.provider_request_id || order.order_id || order.shipment_id || awb,
+      )
+      const raw = await bigshipService.trackShipment(customGlobalOrderId)
+      providerData = mapBigshipTracking(raw, order)
     }
   } catch (err: any) {
     if (err instanceof HttpError) throw err

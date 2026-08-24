@@ -10,6 +10,7 @@ import {
   testDelhiveryB2BCredentialsController,
   testXpressbeesCredentialsController,
   updateAmazonCredentialsController,
+  updateBigshipCredentialsController,
   updateDelhiveryCredentialsController,
   updateDelhiveryB2BCredentialsController,
   updateEkartCredentialsController,
@@ -89,6 +90,12 @@ router.put(
   requireAuth,
   isAdminMiddleware,
   updateXpressbeesAwbRangeController,
+)
+router.put(
+  '/credentials/bigship',
+  requireAuth,
+  isAdminMiddleware,
+  updateBigshipCredentialsController,
 )
 router.put(
   '/credentials/amazon',

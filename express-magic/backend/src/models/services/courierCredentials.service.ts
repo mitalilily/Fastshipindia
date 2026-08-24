@@ -3,7 +3,13 @@ import { db } from '../client'
 import { courierCredentials } from '../schema/courierCredentials'
 
 export type BusinessType = 'b2b' | 'b2c'
-export type ServiceProviderId = 'delhivery' | 'shipway' | 'xpressbees' | 'ekart' | 'shadowfax'
+export type ServiceProviderId =
+  | 'delhivery'
+  | 'shipway'
+  | 'xpressbees'
+  | 'ekart'
+  | 'shadowfax'
+  | 'bigship'
 
 export type DelhiveryConfig = {
   apiKey?: string
@@ -71,6 +77,13 @@ export type ShadowfaxConfig = {
   webhookSecret?: string
 }
 
+export type BigshipConfig = {
+  apiBase?: string
+  username?: string
+  password?: string
+  accessKey?: string
+}
+
 export type CourierConfig =
   | DelhiveryConfig
   | SmartshipConfig
@@ -79,6 +92,7 @@ export type CourierConfig =
   | XpressbeesConfig
   | EkartConfig
   | ShadowfaxConfig
+  | BigshipConfig
 
 export interface CourierCredentialsUpsertPayload {
   serviceProvider: ServiceProviderId
@@ -112,6 +126,7 @@ const KNOWN_PROVIDERS: ServiceProviderId[] = [
   'xpressbees',
   'ekart',
   'shadowfax',
+  'bigship',
 ]
 
 const hasEnvForProviderAndType = (provider: ServiceProviderId, _type: BusinessType): boolean => {
@@ -142,6 +157,14 @@ const hasEnvForProviderAndType = (provider: ServiceProviderId, _type: BusinessTy
       process.env.SHADOWFAX_API_TOKEN ||
       process.env.SHADOWFAX_API_KEY ||
       process.env.SHADOWFAX_API_BASE
+    )
+  }
+  if (provider === 'bigship') {
+    return !!(
+      process.env.BIGSHIP_ACCESS_KEY ||
+      process.env.BIGSHIP_USERNAME ||
+      process.env.BIGSHIP_PASSWORD ||
+      process.env.BIGSHIP_API_BASE
     )
   }
   return false
@@ -199,6 +222,16 @@ const buildConfigFromRow = (provider: ServiceProviderId, row: typeof courierCred
       apiToken: normalize(row.apiKey),
       clientName: normalize(row.clientName),
       webhookSecret: normalize(row.webhookSecret),
+    }
+    return cfg
+  }
+
+  if (provider === 'bigship') {
+    const cfg: BigshipConfig = {
+      apiBase: normalize(row.apiBase),
+      username: normalize(row.username),
+      password: normalize(row.password),
+      accessKey: normalize(row.apiKey || (metadata.accessKey as string) || ''),
     }
     return cfg
   }

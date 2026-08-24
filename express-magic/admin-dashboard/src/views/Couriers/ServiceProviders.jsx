@@ -32,12 +32,20 @@ import {
 const providerLabels = {
   delhivery: "Delhivery",
   deliveryone: "Delhivery",
+  bigship: "Bigship",
 };
 
 const fallbackProviders = [
   {
     serviceProvider: "delhivery",
     name: "Delhivery",
+    totalCouriers: 0,
+    enabledCouriers: 0,
+    isEnabled: false,
+  },
+  {
+    serviceProvider: "bigship",
+    name: "Bigship",
     totalCouriers: 0,
     enabledCouriers: 0,
     isEnabled: false,
@@ -50,6 +58,7 @@ const brandStyles = {
   Ekart: ["#0B65BB", "#FFD438"],
   "Shipex India": ["#10B981", "#FFFFFF"],
   Xpressbees: ["#111111", "#FFB020"],
+  Bigship: ["#0B66D8", "#FFFFFF"],
 };
 
 function ProviderMark({ name }) {
@@ -99,12 +108,13 @@ const ServiceProviders = () => {
   const updateStatus = useUpdateServiceProviderStatus();
   const toast = useToast();
 
-  const delhiveryProviders = providers.filter(
-    (provider) => provider.serviceProvider?.toLowerCase() === "delhivery"
+  const visibleProviders = providers.filter(
+    (provider) =>
+      ["delhivery", "bigship"].includes(provider.serviceProvider?.toLowerCase())
   );
 
-  const rows = delhiveryProviders.length
-    ? delhiveryProviders.map((provider) => ({
+  const rows = visibleProviders.length
+    ? visibleProviders.map((provider) => ({
         ...provider,
         name:
           providerLabels[provider.serviceProvider] ||

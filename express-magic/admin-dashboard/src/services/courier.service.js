@@ -146,6 +146,12 @@ export const updateDelhiveryB2BCredentials = async (payload) => {
   return data.data
 }
 
+export const updateBigshipCredentials = async (payload) => {
+  const { data } = await api.put('/admin/couriers/credentials/bigship', payload)
+  if (!data?.success) throw new Error('Failed to update Bigship credentials')
+  return data.data
+}
+
 export const testDelhiveryB2BCredentials = async () => {
   try {
     const { data } = await api.post('/admin/couriers/credentials/delhivery-b2b/test')

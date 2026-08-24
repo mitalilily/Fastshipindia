@@ -262,6 +262,7 @@ export const courierLogos: Record<string, string> = {
   Amazon: '/logo/integrations/amazon.png',
   Ekart: '/logo/integrations/ekart.png',
   Xpressbees: '/logo/integrations/xpressbees.png',
+  Bigship: '/logo/integrations/default-courier.png',
 }
 export const defaultLogo = '/logo/integrations/default-courier.png'
 

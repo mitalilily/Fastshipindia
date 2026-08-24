@@ -10,6 +10,7 @@ const supportedTrackingProviders = [
   'amazon',
   'xpressbees',
   'ekart',
+  'bigship',
 ] as const
 
 type TrackingProvider = (typeof supportedTrackingProviders)[number]

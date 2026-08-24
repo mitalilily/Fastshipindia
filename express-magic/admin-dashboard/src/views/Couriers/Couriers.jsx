@@ -47,6 +47,7 @@ const providerColors = {
   Ekart: ["#E9F5FF", "#006BFF"],
   "Shipex India": ["#F0FFE9", "#28A600"],
   Xpressbees: ["#FFF7E3", "#F08A00"],
+  Bigship: ["#EAF3FF", "#1167D8"],
 };
 
 const fallbackCouriers = [
@@ -118,6 +119,7 @@ const fallbackCouriers = [
 const normalizeProvider = (value) => {
   if (!value) return "Delhivery";
   if (value === "deliveryone" || value === "delhivery") return "Delhivery";
+  if (value === "bigship") return "Bigship";
   return value;
 };
 
@@ -356,6 +358,7 @@ const Couriers = () => {
               >
                 <option value="">All providers</option>
                 <option value="delhivery">Delhivery</option>
+                <option value="bigship">Bigship</option>
               </AdminSelect>
             </Box>
             <Box>

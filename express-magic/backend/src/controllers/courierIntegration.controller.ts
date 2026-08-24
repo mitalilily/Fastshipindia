@@ -156,6 +156,7 @@ const SUPPORTED_B2C_FALLBACK_PROVIDERS = [
   'xpressbees',
   'shadowfax',
   'amazon',
+  'bigship',
 ]
 
 const toNumber = (value: unknown, fallback = 0) => {
@@ -264,6 +265,7 @@ const inferB2CFallbackProvider = (rate: typeof shippingRates.$inferSelect) => {
   if (name.includes('xpress')) return 'xpressbees'
   if (name.includes('shadowfax')) return 'shadowfax'
   if (name.includes('amazon')) return 'amazon'
+  if (name.includes('bigship')) return 'bigship'
   return ''
 }
 

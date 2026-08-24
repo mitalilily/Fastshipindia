@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react'
 import {
   useCourierCredentials,
   useTestDelhiveryB2BCredentials,
+  useUpdateBigshipCredentials,
   useUpdateDelhiveryB2BCredentials,
   useUpdateDelhiveryCredentials,
 } from 'hooks/useCouriers'
@@ -39,6 +40,7 @@ const CourierCredentials = () => {
   const { data, isLoading, error } = useCourierCredentials()
   const updateDelhivery = useUpdateDelhiveryCredentials()
   const updateDelhiveryB2B = useUpdateDelhiveryB2BCredentials()
+  const updateBigship = useUpdateBigshipCredentials()
   const testDelhiveryB2B = useTestDelhiveryB2BCredentials()
 
   const [b2cForm, setB2CForm] = useState({
@@ -50,6 +52,12 @@ const CourierCredentials = () => {
     apiBase: 'https://ltl-clients-api.delhivery.com',
     username: '',
     password: '',
+  })
+  const [bigshipForm, setBigshipForm] = useState({
+    apiBase: 'https://api.bigship.direct',
+    username: '',
+    password: '',
+    accessKey: '',
   })
 
   useEffect(() => {
@@ -66,6 +74,14 @@ const CourierCredentials = () => {
           data.delhiveryB2B.apiBase || 'https://ltl-clients-api.delhivery.com',
         username: data.delhiveryB2B.username || '',
         password: '',
+      })
+    }
+    if (data?.bigship) {
+      setBigshipForm({
+        apiBase: data.bigship.apiBase || 'https://api.bigship.direct',
+        username: data.bigship.username || '',
+        password: '',
+        accessKey: '',
       })
     }
   }, [data])
@@ -138,6 +154,45 @@ const CourierCredentials = () => {
     )
   }
 
+  const handleSaveBigship = () => {
+    const missing = [
+      !bigshipForm.apiBase.trim() && 'API Base URL',
+      !bigshipForm.username.trim() && 'Username',
+      !data?.bigship?.hasPassword && !bigshipForm.password.trim() && 'Password',
+      !data?.bigship?.hasAccessKey && !bigshipForm.accessKey.trim() && 'Access Key',
+    ].filter(Boolean)
+
+    if (missing.length) {
+      toast({
+        title: 'Complete the required Bigship fields',
+        description: `Missing: ${missing.join(', ')}`,
+        status: 'warning',
+      })
+      return
+    }
+
+    updateBigship.mutate(
+      {
+        apiBase: bigshipForm.apiBase.trim(),
+        username: bigshipForm.username.trim(),
+        ...(bigshipForm.password.trim() ? { password: bigshipForm.password.trim() } : {}),
+        ...(bigshipForm.accessKey.trim() ? { accessKey: bigshipForm.accessKey.trim() } : {}),
+      },
+      {
+        onSuccess: () => {
+          toast({ title: 'Bigship credentials saved', status: 'success' })
+          setBigshipForm((previous) => ({ ...previous, password: '', accessKey: '' }))
+        },
+        onError: (saveError) =>
+          toast({
+            title: 'Failed to save Bigship credentials',
+            description: getErrorMessage(saveError, 'Please try again.'),
+            status: 'error',
+          }),
+      },
+    )
+  }
+
   const handleTestB2B = () => {
     testDelhiveryB2B.mutate(undefined, {
       onSuccess: (result) =>
@@ -165,7 +220,7 @@ const CourierCredentials = () => {
           Courier Credentials
         </Text>
         <Text mt={1} color="gray.600">
-          Configure Delhivery B2C token access and B2B JWT authentication separately.
+          Configure courier API credentials for live bookings.
         </Text>
       </Box>
 
@@ -297,6 +352,78 @@ const CourierCredentials = () => {
             <Text fontSize="xs" color="gray.500">
               Save changes before testing. Password is never returned by the API.
             </Text>
+          </VStack>
+        </Box>
+
+        <Box {...cardStyles}>
+          <VStack spacing={4} align="stretch">
+            <Flex justify="space-between" align="center" gap={3}>
+              <Box>
+                <Text fontSize="lg" fontWeight="700">Bigship B2C</Text>
+                <Text fontSize="sm" color="gray.500">Username/password/access key authentication</Text>
+              </Box>
+              <Badge colorScheme={data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'green' : 'orange'}>
+                {data?.bigship?.hasPassword && data?.bigship?.hasAccessKey ? 'Configured' : 'Setup required'}
+              </Badge>
+            </Flex>
+            <Divider />
+
+            <FormControl isRequired>
+              <FormLabel>API Base URL</FormLabel>
+              <Input
+                value={bigshipForm.apiBase}
+                onChange={(event) =>
+                  setBigshipForm((previous) => ({ ...previous, apiBase: event.target.value }))
+                }
+                placeholder="https://api.bigship.direct"
+              />
+            </FormControl>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Username</FormLabel>
+                <Input
+                  autoComplete="username"
+                  value={bigshipForm.username}
+                  onChange={(event) =>
+                    setBigshipForm((previous) => ({ ...previous, username: event.target.value }))
+                  }
+                  placeholder="Bigship username"
+                />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Password</FormLabel>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  value={bigshipForm.password}
+                  onChange={(event) =>
+                    setBigshipForm((previous) => ({ ...previous, password: event.target.value }))
+                  }
+                  placeholder="Leave blank to keep saved password"
+                />
+              </FormControl>
+            </SimpleGrid>
+            <FormControl isRequired>
+              <FormLabel>Access Key</FormLabel>
+              <Input
+                type="password"
+                value={bigshipForm.accessKey}
+                onChange={(event) =>
+                  setBigshipForm((previous) => ({ ...previous, accessKey: event.target.value }))
+                }
+                placeholder={data?.bigship?.accessKeyMasked || 'Enter Bigship access key'}
+              />
+              <FormHelperText>Leave blank to keep the existing access key.</FormHelperText>
+            </FormControl>
+
+            <Button
+              colorScheme="blue"
+              onClick={handleSaveBigship}
+              isLoading={updateBigship.isPending}
+              alignSelf={{ base: 'stretch', sm: 'flex-start' }}
+            >
+              Save Bigship Credentials
+            </Button>
           </VStack>
         </Box>
       </SimpleGrid>

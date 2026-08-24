@@ -29,6 +29,7 @@ import { EkartService } from '../../models/services/couriers/ekart.service'
 import { XpressbeesService } from '../../models/services/couriers/xpressbees.service'
 import { ShadowfaxService } from '../../models/services/couriers/shadowfax.service'
 import { DelhiveryB2BService } from '../../models/services/couriers/delhiveryB2B.service'
+import { BigshipService } from '../../models/services/couriers/bigship.service'
 import {
   DEFAULT_DELHIVERY_B2B_API_BASE,
   DELHIVERY_B2B_PROVIDER,
@@ -281,8 +282,8 @@ export const updateCourierStatusController = async (req: Request, res: Response)
 
 export const getServiceProvidersController = async (req: Request, res: Response) => {
   try {
-    // Delhivery is the only provider currently exposed through the admin integration UI.
-    const allowedProviders = ['delhivery']
+    // Keep the curated provider set visible even before courier rows are created.
+    const allowedProviders = ['delhivery', 'bigship']
 
     const rows = await db
       .select({
@@ -328,7 +329,7 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
   const { isEnabled } = req.body
 
   try {
-    const allowedProviders = ['delhivery']
+    const allowedProviders = ['delhivery', 'bigship']
     const normalizedProvider = String(serviceProvider || '').trim().toLowerCase()
 
     if (!normalizedProvider || typeof isEnabled !== 'boolean') {
@@ -345,9 +346,8 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
     }
 
     // A fresh installation may have credentials but no courier rows yet. Provision the
-    // canonical B2C services and the independent B2B/LTL service when the admin enables
-    // the provider so each business type can be managed separately.
-    if (isEnabled) {
+    // canonical rows when the admin enables the provider so each provider can be toggled.
+    if (isEnabled && normalizedProvider === 'delhivery') {
       await db
         .insert(couriers)
         .values([
@@ -373,6 +373,27 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
             businessType: ['b2b'],
           },
         ])
+        .onConflictDoUpdate({
+          target: [couriers.id, couriers.serviceProvider],
+          set: {
+            name: sql`excluded.name`,
+            isEnabled: true,
+            businessType: sql`excluded.business_type`,
+            updatedAt: new Date(),
+          },
+        })
+    }
+
+    if (isEnabled && normalizedProvider === 'bigship') {
+      await db
+        .insert(couriers)
+        .values({
+          id: 1,
+          name: 'Bigship B2C',
+          serviceProvider: normalizedProvider,
+          isEnabled: true,
+          businessType: ['b2c'],
+        })
         .onConflictDoUpdate({
           target: [couriers.id, couriers.serviceProvider],
           set: {
@@ -616,6 +637,7 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
           'ekart',
           'xpressbees',
           'shadowfax',
+          'bigship',
           AMAZON_CREDENTIALS_PROVIDER,
         ]),
       )
@@ -662,6 +684,14 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
         apiKeyMasked: '',
         hasWebhookSecret: false,
         webhookConfig: buildShadowfaxWebhookConfig(),
+      },
+      bigship: {
+        provider: 'bigship',
+        apiBase: 'https://api.bigship.direct',
+        username: '',
+        hasPassword: false,
+        hasAccessKey: false,
+        accessKeyMasked: '',
       },
       amazon: buildAmazonCredentialResponse(),
     }
@@ -726,6 +756,18 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
             : '',
           hasWebhookSecret,
           webhookConfig: buildShadowfaxWebhookConfig(),
+        }
+      } else if (provider === 'bigship') {
+        const accessKey = row.apiKey || ''
+        acc.bigship = {
+          provider: 'bigship',
+          apiBase: row.apiBase || 'https://api.bigship.direct',
+          username: row.username || '',
+          hasPassword: Boolean((row.password || '').trim()),
+          hasAccessKey: Boolean(accessKey.trim()),
+          accessKeyMasked: accessKey
+            ? `${accessKey.slice(0, 4)}${'*'.repeat(Math.max(accessKey.length - 8, 0))}${accessKey.slice(-4)}`
+            : '',
         }
       } else if (provider === AMAZON_CREDENTIALS_PROVIDER) {
         acc.amazon = buildAmazonCredentialResponse(row)
@@ -993,6 +1035,76 @@ export const testDelhiveryB2BCredentialsController = async (_req: Request, res: 
       success: false,
       message,
     })
+  }
+}
+
+export const updateBigshipCredentialsController = async (req: Request, res: Response) => {
+  const { apiBase, username, password, accessKey } = req.body || {}
+
+  try {
+    const nextApiBase = typeof apiBase === 'string' ? apiBase.trim() : undefined
+    const nextUsername = typeof username === 'string' ? username.trim() : undefined
+    const nextPassword = typeof password === 'string' ? password.trim() : undefined
+    const nextAccessKey = typeof accessKey === 'string' ? accessKey.trim() : undefined
+    const hasNewPassword = Boolean(nextPassword)
+    const hasNewAccessKey = Boolean(nextAccessKey)
+
+    const [existing] = await db
+      .select({ id: courier_credentials.id })
+      .from(courier_credentials)
+      .where(eq(courier_credentials.provider, 'bigship'))
+      .limit(1)
+
+    if (existing) {
+      const updatePayload: Record<string, any> = { updatedAt: new Date() }
+      if (nextApiBase !== undefined) {
+        updatePayload.apiBase = nextApiBase || 'https://api.bigship.direct'
+      }
+      if (nextUsername !== undefined) updatePayload.username = nextUsername
+      if (hasNewPassword) updatePayload.password = nextPassword
+      if (hasNewAccessKey) updatePayload.apiKey = nextAccessKey
+
+      await db
+        .update(courier_credentials)
+        .set(updatePayload)
+        .where(eq(courier_credentials.provider, 'bigship'))
+    } else {
+      await db.insert(courier_credentials).values({
+        provider: 'bigship',
+        apiBase: nextApiBase || 'https://api.bigship.direct',
+        username: nextUsername || '',
+        password: hasNewPassword ? nextPassword! : '',
+        apiKey: hasNewAccessKey ? nextAccessKey! : '',
+      })
+    }
+
+    BigshipService.clearCachedConfig()
+
+    const [saved] = await db
+      .select({
+        apiBase: courier_credentials.apiBase,
+        username: courier_credentials.username,
+        password: courier_credentials.password,
+        apiKey: courier_credentials.apiKey,
+      })
+      .from(courier_credentials)
+      .where(eq(courier_credentials.provider, 'bigship'))
+      .limit(1)
+
+    res.json({
+      success: true,
+      message: 'Bigship credentials updated successfully',
+      data: {
+        provider: 'bigship',
+        apiBase: saved?.apiBase || 'https://api.bigship.direct',
+        username: saved?.username || '',
+        hasPassword: Boolean((saved?.password || '').trim()),
+        hasAccessKey: Boolean((saved?.apiKey || '').trim()),
+      },
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, message: 'Failed to update Bigship credentials' })
   }
 }
 
