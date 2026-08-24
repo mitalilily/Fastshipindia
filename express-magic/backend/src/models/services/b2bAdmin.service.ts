@@ -1627,6 +1627,7 @@ export const calculateB2BRate = async (params: {
   deliveryTime?: string // Optional: Delivery time window (e.g., "11AM", "9AM-11AM", "before 11AM") - if provided, applies time-specific delivery charge
   deliveryAddress?: string // Optional: Delivery address - used to detect CSD locations via keywords
   planId?: string // Optional: Plan ID to fetch plan-specific additional charges
+  allowAnyProviderRateFallback?: boolean // Optional: allow a route-level rate from another provider
 }) => {
   const { courierId, serviceProvider } = normalizeCourierScope(params.courierScope)
   const effectiveDate = params.effectiveDate ?? new Date()
@@ -1659,6 +1660,7 @@ export const calculateB2BRate = async (params: {
     courierId,
     serviceProvider,
     effectiveDate,
+    allowAnyProviderFallback: params.allowAnyProviderRateFallback,
   })
 
   if (!rate) {
@@ -2640,6 +2642,7 @@ export const findZoneRate = async (params: {
   courierId: number | null
   serviceProvider: string | null
   effectiveDate?: Date
+  allowAnyProviderFallback?: boolean
 }) => {
   const effectiveDate = params.effectiveDate ?? new Date()
   const scopes: (CourierScope | null)[] = [
@@ -2676,6 +2679,31 @@ export const findZoneRate = async (params: {
           serviceProvider
             ? eq(b2bZoneToZoneRates.service_provider, serviceProvider)
             : isNull(b2bZoneToZoneRates.service_provider),
+        ),
+      )
+      .orderBy(desc(b2bZoneToZoneRates.effective_from))
+      .limit(1)
+
+    if (row) return row
+  }
+
+  if (params.allowAnyProviderFallback) {
+    const [row] = await db
+      .select()
+      .from(b2bZoneToZoneRates)
+      .where(
+        and(
+          eq(b2bZoneToZoneRates.origin_zone_id, params.originZoneId),
+          eq(b2bZoneToZoneRates.destination_zone_id, params.destinationZoneId),
+          eq(b2bZoneToZoneRates.is_active, true),
+          or(
+            isNull(b2bZoneToZoneRates.effective_from),
+            lte(b2bZoneToZoneRates.effective_from, effectiveDate),
+          ),
+          or(
+            isNull(b2bZoneToZoneRates.effective_to),
+            gte(b2bZoneToZoneRates.effective_to, effectiveDate),
+          ),
         ),
       )
       .orderBy(desc(b2bZoneToZoneRates.effective_from))

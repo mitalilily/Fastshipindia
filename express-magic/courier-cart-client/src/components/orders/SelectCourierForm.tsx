@@ -224,7 +224,9 @@ export const SelectCourierForm = ({
     const name = String(courier?.name ?? '').toLowerCase()
     return (
       provider.startsWith('delhivery') ||
-      name.includes('delhivery')
+      provider.startsWith('bigship') ||
+      name.includes('delhivery') ||
+      name.includes('bigship')
     )
   })
   if (!pickupPincode || !deliveryPincode || !totalWeight) {

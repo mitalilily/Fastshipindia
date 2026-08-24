@@ -5574,6 +5574,10 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         }
       }
 
+      if (!selectedRate && providerKey === 'bigship') {
+        selectedRate = zoneToZoneRates[0]
+      }
+
       if (!selectedRate) continue
 
       courierMap.set(courierId, {
@@ -5642,6 +5646,8 @@ export const fetchAvailableCouriersWithRatesB2B = async (
               courierId: Number(courier.id),
               serviceProvider: courier.pricingServiceProvider || undefined,
             },
+            allowAnyProviderRateFallback:
+              normalizeProviderKey(courier.integration_type || courier.serviceProvider) === 'bigship',
             pickupDate: (params as any).pickup_date,
             deliveryAddress: String((params as any).delivery_address ?? (params as any).deliveryAddress ?? ''),
             planId: activePlanId ?? undefined,
@@ -10388,6 +10394,7 @@ export const createB2BShipmentService = async (
         courierId,
         serviceProvider: effectiveIntegrationType || undefined,
       },
+      allowAnyProviderRateFallback: effectiveIntegrationType === 'bigship',
       pickupDate: params.pickup?.pickup_date,
       deliveryAddress: params.consignee.address,
       planId: activePlanId ?? undefined,
