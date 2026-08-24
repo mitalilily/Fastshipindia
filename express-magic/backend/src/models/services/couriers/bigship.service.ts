@@ -160,11 +160,19 @@ export class BigshipService {
 
     if (this.token && Date.now() < this.tokenExpiresAt) return this.token
 
-    const response = await this.client.post(this.endpoint('/api/outbound/login'), {
-      username: this.username,
-      password: this.password,
-      access_key: this.accessKey,
-    })
+    let response
+    try {
+      response = await this.client.post(this.endpoint('/api/outbound/login'), {
+        username: this.username,
+        password: this.password,
+        access_key: this.accessKey,
+      })
+    } catch (error: any) {
+      throw new HttpError(
+        Number(error?.response?.status || 502),
+        extractBigshipError(error?.response?.data) || error?.message || 'Bigship login failed',
+      )
+    }
     const data = response.data
     if (data?.status === false || !data?.data?.token) {
       throw new HttpError(
