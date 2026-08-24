@@ -37,6 +37,22 @@ const indianPhone = (value: unknown) => {
   return digits.length > 10 ? digits.slice(-10) : digits
 }
 
+const normalizeComparable = (value: unknown) =>
+  normalizeText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+
+const wordCount = (value: string) => value.split(/\s+/).filter(Boolean).length
+
+const ensureWords = (value: unknown, fallback: string) => {
+  const text = normalizeText(value)
+  const candidate = wordCount(text) >= 3 ? text : fallback
+  return candidate.split(/\s+/).slice(0, 75).join(' ')
+}
+
+const limitWords = (value: unknown, maxWords: number) =>
+  normalizeText(value).split(/\s+/).filter(Boolean).slice(0, maxWords).join(' ')
+
 const firstOrderItem = (params: ShipmentParams) =>
   Array.isArray(params.order_items) && params.order_items.length
     ? params.order_items[0]
@@ -216,6 +232,122 @@ export class BigshipService {
     }
   }
 
+  private async listWarehouses(filterType = '', filterValue = '') {
+    const token = await this.ensureToken()
+    const response = await this.client.get(this.endpoint('/api/outbound/get-warehouse-list'), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      params: {
+        page: '1',
+        perPage: '25',
+        segment_type: 'local',
+        status: '1',
+        filter_type: filterType,
+        filter_value: filterValue,
+      },
+    })
+
+    const data = response.data
+    if (data?.status === false) {
+      throw new HttpError(
+        Number(data?.status_code || 422),
+        extractBigshipError(data) || 'Bigship warehouse lookup failed',
+      )
+    }
+
+    return Array.isArray(data?.data?.warehouse) ? data.data.warehouse : []
+  }
+
+  private findMatchingWarehouse(warehouses: any[], params: ShipmentParams) {
+    const pickup = params.pickup || {}
+    const pincode = normalizeText(pickup.pincode)
+    const phone = indianPhone(pickup.phone)
+    const warehouseName = normalizeComparable(pickup.warehouse_name || pickup.name)
+
+    return warehouses.find((warehouse) => {
+      const warehousePincode = normalizeText(warehouse?.pincode)
+      const warehousePhone = indianPhone(warehouse?.warehouseAddressPhone)
+      const warehouseNames = [
+        warehouse?.warehouseName,
+        warehouse?.warehouseContactPerson,
+      ].map(normalizeComparable)
+
+      const pincodeMatches = !pincode || warehousePincode === pincode
+      const phoneMatches = !phone || warehousePhone === phone
+      const nameMatches = !warehouseName || warehouseNames.some((name) => name.includes(warehouseName))
+
+      return pincodeMatches && (phoneMatches || nameMatches)
+    })
+  }
+
+  private async resolveWarehouseId(params: ShipmentParams) {
+    const explicitWarehouseId = normalizeText(
+      (params as any).bigship_warehouse_id || (params as any).bigshipWarehouseId,
+    )
+    if (/^\d+$/.test(explicitWarehouseId)) return explicitWarehouseId
+
+    const pickupLocationId = normalizeText(params.pickup_location_id)
+    if (/^\d+$/.test(pickupLocationId)) return pickupLocationId
+
+    const pickup = params.pickup || {}
+    const pincode = normalizeText(pickup.pincode)
+    const phone = indianPhone(pickup.phone)
+    const contactPerson = normalizeText(pickup.name || pickup.warehouse_name)
+    const city = normalizeText(pickup.city)
+    const state = normalizeText(pickup.state)
+    const address = normalizeText(pickup.address)
+
+    if (!pincode || !phone || !contactPerson || !city || !state || !address) {
+      throw new HttpError(
+        400,
+        'Bigship pickup address, contact name, phone, city, state and pincode are required before booking.',
+      )
+    }
+
+    const lookupAttempts = [
+      ['warehouse_pin', pincode],
+      ['warehouse_phone', phone],
+      ['warehouse_contact_person', contactPerson],
+    ] as const
+
+    for (const [filterType, filterValue] of lookupAttempts) {
+      const warehouses = await this.listWarehouses(filterType, filterValue)
+      const match = this.findMatchingWarehouse(warehouses, params)
+      const warehouseId = normalizeText(match?.warehouseId)
+      if (/^\d+$/.test(warehouseId)) return warehouseId
+    }
+
+    const fallbackAddress = `${address} ${city} ${state}`
+    const warehousePayload = {
+      segment_type: 'local',
+      warehouseContactPerson: limitWords(contactPerson, 20) || 'Pickup Contact',
+      warehouseAddressPhone: phone,
+      warehouseCountry: 'India',
+      warehouseState: state,
+      warehouseCity: city,
+      warehousePinCode: pincode,
+      warehouseAddressLine1: limitWords(ensureWords(address, fallbackAddress), 75),
+      warehouseAddressLine2: limitWords(ensureWords((pickup as any).address_2, fallbackAddress), 75),
+      warehouseAddressLandMark: limitWords(
+        ensureWords((params as any).pickup_landmark || city, `${city} ${state} ${pincode}`),
+        50,
+      ),
+    }
+
+    const response = await this.request('post', '/api/outbound/save-warehouse-data', warehousePayload)
+    const createdWarehouseId = normalizeText(response?.data?.warehouseId)
+    if (!/^\d+$/.test(createdWarehouseId)) {
+      throw new HttpError(
+        Number(response?.status_code || 502),
+        extractBigshipError(response) || 'Bigship warehouse creation failed',
+      )
+    }
+
+    return createdWarehouseId
+  }
+
   private buildCreateOrderPayload(
     params: ShipmentParams,
     segmentType: 'domestic_b2b' | 'domestic_b2c' = 'domestic_b2c',
@@ -345,7 +477,11 @@ export class BigshipService {
     params: ShipmentParams,
     segmentType: 'domestic_b2b' | 'domestic_b2c',
   ) {
-    const draftPayload = this.buildCreateOrderPayload(params, segmentType)
+    const bigshipWarehouseId = await this.resolveWarehouseId(params)
+    const draftPayload = this.buildCreateOrderPayload(
+      { ...params, bigship_warehouse_id: bigshipWarehouseId } as ShipmentParams,
+      segmentType,
+    )
     const draft = await this.request('post', '/api/outbound/create-order', draftPayload)
     const customGlobalOrderId = normalizeText(draft?.data?.CustomGlobalOrderId)
     if (draft?.status === false || !customGlobalOrderId) {
