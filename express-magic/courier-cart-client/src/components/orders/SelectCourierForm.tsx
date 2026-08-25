@@ -225,8 +225,10 @@ export const SelectCourierForm = ({
     return (
       provider.startsWith('delhivery') ||
       provider.startsWith('bigship') ||
+      provider.startsWith('shipmozo') ||
       name.includes('delhivery') ||
-      name.includes('bigship')
+      name.includes('bigship') ||
+      name.includes('shipmozo')
     )
   })
   if (!pickupPincode || !deliveryPincode || !totalWeight) {
