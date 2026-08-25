@@ -71,6 +71,7 @@ const BIGSHIP_CITY_ALIASES: Record<string, string[]> = {
   'MUMBAI SUBURBAN': ['MUMBAI'],
   NOIDA: ['GAUTAM BUDDHA NAGAR'],
   'GAUTAM BUDDHA NAGAR': ['NOIDA'],
+  GOTAN: ['NAGAUR', 'JODHPUR'],
 }
 
 const uniqueTexts = (values: string[]) => {
@@ -97,6 +98,13 @@ const inferBigshipLocationFromPincode = (pincode: string) => {
     return {
       city: 'GURGAON',
       state: 'HARYANA',
+    }
+  }
+
+  if (pin === '342902') {
+    return {
+      city: 'NAGAUR',
+      state: 'RAJASTHAN',
     }
   }
 
