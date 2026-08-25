@@ -17,12 +17,53 @@ import ManifestScheduleDialog, {
 import { OrderExpandedRow } from '../OrderExpandedRow'
 
 export const statusColorMap: Record<string, 'success' | 'pending' | 'error' | 'info'> = {
+  pending: 'pending',
+  booked: 'pending',
+  shipment_booked: 'pending',
+  shipment_created: 'pending',
+  pickup_initiated: 'pending',
+  manifest_generated: 'pending',
+  in_transit: 'pending',
+  out_for_delivery: 'pending',
+  rto_in_transit: 'pending',
   delivered: 'success',
+  rto_delivered: 'success',
   processing: 'pending',
   cancelled: 'error',
-  pending: 'info',
-  shipment_booked: 'info',
-  manifest_generated: 'success',
+  canceled: 'error',
+  cancellation_requested: 'error',
+  manifest_failed: 'error',
+  failed: 'error',
+  ndr: 'error',
+  undelivered: 'error',
+  rto_initiated: 'error',
+  rto: 'error',
+  lost: 'error',
+}
+
+const shippingStatusMap: Record<string, string> = {
+  pending: 'Pending',
+  booked: 'Booked',
+  shipment_booked: 'Shipment Booked',
+  shipment_created: 'Shipment Created',
+  pickup_initiated: 'Scheduled for Pickup',
+  manifest_generated: 'Manifest Generated',
+  in_transit: 'In Transit',
+  out_for_delivery: 'Out For Delivery',
+  delivered: 'Delivered',
+  undelivered: 'Undelivered',
+  ndr: 'NDR',
+  rto_initiated: 'RTO Initiated',
+  rto: 'RTO Initiated',
+  rto_in_transit: 'RTO In Transit',
+  rto_delivered: 'RTO Delivered',
+  cancellation_requested: 'Cancellation Requested',
+  cancelled: 'Cancelled',
+  canceled: 'Cancelled',
+  manifest_failed: 'Manifest Failed',
+  failed: 'Failed',
+  lost: 'Lost',
+  processing: 'Processing',
 }
 
 interface B2BOrdersListProps {
@@ -118,6 +159,17 @@ const B2BOrdersList = ({
     if (!value) return '-'
     const date = moment(value)
     return date.isValid() ? date.format('DD MMM YYYY | hh:mm A') : '-'
+  }
+
+  const normalizeOrderStatus = (status: unknown) =>
+    String(status || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_')
+
+  const getDisplayStatusLabel = (status?: string | null) => {
+    const normalizedStatus = normalizeOrderStatus(status)
+    return shippingStatusMap[normalizedStatus] || status || 'Unknown'
   }
 
   const parseMaybeJsonObject = (value: unknown): Record<string, unknown> => {
@@ -489,7 +541,15 @@ const B2BOrdersList = ({
       label: 'Status',
       id: 'order_status',
       minWidth: 150,
-      render: (v) => <StatusChip label={v} status={statusColorMap[v] || 'info'} />,
+      render: (v) => {
+        const normalizedStatus = normalizeOrderStatus(v)
+        return (
+          <StatusChip
+            label={getDisplayStatusLabel(v)}
+            status={statusColorMap[normalizedStatus] || 'info'}
+          />
+        )
+      },
     },
     {
       label: 'Docs',

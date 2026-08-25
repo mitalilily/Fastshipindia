@@ -238,18 +238,23 @@ const shippingStatusMap: Record<string, string> = {
   rto_delivered: 'RTO Delivered',
   cancellation_requested: 'Cancellation Requested',
   cancelled: 'Cancelled',
+  canceled: 'Cancelled',
+  failed: 'Failed',
+  lost: 'Lost',
+  processing: 'Processing',
+  shipment_booked: 'Shipment Booked',
 }
 
 const orderStatusQuickFilters = [
-  { label: 'All', value: 'all', statuses: undefined },
-  { label: 'Pickups & Manifests', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'] },
-  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
-  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
-  { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
-  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'] },
-  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'] },
-  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'] },
-  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'cancellation_requested'] },
+  { label: 'All', value: 'all', statuses: undefined, tone: 'primary' },
+  { label: 'Pickups & Manifests', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'], tone: 'warning' },
+  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'], tone: 'warning' },
+  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'], tone: 'warning' },
+  { label: 'Delivered', value: 'delivered', statuses: ['delivered'], tone: 'success' },
+  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'], tone: 'warning' },
+  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'], tone: 'success' },
+  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered', 'failed', 'manifest_failed'], tone: 'error' },
+  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'canceled', 'cancellation_requested'], tone: 'error' },
 ] as const
 
 type OrderStatusQuickFilter = (typeof orderStatusQuickFilters)[number]
@@ -259,6 +264,20 @@ const normalizeOrderStatus = (status: unknown) =>
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, '_')
+
+const statusChipPalette = {
+  success: { color: '#047857', background: '#10B981', border: '#047857' },
+  pending: { color: '#B45309', background: '#F59E0B', border: '#B45309' },
+  error: { color: '#B91C1C', background: '#EF4444', border: '#B91C1C' },
+  info: { color: '#1D4ED8', background: '#3B82F6', border: '#1D4ED8' },
+} as const
+
+const quickFilterTonePalette = {
+  primary: { main: '#1D2842', hover: '#152038' },
+  success: { main: '#05BD7E', hover: '#049B67' },
+  warning: { main: '#F59E0B', hover: '#D97706' },
+  error: { main: '#EF4444', hover: '#DC2626' },
+} as const
 
 const normalizeStatusFilter = (status?: string | string[]) =>
   (Array.isArray(status) ? status : status ? [status] : []).map(normalizeOrderStatus).filter(Boolean)
@@ -1028,6 +1047,18 @@ const AllOrders = () => {
     return shippingStatusMap[normalizedStatus] || status || 'Unknown'
   }
 
+  const getStatusChipSx = (status?: string | null) => {
+    const normalizedStatus = normalizeOrderStatus(status)
+    const tone = statusColorMap[normalizedStatus] || 'info'
+    const palette = statusChipPalette[tone]
+
+    return {
+      color: palette.color,
+      bgcolor: alpha(palette.background, 0.12),
+      border: `1px solid ${alpha(palette.border, 0.36)}`,
+    }
+  }
+
   const isDocumentGenerationReady = (row: Order) => {
     const normalizedStatus = String(row.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
     return (
@@ -1331,9 +1362,7 @@ const AllOrders = () => {
             minWidth: 74,
             maxWidth: '100%',
             borderRadius: '999px',
-            color: '#05BD7E',
-            bgcolor: alpha('#05BD7E', 0.08),
-            border: `1px solid ${alpha('#05BD7E', 0.45)}`,
+            ...getStatusChipSx(row.order_status),
             '& .MuiChip-label': {
               px: 0.7,
               fontSize: 10,
@@ -1760,6 +1789,7 @@ const AllOrders = () => {
             {orderStatusQuickFilters.map((tab) => {
               const selected = activeQuickStatus === tab.value
               const count = getQuickStatusCount(tab)
+              const tabTone = quickFilterTonePalette[tab.tone]
 
               return (
                 <Button
@@ -1776,11 +1806,11 @@ const AllOrders = () => {
                     fontSize: 12,
                     fontWeight: 700,
                     color: selected ? '#FFFFFF' : textSecondary,
-                    bgcolor: selected ? '#1D2842' : 'transparent',
-                    border: `1px solid ${selected ? '#1D2842' : borderColor}`,
+                    bgcolor: selected ? tabTone.main : 'transparent',
+                    border: `1px solid ${selected ? tabTone.main : borderColor}`,
                     '&:hover': {
-                      bgcolor: selected ? '#152038' : quietSurface,
-                      borderColor: selected ? '#152038' : alpha('#1D2842', 0.2),
+                      bgcolor: selected ? tabTone.hover : quietSurface,
+                      borderColor: selected ? tabTone.hover : alpha('#1D2842', 0.2),
                     },
                   }}
                 >
@@ -1794,8 +1824,8 @@ const AllOrders = () => {
                       borderRadius: 999,
                       fontSize: 11,
                       fontWeight: 800,
-                      color: selected ? '#1D2842' : textPrimary,
-                      bgcolor: selected ? '#FFFFFF' : alpha('#1D2842', 0.08),
+                      color: selected ? tabTone.main : textPrimary,
+                      bgcolor: selected ? '#FFFFFF' : alpha(tabTone.main, 0.12),
                     }}
                   >
                     {count}

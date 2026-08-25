@@ -110,16 +110,32 @@ export function SmartTabs<T extends string = string>({
   const isOverflowSelected = Boolean(selectedOverflowTab)
   const controlledValue = isOverflowSelected ? '__more__' : value
 
-  const getSelectedSx = (statusColor: StatusColor) => {
-    if (statusColor !== 'success') return undefined
+  const getTabTone = (statusColor: StatusColor) => {
+    if (statusColor === 'success') return '#05BD7E'
+    if (statusColor === 'warning') return '#F59E0B'
+    if (statusColor === 'error') return '#EF4444'
+    if (statusColor === 'primary') return '#1D2842'
+    return undefined
+  }
+
+  const getDirectSelectedSx = (statusColor: StatusColor) => {
+    const tone = getTabTone(statusColor)
+    if (!tone) return undefined
 
     return {
-      '&.Mui-selected': {
-        color: '#FFFFFF',
-        background: '#05BD7E',
-        borderColor: '#05BD7E',
-        boxShadow: `0 12px 24px ${alpha('#05BD7E', 0.24)}`,
-      },
+      color: '#FFFFFF',
+      background: tone,
+      borderColor: tone,
+      boxShadow: `0 12px 24px ${alpha(tone, 0.24)}`,
+    }
+  }
+
+  const getSelectedSx = (statusColor: StatusColor) => {
+    const selectedSx = getDirectSelectedSx(statusColor)
+    if (!selectedSx) return undefined
+
+    return {
+      '&.Mui-selected': selectedSx,
     }
   }
 
@@ -305,18 +321,10 @@ export function SmartTabs<T extends string = string>({
                 sx={
                   isOverflowSelected
                     ? {
-                        color:
-                          selectedOverflowTab?.statusColor === 'success'
-                            ? '#FFFFFF'
-                            : theme.palette.text.primary,
-                        background:
-                          selectedOverflowTab?.statusColor === 'success'
-                            ? '#05BD7E'
-                            : alpha(theme.palette.primary.main, 0.12),
-                        borderColor:
-                          selectedOverflowTab?.statusColor === 'success'
-                            ? '#05BD7E'
-                            : undefined,
+                        ...(getDirectSelectedSx(selectedOverflowTab?.statusColor) || {
+                          color: theme.palette.text.primary,
+                          background: alpha(theme.palette.primary.main, 0.12),
+                        }),
                         ...(compact
                           ? {
                               borderRadius: '8px',

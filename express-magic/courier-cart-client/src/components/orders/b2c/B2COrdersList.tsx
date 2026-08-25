@@ -112,16 +112,16 @@ type PendingManifestRequest =
   | null
 
 const orderStatusFilterTabs = [
-  { label: 'All', value: 'all', statuses: undefined },
-  { label: 'Pickups & Manifests', value: 'pickup_manifests', statuses: ['pickup_initiated', 'manifest_generated'] },
-  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
-  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
-  { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
-  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'] },
-  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'] },
-  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'] },
-  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'cancellation_requested'] },
-  { label: 'Exception', value: 'exception', statuses: ['manifest_failed', 'lost', 'rto_initiated', 'rto'] },
+  { label: 'All', value: 'all', statuses: undefined, statusColor: 'primary' },
+  { label: 'Pickups & Manifests', value: 'pickup_manifests', statuses: ['pickup_initiated', 'manifest_generated'], statusColor: 'warning' },
+  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'], statusColor: 'warning' },
+  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'], statusColor: 'warning' },
+  { label: 'Delivered', value: 'delivered', statuses: ['delivered'], statusColor: 'success' },
+  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'], statusColor: 'warning' },
+  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'], statusColor: 'success' },
+  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'], statusColor: 'error' },
+  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'canceled', 'cancellation_requested'], statusColor: 'error' },
+  { label: 'Exception', value: 'exception', statuses: ['manifest_failed', 'failed', 'lost', 'rto_initiated', 'rto'], statusColor: 'error' },
 ] as const
 
 type OrderStatusFilterValue = (typeof orderStatusFilterTabs)[number]['value']
@@ -214,23 +214,33 @@ const shipNowButtonSx = {
 
 export const statusColorMap: Record<string, 'success' | 'pending' | 'error' | 'info'> = {
   pending: 'pending',
-  booked: 'info',
+  booked: 'pending',
   manifest_failed: 'error',
+  failed: 'error',
+  lost: 'error',
   pickup_initiated: 'pending',
-  shipment_created: 'info', // legacy
+  shipment_created: 'pending', // legacy
   in_transit: 'pending',
   out_for_delivery: 'pending',
   delivered: 'success',
   undelivered: 'error',
   cancelled: 'error',
+  canceled: 'error',
   ndr: 'error',
   rto_initiated: 'error',
   rto: 'error',
   rto_in_transit: 'pending',
-  rto_delivered: 'info',
-  cancellation_requested: 'info',
-  manifest_generated: 'info', // legacy
+  rto_delivered: 'success',
+  cancellation_requested: 'error',
+  manifest_generated: 'pending', // legacy
 }
+
+const statusChipPalette = {
+  success: { color: '#047857', background: '#10B981', border: '#047857' },
+  pending: { color: '#B45309', background: '#F59E0B', border: '#B45309' },
+  error: { color: '#B91C1C', background: '#EF4444', border: '#B91C1C' },
+  info: { color: '#1D4ED8', background: '#3B82F6', border: '#1D4ED8' },
+} as const
 
 /* ───────────── Shipping Statuses ───────────── */
 const shippingStatusMap: Record<string, string> = {
@@ -250,6 +260,9 @@ const shippingStatusMap: Record<string, string> = {
   rto_delivered: 'RTO Delivered',
   cancellation_requested: 'Cancellation Requested',
   cancelled: 'Cancelled',
+  canceled: 'Cancelled',
+  failed: 'Failed',
+  lost: 'Lost',
 }
 
 const B2COrdersList = () => {
@@ -1297,6 +1310,18 @@ const B2COrdersList = () => {
     return shippingStatusMap[normalizedStatus] || status || 'Unknown'
   }
 
+  const getStatusChipSx = (status?: string | null) => {
+    const normalizedStatus = String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+    const tone = statusColorMap[normalizedStatus] || 'info'
+    const palette = statusChipPalette[tone]
+
+    return {
+      color: palette.color,
+      bgcolor: alpha(palette.background, 0.12),
+      border: `1px solid ${alpha(palette.border, 0.36)}`,
+    }
+  }
+
   const isPickupRequestOrder = (row: B2COrder) =>
     ['deliveryone', 'delhivery'].includes(getB2CManifestProvider(row))
 
@@ -1503,9 +1528,7 @@ const B2COrdersList = () => {
             minWidth: 74,
             maxWidth: '100%',
             borderRadius: '999px',
-            color: 'secondary.main',
-            bgcolor: alpha(theme.palette.secondary.main, 0.08),
-            border: `1px solid ${alpha(theme.palette.secondary.main, 0.24)}`,
+            ...getStatusChipSx(row.order_status),
             '& .MuiChip-label': {
               px: 0.7,
               fontSize: 10,
@@ -1752,7 +1775,7 @@ const B2COrdersList = () => {
   const tabs = orderStatusFilterTabs.map((tab) => ({
     label: tab.label,
     value: tab.value,
-    statusColor: 'success' as const,
+    statusColor: tab.statusColor,
   }))
 
   return (

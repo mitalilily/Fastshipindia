@@ -12,16 +12,23 @@ import { statusColorMap } from '../../components/orders/b2c/B2COrdersList'
 import { downloadClientOrdersCsv } from '../../utils/orderCsvExport'
 
 const b2bStatusQuickFilters = [
-  { label: 'All', value: 'all', statuses: undefined },
-  { label: 'Pickups & Manifests', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'] },
-  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'] },
-  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'] },
-  { label: 'Delivered', value: 'delivered', statuses: ['delivered'] },
-  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'] },
-  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'] },
-  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered'] },
-  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'cancellation_requested'] },
+  { label: 'All', value: 'all', statuses: undefined, tone: 'primary' },
+  { label: 'Pickups & Manifests', value: 'scheduled', statuses: ['pickup_initiated', 'manifest_generated'], tone: 'warning' },
+  { label: 'In-Transit', value: 'in_transit', statuses: ['in_transit'], tone: 'warning' },
+  { label: 'Out For Delivery', value: 'out_for_delivery', statuses: ['out_for_delivery'], tone: 'warning' },
+  { label: 'Delivered', value: 'delivered', statuses: ['delivered'], tone: 'success' },
+  { label: 'RTO Intransit', value: 'rto_in_transit', statuses: ['rto_in_transit'], tone: 'warning' },
+  { label: 'RTO Delivered', value: 'rto_delivered', statuses: ['rto_delivered'], tone: 'success' },
+  { label: 'Undelivered', value: 'undelivered', statuses: ['ndr', 'undelivered', 'failed', 'manifest_failed'], tone: 'error' },
+  { label: 'Cancelled', value: 'cancelled', statuses: ['cancelled', 'canceled', 'cancellation_requested'], tone: 'error' },
 ] as const
+
+const quickFilterTonePalette = {
+  primary: { main: '#1D2842', hover: '#152038' },
+  success: { main: '#05BD7E', hover: '#049B67' },
+  warning: { main: '#F59E0B', hover: '#D97706' },
+  error: { main: '#EF4444', hover: '#DC2626' },
+} as const
 
 const normalizeStatusFilterValue = (status: unknown) =>
   String(status || '')
@@ -183,6 +190,7 @@ const B2bOrders = () => {
         <Stack direction="row" gap={0.75} sx={{ width: 'max-content', minWidth: '100%' }}>
           {b2bStatusQuickFilters.map((tab) => {
             const selected = activeQuickStatus === tab.value
+            const tabTone = quickFilterTonePalette[tab.tone]
 
             return (
               <Button
@@ -198,11 +206,11 @@ const B2bOrders = () => {
                   fontSize: 12,
                   fontWeight: 700,
                   color: selected ? '#FFFFFF' : textSecondary,
-                  bgcolor: selected ? '#1D2842' : 'transparent',
-                  border: `1px solid ${selected ? '#1D2842' : borderColor}`,
+                  bgcolor: selected ? tabTone.main : 'transparent',
+                  border: `1px solid ${selected ? tabTone.main : borderColor}`,
                   '&:hover': {
-                    bgcolor: selected ? '#152038' : quietSurface,
-                    borderColor: selected ? '#152038' : alpha('#1D2842', 0.2),
+                    bgcolor: selected ? tabTone.hover : quietSurface,
+                    borderColor: selected ? tabTone.hover : alpha('#1D2842', 0.2),
                   },
                 }}
               >
