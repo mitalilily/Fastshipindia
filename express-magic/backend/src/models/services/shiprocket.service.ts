@@ -10359,6 +10359,23 @@ export const createB2BShipmentService = async (
     total: number
   } | null = null
 
+  const buildBigshipChargesFallback = () => {
+    const fallbackTotal =
+      optionalNumeric(params.freight_charges) ??
+      optionalNumeric(params.courier_cost) ??
+      optionalNumeric(params.shipping_charges) ??
+      0
+
+    if (fallbackTotal <= 0) return null
+
+    return {
+      baseFreight: fallbackTotal,
+      overheads: [],
+      demurrage: 0,
+      total: fallbackTotal,
+    }
+  }
+
   try {
     const rateResult = await calculateB2BRate({
       originPincode: params.pickup?.pincode ?? '',
@@ -10409,15 +10426,36 @@ export const createB2BShipmentService = async (
       }
     }
   } catch (err: any) {
-    console.error('⚠️ Failed to compute B2B charges breakdown for order', params.order_number, err)
-    throw new HttpError(
-      422,
-      `Unable to calculate B2B rate from rate chart: ${err?.message || 'rate calculation failed'}`,
-    )
+    if (effectiveIntegrationType === 'bigship') {
+      chargesBreakdown = buildBigshipChargesFallback()
+      if (chargesBreakdown) {
+        console.warn('Using selected Bigship B2B rate because local rate chart failed', {
+          order_number: params.order_number,
+          origin_pincode: params.pickup?.pincode,
+          destination_pincode: params.consignee?.pincode,
+          error: err?.message || err,
+          fallback_total: chargesBreakdown.total,
+        })
+      }
+    }
+
+    if (!chargesBreakdown) {
+      console.error('Failed to compute B2B charges breakdown for order', params.order_number, err)
+      throw new HttpError(
+        422,
+        `Unable to calculate B2B rate from rate chart: ${err?.message || 'rate calculation failed'}`,
+      )
+    }
   }
 
   if (!chargesBreakdown) {
-    throw new HttpError(422, 'Unable to calculate B2B rate from rate chart: empty rate result')
+    if (effectiveIntegrationType === 'bigship') {
+      chargesBreakdown = buildBigshipChargesFallback()
+    }
+
+    if (!chargesBreakdown) {
+      throw new HttpError(422, 'Unable to calculate B2B rate from rate chart: empty rate result')
+    }
   }
 
   const authoritativeFreightCharges = Number(chargesBreakdown.total)
