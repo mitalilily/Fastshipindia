@@ -346,14 +346,32 @@ const getShipmozoCancellationReference = (order: any) => {
       : {}
 
   return String(
-    order?.provider_reference ||
-      order?.order_id ||
+    providerMeta?.shipmozo?.shipmozo_order_id ||
       providerMeta?.order_id ||
       providerMeta?.shipmozo?.push?.data?.order_id ||
       providerMeta?.shipmozo?.push?.order_id ||
-      order?.order_number ||
-      order?.provider_request_id ||
+      order?.order_id ||
       order?.shipment_id ||
+      order?.provider_reference ||
+      order?.provider_request_id ||
+      order?.order_number ||
+      '',
+  ).trim()
+}
+
+const getShipmozoCancellationAwb = (order: any) => {
+  const providerMeta =
+    order?.provider_meta && typeof order.provider_meta === 'object' && !Array.isArray(order.provider_meta)
+      ? order.provider_meta
+      : {}
+
+  return String(
+    order?.awb_number ||
+      providerMeta?.awb_number ||
+      providerMeta?.shipmozo?.assign?.data?.awb_number ||
+      providerMeta?.shipmozo?.assign?.data?.awb ||
+      providerMeta?.shipmozo?.pickup?.data?.awb_number ||
+      providerMeta?.shipmozo?.pickup?.data?.awb ||
       '',
   ).trim()
 }
@@ -426,6 +444,48 @@ const verifyBigshipCancellation = async (svc: BigshipService, reference: string)
       if (isAlreadyCancelledOrMissingProviderShipment(payload)) {
         return { verified: true, tracking: null, error }
       }
+    }
+  }
+
+  return { verified: false, tracking: lastTracking, error: lastError }
+}
+
+const verifyShipmozoCancellation = async (
+  svc: ShipmozoService,
+  orderId: string,
+  awbNumber: string,
+) => {
+  const retryDelaysMs = [0, 3000, 7000, 15000]
+  let lastTracking: any = null
+  let lastError: any = null
+
+  for (const delayMs of retryDelaysMs) {
+    if (delayMs > 0) await delay(delayMs)
+
+    try {
+      const detail = orderId
+        ? await svc.getOrderDetail(orderId).catch((error: any) => {
+            lastError = error
+            return null
+          })
+        : null
+      const tracking = awbNumber
+        ? await svc.trackShipment(awbNumber).catch((error: any) => {
+            lastError = error
+            return null
+          })
+        : null
+      lastTracking = { detail, tracking }
+
+      if (
+        isProviderCancellationVerified(detail) ||
+        isProviderCancellationVerified(tracking) ||
+        isProviderCancellationVerified(lastTracking)
+      ) {
+        return { verified: true, tracking: lastTracking }
+      }
+    } catch (error: any) {
+      lastError = error
     }
   }
 
@@ -631,7 +691,7 @@ const cancelB2BOrderShipment = async (order: any) => {
 
   if (integration === 'shipmozo') {
     const shipmozoOrderId = getShipmozoCancellationReference(order) || lrn
-    const shipmozoAwb = String(order.awb_number || '').trim()
+    const shipmozoAwb = getShipmozoCancellationAwb(order)
     if (!shipmozoOrderId || !shipmozoAwb) {
       throw new Error('Shipmozo cancellation requires provider order id and AWB number')
     }
@@ -652,6 +712,72 @@ const cancelB2BOrderShipment = async (order: any) => {
       throw new Error(getCancellationErrorMessage(cancellationResult))
     }
 
+    const verification = await verifyShipmozoCancellation(svc, shipmozoOrderId, shipmozoAwb)
+    if (!verification.verified) {
+      const requestedAt = new Date()
+      const pendingResult = {
+        success: true,
+        pending_provider_confirmation: true,
+        provider: 'shipmozo',
+        provider_reference: shipmozoOrderId,
+        awb_number: shipmozoAwb,
+        message:
+          'Shipmozo cancellation requested; provider tracking has not confirmed cancellation yet.',
+        provider_response: cancellationResult,
+        last_tracking: verification.tracking || null,
+        last_error: verification.error?.message || null,
+      }
+
+      await db
+        .update(b2b_orders)
+        .set({
+          order_status: 'cancellation_requested',
+          provider_last_status: 'cancellation_requested',
+          delivery_message: pendingResult.message,
+          provider_meta: {
+            ...providerMeta,
+            cancellation: {
+              provider: 'shipmozo',
+              requested_at: requestedAt.toISOString(),
+              provider_reference: shipmozoOrderId,
+              awb_number: shipmozoAwb,
+              pending_provider_confirmation: true,
+              result: cancellationResult,
+              last_tracking: verification.tracking || null,
+              last_error: verification.error?.message || null,
+            },
+          },
+          updated_at: requestedAt,
+        } as any)
+        .where(eq(b2b_orders.id, order.id))
+
+      await logTrackingEvent({
+        orderId: order.id,
+        userId: order.user_id,
+        awbNumber: shipmozoAwb,
+        courier: order.courier_partner || 'Shipmozo B2B',
+        statusCode: 'cancellation_requested',
+        statusText: 'Shipmozo B2B cancellation requested',
+        raw: pendingResult,
+      }).catch((err) => {
+        console.warn('Failed to log Shipmozo B2B cancellation-requested event:', err)
+      })
+
+      await sendWebhookEvent(order.user_id, 'tracking.updated', {
+        awb_number: shipmozoAwb,
+        provider_reference: shipmozoOrderId,
+        order_id: order.id,
+        order_number: order.order_number,
+        status: 'cancellation_requested',
+        raw_status: 'cancellation_requested',
+        courier_partner: order.courier_partner,
+      }).catch((err) => {
+        console.warn('Failed to send Shipmozo B2B cancellation-requested webhook:', err)
+      })
+
+      return pendingResult
+    }
+
     const finalStatus = 'cancelled'
     const cancelledAt = new Date()
 
@@ -670,6 +796,7 @@ const cancelB2BOrderShipment = async (order: any) => {
             provider_reference: shipmozoOrderId,
             awb_number: shipmozoAwb,
             result: cancellationResult,
+            verified_tracking: verification.tracking || null,
           },
         },
         updated_at: cancelledAt,
@@ -1069,12 +1196,13 @@ export async function cancelOrderShipment(orderId: string) {
     }
   } else if (integration === 'shipmozo') {
     const shipmozoOrderId = getShipmozoCancellationReference(order)
-    if (!shipmozoOrderId || !awbNumber) {
+    const shipmozoAwb = getShipmozoCancellationAwb(order)
+    if (!shipmozoOrderId || !shipmozoAwb) {
       throw new Error('Shipmozo cancellation requires provider order id and AWB number')
     }
 
     const svc = new ShipmozoService()
-    cancellationResult = await svc.cancelOrder(shipmozoOrderId, awbNumber)
+    cancellationResult = await svc.cancelOrder(shipmozoOrderId, shipmozoAwb)
   } else {
     const svc = new XpressbeesService()
     cancellationResult = await svc.cancelShipment(awbNumber)
@@ -1108,6 +1236,9 @@ export async function cancelOrderShipment(orderId: string) {
 
   let bigshipCancellationVerification: any = null
   let bigshipCancellationReference = ''
+  let shipmozoCancellationVerification: any = null
+  let shipmozoCancellationReference = ''
+  let shipmozoCancellationAwb = ''
   if (integration === 'bigship') {
     const svc = new BigshipService()
     bigshipCancellationReference = getBigshipCancellationReference(order)
@@ -1181,6 +1312,85 @@ export async function cancelOrderShipment(orderId: string) {
     }
   }
 
+  if (integration === 'shipmozo') {
+    const svc = new ShipmozoService()
+    shipmozoCancellationReference = getShipmozoCancellationReference(order)
+    shipmozoCancellationAwb = getShipmozoCancellationAwb(order)
+    shipmozoCancellationVerification = await verifyShipmozoCancellation(
+      svc,
+      shipmozoCancellationReference,
+      shipmozoCancellationAwb,
+    )
+
+    if (!shipmozoCancellationVerification.verified) {
+      const requestedAt = new Date()
+      const pendingResult = {
+        success: true,
+        pending_provider_confirmation: true,
+        provider: 'shipmozo',
+        provider_reference: shipmozoCancellationReference,
+        awb_number: shipmozoCancellationAwb,
+        message:
+          'Shipmozo cancellation requested; provider tracking has not confirmed cancellation yet.',
+        provider_response: cancellationResult,
+        last_tracking: shipmozoCancellationVerification.tracking || null,
+        last_error: shipmozoCancellationVerification.error?.message || null,
+      }
+
+      await db
+        .update(b2c_orders)
+        .set({
+          order_status: 'cancellation_requested',
+          pickup_status: 'cancellation_requested',
+          provider_last_status: 'cancellation_requested',
+          delivery_message: pendingResult.message,
+          provider_meta: {
+            ...providerMeta,
+            cancellation: {
+              provider: integration,
+              requested_at: requestedAt.toISOString(),
+              provider_reference: shipmozoCancellationReference || null,
+              awb_number: shipmozoCancellationAwb || null,
+              pending_provider_confirmation: true,
+              result: cancellationResult,
+              last_tracking: shipmozoCancellationVerification.tracking || null,
+              last_error: shipmozoCancellationVerification.error?.message || null,
+            },
+          },
+          updated_at: requestedAt,
+        })
+        .where(eq(b2c_orders.id, orderId))
+
+      await syncSalesChannelStatusForOrder(orderId, 'shipmozo cancellation request')
+
+      await logTrackingEvent({
+        orderId: order.id,
+        userId: order.user_id,
+        awbNumber: shipmozoCancellationAwb || null,
+        courier: order.courier_partner || integration,
+        statusCode: 'cancellation_requested',
+        statusText: 'Shipmozo cancellation requested',
+        raw: pendingResult,
+      }).catch((err) => {
+        console.warn('Failed to log Shipmozo cancellation-requested event:', err)
+      })
+
+      await sendWebhookEvent(order.user_id, 'tracking.updated', {
+        awb_number: shipmozoCancellationAwb || order.awb_number,
+        provider_reference: shipmozoCancellationReference || null,
+        order_id: order.id,
+        order_number: order.order_number,
+        status: 'cancellation_requested',
+        raw_status: 'cancellation_requested',
+        courier_partner: order.courier_partner,
+      }).catch((err) => {
+        console.warn('Failed to send Shipmozo cancellation-requested webhook:', err)
+      })
+
+      return pendingResult
+    }
+  }
+
   const finalStatus = 'cancelled'
   console.log(`Updating order status to ${finalStatus}:`, { orderId, integration })
   const cancelledAt = new Date()
@@ -1202,6 +1412,13 @@ export async function cancelOrderShipment(orderId: string) {
                 provider_verified_at: cancelledAt.toISOString(),
                 provider_reference: bigshipCancellationReference || null,
                 verified_tracking: bigshipCancellationVerification?.tracking || null,
+              }
+            : {}),
+          ...(integration === 'shipmozo'
+            ? {
+                provider_verified_at: cancelledAt.toISOString(),
+                provider_reference: shipmozoCancellationReference || null,
+                verified_tracking: shipmozoCancellationVerification?.tracking || null,
               }
             : {}),
           awb_number: awbNumber || null,

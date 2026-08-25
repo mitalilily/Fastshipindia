@@ -69,6 +69,43 @@ const resolveExternalOrder = async (userId: string, orderId: string) => {
   )
 }
 
+const getShipmozoCancellationReference = (order: any) => {
+  const providerMeta =
+    order?.provider_meta && typeof order.provider_meta === 'object' && !Array.isArray(order.provider_meta)
+      ? order.provider_meta
+      : {}
+
+  return String(
+    providerMeta?.shipmozo?.shipmozo_order_id ||
+      providerMeta?.order_id ||
+      providerMeta?.shipmozo?.push?.data?.order_id ||
+      providerMeta?.shipmozo?.push?.order_id ||
+      order?.order_id ||
+      order?.shipment_id ||
+      order?.provider_reference ||
+      order?.provider_request_id ||
+      order?.order_number ||
+      '',
+  ).trim()
+}
+
+const getShipmozoCancellationAwb = (order: any) => {
+  const providerMeta =
+    order?.provider_meta && typeof order.provider_meta === 'object' && !Array.isArray(order.provider_meta)
+      ? order.provider_meta
+      : {}
+
+  return String(
+    order?.awb_number ||
+      providerMeta?.awb_number ||
+      providerMeta?.shipmozo?.assign?.data?.awb_number ||
+      providerMeta?.shipmozo?.assign?.data?.awb ||
+      providerMeta?.shipmozo?.pickup?.data?.awb_number ||
+      providerMeta?.shipmozo?.pickup?.data?.awb ||
+      '',
+  ).trim()
+}
+
 /**
  * Create a B2C order via external API
  * POST /api/v1/orders
@@ -425,8 +462,8 @@ export const cancelOrderController = async (req: any, res: Response) => {
       } else if (provider === 'shipmozo') {
         const shipmozo = new ShipmozoService()
         cancellationResult = await shipmozo.cancelOrder(
-          order.provider_reference || order.order_id || order.order_number,
-          order.awb_number,
+          getShipmozoCancellationReference(order),
+          getShipmozoCancellationAwb(order),
         )
       } else if (provider === 'bigship') {
         const bigship = new BigshipService()
