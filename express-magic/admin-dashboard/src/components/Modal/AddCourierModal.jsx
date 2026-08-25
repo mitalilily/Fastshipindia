@@ -121,6 +121,7 @@ const AddCourierModal = ({ isOpen, onClose }) => {
             <option value="shadowfax">Shadowfax</option>
             <option value="amazon">Amazon Shipping</option>
             <option value="bigship">Bigship</option>
+            <option value="shipmozo">Shipmozo</option>
           </Select>
         </FormControl>
         <FormControl>

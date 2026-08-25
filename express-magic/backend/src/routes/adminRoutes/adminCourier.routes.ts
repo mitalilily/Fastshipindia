@@ -9,6 +9,7 @@ import {
   importShippingRatesController,
   testBigshipCredentialsController,
   testDelhiveryB2BCredentialsController,
+  testShipmozoCredentialsController,
   testXpressbeesCredentialsController,
   updateAmazonCredentialsController,
   updateBigshipCredentialsController,
@@ -16,6 +17,7 @@ import {
   updateDelhiveryB2BCredentialsController,
   updateEkartCredentialsController,
   updateShadowfaxCredentialsController,
+  updateShipmozoCredentialsController,
   updateXpressbeesAwbRangeController,
   updateXpressbeesCredentialsController,
   updateShippingRateController,
@@ -103,6 +105,18 @@ router.post(
   requireAuth,
   isAdminMiddleware,
   testBigshipCredentialsController,
+)
+router.put(
+  '/credentials/shipmozo',
+  requireAuth,
+  isAdminMiddleware,
+  updateShipmozoCredentialsController,
+)
+router.post(
+  '/credentials/shipmozo/test',
+  requireAuth,
+  isAdminMiddleware,
+  testShipmozoCredentialsController,
 )
 router.put(
   '/credentials/amazon',

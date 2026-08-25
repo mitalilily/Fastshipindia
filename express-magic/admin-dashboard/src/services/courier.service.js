@@ -169,6 +169,29 @@ export const testBigshipCredentials = async (payload = {}) => {
   }
 }
 
+export const updateShipmozoCredentials = async (payload) => {
+  const { data } = await api.put('/admin/couriers/credentials/shipmozo', payload)
+  if (!data?.success) throw new Error('Failed to update Shipmozo credentials')
+  return data.data
+}
+
+export const testShipmozoCredentials = async (payload = {}) => {
+  try {
+    const { data } = await api.post('/admin/couriers/credentials/shipmozo/test', payload)
+    if (!data?.success) {
+      throw new Error(data?.message || data?.error || 'Shipmozo authentication failed')
+    }
+    return data.data
+  } catch (error) {
+    throw new Error(
+      error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Shipmozo authentication failed',
+    )
+  }
+}
+
 export const testDelhiveryB2BCredentials = async () => {
   try {
     const { data } = await api.post('/admin/couriers/credentials/delhivery-b2b/test')

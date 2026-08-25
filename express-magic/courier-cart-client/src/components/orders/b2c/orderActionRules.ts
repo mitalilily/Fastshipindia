@@ -19,7 +19,7 @@ const B2C_CANCELLABLE_STATUSES = new Set([
   'pickup_initiated',
   'manifest_generated',
 ])
-const B2C_CANCELLABLE_PROVIDERS = new Set(['delhivery', 'deliveryone', 'bigship'])
+const B2C_CANCELLABLE_PROVIDERS = new Set(['delhivery', 'deliveryone', 'bigship', 'shipmozo'])
 const B2C_MANIFESTABLE_STATUSES = new Set([
   'pending',
   'booked',
@@ -57,6 +57,9 @@ const getB2CActionProvider = (order: B2COrderActionShape) => {
     combinedProvider.includes('delhivery_express')
   ) {
     return 'delhivery'
+  }
+  if (combinedProvider.includes('shipmozo')) {
+    return 'shipmozo'
   }
 
   return integrationType || courierPartner

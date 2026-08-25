@@ -1,9 +1,11 @@
 import { eq } from 'drizzle-orm'
 import { Response } from 'express'
 import { db } from '../../models/client'
+import { BigshipService } from '../../models/services/couriers/bigship.service'
 import { DelhiveryService } from '../../models/services/couriers/delhivery.service'
 import { EkartService } from '../../models/services/couriers/ekart.service'
 import { ShadowfaxService } from '../../models/services/couriers/shadowfax.service'
+import { ShipmozoService } from '../../models/services/couriers/shipmozo.service'
 import { XpressbeesService } from '../../models/services/couriers/xpressbees.service'
 import { cancelAmazonShipment } from '../../models/services/amazonShipping.service'
 import {
@@ -364,11 +366,11 @@ export const cancelOrderController = async (req: any, res: Response) => {
 
     let cancellationResult: any = null
     const provider = String(order.integration_type || '').toLowerCase()
-    if (!['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon'].includes(provider)) {
+    if (!['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship', 'shipmozo'].includes(provider)) {
       return res.status(400).json({
         success: false,
         error: 'Unsupported provider',
-        message: `Only Delhivery, Ekart, Xpressbees, Shadowfax and Amazon are supported for cancellation. Found: ${order.integration_type}`,
+        message: `Only Delhivery, Ekart, Xpressbees, Shadowfax, Amazon, Bigship and Shipmozo are supported for cancellation. Found: ${order.integration_type}`,
       })
     }
 
@@ -420,6 +422,17 @@ export const cancelOrderController = async (req: any, res: Response) => {
           },
           amazonCredentials,
         )
+      } else if (provider === 'shipmozo') {
+        const shipmozo = new ShipmozoService()
+        cancellationResult = await shipmozo.cancelOrder(
+          order.provider_reference || order.order_id || order.order_number,
+          order.awb_number,
+        )
+      } else if (provider === 'bigship') {
+        const bigship = new BigshipService()
+        cancellationResult = await bigship.cancelShipment(
+          order.provider_reference || order.order_id || order.shipment_id || order.awb_number,
+        )
       } else {
         const xpressbees = new XpressbeesService()
         cancellationResult = await xpressbees.cancelShipment(order.awb_number)
@@ -437,6 +450,7 @@ export const cancelOrderController = async (req: any, res: Response) => {
       cancellationResult?.success === true ||
       cancellationResult?.Success === true ||
       cancellationResult?.status === true ||
+      String(cancellationResult?.result || '').trim() === '1' ||
       cancellationResult?.status === 'Success' ||
       cancellationResult?.status === 'success' ||
       cancellationResult?.response?.status === true ||

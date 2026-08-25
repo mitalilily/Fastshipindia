@@ -87,6 +87,8 @@ const isDelhiveryB2BValue = (value?: string | null) => {
   )
 }
 
+const isShipmozoValue = (value?: string | null) => normalizeToken(value).includes('shipmozo')
+
 export const isDelhiveryCourier = (courier: CourierLike) =>
   getCourierValues(courier).some((value) => isDeliveryOneValue(value))
 
@@ -120,6 +122,7 @@ const getDeliveryOneDisplayName = (courier: CourierLike) => {
 export const getCourierDisplayName = (courier: CourierLike, fallback = 'Unknown Courier') => {
   const values = getCourierValues(courier)
   if (values.some(isDelhiveryB2BValue)) return DELHIVERY_B2B_DISPLAY_NAME
+  if (values.some(isShipmozoValue)) return typeof courier === 'string' ? 'Shipmozo' : courier?.displayName || courier?.courier_name || courier?.name || 'Shipmozo'
   if (values.some(isDeliveryOneValue)) return getDeliveryOneDisplayName(courier)
   if (typeof courier === 'string') return courier || fallback
   return courier?.displayName || courier?.courier_name || courier?.name || fallback
@@ -134,6 +137,10 @@ export const getCourierLogo = (courier: CourierLike, fallback = defaultLogo) => 
   if (values.some(isDeliveryOneValue)) {
     const displayName = getDeliveryOneDisplayName(courier)
     return courierLogos[displayName] || courierLogos.deliveryone || DELIVERY_ONE_LOGO
+  }
+
+  if (values.some(isShipmozoValue)) {
+    return courierLogos.Shipmozo || fallback
   }
 
   const normalizedValues = values.map((value) => value.toLowerCase())

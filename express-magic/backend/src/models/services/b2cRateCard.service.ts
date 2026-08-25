@@ -131,6 +131,7 @@ function inferB2CServiceProvider(row: typeof shippingRates.$inferSelect): string
   if (courierName.includes('shadowfax')) return 'shadowfax'
   if (courierName.includes('xpress')) return 'xpressbees'
   if (courierName.includes('bigship')) return 'bigship'
+  if (courierName.includes('shipmozo')) return 'shipmozo'
 
   return ''
 }

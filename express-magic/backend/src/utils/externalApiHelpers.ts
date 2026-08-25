@@ -11,6 +11,7 @@ const PROVIDER_CODE_MAP: Record<string, string> = {
   shadowfax: 'SFX9P',
   amazon: 'LM2A8',
   bigship: 'BG6S4',
+  shipmozo: 'SM8Z2',
 }
 
 // Reverse map: provider code -> integration type
@@ -21,6 +22,7 @@ const PROVIDER_CODE_REVERSE_MAP: Record<string, string> = {
   SFX9P: 'shadowfax',
   LM2A8: 'amazon',
   BG6S4: 'bigship',
+  SM8Z2: 'shipmozo',
 }
 
 /**
@@ -39,14 +41,14 @@ export const getOpaqueProviderCode = (integrationType: string | null | undefined
  */
 export const getIntegrationTypeFromProviderCode = (
   providerCode: string | null | undefined,
-): 'delhivery' | 'ekart' | 'xpressbees' | 'shadowfax' | 'amazon' | 'bigship' | null => {
+): 'delhivery' | 'ekart' | 'xpressbees' | 'shadowfax' | 'amazon' | 'bigship' | 'shipmozo' | null => {
   if (!providerCode) return null
 
   const normalizedCode = providerCode.trim().toUpperCase()
   const integrationType = PROVIDER_CODE_REVERSE_MAP[normalizedCode]
 
   if (integrationType) {
-    return integrationType as 'delhivery' | 'ekart' | 'xpressbees' | 'shadowfax' | 'amazon' | 'bigship'
+    return integrationType as 'delhivery' | 'ekart' | 'xpressbees' | 'shadowfax' | 'amazon' | 'bigship' | 'shipmozo'
   }
 
   return null

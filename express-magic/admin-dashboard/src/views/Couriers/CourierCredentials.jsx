@@ -19,9 +19,11 @@ import {
   useCourierCredentials,
   useTestBigshipCredentials,
   useTestDelhiveryB2BCredentials,
+  useTestShipmozoCredentials,
   useUpdateBigshipCredentials,
   useUpdateDelhiveryB2BCredentials,
   useUpdateDelhiveryCredentials,
+  useUpdateShipmozoCredentials,
 } from 'hooks/useCouriers'
 
 const cardStyles = {
@@ -47,8 +49,10 @@ const CourierCredentials = () => {
   const updateDelhivery = useUpdateDelhiveryCredentials()
   const updateDelhiveryB2B = useUpdateDelhiveryB2BCredentials()
   const updateBigship = useUpdateBigshipCredentials()
+  const updateShipmozo = useUpdateShipmozoCredentials()
   const testDelhiveryB2B = useTestDelhiveryB2BCredentials()
   const testBigship = useTestBigshipCredentials()
+  const testShipmozo = useTestShipmozoCredentials()
 
   const [b2cForm, setB2CForm] = useState({
     apiBase: 'https://track.delhivery.com',
@@ -65,6 +69,13 @@ const CourierCredentials = () => {
     username: '',
     password: '',
     accessKey: '',
+  })
+  const [shipmozoForm, setShipmozoForm] = useState({
+    apiBase: 'https://shipping-api.com/app/api/v1',
+    username: '',
+    password: '',
+    publicKey: '',
+    privateKey: '',
   })
 
   useEffect(() => {
@@ -89,6 +100,15 @@ const CourierCredentials = () => {
         username: data.bigship.username || '',
         password: '',
         accessKey: '',
+      })
+    }
+    if (data?.shipmozo) {
+      setShipmozoForm({
+        apiBase: data.shipmozo.apiBase || 'https://shipping-api.com/app/api/v1',
+        username: data.shipmozo.username || '',
+        password: '',
+        publicKey: '',
+        privateKey: '',
       })
     }
   }, [data])
@@ -243,6 +263,82 @@ const CourierCredentials = () => {
     })
   }
 
+  const handleSaveShipmozo = () => {
+    const cleanPublicKey = cleanOptionalSecret(shipmozoForm.publicKey)
+    const cleanPrivateKey = cleanOptionalSecret(shipmozoForm.privateKey)
+    const missing = [
+      !shipmozoForm.apiBase.trim() && 'API Base URL',
+      !shipmozoForm.username.trim() && 'Username',
+      !data?.shipmozo?.hasPassword && !shipmozoForm.password.trim() && 'Password',
+      !data?.shipmozo?.hasPublicKey && !shipmozoForm.password.trim() && !cleanPublicKey && 'Public Key',
+    ].filter(Boolean)
+
+    if (missing.length) {
+      toast({
+        title: 'Complete the required Shipmozo fields',
+        description: `Missing: ${missing.join(', ')}`,
+        status: 'warning',
+      })
+      return
+    }
+
+    updateShipmozo.mutate(
+      {
+        apiBase: shipmozoForm.apiBase.trim().replace(/\/+$/, ''),
+        username: shipmozoForm.username.trim(),
+        ...(shipmozoForm.password.trim() ? { password: shipmozoForm.password.trim() } : {}),
+        ...(cleanPublicKey ? { publicKey: cleanPublicKey } : {}),
+        ...(cleanPrivateKey ? { privateKey: cleanPrivateKey } : {}),
+      },
+      {
+        onSuccess: () => {
+          toast({ title: 'Shipmozo credentials saved', status: 'success' })
+          setShipmozoForm((previous) => ({
+            ...previous,
+            password: '',
+            publicKey: '',
+            privateKey: '',
+          }))
+        },
+        onError: (saveError) =>
+          toast({
+            title: 'Failed to save Shipmozo credentials',
+            description: getErrorMessage(saveError, 'Please try again.'),
+            status: 'error',
+          }),
+      },
+    )
+  }
+
+  const handleTestShipmozo = () => {
+    const cleanPublicKey = cleanOptionalSecret(shipmozoForm.publicKey)
+    const cleanPrivateKey = cleanOptionalSecret(shipmozoForm.privateKey)
+
+    testShipmozo.mutate({
+      apiBase: shipmozoForm.apiBase.trim().replace(/\/+$/, ''),
+      username: shipmozoForm.username.trim(),
+      ...(shipmozoForm.password.trim() ? { password: shipmozoForm.password.trim() } : {}),
+      ...(cleanPublicKey ? { publicKey: cleanPublicKey } : {}),
+      ...(cleanPrivateKey ? { privateKey: cleanPrivateKey } : {}),
+    }, {
+      onSuccess: (result) =>
+        toast({
+          title: 'Shipmozo authentication successful',
+          description:
+            result?.publicKeyMatches === false
+              ? 'Login verified. Saved public key differs from the key returned by Shipmozo.'
+              : undefined,
+          status: 'success',
+        }),
+      onError: (testError) =>
+        toast({
+          title: 'Shipmozo authentication failed',
+          description: getErrorMessage(testError, 'Check username, password and API keys.'),
+          status: 'error',
+        }),
+    })
+  }
+
   const renderBigshipCredentialCard = ({ title, subtitle }) => {
     const hasPasswordForTest = data?.bigship?.hasPassword || Boolean(bigshipForm.password.trim())
     const hasAccessKeyForTest =
@@ -339,6 +435,114 @@ const CourierCredentials = () => {
         </Text>
       </VStack>
     </Box>
+    )
+  }
+
+  const renderShipmozoCredentialCard = ({ title, subtitle }) => {
+    const hasPasswordForTest =
+      data?.shipmozo?.hasPassword || Boolean(shipmozoForm.password.trim())
+    const hasPublicKeyForTest =
+      data?.shipmozo?.hasPublicKey || Boolean(cleanOptionalSecret(shipmozoForm.publicKey))
+    const hasPrivateKeyForTest =
+      data?.shipmozo?.hasPrivateKey || Boolean(cleanOptionalSecret(shipmozoForm.privateKey))
+
+    return (
+      <Box {...cardStyles}>
+        <VStack spacing={4} align="stretch">
+          <Flex justify="space-between" align="center" gap={3}>
+            <Box>
+              <Text fontSize="lg" fontWeight="700">{title}</Text>
+              <Text fontSize="sm" color="gray.500">{subtitle}</Text>
+            </Box>
+            <Badge colorScheme={data?.shipmozo?.hasPublicKey && data?.shipmozo?.hasPrivateKey ? 'green' : 'orange'}>
+              {data?.shipmozo?.hasPublicKey && data?.shipmozo?.hasPrivateKey ? 'Configured' : 'Setup required'}
+            </Badge>
+          </Flex>
+          <Divider />
+
+          <FormControl isRequired>
+            <FormLabel>API Base URL</FormLabel>
+            <Input
+              value={shipmozoForm.apiBase}
+              onChange={(event) =>
+                setShipmozoForm((previous) => ({ ...previous, apiBase: event.target.value }))
+              }
+              placeholder="https://shipping-api.com/app/api/v1"
+            />
+          </FormControl>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Username</FormLabel>
+              <Input
+                autoComplete="username"
+                value={shipmozoForm.username}
+                onChange={(event) =>
+                  setShipmozoForm((previous) => ({ ...previous, username: event.target.value }))
+                }
+                placeholder="Shipmozo username"
+              />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Password</FormLabel>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={shipmozoForm.password}
+                onChange={(event) =>
+                  setShipmozoForm((previous) => ({ ...previous, password: event.target.value }))
+                }
+                placeholder="Leave blank to keep saved password"
+              />
+            </FormControl>
+          </SimpleGrid>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Public Key</FormLabel>
+              <Input
+                type="password"
+                value={shipmozoForm.publicKey}
+                onChange={(event) =>
+                  setShipmozoForm((previous) => ({ ...previous, publicKey: event.target.value }))
+                }
+                placeholder={data?.shipmozo?.hasPublicKey ? 'Saved public key hidden' : 'Shipmozo public key'}
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel>Private Key</FormLabel>
+              <Input
+                type="password"
+                value={shipmozoForm.privateKey}
+                onChange={(event) =>
+                  setShipmozoForm((previous) => ({ ...previous, privateKey: event.target.value }))
+                }
+                placeholder={data?.shipmozo?.hasPrivateKey ? 'Saved private key hidden' : 'Auto-filled from login when saved'}
+              />
+            </FormControl>
+          </SimpleGrid>
+
+          <Flex gap={3} direction={{ base: 'column', sm: 'row' }}>
+            <Button
+              colorScheme="blue"
+              onClick={handleSaveShipmozo}
+              isLoading={updateShipmozo.isPending}
+            >
+              Save Shipmozo Credentials
+            </Button>
+            <Button
+              variant="outline"
+              colorScheme="blue"
+              onClick={handleTestShipmozo}
+              isLoading={testShipmozo.isPending}
+              isDisabled={!hasPasswordForTest && !(hasPublicKeyForTest && hasPrivateKeyForTest)}
+            >
+              Test Shipmozo Credentials
+            </Button>
+          </Flex>
+          <Text fontSize="xs" color="gray.500">
+            Save username/password to refresh the private key from Shipmozo login.
+          </Text>
+        </VStack>
+      </Box>
     )
   }
 
@@ -494,6 +698,14 @@ const CourierCredentials = () => {
         {renderBigshipCredentialCard({
           title: 'Bigship B2B',
           subtitle: 'B2B username/password/access key authentication',
+        })}
+        {renderShipmozoCredentialCard({
+          title: 'Shipmozo B2C',
+          subtitle: 'B2C public/private key authentication',
+        })}
+        {renderShipmozoCredentialCard({
+          title: 'Shipmozo B2B',
+          subtitle: 'B2B public/private key authentication',
         })}
       </SimpleGrid>
     </Flex>

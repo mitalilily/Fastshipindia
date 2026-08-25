@@ -12,9 +12,11 @@ import {
   fetchShippingRates,
   testBigshipCredentials,
   testDelhiveryB2BCredentials,
+  testShipmozoCredentials,
   updateBigshipCredentials,
   updateDelhiveryB2BCredentials,
   updateDelhiveryCredentials,
+  updateShipmozoCredentials,
   updateCourierStatus,
   updateServiceProviderStatus,
   updateShippingRate,
@@ -158,6 +160,20 @@ export const useUpdateBigshipCredentials = () => {
 
 export const useTestBigshipCredentials = () =>
   useMutation({ mutationFn: testBigshipCredentials })
+
+export const useUpdateShipmozoCredentials = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateShipmozoCredentials,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['courierCredentials'])
+    },
+  })
+}
+
+export const useTestShipmozoCredentials = () =>
+  useMutation({ mutationFn: testShipmozoCredentials })
 
 export const useTestDelhiveryB2BCredentials = () =>
   useMutation({ mutationFn: testDelhiveryB2BCredentials })

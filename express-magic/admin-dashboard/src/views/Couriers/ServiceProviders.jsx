@@ -33,6 +33,7 @@ const providerLabels = {
   delhivery: "Delhivery",
   deliveryone: "Delhivery",
   bigship: "Bigship",
+  shipmozo: "Shipmozo",
 };
 
 const fallbackProviders = [
@@ -50,6 +51,13 @@ const fallbackProviders = [
     enabledCouriers: 0,
     isEnabled: false,
   },
+  {
+    serviceProvider: "shipmozo",
+    name: "Shipmozo",
+    totalCouriers: 0,
+    enabledCouriers: 0,
+    isEnabled: false,
+  },
 ];
 
 const brandStyles = {
@@ -59,6 +67,7 @@ const brandStyles = {
   "Shipex India": ["#10B981", "#FFFFFF"],
   Xpressbees: ["#111111", "#FFB020"],
   Bigship: ["#0B66D8", "#FFFFFF"],
+  Shipmozo: ["#14213D", "#FFFFFF"],
 };
 
 function ProviderMark({ name }) {
@@ -110,7 +119,7 @@ const ServiceProviders = () => {
 
   const visibleProviders = providers.filter(
     (provider) =>
-      ["delhivery", "bigship"].includes(provider.serviceProvider?.toLowerCase())
+      ["delhivery", "bigship", "shipmozo"].includes(provider.serviceProvider?.toLowerCase())
   );
 
   const rows = visibleProviders.length

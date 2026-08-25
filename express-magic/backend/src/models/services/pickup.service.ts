@@ -13,6 +13,7 @@ import { DelhiveryService } from './couriers/delhivery.service'
 import { BigshipService } from './couriers/bigship.service'
 import { EkartService } from './couriers/ekart.service'
 import { ShadowfaxService } from './couriers/shadowfax.service'
+import { ShipmozoService } from './couriers/shipmozo.service'
 import { XpressbeesService } from './couriers/xpressbees.service'
 import { logTrackingEvent } from './trackingEvents.service'
 import { applyCancellationRefundOnce } from './webhookProcessor'
@@ -24,6 +25,7 @@ const SUPPORTED_CANCELLATION_PROVIDERS = new Set([
   'shadowfax',
   'amazon',
   'bigship',
+  'shipmozo',
 ])
 
 const TERMINAL_NON_CANCELLABLE_STATUSES = new Set(['delivered', 'rto_delivered'])
@@ -40,6 +42,7 @@ const isCancellationAccepted = (result: any) => {
   const responseText = cancellationResponseText(result)
   const numericStatus = Number(
     result?.status ??
+      result?.result ??
       result?.responseCode ??
       result?.code ??
       result?.ReturnCode ??
@@ -67,6 +70,7 @@ const isCancellationAccepted = (result: any) => {
     result?.status === true ||
     String(result?.ReturnCode || result?.returnCode || '').trim() === '100' ||
     String(result?.status || '').toLowerCase() === 'success' ||
+    String(result?.result || '').trim() === '1' ||
     (Number.isFinite(numericStatus) && numericStatus >= 200 && numericStatus < 300) ||
     result?.response?.status === true ||
     (acceptedText && !rejected)
@@ -279,6 +283,7 @@ const cancelAmazonShipmentWithRetry = async ({
 const resolveCancellationProvider = (order: any) => {
   const integrationType = String(order?.integration_type || '').trim().toLowerCase()
   if (integrationType.includes('bigship')) return 'bigship'
+  if (integrationType.includes('shipmozo')) return 'shipmozo'
   if (integrationType.includes('delhivery')) return 'delhivery'
   if (integrationType.includes('ekart')) return 'ekart'
   if (integrationType.includes('xpressbees') || integrationType.includes('xpress bees')) {
@@ -289,6 +294,7 @@ const resolveCancellationProvider = (order: any) => {
 
   const providerText = `${integrationType} ${order?.courier_partner || ''}`.trim().toLowerCase()
   if (providerText.includes('delhivery')) return 'delhivery'
+  if (providerText.includes('shipmozo')) return 'shipmozo'
   if (providerText.includes('ekart')) return 'ekart'
   if (providerText.includes('xpressbees') || providerText.includes('xpress bees')) {
     return 'xpressbees'
@@ -329,6 +335,25 @@ const getBigshipCancellationReference = (order: any) => {
       order?.provider_request_id ||
       order?.shipment_id ||
       order?.awb_number ||
+      '',
+  ).trim()
+}
+
+const getShipmozoCancellationReference = (order: any) => {
+  const providerMeta =
+    order?.provider_meta && typeof order.provider_meta === 'object' && !Array.isArray(order.provider_meta)
+      ? order.provider_meta
+      : {}
+
+  return String(
+    order?.provider_reference ||
+      order?.order_id ||
+      providerMeta?.order_id ||
+      providerMeta?.shipmozo?.push?.data?.order_id ||
+      providerMeta?.shipmozo?.push?.order_id ||
+      order?.order_number ||
+      order?.provider_request_id ||
+      order?.shipment_id ||
       '',
   ).trim()
 }
@@ -604,8 +629,95 @@ const cancelB2BOrderShipment = async (order: any) => {
     return cancellationResult
   }
 
+  if (integration === 'shipmozo') {
+    const shipmozoOrderId = getShipmozoCancellationReference(order) || lrn
+    const shipmozoAwb = String(order.awb_number || '').trim()
+    if (!shipmozoOrderId || !shipmozoAwb) {
+      throw new Error('Shipmozo cancellation requires provider order id and AWB number')
+    }
+
+    const svc = new ShipmozoService()
+    const cancellationResult = await svc.cancelOrder(shipmozoOrderId, shipmozoAwb)
+    const isSuccess = isCancellationAccepted(cancellationResult)
+
+    console.log('Shipmozo B2B cancellation response validation:', {
+      orderId: order.id,
+      shipmozoOrderId,
+      shipmozoAwb,
+      isSuccess,
+      response: cancellationResult,
+    })
+
+    if (!isSuccess) {
+      throw new Error(getCancellationErrorMessage(cancellationResult))
+    }
+
+    const finalStatus = 'cancelled'
+    const cancelledAt = new Date()
+
+    await db
+      .update(b2b_orders)
+      .set({
+        order_status: finalStatus,
+        provider_last_status: finalStatus,
+        delivery_message: getCancellationDeliveryMessage(cancellationResult),
+        provider_meta: {
+          ...providerMeta,
+          cancellation: {
+            provider: 'shipmozo',
+            requested_at: cancelledAt.toISOString(),
+            provider_verified_at: cancelledAt.toISOString(),
+            provider_reference: shipmozoOrderId,
+            awb_number: shipmozoAwb,
+            result: cancellationResult,
+          },
+        },
+        updated_at: cancelledAt,
+      } as any)
+      .where(eq(b2b_orders.id, order.id))
+
+    await requestCancellationRefundAfterStatusUpdate(order, 'pickup_cancel_api_shipmozo_b2b')
+
+    await logTrackingEvent({
+      orderId: order.id,
+      userId: order.user_id,
+      awbNumber: shipmozoAwb,
+      courier: order.courier_partner || 'Shipmozo B2B',
+      statusCode: finalStatus,
+      statusText: 'Shipmozo B2B shipment cancelled',
+      raw: cancellationResult,
+    }).catch((err) => {
+      console.warn('Failed to log Shipmozo B2B cancellation tracking event:', err)
+    })
+
+    await sendWebhookEvent(order.user_id, 'tracking.updated', {
+      awb_number: shipmozoAwb,
+      provider_reference: shipmozoOrderId,
+      order_id: order.id,
+      order_number: order.order_number,
+      status: finalStatus,
+      raw_status: finalStatus,
+      courier_partner: order.courier_partner,
+    }).catch((err) => {
+      console.warn('Failed to send Shipmozo B2B cancellation tracking webhook:', err)
+    })
+
+    await sendWebhookEvent(order.user_id, 'order.cancelled', {
+      awb_number: shipmozoAwb,
+      provider_reference: shipmozoOrderId,
+      order_id: order.id,
+      order_number: order.order_number,
+      status: finalStatus,
+      courier_partner: order.courier_partner,
+    }).catch((err) => {
+      console.warn('Failed to send Shipmozo B2B order cancellation webhook:', err)
+    })
+
+    return cancellationResult
+  }
+
   if (integration !== 'delhivery') {
-    throw new Error('Only Delhivery and Bigship B2B are supported for B2B cancellation')
+    throw new Error('Only Delhivery, Bigship B2B and Shipmozo B2B are supported for B2B cancellation')
   }
 
   if (!lrn) {
@@ -793,7 +905,7 @@ export async function cancelOrderShipment(orderId: string) {
 
   if (!SUPPORTED_CANCELLATION_PROVIDERS.has(integration) && !(isSalesChannelSourceOrder(order) && !awbNumber)) {
     console.error('Unsupported integration type:', { orderId, integration })
-    throw new Error('Only Delhivery, Ekart, Xpressbees, Shadowfax and Amazon are supported for cancellation')
+    throw new Error('Only Delhivery, Ekart, Xpressbees, Shadowfax, Amazon, Bigship and Shipmozo are supported for cancellation')
   }
 
   const amazonShipmentId = String(
@@ -834,7 +946,7 @@ export async function cancelOrderShipment(orderId: string) {
     throw new Error('Delhivery cancellation requires an AWB number')
   }
 
-  if (integration !== 'amazon' && integration !== 'bigship' && !awbNumber) {
+  if (integration !== 'amazon' && integration !== 'bigship' && integration !== 'shipmozo' && !awbNumber) {
     cancellationResult = {
       success: true,
       localOnly: true,
@@ -955,6 +1067,14 @@ export async function cancelOrderShipment(orderId: string) {
         bigshipReference,
       )
     }
+  } else if (integration === 'shipmozo') {
+    const shipmozoOrderId = getShipmozoCancellationReference(order)
+    if (!shipmozoOrderId || !awbNumber) {
+      throw new Error('Shipmozo cancellation requires provider order id and AWB number')
+    }
+
+    const svc = new ShipmozoService()
+    cancellationResult = await svc.cancelOrder(shipmozoOrderId, awbNumber)
   } else {
     const svc = new XpressbeesService()
     cancellationResult = await svc.cancelShipment(awbNumber)

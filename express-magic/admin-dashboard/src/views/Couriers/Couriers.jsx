@@ -48,6 +48,7 @@ const providerColors = {
   "Shipex India": ["#F0FFE9", "#28A600"],
   Xpressbees: ["#FFF7E3", "#F08A00"],
   Bigship: ["#EAF3FF", "#1167D8"],
+  Shipmozo: ["#EAF0FF", "#14213D"],
 };
 
 const fallbackCouriers = [
@@ -69,6 +70,20 @@ const fallbackCouriers = [
     id: "dlv-b2b-ltl",
     name: "Delhivery B2B (LTL)",
     serviceProvider: "Delhivery",
+    businessType: ["b2b"],
+    isEnabled: true,
+  },
+  {
+    id: "shipmozo-b2c",
+    name: "Shipmozo B2C",
+    serviceProvider: "Shipmozo",
+    businessType: ["b2c"],
+    isEnabled: true,
+  },
+  {
+    id: "shipmozo-b2b",
+    name: "Shipmozo B2B",
+    serviceProvider: "Shipmozo",
     businessType: ["b2b"],
     isEnabled: true,
   },
@@ -120,6 +135,7 @@ const normalizeProvider = (value) => {
   if (!value) return "Delhivery";
   if (value === "deliveryone" || value === "delhivery") return "Delhivery";
   if (value === "bigship") return "Bigship";
+  if (value === "shipmozo") return "Shipmozo";
   return value;
 };
 
@@ -359,6 +375,7 @@ const Couriers = () => {
                 <option value="">All providers</option>
                 <option value="delhivery">Delhivery</option>
                 <option value="bigship">Bigship</option>
+                <option value="shipmozo">Shipmozo</option>
               </AdminSelect>
             </Box>
             <Box>

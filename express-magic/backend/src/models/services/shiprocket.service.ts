@@ -118,6 +118,7 @@ import { EkartService } from './couriers/ekart.service'
 import { ShadowfaxService } from './couriers/shadowfax.service'
 import { XpressbeesService } from './couriers/xpressbees.service'
 import { BigshipService } from './couriers/bigship.service'
+import { ShipmozoService } from './couriers/shipmozo.service'
 import { calculateOrderWeights } from './courierWeightCalculation.service'
 import { generateLabelForOrder } from './generateCustomLabelService'
 import { recordNdrEvent } from './ndr.service'
@@ -3506,7 +3507,7 @@ export const fetchAvailableCouriersWithRates = async (
 
     // Build registry of enabled couriers by service provider
     // Filter by business type: check if business_type JSONB array contains 'b2c'
-    const SUPPORTED_PROVIDERS = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship']
+    const SUPPORTED_PROVIDERS = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship', 'shipmozo']
     const allSystemCourierRows = await db
       .select({
         id: couriers.id,
@@ -4556,6 +4557,57 @@ export const fetchAvailableCouriersWithRates = async (
       })
     }
 
+    if (
+      effectiveShipmentType === 'b2c' &&
+      providerCourierBuckets.get('shipmozo')?.rows.length &&
+      !params.isReverse
+    ) {
+      try {
+        const shipmozo = new ShipmozoService()
+        const rateResponse = await shipmozo.rateCalculator({
+          pickupPincode: params.origin ?? params.source_pincode,
+          deliveryPincode: params.destination ?? params.destination_pincode,
+          paymentType: params.payment_type || 'prepaid',
+          orderAmount: params.order_amount || 1,
+          codAmount: (params as any).cod_amount || params.order_amount || 0,
+          weight: params.weight,
+          length: params.length,
+          breadth: params.breadth,
+          height: params.height,
+        })
+        const rates = Array.isArray(rateResponse?.data) ? rateResponse.data : []
+        const bookableRates = rates
+          .map((rate: any) => ({
+            ...rate,
+            total_charges: Number(rate?.total_charges ?? rate?.shipping_charges ?? 0),
+          }))
+          .filter((rate: any) => Number(rate?.id) > 0 && Number(rate?.total_charges) > 0)
+          .sort((a: any, b: any) => Number(a.total_charges) - Number(b.total_charges))
+
+        if (bookableRates.length) {
+          const fastestEdd = bookableRates
+            .map((rate: any) => String(rate?.estimated_delivery || '').trim())
+            .find(Boolean)
+
+          registerServiceableProvider('shipmozo', {
+            providerId: 'shipmozo',
+            providerName: 'Shipmozo',
+            codAvailable: true,
+            prepaidAvailable: true,
+            edd: fastestEdd || '3-5 Days',
+            raw: {
+              rates: bookableRates,
+              rate_response: rateResponse,
+            },
+          })
+        }
+      } catch (shipmozoErr: any) {
+        console.warn('[Serviceability] Shipmozo live rate check failed', {
+          message: shipmozoErr?.message || shipmozoErr,
+        })
+      }
+    }
+
     const providerDisplayNames: Record<string, string> = {
       delhivery: 'Delhivery',
       ekart: 'Ekart Logistics',
@@ -4563,6 +4615,7 @@ export const fetchAvailableCouriersWithRates = async (
       shadowfax: 'Shadowfax',
       amazon: 'Amazon Shipping',
       bigship: 'Bigship',
+      shipmozo: 'Shipmozo',
     }
 
     const fallbackProviderDetails: Array<{
@@ -4683,6 +4736,10 @@ export const fetchAvailableCouriersWithRates = async (
             : null
         const amazonRate =
           providerKey === 'amazon' ? pickAmazonRateForCourier(amazonRates, courier.name) : null
+        const shipmozoRate =
+          providerKey === 'shipmozo'
+            ? (Array.isArray(providerMeta.raw?.rates) ? providerMeta.raw.rates[0] : null)
+            : null
         const cachedAmazonFallbackRate =
           providerKey === 'amazon' && providerMeta.raw?.fallback === true
             ? await getCachedAmazonRateToken({ ...params, courier_id: courier.id }, userId)
@@ -4776,18 +4833,36 @@ export const fetchAvailableCouriersWithRates = async (
           service_mode: delhiveryShippingMode,
           courier_cost_estimate:
             amazonRecord?.charge ??
+            shipmozoRate?.total_charges ??
+            shipmozoRate?.shipping_charges ??
             xpressbeesRecord?.total_charges ??
             xpressbeesRecord?.freight_charges ??
             shadowfaxRecord?.rate ??
             null,
           freight_charges:
-            amazonRecord?.charge ?? xpressbeesRecord?.freight_charges ?? shadowfaxRecord?.rate ?? null,
+            amazonRecord?.charge ??
+            shipmozoRate?.total_charges ??
+            shipmozoRate?.shipping_charges ??
+            xpressbeesRecord?.freight_charges ??
+            shadowfaxRecord?.rate ??
+            null,
           cod_charges: xpressbeesRecord?.cod_charges ?? null,
           total_charges:
-            amazonRecord?.charge ?? xpressbeesRecord?.total_charges ?? shadowfaxRecord?.rate ?? null,
+            amazonRecord?.charge ??
+            shipmozoRate?.total_charges ??
+            xpressbeesRecord?.total_charges ??
+            shadowfaxRecord?.rate ??
+            null,
           chargeable_weight:
-            xpressbeesRecord?.chargeable_weight ?? Number(params.weight ?? 0) ?? null,
-          provider_serviceability: xpressbeesRecord ?? shadowfaxRecord ?? amazonRecord ?? null,
+            shipmozoRate?.minimum_chargeable_weight ??
+            xpressbeesRecord?.chargeable_weight ??
+            Number(params.weight ?? 0) ??
+            null,
+          provider_serviceability:
+            xpressbeesRecord ??
+            shadowfaxRecord ??
+            amazonRecord ??
+            (shipmozoRate ? { ...shipmozoRate, shipmozo_courier_id: shipmozoRate.id } : null),
           amazon_request_token: amazonRecord?.requestToken ?? null,
           amazon_rate_id: amazonRecord?.rateId ?? null,
           amazon_service_id: amazonRecord?.serviceId ?? null,
@@ -5018,6 +5093,64 @@ export const fetchAvailableCouriersWithRates = async (
         const applicableRateOptions = applicableRateCards.flatMap((r) =>
           buildServiceabilityRateOptions(r),
         )
+
+        if (!applicableRateOptions.length && providerKey === 'shipmozo') {
+          const liveRate = courier?.provider_serviceability || {}
+          const liveFreight = Number(liveRate.total_charges ?? liveRate.shipping_charges ?? 0)
+          if (liveFreight > 0) {
+            const liveChargeableWeight =
+              Number(liveRate.minimum_chargeable_weight ?? 0) ||
+              (serviceabilityWeightG > 0 ? serviceabilityWeightG : Number(params.weight ?? 0))
+
+            return [
+              {
+                ...courier,
+                courier_option_key: makeCourierIdentityKey({
+                  id: courier.id,
+                  integration_type: courier.integration_type || courier.service_provider || null,
+                  serviceProvider: courier.serviceProvider || null,
+                  rate_card_id: `shipmozo-${liveRate.shipmozo_courier_id || liveRate.id || 'live'}`,
+                  max_slab_weight: null,
+                }),
+                rate_card_id: null,
+                name: liveRate.name ? `Shipmozo - ${liveRate.name}` : courierDisplayName,
+                displayName: liveRate.name ? `Shipmozo - ${liveRate.name}` : courierDisplayName,
+                localRates: {
+                  forward: {
+                    rate: liveFreight,
+                    cod_charges: 0,
+                    cod_percent: 0,
+                    other_charges: 0,
+                    total_charges: liveFreight,
+                    mode: 'surface',
+                    chargeable_weight: liveChargeableWeight,
+                    volumetric_weight: null,
+                    max_slab_weight: null,
+                    shipmozo_courier_id: liveRate.shipmozo_courier_id || liveRate.id || null,
+                  },
+                },
+                approxZone,
+                zone: approxZone?.name || approxZone?.code || null,
+                zone_id: approxZone?.id || null,
+                zone_code: approxZone?.code || null,
+                zone_name: approxZone?.name || null,
+                shipping_mode: 'surface',
+                service_mode: 'surface',
+                courier_cost_estimate: liveFreight,
+                freight_charges: liveFreight,
+                cod_charges: 0,
+                other_charges: 0,
+                total_charges: liveFreight,
+                chargeable_weight: liveChargeableWeight,
+                volumetric_weight: null,
+                slabs: null,
+                rate: liveFreight,
+                max_slab_weight: null,
+                rate_card_fallback: 'shipmozo_live_rate',
+              },
+            ]
+          }
+        }
 
         if (!applicableRateOptions.length) {
           return [
@@ -5477,7 +5610,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
           sql`${couriers.businessType} @> '["b2b"]'::jsonb`,
         ),
       )
-    const supportedB2BProviders = ['delhivery', 'bigship']
+    const supportedB2BProviders = ['delhivery', 'bigship', 'shipmozo']
     const systemCourierRows = enabledB2BCourierRows.filter((row) =>
       supportedB2BProviders.includes(normalizeProviderKey(row.serviceProvider)),
     )
@@ -5574,7 +5707,7 @@ export const fetchAvailableCouriersWithRatesB2B = async (
         }
       }
 
-      if (!selectedRate && providerKey === 'bigship') {
+      if (!selectedRate && (providerKey === 'bigship' || providerKey === 'shipmozo')) {
         selectedRate = zoneToZoneRates[0]
       }
 
@@ -5646,8 +5779,9 @@ export const fetchAvailableCouriersWithRatesB2B = async (
               courierId: Number(courier.id),
               serviceProvider: courier.pricingServiceProvider || undefined,
             },
-            allowAnyProviderRateFallback:
-              normalizeProviderKey(courier.integration_type || courier.serviceProvider) === 'bigship',
+            allowAnyProviderRateFallback: ['bigship', 'shipmozo'].includes(
+              normalizeProviderKey(courier.integration_type || courier.serviceProvider),
+            ),
             pickupDate: (params as any).pickup_date,
             deliveryAddress: String((params as any).delivery_address ?? (params as any).deliveryAddress ?? ''),
             planId: activePlanId ?? undefined,
@@ -6925,7 +7059,7 @@ export const createB2CShipmentService = async (
         } else {
           throw new HttpError(
             400,
-            `Unsupported serviceProvider: ${serviceProvider}. Supported providers: delhivery, ekart, xpressbees, shadowfax, amazon.`,
+            `Unsupported serviceProvider: ${serviceProvider}. Supported providers: delhivery, ekart, xpressbees, shadowfax, amazon, bigship, shipmozo.`,
           )
         }
       } else {
@@ -7543,10 +7677,10 @@ export const createB2CShipmentService = async (
   try {
     // 1️⃣ CREATE SHIPMENT
     const requestedIntegrationType = String(params.integration_type || '').toLowerCase()
-    const allowedIntegrationTypes = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship']
+    const allowedIntegrationTypes = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship', 'shipmozo']
     if (!requestedIntegrationType || !allowedIntegrationTypes.includes(requestedIntegrationType)) {
       throw new Error(
-        `Invalid integration_type: ${params.integration_type}. Supported values: delhivery, ekart, xpressbees, shadowfax, amazon, bigship.`,
+        `Invalid integration_type: ${params.integration_type}. Supported values: delhivery, ekart, xpressbees, shadowfax, amazon, bigship, shipmozo.`,
       )
     }
 
@@ -7557,6 +7691,7 @@ export const createB2CShipmentService = async (
       | 'shadowfax'
       | 'amazon'
       | 'bigship'
+      | 'shipmozo'
     const providerName =
       integrationType === 'delhivery'
         ? 'Delhivery'
@@ -7568,7 +7703,9 @@ export const createB2CShipmentService = async (
               ? 'Shadowfax'
               : integrationType === 'amazon'
                 ? 'Amazon Shipping'
-                : 'Bigship'
+                : integrationType === 'bigship'
+                  ? 'Bigship'
+                  : 'Shipmozo'
 
     if (!isReverseShipment) {
       const orderDateRaw =
@@ -8268,6 +8405,55 @@ export const createB2CShipmentService = async (
         provider_service: shipmentData?.provider_service ?? undefined,
         provider_mode: shipmentData?.provider_mode ?? undefined,
         provider_flow: 'bigship_draft_rate_place',
+      }
+    } else if (integrationType === 'shipmozo') {
+      if (isReverseShipment) {
+        throw new HttpError(400, 'Shipmozo reverse shipments are not supported yet.')
+      }
+
+      console.log('Using Shipmozo API...')
+      const shipmozo = new ShipmozoService()
+      shipmentData = await shipmozo.createShipment(params)
+
+      const shipmozoAwb =
+        shipmentData?.awb_number ??
+        shipmentData?.data?.awb_number ??
+        shipmentData?.data?.awb ??
+        null
+
+      if (!shipmozoAwb) {
+        console.error('Invalid Shipmozo shipment:', shipmentData)
+        throw new HttpError(500, 'Shipmozo shipment creation failed')
+      }
+
+      providerCourierCost =
+        shipmentData?.courier_cost ??
+        shipmentData?.shipmozo?.selected_rate?.total_charges ??
+        params?.courier_cost ??
+        null
+      providerSortCode = null
+
+      shipmentMeta = {
+        shipment_id:
+          shipmentData?.shipment_id ??
+          shipmentData?.provider_reference ??
+          shipmentData?.order_id ??
+          shipmozoAwb ??
+          undefined,
+        awb_number: shipmozoAwb,
+        courier_name: shipmentData?.courier_name ?? 'Shipmozo',
+        courier_id: params.courier_id ? Number(params.courier_id) : null,
+        label: undefined,
+        manifest: undefined,
+        courier_cost: providerCourierCost,
+        sort_code: providerSortCode,
+        provider_reference:
+          shipmentData?.provider_reference ?? shipmentData?.order_id ?? shipmozoAwb ?? undefined,
+        provider_request_id:
+          shipmentData?.provider_request_id ?? shipmentData?.shipment_id ?? undefined,
+        provider_service: shipmentData?.provider_service ?? undefined,
+        provider_mode: shipmentData?.provider_mode ?? undefined,
+        provider_flow: 'shipmozo_push_assign_pickup',
       }
     } else if (integrationType === 'amazon') {
       console.log('Using Amazon Shipping API...')
@@ -10268,13 +10454,14 @@ export const createB2BShipmentService = async (
 
     if (normalized.startsWith('delhivery')) return 'delhivery'
     if (normalized.includes('bigship')) return 'bigship'
+    if (normalized.includes('shipmozo')) return 'shipmozo'
     return normalized
   }
   const requestedProvider = normalizeB2BProviderKey(
     params.integration_type || params.courier_partner || null,
   )
   let effectiveIntegrationType: string =
-    requestedProvider && ['delhivery', 'bigship'].includes(requestedProvider)
+    requestedProvider && ['delhivery', 'bigship', 'shipmozo'].includes(requestedProvider)
       ? requestedProvider
       : 'delhivery'
 
@@ -10292,7 +10479,7 @@ export const createB2BShipmentService = async (
         ? row.businessType.some((type) => String(type).toLowerCase() === 'b2b')
         : false
       const provider = normalizeB2BProviderKey(row.serviceProvider)
-      return Boolean(row.isEnabled && supportsB2B && ['delhivery', 'bigship'].includes(provider))
+      return Boolean(row.isEnabled && supportsB2B && ['delhivery', 'bigship', 'shipmozo'].includes(provider))
     })
     const courierRow =
       eligibleRows.find((row) => normalizeB2BProviderKey(row.serviceProvider) === requestedProvider) ||
@@ -10307,7 +10494,7 @@ export const createB2BShipmentService = async (
       !courierRow ||
       !courierRow.isEnabled ||
       !supportsB2B ||
-      !['delhivery', 'bigship'].includes(selectedProvider)
+      !['delhivery', 'bigship', 'shipmozo'].includes(selectedProvider)
     ) {
       throw new HttpError(
         400,
@@ -10411,7 +10598,7 @@ export const createB2BShipmentService = async (
         courierId,
         serviceProvider: effectiveIntegrationType || undefined,
       },
-      allowAnyProviderRateFallback: effectiveIntegrationType === 'bigship',
+      allowAnyProviderRateFallback: ['bigship', 'shipmozo'].includes(effectiveIntegrationType),
       pickupDate: params.pickup?.pickup_date,
       deliveryAddress: params.consignee.address,
       planId: activePlanId ?? undefined,
@@ -10426,11 +10613,12 @@ export const createB2BShipmentService = async (
       }
     }
   } catch (err: any) {
-    if (effectiveIntegrationType === 'bigship') {
+    if (['bigship', 'shipmozo'].includes(effectiveIntegrationType)) {
       chargesBreakdown = buildBigshipChargesFallback()
       if (chargesBreakdown) {
-        console.warn('Using selected Bigship B2B rate because local rate chart failed', {
+        console.warn('Using selected B2B provider rate because local rate chart failed', {
           order_number: params.order_number,
+          provider: effectiveIntegrationType,
           origin_pincode: params.pickup?.pincode,
           destination_pincode: params.consignee?.pincode,
           error: err?.message || err,
@@ -10449,7 +10637,7 @@ export const createB2BShipmentService = async (
   }
 
   if (!chargesBreakdown) {
-    if (effectiveIntegrationType === 'bigship') {
+    if (['bigship', 'shipmozo'].includes(effectiveIntegrationType)) {
       chargesBreakdown = buildBigshipChargesFallback()
     }
 
@@ -11050,6 +11238,130 @@ export const createB2BShipmentService = async (
           provider_last_status: 'booking_failed',
           provider_meta: {
             error: error?.message || 'Bigship B2B shipment creation failed',
+          },
+          updated_at: new Date(),
+        } as any)
+        .where(eq(b2b_orders.id, pendingOrder.id))
+
+      throw error
+    }
+  }
+
+  if (effectiveIntegrationType === 'shipmozo') {
+    try {
+      await debitB2BWalletForPendingOrder()
+
+      const payload: ShipmentParams = {
+        ...params,
+        order_number: normalizedOrderNumber,
+        integration_type: 'shipmozo',
+        payment_type: params.payment_type === 'cod' ? 'cod' : 'prepaid',
+        request_auto_pickup: params.request_auto_pickup ?? 'no',
+        is_insurance: params.is_insurance ?? 0,
+        is_rto_different: params.is_rto_different ?? 'no',
+        package_weight,
+        package_length,
+        package_breadth,
+        package_height,
+        boxes,
+        order_items: normalizedOrderItems,
+        invoices: normalizedInvoices,
+        invoice_number: primaryInvoice?.invoiceNumber ?? params.invoice_number,
+        invoice_date: primaryInvoice?.invoiceDate ?? params.invoice_date,
+        invoice_amount: primaryInvoice?.invoiceValue ?? params.invoice_amount,
+        company: {
+          name: params.consignee?.company_name || params.company?.name || '',
+          gst: params.consignee?.gstin || params.company?.gst || '',
+        },
+      }
+
+      const shipmozo = new ShipmozoService()
+      const shipmentData: any = await shipmozo.createShipment(payload)
+      const shipmozoAwb = shipmentData?.awb_number || null
+
+      if (!shipmozoAwb) {
+        console.error('Invalid Shipmozo B2B shipment:', shipmentData)
+        throw new HttpError(500, 'Shipmozo B2B shipment creation failed')
+      }
+
+      const providerReference =
+        String(shipmentData?.provider_reference ?? shipmentData?.order_id ?? shipmozoAwb).trim() ||
+        shipmozoAwb
+      const providerRequestId =
+        String(shipmentData?.provider_request_id ?? shipmentData?.shipment_id ?? shipmozoAwb).trim() ||
+        shipmozoAwb
+
+      await db
+        .update(b2b_orders)
+        .set({
+          integration_type: 'shipmozo',
+          order_status: 'pickup_initiated',
+          order_id: String(shipmentData?.order_id || '').trim() || null,
+          shipment_id: String(shipmentData?.shipment_id || providerReference).trim(),
+          awb_number: String(shipmozoAwb),
+          courier_partner: shipmentData?.courier_name || params.courier_partner || 'Shipmozo B2B',
+          courier_id: courierId ?? null,
+          label: typeof shipmentData?.label === 'string' ? shipmentData.label : null,
+          courier_cost: shipmentData?.courier_cost ?? params?.courier_cost ?? null,
+          weight: package_weight,
+          length: package_length || null,
+          breadth: package_breadth || null,
+          height: package_height || null,
+          volumetric_weight: Number(totalVolumetricWeight || 0) || null,
+          charged_weight:
+            Number(shipmentData?.shipmozo?.selected_rate?.minimum_chargeable_weight ?? 0) ||
+            package_weight,
+          provider_reference: providerReference,
+          provider_request_id: providerRequestId,
+          provider_mode: shipmentData?.provider_mode || 'surface',
+          provider_service: shipmentData?.provider_service || 'ltl',
+          provider_last_status: 'manifested',
+          provider_meta: shipmentData,
+          updated_at: new Date(),
+        } as any)
+        .where(eq(b2b_orders.id, pendingOrder.id))
+
+      sendWebhookEvent(userId, 'order.created', {
+        order_id: pendingOrder.id,
+        order_number: normalizedOrderNumber,
+        awb_number: shipmozoAwb,
+        status: 'pickup_initiated',
+        courier_partner: shipmentData?.courier_name || 'Shipmozo B2B',
+        courier_id: courierId ?? null,
+        shipment_id: providerReference,
+        integration_type: 'shipmozo',
+        payment_type: params.payment_type,
+        created_at: new Date().toISOString(),
+        order_type: 'b2b',
+      }).catch((err) => console.error('Failed to send Shipmozo B2B order.created webhook:', err))
+
+      return {
+        order: {
+          id: pendingOrder.id,
+          order_number: normalizedOrderNumber,
+          awb_number: shipmozoAwb,
+          lrn: providerReference,
+          provider_reference: providerReference,
+          provider_request_id: providerRequestId,
+        },
+        shipment: shipmentData,
+      }
+    } catch (error: any) {
+      await refundB2BWalletDebitForFailedBooking(error).catch((refundError: any) => {
+        console.error(
+          `Failed to reverse B2B wallet debit for ${normalizedOrderNumber}:`,
+          refundError?.message || refundError,
+        )
+      })
+
+      await db
+        .update(b2b_orders)
+        .set({
+          integration_type: 'shipmozo',
+          order_status: 'failed',
+          provider_last_status: 'booking_failed',
+          provider_meta: {
+            error: error?.message || 'Shipmozo B2B shipment creation failed',
           },
           updated_at: new Date(),
         } as any)
@@ -16201,6 +16513,106 @@ const mapBigshipTracking = (raw: any, order: OrderSummary): ProviderNormalizedTr
   }
 }
 
+const mapShipmozoTracking = (raw: any, order: OrderSummary): ProviderNormalizedTracking => {
+  const history: TrackingHistoryItem[] = []
+  const payload = raw?.data || raw?.payload || raw || {}
+  const tracking = payload?.tracking || payload?.track || payload?.shipment || payload?.order || payload
+  const rawEvents =
+    tracking?.history ||
+    tracking?.tracking_history ||
+    tracking?.trackingHistory ||
+    tracking?.tracking ||
+    tracking?.events ||
+    tracking?.scans ||
+    payload?.history ||
+    payload?.tracking_history ||
+    payload?.tracking ||
+    payload?.events ||
+    payload?.scans ||
+    []
+  const events = Array.isArray(rawEvents)
+    ? rawEvents
+    : rawEvents && typeof rawEvents === 'object'
+      ? [rawEvents]
+      : []
+
+  events.forEach((entry: any) => {
+    pushHistoryEvent(history, {
+      statusCode:
+        entry?.status_code ||
+        entry?.statusCode ||
+        entry?.status ||
+        entry?.scan_status ||
+        entry?.event,
+      message:
+        entry?.message ||
+        entry?.remarks ||
+        entry?.description ||
+        entry?.activity ||
+        entry?.scan ||
+        entry?.status ||
+        entry?.event,
+      location:
+        entry?.location ||
+        entry?.current_location ||
+        entry?.scan_location ||
+        entry?.city,
+      time:
+        entry?.event_time ||
+        entry?.eventTime ||
+        entry?.status_time ||
+        entry?.scan_date_time ||
+        entry?.created_at ||
+        entry?.updated_at ||
+        entry?.timestamp,
+    })
+  })
+
+  const status = sanitizeString(
+    tracking?.current_status ||
+      tracking?.status ||
+      payload?.current_status ||
+      payload?.status ||
+      findProviderValue(payload, ['currentStatus', 'shipmentStatus', 'statusName', 'order_status']) ||
+      history[0]?.message ||
+      order.order_status,
+    order.order_status || 'In Transit',
+  )
+
+  if (!history.length && status) {
+    pushHistoryEvent(history, {
+      statusCode: status,
+      message: status,
+      location: tracking?.current_location || payload?.current_location || payload?.location,
+      time: tracking?.updated_at || payload?.updated_at || payload?.created_at,
+    })
+  }
+
+  sortHistoryDescending(history)
+
+  return {
+    history,
+    status,
+    courier_name: sanitizeString(
+      tracking?.courierName || tracking?.courier_name || payload?.courierName || payload?.courier_name,
+      'Shipmozo',
+    ),
+    edd:
+      sanitizeString(
+        tracking?.edd ||
+          tracking?.expected_delivery_date ||
+          payload?.edd ||
+          payload?.expected_delivery_date ||
+          '',
+      ) || undefined,
+    shipment_info:
+      sanitizeString(
+        tracking?.message || tracking?.remarks || payload?.message || payload?.remarks || '',
+        '',
+      ) || undefined,
+  }
+}
+
 const normalizeLiveTrackingStatusText = (value: unknown) =>
   sanitizeString(value)
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
@@ -17279,6 +17691,10 @@ export const trackByAwbService = async (awb: string): Promise<TrackingServiceRes
       )
       const raw = await bigshipService.trackShipment(customGlobalOrderId)
       providerData = mapBigshipTracking(raw, order)
+    } else if (providerKey === 'shipmozo') {
+      const shipmozoService = new ShipmozoService()
+      const raw = await shipmozoService.trackShipment(order.awb_number || awb)
+      providerData = mapShipmozoTracking(raw, order)
     }
   } catch (err: any) {
     if (err instanceof HttpError) throw err

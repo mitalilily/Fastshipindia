@@ -10,6 +10,7 @@ export type ServiceProviderId =
   | 'ekart'
   | 'shadowfax'
   | 'bigship'
+  | 'shipmozo'
 
 export type DelhiveryConfig = {
   apiKey?: string
@@ -84,6 +85,14 @@ export type BigshipConfig = {
   accessKey?: string
 }
 
+export type ShipmozoConfig = {
+  apiBase?: string
+  username?: string
+  password?: string
+  publicKey?: string
+  privateKey?: string
+}
+
 export type CourierConfig =
   | DelhiveryConfig
   | SmartshipConfig
@@ -93,6 +102,7 @@ export type CourierConfig =
   | EkartConfig
   | ShadowfaxConfig
   | BigshipConfig
+  | ShipmozoConfig
 
 export interface CourierCredentialsUpsertPayload {
   serviceProvider: ServiceProviderId
@@ -127,6 +137,7 @@ const KNOWN_PROVIDERS: ServiceProviderId[] = [
   'ekart',
   'shadowfax',
   'bigship',
+  'shipmozo',
 ]
 
 const hasEnvForProviderAndType = (provider: ServiceProviderId, _type: BusinessType): boolean => {
@@ -165,6 +176,15 @@ const hasEnvForProviderAndType = (provider: ServiceProviderId, _type: BusinessTy
       process.env.BIGSHIP_USERNAME ||
       process.env.BIGSHIP_PASSWORD ||
       process.env.BIGSHIP_API_BASE
+    )
+  }
+  if (provider === 'shipmozo') {
+    return !!(
+      process.env.SHIPMOZO_PUBLIC_KEY ||
+      process.env.SHIPMOZO_PRIVATE_KEY ||
+      process.env.SHIPMOZO_USERNAME ||
+      process.env.SHIPMOZO_PASSWORD ||
+      process.env.SHIPMOZO_API_BASE
     )
   }
   return false
@@ -232,6 +252,22 @@ const buildConfigFromRow = (provider: ServiceProviderId, row: typeof courierCred
       username: normalize(row.username),
       password: normalize(row.password),
       accessKey: normalize(row.apiKey || (metadata.accessKey as string) || ''),
+    }
+    return cfg
+  }
+
+  if (provider === 'shipmozo') {
+    const cfg: ShipmozoConfig = {
+      apiBase: normalize(row.apiBase),
+      username: normalize(row.username),
+      password: normalize(row.password),
+      publicKey: normalize(row.apiKey || (metadata.publicKey as string) || ''),
+      privateKey: normalize(
+        (metadata.privateKey as string) ||
+          (metadata.private_key as string) ||
+          (metadata.shipmozoPrivateKey as string) ||
+          '',
+      ),
     }
     return cfg
   }

@@ -30,6 +30,7 @@ import { XpressbeesService } from '../../models/services/couriers/xpressbees.ser
 import { ShadowfaxService } from '../../models/services/couriers/shadowfax.service'
 import { DelhiveryB2BService } from '../../models/services/couriers/delhiveryB2B.service'
 import { BigshipService } from '../../models/services/couriers/bigship.service'
+import { ShipmozoService } from '../../models/services/couriers/shipmozo.service'
 import {
   DEFAULT_DELHIVERY_B2B_API_BASE,
   DELHIVERY_B2B_PROVIDER,
@@ -67,6 +68,11 @@ const BIGSHIP_COURIER_IDS = {
   B2B: 102,
 } as const
 
+const SHIPMOZO_COURIER_IDS = {
+  B2C: 201,
+  B2B: 202,
+} as const
+
 const BIGSHIP_DEFAULT_COURIERS = [
   {
     id: BIGSHIP_COURIER_IDS.B2C,
@@ -84,12 +90,29 @@ const BIGSHIP_DEFAULT_COURIERS = [
   },
 ]
 
+const SHIPMOZO_DEFAULT_COURIERS = [
+  {
+    id: SHIPMOZO_COURIER_IDS.B2C,
+    name: 'Shipmozo B2C',
+    serviceProvider: 'shipmozo',
+    isEnabled: true,
+    businessType: ['b2c'] as ('b2c' | 'b2b')[],
+  },
+  {
+    id: SHIPMOZO_COURIER_IDS.B2B,
+    name: 'Shipmozo B2B',
+    serviceProvider: 'shipmozo',
+    isEnabled: true,
+    businessType: ['b2b'] as ('b2c' | 'b2b')[],
+  },
+]
+
 const isMaskedSecretValue = (value?: string | null) => Boolean(String(value || '').includes('*'))
 
 const ensureDefaultBigshipCourier = async () => {
   await db
     .insert(couriers)
-    .values(BIGSHIP_DEFAULT_COURIERS)
+    .values([...BIGSHIP_DEFAULT_COURIERS, ...SHIPMOZO_DEFAULT_COURIERS])
     .onConflictDoUpdate({
       target: [couriers.id, couriers.serviceProvider],
       set: {
@@ -328,7 +351,7 @@ export const getServiceProvidersController = async (req: Request, res: Response)
     await ensureDefaultBigshipCourier()
 
     // Keep the curated provider set visible even before courier rows are created.
-    const allowedProviders = ['delhivery', 'bigship']
+    const allowedProviders = ['delhivery', 'bigship', 'shipmozo']
 
     const rows = await db
       .select({
@@ -374,7 +397,7 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
   const { isEnabled } = req.body
 
   try {
-    const allowedProviders = ['delhivery', 'bigship']
+    const allowedProviders = ['delhivery', 'bigship', 'shipmozo']
     const normalizedProvider = String(serviceProvider || '').trim().toLowerCase()
 
     if (!normalizedProvider || typeof isEnabled !== 'boolean') {
@@ -434,6 +457,26 @@ export const updateServiceProviderStatusController = async (req: Request, res: R
         .insert(couriers)
         .values(
           BIGSHIP_DEFAULT_COURIERS.map((courier) => ({
+            ...courier,
+            serviceProvider: normalizedProvider,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [couriers.id, couriers.serviceProvider],
+          set: {
+            name: sql`excluded.name`,
+            isEnabled: true,
+            businessType: sql`excluded.business_type`,
+            updatedAt: new Date(),
+          },
+        })
+    }
+
+    if (isEnabled && normalizedProvider === 'shipmozo') {
+      await db
+        .insert(couriers)
+        .values(
+          SHIPMOZO_DEFAULT_COURIERS.map((courier) => ({
             ...courier,
             serviceProvider: normalizedProvider,
           })),
@@ -682,6 +725,7 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
           'xpressbees',
           'shadowfax',
           'bigship',
+          'shipmozo',
           AMAZON_CREDENTIALS_PROVIDER,
         ]),
       )
@@ -736,6 +780,15 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
         hasPassword: false,
         hasAccessKey: false,
         accessKeyMasked: '',
+      },
+      shipmozo: {
+        provider: 'shipmozo',
+        apiBase: 'https://shipping-api.com/app/api/v1',
+        username: '',
+        hasPassword: false,
+        hasPublicKey: false,
+        hasPrivateKey: false,
+        publicKeyMasked: '',
       },
       amazon: buildAmazonCredentialResponse(),
     }
@@ -812,6 +865,24 @@ export const getCourierCredentialsController = async (req: Request, res: Respons
           hasAccessKey,
           accessKeyMasked: hasAccessKey
             ? `${accessKey.slice(0, 4)}${'*'.repeat(Math.max(accessKey.length - 8, 0))}${accessKey.slice(-4)}`
+            : '',
+        }
+      } else if (provider === 'shipmozo') {
+        const metadata = row.metadata || {}
+        const publicKey = row.apiKey || metadata.publicKey || ''
+        const privateKey = metadata.privateKey || metadata.private_key || ''
+        const hasPublicKey = Boolean(String(publicKey || '').trim()) && !isMaskedSecretValue(publicKey)
+        const hasPrivateKey =
+          Boolean(String(privateKey || '').trim()) && !isMaskedSecretValue(privateKey)
+        acc.shipmozo = {
+          provider: 'shipmozo',
+          apiBase: row.apiBase || 'https://shipping-api.com/app/api/v1',
+          username: row.username || '',
+          hasPassword: Boolean((row.password || '').trim()),
+          hasPublicKey,
+          hasPrivateKey,
+          publicKeyMasked: hasPublicKey
+            ? `${String(publicKey).slice(0, 4)}${'*'.repeat(Math.max(String(publicKey).length - 8, 0))}${String(publicKey).slice(-4)}`
             : '',
         }
       } else if (provider === AMAZON_CREDENTIALS_PROVIDER) {
@@ -1092,6 +1163,15 @@ const normalizeBigshipAccessKey = (value?: string) => {
   return isMaskedSecretValue(trimmed) ? undefined : trimmed
 }
 
+const normalizeShipmozoCredential = (value?: string) =>
+  typeof value === 'string' ? value.trim().replace(/\\@/g, '@') : undefined
+
+const normalizeShipmozoSecret = (value?: string) => {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return isMaskedSecretValue(trimmed) ? undefined : trimmed
+}
+
 export const updateBigshipCredentialsController = async (req: Request, res: Response) => {
   const { apiBase, username, password, accessKey } = req.body || {}
 
@@ -1238,6 +1318,205 @@ export const testBigshipCredentialsController = async (req: Request, res: Respon
       rejectedLogin && testedCredentials
         ? `Bigship rejected the saved credentials for ${testedCredentials.username} at ${testedCredentials.apiBase}. Check the API base URL, password and access key.`
         : error?.message || 'Bigship credential test failed'
+
+    return res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
+      success: false,
+      message,
+    })
+  }
+}
+
+export const updateShipmozoCredentialsController = async (req: Request, res: Response) => {
+  const { apiBase, username, password, publicKey, privateKey } = req.body || {}
+
+  try {
+    const nextApiBase =
+      typeof apiBase === 'string'
+        ? apiBase.trim().replace(/\/+$/, '')
+        : undefined
+    const nextUsername = normalizeShipmozoCredential(username)
+    const nextPassword = normalizeShipmozoCredential(password)
+    const nextPublicKey = normalizeShipmozoSecret(publicKey)
+    const nextPrivateKey = normalizeShipmozoSecret(privateKey)
+    const hasNewPassword = Boolean(nextPassword)
+    let resolvedPublicKey = nextPublicKey
+    let resolvedPrivateKey = nextPrivateKey
+
+    if (nextUsername && nextPassword) {
+      const loginResult = await new ShipmozoService({
+        configOverrides: {
+          apiBase: nextApiBase || 'https://shipping-api.com/app/api/v1',
+          username: nextUsername,
+          password: nextPassword,
+          publicKey: nextPublicKey,
+          privateKey: nextPrivateKey,
+        },
+      }).testCredentials({
+        apiBase: nextApiBase || 'https://shipping-api.com/app/api/v1',
+        username: nextUsername,
+        password: nextPassword,
+        publicKey: nextPublicKey,
+        privateKey: nextPrivateKey,
+      })
+      resolvedPublicKey = loginResult.publicKey
+      resolvedPrivateKey = loginResult.privateKey
+    }
+
+    const [existing] = await db
+      .select({ id: courier_credentials.id, metadata: courier_credentials.metadata })
+      .from(courier_credentials)
+      .where(eq(courier_credentials.provider, 'shipmozo'))
+      .limit(1)
+
+    if (existing) {
+      const metadata = existing.metadata || {}
+      const updatePayload: Record<string, any> = { updatedAt: new Date() }
+      if (nextApiBase !== undefined) {
+        updatePayload.apiBase = nextApiBase || 'https://shipping-api.com/app/api/v1'
+      }
+      if (nextUsername !== undefined) updatePayload.username = nextUsername
+      if (hasNewPassword) updatePayload.password = nextPassword
+      if (resolvedPublicKey) updatePayload.apiKey = resolvedPublicKey
+      if (resolvedPrivateKey) {
+        updatePayload.metadata = {
+          ...metadata,
+          publicKey: resolvedPublicKey || metadata.publicKey || '',
+          privateKey: resolvedPrivateKey,
+        }
+      }
+
+      await db
+        .update(courier_credentials)
+        .set(updatePayload)
+        .where(eq(courier_credentials.provider, 'shipmozo'))
+    } else {
+      await db.insert(courier_credentials).values({
+        provider: 'shipmozo',
+        apiBase: nextApiBase || 'https://shipping-api.com/app/api/v1',
+        username: nextUsername || '',
+        password: hasNewPassword ? nextPassword! : '',
+        apiKey: resolvedPublicKey || '',
+        metadata: {
+          publicKey: resolvedPublicKey || '',
+          privateKey: resolvedPrivateKey || '',
+        },
+      })
+    }
+
+    ShipmozoService.clearCachedConfig()
+
+    const [saved] = await db
+      .select({
+        apiBase: courier_credentials.apiBase,
+        username: courier_credentials.username,
+        password: courier_credentials.password,
+        apiKey: courier_credentials.apiKey,
+        metadata: courier_credentials.metadata,
+      })
+      .from(courier_credentials)
+      .where(eq(courier_credentials.provider, 'shipmozo'))
+      .limit(1)
+
+    res.json({
+      success: true,
+      message: 'Shipmozo credentials updated successfully',
+      data: {
+        provider: 'shipmozo',
+        apiBase: saved?.apiBase || 'https://shipping-api.com/app/api/v1',
+        username: saved?.username || '',
+        hasPassword: Boolean((saved?.password || '').trim()),
+        hasPublicKey: Boolean((saved?.apiKey || '').trim()),
+        hasPrivateKey: Boolean(String(saved?.metadata?.privateKey || '').trim()),
+      },
+    })
+  } catch (error: any) {
+    const statusCode = Number(error?.statusCode || 500)
+    res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
+      success: false,
+      message: error?.message || 'Failed to update Shipmozo credentials',
+    })
+  }
+}
+
+export const testShipmozoCredentialsController = async (req: Request, res: Response) => {
+  let testedCredentials:
+    | {
+        apiBase: string
+        username: string
+      }
+    | null = null
+
+  try {
+    const [saved] = await db
+      .select({
+        apiBase: courier_credentials.apiBase,
+        username: courier_credentials.username,
+        password: courier_credentials.password,
+        apiKey: courier_credentials.apiKey,
+        metadata: courier_credentials.metadata,
+      })
+      .from(courier_credentials)
+      .where(eq(courier_credentials.provider, 'shipmozo'))
+      .limit(1)
+
+    const requestApiBase =
+      typeof req.body?.apiBase === 'string' ? req.body.apiBase.trim().replace(/\/+$/, '') : ''
+    const requestUsername = normalizeShipmozoCredential(req.body?.username)
+    const requestPassword = normalizeShipmozoCredential(req.body?.password)
+    const requestPublicKey = normalizeShipmozoSecret(req.body?.publicKey)
+    const requestPrivateKey = normalizeShipmozoSecret(req.body?.privateKey)
+
+    const apiBase = requestApiBase || (saved?.apiBase || 'https://shipping-api.com/app/api/v1').trim()
+    const username = requestUsername || normalizeShipmozoCredential(saved?.username) || ''
+    const password = requestPassword || normalizeShipmozoCredential(saved?.password) || ''
+    const publicKey = requestPublicKey || (saved?.apiKey || '').trim()
+    const privateKey = requestPrivateKey || String(saved?.metadata?.privateKey || '').trim()
+
+    testedCredentials = {
+      apiBase,
+      username,
+    }
+
+    if ((!username || !password) && (!publicKey || !privateKey)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Save Shipmozo username/password or public/private keys before testing',
+      })
+    }
+
+    ShipmozoService.clearCachedConfig()
+    const result = await new ShipmozoService({
+      configOverrides: {
+        apiBase,
+        username,
+        password,
+        publicKey,
+        privateKey,
+      },
+    }).testCredentials({
+      apiBase,
+      username,
+      password,
+      publicKey,
+      privateKey,
+    })
+
+    return res.json({
+      success: true,
+      data: {
+        authenticated: true,
+        apiBase: result.apiBase,
+        username: result.username,
+        publicKeyMatches: result.publicKeyMatches,
+      },
+    })
+  } catch (error: any) {
+    const statusCode = Number(error?.statusCode || 500)
+    const rejectedLogin = statusCode === 401 || statusCode === 403
+    const message =
+      rejectedLogin && testedCredentials
+        ? `Shipmozo rejected the saved credentials for ${testedCredentials.username} at ${testedCredentials.apiBase}. Check the API base URL, password and keys.`
+        : error?.message || 'Shipmozo credential test failed'
 
     return res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
       success: false,
