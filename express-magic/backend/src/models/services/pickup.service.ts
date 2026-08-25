@@ -73,6 +73,46 @@ const isCancellationAccepted = (result: any) => {
   )
 }
 
+const isAlreadyCancelledOrMissingProviderShipment = (value: unknown) => {
+  const responseText = cancellationResponseText(value)
+  return (
+    responseText.includes('already cancelled') ||
+    responseText.includes('already canceled') ||
+    responseText.includes('no waybill found') ||
+    responseText.includes('waybill not found') ||
+    responseText.includes('way bill not found') ||
+    responseText.includes('no way bill found')
+  )
+}
+
+const normalizeIdempotentCancellationError = (
+  error: any,
+  provider: string,
+  reference: string,
+) => {
+  const payload = {
+    provider,
+    reference,
+    status: error?.statusCode || error?.response?.status || null,
+    message: error?.message || 'Provider reported shipment is already cancelled or missing',
+    response: error?.response?.data || null,
+  }
+
+  if (!isAlreadyCancelledOrMissingProviderShipment(payload)) {
+    throw error
+  }
+
+  return {
+    success: true,
+    alreadyCancelled: true,
+    provider,
+    reference,
+    message: 'Provider has no active waybill for this shipment; marking local order as cancelled.',
+    provider_response: payload.response,
+    provider_error: payload.message,
+  }
+}
+
 const getCancellationErrorMessage = (result: any) =>
   result?.error ||
   result?.message ||
@@ -361,7 +401,16 @@ const cancelB2BOrderShipment = async (order: any) => {
     }
 
     const svc = new BigshipService()
-    const cancellationResult = await svc.cancelShipment(bigshipReference)
+    let cancellationResult: any
+    try {
+      cancellationResult = await svc.cancelShipment(bigshipReference)
+    } catch (error: any) {
+      cancellationResult = normalizeIdempotentCancellationError(
+        error,
+        'bigship',
+        bigshipReference,
+      )
+    }
     const isSuccess = isCancellationAccepted(cancellationResult)
 
     console.log('Bigship B2B cancellation response validation:', {
@@ -784,7 +833,15 @@ export async function cancelOrderShipment(orderId: string) {
     }
 
     const svc = new BigshipService()
-    cancellationResult = await svc.cancelShipment(bigshipReference)
+    try {
+      cancellationResult = await svc.cancelShipment(bigshipReference)
+    } catch (error: any) {
+      cancellationResult = normalizeIdempotentCancellationError(
+        error,
+        'bigship',
+        bigshipReference,
+      )
+    }
   } else {
     const svc = new XpressbeesService()
     cancellationResult = await svc.cancelShipment(awbNumber)
