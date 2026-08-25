@@ -74,9 +74,24 @@ const getResponseData = (response: any) => response?.data ?? response
 const pickFirst = (...values: unknown[]) => values.map((value) => normalizeText(value)).find(Boolean) || ''
 
 const buildShipmozoOrderId = (...values: unknown[]) => {
-  const digits = values.map((value) => normalizeText(value)).join('').replace(/\D/g, '')
-  const seed = digits.length >= 6 ? digits : `${digits}${Date.now()}`
-  return seed.slice(-18)
+  const seed =
+    values
+      .map((value) => normalizeText(value))
+      .filter(Boolean)
+      .join('-') || String(Date.now())
+  let hash = 0x811c9dc5
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+
+  return String((Math.abs(hash) % 900000000) + 100000000)
+}
+
+const unwrapResponseData = (value: any) => {
+  const data = getResponseData(value)
+  return Array.isArray(data) ? data[0] : data
 }
 
 export class ShipmozoService {
@@ -404,6 +419,14 @@ export class ShipmozoService {
     if (!isSuccessResponse(push)) {
       throw new HttpError(422, extractShipmozoError(push) || 'Shipmozo push-order failed')
     }
+    const pushData = unwrapResponseData(push)
+    const providerOrderId = pickFirst(
+      pushData?.order_id,
+      pushData?.id,
+      pushData?.shipment_id,
+      pushData?.shipmozo_order_id,
+      orderId,
+    )
 
     const rates = await this.rateCalculator({
       pickupPincode: params.pickup?.pincode || params.origin || params.pickup_pincode,
@@ -415,7 +438,7 @@ export class ShipmozoService {
       length: params.package_length ?? params.length,
       breadth: params.package_breadth ?? params.breadth,
       height: params.package_height ?? params.height,
-      orderId,
+      orderId: providerOrderId,
     })
     const rateList = Array.isArray(rates?.data) ? rates.data : []
     const requestedCourierId = Number(params.courier_id)
@@ -431,7 +454,7 @@ export class ShipmozoService {
     }
 
     const assign = await this.request('POST', '/assign-courier', {
-      order_id: orderId,
+      order_id: providerOrderId,
       courier_id: Number(selectedRate.id),
     })
     if (!isSuccessResponse(assign)) {
@@ -442,7 +465,7 @@ export class ShipmozoService {
     const assignData = getResponseData(assign)
     let awb = pickFirst(assignData?.awb_number, assignData?.awb, assignData?.lr_number)
     if (!awb || normalizeText(selectedRate?.pickups_automatically_scheduled).toUpperCase() === 'NO') {
-      pickupResponse = await this.request('POST', '/schedule-pickup', { order_id: orderId }).catch((error: any) => {
+      pickupResponse = await this.request('POST', '/schedule-pickup', { order_id: providerOrderId }).catch((error: any) => {
         const message = normalizeText(error?.message).toLowerCase()
         if (message.includes('already') || message.includes('automatic')) return null
         throw error
@@ -452,7 +475,7 @@ export class ShipmozoService {
     }
 
     if (!awb) {
-      const orderDetail = await this.getOrderDetail(orderId).catch(() => null)
+      const orderDetail = await this.getOrderDetail(providerOrderId).catch(() => null)
       const detailData = getResponseData(orderDetail)
       awb = pickFirst(detailData?.awb_number, detailData?.awb, detailData?.lr_number)
     }
@@ -463,20 +486,21 @@ export class ShipmozoService {
 
     return {
       status: true,
-      order_id: orderId,
-      shipment_id: orderId,
+      order_id: providerOrderId,
+      shipment_id: providerOrderId,
       fastship_order_number: fastshipOrderNumber,
       awb_number: awb,
       courier_name: pickFirst(selectedRate?.name, assignData?.courier, 'Shipmozo'),
       courier_id: Number(selectedRate.id),
       courier_cost: toNumber(selectedRate?.total_charges ?? selectedRate?.shipping_charges, 0),
-      provider_reference: pickFirst(assignData?.reference_id, orderId),
-      provider_request_id: pickFirst(assignData?.reference_id, orderId),
+      provider_reference: pickFirst(assignData?.reference_id, providerOrderId),
+      provider_request_id: pickFirst(assignData?.reference_id, providerOrderId),
       provider_service: pickFirst(selectedRate?.name, assignData?.courier),
       provider_mode: 'surface',
       shipmozo: {
         fastship_order_number: fastshipOrderNumber,
-        shipmozo_order_id: orderId,
+        shipmozo_order_id: providerOrderId,
+        fastship_generated_order_id: orderId,
         push,
         rates,
         selected_rate: selectedRate,
