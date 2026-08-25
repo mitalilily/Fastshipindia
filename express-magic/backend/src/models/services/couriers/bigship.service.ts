@@ -61,6 +61,22 @@ const normalizeBigshipLocation = (value: unknown) =>
     .trim()
     .toUpperCase()
 
+const normalizePincode = (value: unknown) => normalizeText(value).replace(/\D/g, '')
+
+const firstValidPincode = (values: unknown[]) =>
+  values.map(normalizePincode).find((value) => /^\d{6}$/.test(value)) || ''
+
+const getDestinationPincode = (params: ShipmentParams) =>
+  firstValidPincode([
+    params.consignee?.pincode,
+    params.destination_pincode,
+    params.destination,
+    (params as any).shipping_pincode,
+    (params as any).delivery_pincode,
+    (params as any).receiver_pincode,
+    (params as any).consignee_pincode,
+  ])
+
 const BIGSHIP_CITY_ALIASES: Record<string, string[]> = {
   BENGALURU: ['BANGALORE'],
   BANGALORE: ['BENGALURU'],
@@ -88,7 +104,7 @@ const uniqueTexts = (values: string[]) => {
 }
 
 const inferBigshipLocationFromPincode = (pincode: string) => {
-  const pin = normalizeText(pincode).replace(/\D/g, '')
+  const pin = normalizePincode(pincode)
 
   if (/^110\d{3}$/.test(pin)) {
     return {
@@ -438,9 +454,7 @@ export class BigshipService {
   }
 
   private buildShippingCityCandidates(params: ShipmentParams) {
-    const inferredLocation = inferBigshipLocationFromPincode(
-      normalizeText(params.consignee?.pincode),
-    )
+    const inferredLocation = inferBigshipLocationFromPincode(getDestinationPincode(params))
     const formCity = normalizeBigshipLocation(params.consignee?.city)
     const inferredCity = normalizeBigshipLocation(inferredLocation?.city)
 
@@ -575,7 +589,7 @@ export class BigshipService {
       normalizeText(item?.name) ||
       normalizeText(params.courier_partner) ||
       'Goods'
-    const shippingPincode = normalizeText(params.consignee?.pincode)
+    const shippingPincode = getDestinationPincode(params) || normalizePincode(params.consignee?.pincode)
     const inferredShippingLocation = inferBigshipLocationFromPincode(shippingPincode)
     const shippingState = normalizeBigshipLocation(
       (params as any).bigship_shipping_state ||
@@ -691,8 +705,17 @@ export class BigshipService {
     segmentType: 'domestic_b2b' | 'domestic_b2c',
   ) {
     const bigshipWarehouseId = await this.resolveWarehouseId(params)
+    const destinationPincode = getDestinationPincode(params)
+    const inferredDestinationLocation = inferBigshipLocationFromPincode(destinationPincode)
+    const normalizedConsignee = {
+      ...params.consignee,
+      pincode: destinationPincode || normalizePincode(params.consignee?.pincode),
+      city: inferredDestinationLocation?.city || params.consignee?.city,
+      state: inferredDestinationLocation?.state || params.consignee?.state,
+    }
     const paramsWithWarehouse = {
       ...params,
+      consignee: normalizedConsignee,
       bigship_warehouse_id: bigshipWarehouseId,
       bigship_invoice_number: buildBigshipOrderInvoiceNo(params),
     } as ShipmentParams
