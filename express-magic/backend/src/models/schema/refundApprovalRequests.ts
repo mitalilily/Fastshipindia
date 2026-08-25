@@ -1,5 +1,4 @@
 import { jsonb, numeric, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core'
-import { b2c_orders } from './b2cOrders'
 import { users } from './users'
 import { walletTransactions, wallets } from './wallet'
 
@@ -13,9 +12,7 @@ export const refundApprovalRequests = pgTable(
   'refund_approval_requests',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    orderId: uuid('order_id')
-      .notNull()
-      .references(() => b2c_orders.id, { onDelete: 'cascade' }),
+    orderId: uuid('order_id').notNull(),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),

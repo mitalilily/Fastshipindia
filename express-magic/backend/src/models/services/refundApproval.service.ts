@@ -14,6 +14,12 @@ type RefundRequestSource =
   | string
 
 const roundMoney = (amount: number) => Math.round(amount * 100) / 100
+const normalizeNullableUuid = (value: unknown) => {
+  const text = String(value || '').trim()
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)
+    ? text
+    : null
+}
 
 export const createCancellationRefundApprovalRequest = async ({
   tx,
@@ -64,7 +70,7 @@ export const createCancellationRefundApprovalRequest = async ({
       status: 'pending',
       reason,
       source,
-      requestedBy: requestedBy || null,
+      requestedBy: normalizeNullableUuid(requestedBy),
       meta: {
         order_id: order.id,
         order_number: order.order_number,
@@ -265,7 +271,7 @@ export const ensureRefundApprovalSchema = () =>
 
     CREATE TABLE IF NOT EXISTS refund_approval_requests (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      order_id UUID NOT NULL REFERENCES b2c_orders(id) ON DELETE CASCADE,
+      order_id UUID NOT NULL,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       wallet_id UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
       wallet_transaction_id UUID REFERENCES wallet_transactions(id) ON DELETE SET NULL,
@@ -282,6 +288,23 @@ export const ensureRefundApprovalSchema = () =>
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    DO $$
+    DECLARE
+      constraint_name TEXT;
+    BEGIN
+      FOR constraint_name IN
+        SELECT con.conname
+        FROM pg_constraint con
+        JOIN pg_class rel ON rel.oid = con.conrelid
+        JOIN pg_attribute att ON att.attrelid = rel.oid AND att.attnum = ANY(con.conkey)
+        WHERE rel.relname = 'refund_approval_requests'
+          AND con.contype = 'f'
+          AND att.attname = 'order_id'
+      LOOP
+        EXECUTE format('ALTER TABLE refund_approval_requests DROP CONSTRAINT IF EXISTS %I', constraint_name);
+      END LOOP;
+    END $$;
 
     CREATE UNIQUE INDEX IF NOT EXISTS refund_approval_order_source_reason_unique
       ON refund_approval_requests(order_id, source, reason);
