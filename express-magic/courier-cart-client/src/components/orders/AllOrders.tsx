@@ -132,8 +132,11 @@ const isB2BProviderCancellationVerified = (order: Order) => {
   )
 }
 
+const isB2BOrder = (order: Order) =>
+  String(order.type || order.source_type || order.shipping_mode || '').toLowerCase() === 'b2b'
+
 const isB2BCourierCancelEligible = (order: Order) => {
-  if (String(order.type || order.source_type || '').toLowerCase() !== 'b2b') return false
+  if (!isB2BOrder(order)) return false
 
   const status = String(order.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
   if (B2B_NON_CANCELLABLE_STATUSES.has(status)) return false
@@ -141,13 +144,14 @@ const isB2BCourierCancelEligible = (order: Order) => {
     return false
   }
 
-  const providerText = `${order.integration_type || ''} ${order.courier_partner || ''} ${order.courier_id || ''}`
-    .toLowerCase()
-    .trim()
-  const isDelhivery = providerText.includes('delhivery') || providerText.split(/\s+/).includes('99')
-  const isBigship = providerText.includes('bigship')
-
-  return (isDelhivery || isBigship) && Boolean(getTrackingReference(order))
+  return Boolean(
+    order.id &&
+      (getTrackingReference(order) ||
+        order.courier_partner ||
+        order.integration_type ||
+        order.provider_meta?.shipment ||
+        order.provider_meta?.bigship),
+  )
 }
 
 const actionMenuItemSx = {
