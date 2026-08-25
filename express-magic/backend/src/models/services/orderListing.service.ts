@@ -59,6 +59,49 @@ const buildStatusCondition = (qualifiedColumn: string, status?: string | string[
   return sql`${sql.raw(qualifiedColumn)} = ${String(status).trim()}`
 }
 
+const normalizeOrderStatus = (value: unknown) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+
+const hasCancellationSignal = (row: any) => {
+  const status = normalizeOrderStatus(row?.order_status)
+  if (status === 'cancelled' || status === 'canceled' || status === 'cancellation_requested') {
+    return true
+  }
+
+  const text = [
+    row?.provider_last_status,
+    row?.delivery_message,
+    row?.pickup_status,
+  ]
+    .map((value) => String(value || '').toLowerCase())
+    .join(' ')
+
+  return (
+    text.includes('cancelled') ||
+    text.includes('canceled') ||
+    text.includes('already cancel') ||
+    text.includes('no waybill found') ||
+    text.includes('waybill not found')
+  )
+}
+
+const normalizeListedOrderStatus = <T extends Record<string, any>>(row: T) => {
+  const status = normalizeOrderStatus(row.order_status)
+  if (
+    status &&
+    status !== 'cancelled' &&
+    status !== 'canceled' &&
+    hasCancellationSignal(row)
+  ) {
+    return { ...row, order_status: 'cancelled' }
+  }
+
+  return row
+}
+
 const buildSearchCondition = (alias: 'b2c' | 'b2b', search?: string) => {
   const trimmed = String(search || '').trim()
   if (!trimmed) return null
@@ -309,6 +352,7 @@ export const fetchCombinedOrdersPage = async ({
   const orderedRows = pageRows
     .map((row) => (row.type === 'b2c' ? b2cMap.get(row.id) : b2bMap.get(row.id)))
     .filter(Boolean)
+    .map((row) => normalizeListedOrderStatus(row as Record<string, any>))
 
   return {
     orders: orderedRows,

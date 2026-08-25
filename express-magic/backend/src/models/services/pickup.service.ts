@@ -113,6 +113,24 @@ const normalizeIdempotentCancellationError = (
   }
 }
 
+const requestCancellationRefundAfterStatusUpdate = async (
+  order: any,
+  source: string,
+) => {
+  try {
+    await db.transaction(async (tx) => {
+      await applyCancellationRefundOnce(tx, order, source)
+    })
+  } catch (error) {
+    console.warn('Cancellation refund request failed after local status update:', {
+      orderId: order?.id,
+      orderNumber: order?.order_number,
+      source,
+      error,
+    })
+  }
+}
+
 const getCancellationErrorMessage = (result: any) =>
   result?.error ||
   result?.message ||
@@ -427,29 +445,27 @@ const cancelB2BOrderShipment = async (order: any) => {
     const finalStatus = 'cancelled'
     const cancelledAt = new Date()
 
-    await db.transaction(async (tx) => {
-      await tx
-        .update(b2b_orders)
-        .set({
-          order_status: finalStatus,
-          provider_last_status: finalStatus,
-          delivery_message: getCancellationDeliveryMessage(cancellationResult),
-          provider_meta: {
-            ...providerMeta,
-            cancellation: {
-              provider: 'bigship',
-              requested_at: cancelledAt.toISOString(),
-              provider_reference: bigshipReference,
-              awb_number: order.awb_number || null,
-              result: cancellationResult,
-            },
+    await db
+      .update(b2b_orders)
+      .set({
+        order_status: finalStatus,
+        provider_last_status: finalStatus,
+        delivery_message: getCancellationDeliveryMessage(cancellationResult),
+        provider_meta: {
+          ...providerMeta,
+          cancellation: {
+            provider: 'bigship',
+            requested_at: cancelledAt.toISOString(),
+            provider_reference: bigshipReference,
+            awb_number: order.awb_number || null,
+            result: cancellationResult,
           },
-          updated_at: cancelledAt,
-        } as any)
-        .where(eq(b2b_orders.id, order.id))
+        },
+        updated_at: cancelledAt,
+      } as any)
+      .where(eq(b2b_orders.id, order.id))
 
-      await applyCancellationRefundOnce(tx, order, 'pickup_cancel_api_bigship_b2b')
-    })
+    await requestCancellationRefundAfterStatusUpdate(order, 'pickup_cancel_api_bigship_b2b')
 
     await logTrackingEvent({
       orderId: order.id,
@@ -547,31 +563,29 @@ const cancelB2BOrderShipment = async (order: any) => {
   const finalStatus = 'cancelled'
   const cancelledAt = new Date()
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(b2b_orders)
-      .set({
-        order_status: finalStatus,
-        provider_last_status: finalStatus,
-        delivery_message: getCancellationDeliveryMessage(cancellationResult),
-        provider_meta: {
-          ...providerMeta,
-          cancellation: {
-            provider: 'delhivery_b2b',
-            requested_at: cancelledAt.toISOString(),
-            provider_verified_at: cancelledAt.toISOString(),
-            lrn,
-            awb_number: order.awb_number || null,
-            result: cancellationResult,
-            verified_tracking: verification.tracking || null,
-          },
+  await db
+    .update(b2b_orders)
+    .set({
+      order_status: finalStatus,
+      provider_last_status: finalStatus,
+      delivery_message: getCancellationDeliveryMessage(cancellationResult),
+      provider_meta: {
+        ...providerMeta,
+        cancellation: {
+          provider: 'delhivery_b2b',
+          requested_at: cancelledAt.toISOString(),
+          provider_verified_at: cancelledAt.toISOString(),
+          lrn,
+          awb_number: order.awb_number || null,
+          result: cancellationResult,
+          verified_tracking: verification.tracking || null,
         },
-        updated_at: cancelledAt,
-      })
-      .where(eq(b2b_orders.id, order.id))
+      },
+      updated_at: cancelledAt,
+    })
+    .where(eq(b2b_orders.id, order.id))
 
-    await applyCancellationRefundOnce(tx, order, 'pickup_cancel_api_b2b')
-  })
+  await requestCancellationRefundAfterStatusUpdate(order, 'pickup_cancel_api_b2b')
 
   await logTrackingEvent({
     orderId: order.id,
@@ -877,29 +891,27 @@ export async function cancelOrderShipment(orderId: string) {
   console.log(`Updating order status to ${finalStatus}:`, { orderId, integration })
   const cancelledAt = new Date()
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(b2c_orders)
-      .set({
-        order_status: finalStatus,
-        pickup_status: finalStatus,
-        provider_last_status: finalStatus,
-        delivery_message: getCancellationDeliveryMessage(cancellationResult),
-        provider_meta: {
-          ...providerMeta,
-          cancellation: {
-            provider: integration,
-            requested_at: cancelledAt.toISOString(),
-            awb_number: awbNumber || null,
-            result: cancellationResult,
-          },
+  await db
+    .update(b2c_orders)
+    .set({
+      order_status: finalStatus,
+      pickup_status: finalStatus,
+      provider_last_status: finalStatus,
+      delivery_message: getCancellationDeliveryMessage(cancellationResult),
+      provider_meta: {
+        ...providerMeta,
+        cancellation: {
+          provider: integration,
+          requested_at: cancelledAt.toISOString(),
+          awb_number: awbNumber || null,
+          result: cancellationResult,
         },
-        updated_at: cancelledAt,
-      })
-      .where(eq(b2c_orders.id, orderId))
+      },
+      updated_at: cancelledAt,
+    })
+    .where(eq(b2c_orders.id, orderId))
 
-    await applyCancellationRefundOnce(tx, order, 'pickup_cancel_api')
-  })
+  await requestCancellationRefundAfterStatusUpdate(order, 'pickup_cancel_api')
 
   await syncSalesChannelStatusForOrder(orderId, 'order cancellation')
 
