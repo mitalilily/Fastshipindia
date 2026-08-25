@@ -123,6 +123,20 @@ const pdfText = (value: unknown, fallback = '') =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const buildBigshipOrderInvoiceNo = (params: ShipmentParams) => {
+  const explicit = normalizeText((params as any).bigship_invoice_number)
+  if (explicit) return explicit.slice(0, 60)
+
+  const base =
+    normalizeText(params.invoice_number || params.order_number, 'FS')
+      .replace(/[^a-zA-Z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 36) || 'FS'
+  const suffix = Date.now().toString(36).toUpperCase()
+  return `${base}-${suffix}`.slice(0, 60)
+}
+
 const buildBigshipInvoicePdf = async (params: ShipmentParams) => {
   const pdf = await PDFDocument.create()
   const page = pdf.addPage([595, 842])
@@ -130,8 +144,7 @@ const buildBigshipInvoicePdf = async (params: ShipmentParams) => {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
   const item = firstOrderItem(params)
   const orderAmount = Math.max(0, toNumber(params.order_amount ?? item?.price))
-  const invoiceNumber =
-    pdfText(params.invoice_number) || pdfText(params.order_number) || `BIGSHIP-${Date.now()}`
+  const invoiceNumber = pdfText(buildBigshipOrderInvoiceNo(params))
   const rows = [
     ['Invoice No', invoiceNumber],
     ['Invoice Date', pdfText(params.invoice_date || params.order_date || new Date().toISOString().slice(0, 10))],
@@ -520,8 +533,7 @@ export class BigshipService {
     const orderAmount = Math.max(0, toNumber(params.order_amount ?? item?.price))
     const paymentMode = params.payment_type === 'cod' ? 2 : 1
     const collectableAmount = paymentMode === 2 ? orderAmount : 0
-    const invoiceNumber =
-      normalizeText(params.invoice_number) || normalizeText(params.order_number)
+    const invoiceNumber = buildBigshipOrderInvoiceNo(params)
     const pickupLocation = normalizeText(
       (params as any).bigship_warehouse_id ||
         (params as any).bigshipWarehouseId ||
@@ -667,6 +679,7 @@ export class BigshipService {
     const paramsWithWarehouse = {
       ...params,
       bigship_warehouse_id: bigshipWarehouseId,
+      bigship_invoice_number: buildBigshipOrderInvoiceNo(params),
     } as ShipmentParams
     const shippingCityCandidates = this.buildShippingCityCandidates(paramsWithWarehouse)
     let draft: any = null
@@ -715,7 +728,7 @@ export class BigshipService {
     }
 
     const form = await this.buildPlaceOrderForm(
-      params,
+      paramsWithWarehouse,
       customGlobalOrderId,
       selectedCourierId,
       segmentType,
