@@ -73,6 +73,8 @@ const BIGSHIP_CITY_ALIASES: Record<string, string[]> = {
   NOIDA: ['GAUTAM BUDDHA NAGAR'],
   'GAUTAM BUDDHA NAGAR': ['NOIDA'],
   GOTAN: ['NAGAUR', 'JODHPUR'],
+  NAGAUR: ['JODHPUR'],
+  JODHPUR: ['NAGAUR'],
 }
 
 const uniqueTexts = (values: string[]) => {
@@ -228,6 +230,19 @@ const extractBigshipError = (value: any): string => {
     return Object.values(value).map(extractBigshipError).filter(Boolean).join(' | ')
   }
   return String(value)
+}
+
+const isRetryableBigshipRouteError = (value: unknown) => {
+  const message = normalizeText(value).toLowerCase()
+  return (
+    message.includes('shipping city') ||
+    message.includes('city is invalid') ||
+    message.includes('not serviceable') ||
+    message.includes('non serviceable') ||
+    message.includes('non-serviceable') ||
+    message.includes('saving package') ||
+    (message.includes('package') && message.includes('pincode'))
+  )
 }
 
 export class BigshipService {
@@ -684,77 +699,116 @@ export class BigshipService {
     const shippingCityCandidates = this.buildShippingCityCandidates(paramsWithWarehouse)
     let draft: any = null
     let customGlobalOrderId = ''
-    let lastDraftError: any = null
+    let selectedRate: any = null
+    let selectedCourierId = ''
+    let placeResponse: any = null
+    let awb = ''
+    let reference = ''
+    let lastRouteError: any = null
 
-    for (const shippingCity of shippingCityCandidates.length ? shippingCityCandidates : ['']) {
-      const draftPayload = this.buildCreateOrderPayload(
-        { ...paramsWithWarehouse, bigship_shipping_city: shippingCity } as ShipmentParams,
-        segmentType,
-      )
+    const cityAttempts = shippingCityCandidates.length ? shippingCityCandidates : ['']
+    for (const [index, shippingCity] of cityAttempts.entries()) {
+      const invoiceNumber =
+        index === 0
+          ? normalizeText((paramsWithWarehouse as any).bigship_invoice_number)
+          : `${normalizeText((paramsWithWarehouse as any).bigship_invoice_number).slice(0, 56)}-${
+              index + 1
+            }`
+      const candidateParams = {
+        ...paramsWithWarehouse,
+        bigship_invoice_number: invoiceNumber,
+        bigship_shipping_city: shippingCity,
+      } as ShipmentParams
+      const draftPayload = this.buildCreateOrderPayload(candidateParams, segmentType)
 
       try {
         const candidateDraft = await this.request('post', '/api/outbound/create-order', draftPayload)
         const candidateOrderId = normalizeText(candidateDraft?.data?.CustomGlobalOrderId)
-        if (candidateDraft?.status !== false && candidateOrderId) {
-          draft = candidateDraft
-          customGlobalOrderId = candidateOrderId
-          break
+        if (candidateDraft?.status === false || !candidateOrderId) {
+          const message = extractBigshipError(candidateDraft) || 'Bigship draft order creation failed'
+          const draftError = new HttpError(Number(candidateDraft?.status_code || 502), message)
+          if (isRetryableBigshipRouteError(message)) {
+            lastRouteError = draftError
+            continue
+          }
+          throw draftError
         }
 
-        const message = extractBigshipError(candidateDraft) || 'Bigship draft order creation failed'
-        lastDraftError = new HttpError(Number(candidateDraft?.status_code || 502), message)
-        if (!message.toLowerCase().includes('shipping city')) throw lastDraftError
+        const rateResponse = await this.request('post', '/api/outbound/courier-wise-shipment-cost', {
+          MasterCustomOrderId: candidateOrderId,
+        })
+        const calculatedRates = Array.isArray(rateResponse?.data?.calculatedRates)
+          ? rateResponse.data.calculatedRates
+          : []
+        const candidateRate = this.pickRate(calculatedRates, params.courier_id)
+        const candidateCourierId = normalizeText(candidateRate?.courierId || params.courier_id)
+        if (!candidateCourierId) {
+          throw new HttpError(502, 'Bigship did not return a courier rate for this order')
+        }
+
+        const form = await this.buildPlaceOrderForm(
+          candidateParams,
+          candidateOrderId,
+          candidateCourierId,
+          segmentType,
+        )
+
+        const token = await this.ensureToken()
+        let candidatePlaceResponse: any
+        try {
+          const response = await this.client.post(this.endpoint('/api/outbound/place-order'), form, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          })
+          candidatePlaceResponse = response.data
+        } catch (error: any) {
+          const message =
+            extractBigshipError(error?.response?.data) ||
+            error?.message ||
+            'Bigship place order failed'
+          const placeError = new HttpError(Number(error?.response?.status || 502), message)
+          if (isRetryableBigshipRouteError(message)) {
+            lastRouteError = placeError
+            continue
+          }
+          throw placeError
+        }
+
+        const candidateAwb = normalizeText(
+          candidatePlaceResponse?.data?.awb_assigned || candidatePlaceResponse?.data?.awb,
+        )
+        const candidateReference = normalizeText(
+          candidatePlaceResponse?.data?.reference_number || candidateOrderId,
+        )
+        if (candidatePlaceResponse?.status === false || !candidateAwb) {
+          const message =
+            extractBigshipError(candidatePlaceResponse) || 'Bigship did not return an AWB'
+          const placeError = new HttpError(502, message)
+          if (isRetryableBigshipRouteError(message)) {
+            lastRouteError = placeError
+            continue
+          }
+          throw placeError
+        }
+
+        draft = candidateDraft
+        customGlobalOrderId = candidateOrderId
+        selectedRate = candidateRate
+        selectedCourierId = candidateCourierId
+        placeResponse = candidatePlaceResponse
+        awb = candidateAwb
+        reference = candidateReference
+        break
       } catch (error: any) {
-        lastDraftError = error
-        const message = String(error?.message || '').toLowerCase()
-        if (!message.includes('shipping city')) throw error
+        lastRouteError = error
+        if (!isRetryableBigshipRouteError(error?.message)) throw error
       }
     }
 
-    if (!draft || !customGlobalOrderId) {
-      throw lastDraftError || new HttpError(502, 'Bigship draft order creation failed')
-    }
-
-    const rateResponse = await this.request('post', '/api/outbound/courier-wise-shipment-cost', {
-      MasterCustomOrderId: customGlobalOrderId,
-    })
-    const calculatedRates = Array.isArray(rateResponse?.data?.calculatedRates)
-      ? rateResponse.data.calculatedRates
-      : []
-    const selectedRate = this.pickRate(calculatedRates, params.courier_id)
-    const selectedCourierId = normalizeText(selectedRate?.courierId || params.courier_id)
-    if (!selectedCourierId) {
-      throw new HttpError(502, 'Bigship did not return a courier rate for this order')
-    }
-
-    const form = await this.buildPlaceOrderForm(
-      paramsWithWarehouse,
-      customGlobalOrderId,
-      selectedCourierId,
-      segmentType,
-    )
-
-    const token = await this.ensureToken()
-    let placeResponse: any
-    try {
-      const response = await this.client.post(this.endpoint('/api/outbound/place-order'), form, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-      })
-      placeResponse = response.data
-    } catch (error: any) {
-      throw new HttpError(
-        Number(error?.response?.status || 502),
-        extractBigshipError(error?.response?.data) || error?.message || 'Bigship place order failed',
-      )
-    }
-
-    const awb = normalizeText(placeResponse?.data?.awb_assigned || placeResponse?.data?.awb)
-    const reference = normalizeText(placeResponse?.data?.reference_number || customGlobalOrderId)
-    if (placeResponse?.status === false || !awb) {
-      throw new HttpError(502, extractBigshipError(placeResponse) || 'Bigship did not return an AWB')
+    if (!draft || !customGlobalOrderId || !awb) {
+      throw lastRouteError || new HttpError(502, 'Bigship shipment booking failed')
     }
 
     let label: string | undefined
