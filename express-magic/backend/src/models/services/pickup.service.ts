@@ -375,6 +375,38 @@ const verifyDelhiveryB2BCancellation = async (svc: DelhiveryB2BService, lrn: str
   return { verified: false, tracking: lastTracking, error: lastError }
 }
 
+const verifyBigshipCancellation = async (svc: BigshipService, reference: string) => {
+  const retryDelaysMs = [0, 3000, 7000, 15000]
+  let lastTracking: any = null
+  let lastError: any = null
+
+  for (const delayMs of retryDelaysMs) {
+    if (delayMs > 0) await delay(delayMs)
+
+    try {
+      lastTracking = await svc.trackShipment(reference)
+      if (
+        isProviderCancellationVerified(lastTracking) ||
+        isAlreadyCancelledOrMissingProviderShipment(lastTracking)
+      ) {
+        return { verified: true, tracking: lastTracking }
+      }
+    } catch (error: any) {
+      lastError = error
+      const payload = {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.statusCode || error?.response?.status,
+      }
+      if (isAlreadyCancelledOrMissingProviderShipment(payload)) {
+        return { verified: true, tracking: null, error }
+      }
+    }
+  }
+
+  return { verified: false, tracking: lastTracking, error: lastError }
+}
+
 const cancelB2BOrderShipment = async (order: any) => {
   const integration = resolveCancellationProvider(order)
   const currentStatus = String(order.order_status || '').trim().toLowerCase()
@@ -442,6 +474,71 @@ const cancelB2BOrderShipment = async (order: any) => {
       throw new Error(getCancellationErrorMessage(cancellationResult))
     }
 
+    const verification = await verifyBigshipCancellation(svc, bigshipReference)
+    if (!verification.verified) {
+      const requestedAt = new Date()
+      const pendingResult = {
+        success: true,
+        pending_provider_confirmation: true,
+        provider: 'bigship',
+        provider_reference: bigshipReference,
+        message:
+          'Bigship cancellation requested; provider tracking has not confirmed cancellation yet.',
+        provider_response: cancellationResult,
+        last_tracking: verification.tracking || null,
+        last_error: verification.error?.message || null,
+      }
+
+      await db
+        .update(b2b_orders)
+        .set({
+          order_status: 'cancellation_requested',
+          provider_last_status: 'cancellation_requested',
+          delivery_message: pendingResult.message,
+          provider_meta: {
+            ...providerMeta,
+            cancellation: {
+              provider: 'bigship',
+              requested_at: requestedAt.toISOString(),
+              provider_reference: bigshipReference,
+              awb_number: order.awb_number || null,
+              pending_provider_confirmation: true,
+              result: cancellationResult,
+              last_tracking: verification.tracking || null,
+              last_error: verification.error?.message || null,
+            },
+          },
+          updated_at: requestedAt,
+        } as any)
+        .where(eq(b2b_orders.id, order.id))
+
+      await logTrackingEvent({
+        orderId: order.id,
+        userId: order.user_id,
+        awbNumber: order.awb_number || bigshipReference || null,
+        courier: order.courier_partner || 'Bigship B2B',
+        statusCode: 'cancellation_requested',
+        statusText: 'Bigship B2B cancellation requested',
+        raw: pendingResult,
+      }).catch((err) => {
+        console.warn('Failed to log Bigship B2B cancellation-requested event:', err)
+      })
+
+      await sendWebhookEvent(order.user_id, 'tracking.updated', {
+        awb_number: order.awb_number || null,
+        provider_reference: bigshipReference,
+        order_id: order.id,
+        order_number: order.order_number,
+        status: 'cancellation_requested',
+        raw_status: 'cancellation_requested',
+        courier_partner: order.courier_partner,
+      }).catch((err) => {
+        console.warn('Failed to send Bigship B2B cancellation-requested webhook:', err)
+      })
+
+      return pendingResult
+    }
+
     const finalStatus = 'cancelled'
     const cancelledAt = new Date()
 
@@ -456,9 +553,11 @@ const cancelB2BOrderShipment = async (order: any) => {
           cancellation: {
             provider: 'bigship',
             requested_at: cancelledAt.toISOString(),
+            provider_verified_at: cancelledAt.toISOString(),
             provider_reference: bigshipReference,
             awb_number: order.awb_number || null,
             result: cancellationResult,
+            verified_tracking: verification.tracking || null,
           },
         },
         updated_at: cancelledAt,
@@ -887,6 +986,81 @@ export async function cancelOrderShipment(orderId: string) {
     throw new Error(errorMsg)
   }
 
+  let bigshipCancellationVerification: any = null
+  let bigshipCancellationReference = ''
+  if (integration === 'bigship') {
+    const svc = new BigshipService()
+    bigshipCancellationReference = getBigshipCancellationReference(order)
+    bigshipCancellationVerification = await verifyBigshipCancellation(svc, bigshipCancellationReference)
+
+    if (!bigshipCancellationVerification.verified) {
+      const requestedAt = new Date()
+      const pendingResult = {
+        success: true,
+        pending_provider_confirmation: true,
+        provider: 'bigship',
+        provider_reference: bigshipCancellationReference,
+        message:
+          'Bigship cancellation requested; provider tracking has not confirmed cancellation yet.',
+        provider_response: cancellationResult,
+        last_tracking: bigshipCancellationVerification.tracking || null,
+        last_error: bigshipCancellationVerification.error?.message || null,
+      }
+
+      await db
+        .update(b2c_orders)
+        .set({
+          order_status: 'cancellation_requested',
+          pickup_status: 'cancellation_requested',
+          provider_last_status: 'cancellation_requested',
+          delivery_message: pendingResult.message,
+          provider_meta: {
+            ...providerMeta,
+            cancellation: {
+              provider: integration,
+              requested_at: requestedAt.toISOString(),
+              provider_reference: bigshipCancellationReference || null,
+              awb_number: awbNumber || null,
+              pending_provider_confirmation: true,
+              result: cancellationResult,
+              last_tracking: bigshipCancellationVerification.tracking || null,
+              last_error: bigshipCancellationVerification.error?.message || null,
+            },
+          },
+          updated_at: requestedAt,
+        })
+        .where(eq(b2c_orders.id, orderId))
+
+      await syncSalesChannelStatusForOrder(orderId, 'bigship cancellation request')
+
+      await logTrackingEvent({
+        orderId: order.id,
+        userId: order.user_id,
+        awbNumber: awbNumber || bigshipCancellationReference || null,
+        courier: order.courier_partner || integration,
+        statusCode: 'cancellation_requested',
+        statusText: 'Bigship cancellation requested',
+        raw: pendingResult,
+      }).catch((err) => {
+        console.warn('Failed to log Bigship cancellation-requested event:', err)
+      })
+
+      await sendWebhookEvent(order.user_id, 'tracking.updated', {
+        awb_number: awbNumber || order.awb_number,
+        provider_reference: bigshipCancellationReference || null,
+        order_id: order.id,
+        order_number: order.order_number,
+        status: 'cancellation_requested',
+        raw_status: 'cancellation_requested',
+        courier_partner: order.courier_partner,
+      }).catch((err) => {
+        console.warn('Failed to send Bigship cancellation-requested webhook:', err)
+      })
+
+      return pendingResult
+    }
+  }
+
   const finalStatus = 'cancelled'
   console.log(`Updating order status to ${finalStatus}:`, { orderId, integration })
   const cancelledAt = new Date()
@@ -903,6 +1077,13 @@ export async function cancelOrderShipment(orderId: string) {
         cancellation: {
           provider: integration,
           requested_at: cancelledAt.toISOString(),
+          ...(integration === 'bigship'
+            ? {
+                provider_verified_at: cancelledAt.toISOString(),
+                provider_reference: bigshipCancellationReference || null,
+                verified_tracking: bigshipCancellationVerification?.tracking || null,
+              }
+            : {}),
           awb_number: awbNumber || null,
           result: cancellationResult,
         },
