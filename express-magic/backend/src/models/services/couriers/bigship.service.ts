@@ -88,8 +88,15 @@ const inferBigshipLocationFromPincode = (pincode: string) => {
 
   if (/^110\d{3}$/.test(pin)) {
     return {
-      city: 'NEW DELHI',
+      city: 'DELHI',
       state: 'DELHI',
+    }
+  }
+
+  if (/^122\d{3}$/.test(pin)) {
+    return {
+      city: 'GURGAON',
+      state: 'HARYANA',
     }
   }
 
