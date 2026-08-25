@@ -397,18 +397,22 @@ const AllOrders = () => {
     setSelectionResetToken((current) => current + 1)
   }, [location.pathname, location.search, location.hash])
 
+  const urlStatusFilter = searchParams.get('status') || undefined
+
   useEffect(() => {
-    const status = searchParams.get('status') || undefined
-    if (status && filters.status !== status) {
-      setFilters((prev) => ({
+    setFilters((prev) => {
+      const currentStatus = Array.isArray(prev.status) ? prev.status[0] || undefined : prev.status
+      if (currentStatus === urlStatusFilter || (!currentStatus && !urlStatusFilter)) return prev
+      return {
         ...prev,
-        status,
-      }))
-      setPage(1)
-      clearSelection()
-      setBulkFeedback(null)
-    }
-  }, [searchParams, filters.status])
+        status: urlStatusFilter,
+      }
+    })
+    setPage(1)
+    setSelectedOrderIds([])
+    setSelectionResetToken((current) => current + 1)
+    setBulkFeedback(null)
+  }, [urlStatusFilter])
 
   const allOrdersQuery = useAllOrders(
     {
