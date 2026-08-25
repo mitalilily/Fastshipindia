@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
+import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { HttpError } from '../../../utils/classes'
 import {
   BigshipConfig,
@@ -115,6 +116,55 @@ const firstOrderItem = (params: ShipmentParams) =>
   Array.isArray(params.order_items) && params.order_items.length
     ? params.order_items[0]
     : null
+
+const pdfText = (value: unknown, fallback = '') =>
+  normalizeText(value, fallback)
+    .replace(/[^\x20-\x7E]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const buildBigshipInvoicePdf = async (params: ShipmentParams) => {
+  const pdf = await PDFDocument.create()
+  const page = pdf.addPage([595, 842])
+  const font = await pdf.embedFont(StandardFonts.Helvetica)
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+  const item = firstOrderItem(params)
+  const orderAmount = Math.max(0, toNumber(params.order_amount ?? item?.price))
+  const invoiceNumber =
+    pdfText(params.invoice_number) || pdfText(params.order_number) || `BIGSHIP-${Date.now()}`
+  const rows = [
+    ['Invoice No', invoiceNumber],
+    ['Invoice Date', pdfText(params.invoice_date || params.order_date || new Date().toISOString().slice(0, 10))],
+    ['Order No', pdfText(params.order_number)],
+    ['Payment Mode', params.payment_type === 'cod' ? 'COD' : 'Prepaid'],
+    ['Seller', pdfText(params.pickup?.name || params.pickup?.warehouse_name, 'Seller')],
+    ['Pickup', pdfText(`${params.pickup?.address || ''} ${params.pickup?.city || ''} ${params.pickup?.state || ''} ${params.pickup?.pincode || ''}`)],
+    ['Buyer', pdfText(params.consignee?.name || params.consignee?.company_name, 'Customer')],
+    ['Ship To', pdfText(`${params.consignee?.address || ''} ${params.consignee?.city || ''} ${params.consignee?.state || ''} ${params.consignee?.pincode || ''}`)],
+    ['Product', pdfText(item?.name || (params as any).category_of_goods || 'Goods')],
+    ['Quantity', pdfText(item?.qty ?? item?.quantity ?? '1')],
+    ['Invoice Amount', `INR ${orderAmount.toFixed(2)}`],
+  ]
+
+  page.drawText('Tax Invoice', { x: 50, y: 785, size: 20, font: bold })
+  page.drawText('Generated for Bigship B2B shipment booking', { x: 50, y: 760, size: 10, font })
+
+  let y = 720
+  for (const [label, value] of rows) {
+    page.drawText(label, { x: 50, y, size: 10, font: bold })
+    page.drawText(value.slice(0, 82), { x: 180, y, size: 10, font })
+    y -= 24
+  }
+
+  page.drawText('This invoice was generated from the order details supplied for shipment booking.', {
+    x: 50,
+    y: 80,
+    size: 9,
+    font,
+  })
+
+  return Buffer.from(await pdf.save())
+}
 
 const normalizeBoxes = (params: ShipmentParams) => {
   const sourceBoxes = Array.isArray(params.boxes) ? params.boxes : []
@@ -576,11 +626,13 @@ export class BigshipService {
     return rates[0]
   }
 
-  private buildPlaceOrderForm(
+  private async buildPlaceOrderForm(
     params: ShipmentParams,
     customGlobalOrderId: string,
     selectedCourierId: string,
+    segmentType: 'domestic_b2b' | 'domestic_b2c',
   ) {
+    const isB2B = segmentType === 'domestic_b2b'
     const placePayload: Record<string, string> = {
       MasterCustomOrderId: customGlobalOrderId,
       courierId: selectedCourierId,
@@ -590,12 +642,20 @@ export class BigshipService {
     const ewaybillNo = normalizeText(
       params.ewaybill_number || params.ewbn_number || params.ewbn || params.ewb,
     )
-    if (ewaybillNo) placePayload.EwaybillNo = ewaybillNo
-    const invoiceType = normalizeText((params as any).bigship_invoice_type)
+    if (isB2B || ewaybillNo) placePayload.EwaybillNo = ewaybillNo
+    const invoiceType = normalizeText((params as any).bigship_invoice_type, isB2B ? 'uploaded' : '')
     if (invoiceType) placePayload.invoiceType = invoiceType
 
     const form = new FormData()
     for (const [key, value] of Object.entries(placePayload)) form.append(key, value)
+    if (isB2B) {
+      const invoiceBuffer = await buildBigshipInvoicePdf(params)
+      form.append(
+        'InvoiceData',
+        new Blob([invoiceBuffer], { type: 'application/pdf' }),
+        `invoice-${normalizeText(params.order_number, customGlobalOrderId)}.pdf`,
+      )
+    }
     return form
   }
 
@@ -654,7 +714,12 @@ export class BigshipService {
       throw new HttpError(502, 'Bigship did not return a courier rate for this order')
     }
 
-    const form = this.buildPlaceOrderForm(params, customGlobalOrderId, selectedCourierId)
+    const form = await this.buildPlaceOrderForm(
+      params,
+      customGlobalOrderId,
+      selectedCourierId,
+      segmentType,
+    )
 
     const token = await this.ensureToken()
     let placeResponse: any
