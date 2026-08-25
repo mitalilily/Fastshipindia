@@ -10,6 +10,7 @@ import {
 } from './amazonShippingCredentials.service'
 import { DelhiveryB2BService } from './couriers/delhiveryB2B.service'
 import { DelhiveryService } from './couriers/delhivery.service'
+import { BigshipService } from './couriers/bigship.service'
 import { EkartService } from './couriers/ekart.service'
 import { ShadowfaxService } from './couriers/shadowfax.service'
 import { XpressbeesService } from './couriers/xpressbees.service'
@@ -22,6 +23,7 @@ const SUPPORTED_CANCELLATION_PROVIDERS = new Set([
   'xpressbees',
   'shadowfax',
   'amazon',
+  'bigship',
 ])
 
 const TERMINAL_NON_CANCELLABLE_STATUSES = new Set(['delivered', 'rto_delivered'])
@@ -217,9 +219,17 @@ const cancelAmazonShipmentWithRetry = async ({
 }
 
 const resolveCancellationProvider = (order: any) => {
-  const providerText = `${order?.integration_type || ''} ${order?.courier_partner || ''}`
-    .trim()
-    .toLowerCase()
+  const integrationType = String(order?.integration_type || '').trim().toLowerCase()
+  if (integrationType.includes('bigship')) return 'bigship'
+  if (integrationType.includes('delhivery')) return 'delhivery'
+  if (integrationType.includes('ekart')) return 'ekart'
+  if (integrationType.includes('xpressbees') || integrationType.includes('xpress bees')) {
+    return 'xpressbees'
+  }
+  if (integrationType.includes('shadowfax')) return 'shadowfax'
+  if (integrationType.includes('amazon')) return 'amazon'
+
+  const providerText = `${integrationType} ${order?.courier_partner || ''}`.trim().toLowerCase()
   if (providerText.includes('delhivery')) return 'delhivery'
   if (providerText.includes('ekart')) return 'ekart'
   if (providerText.includes('xpressbees') || providerText.includes('xpress bees')) {
@@ -242,8 +252,28 @@ const getB2BCancellationReference = (order: any) =>
       order?.provider_request_id ||
       order?.awb_number ||
       order?.order_id ||
+    '',
+  ).trim()
+
+const getBigshipCancellationReference = (order: any) => {
+  const providerMeta =
+    order?.provider_meta && typeof order.provider_meta === 'object' && !Array.isArray(order.provider_meta)
+      ? order.provider_meta
+      : {}
+
+  return String(
+    order?.provider_reference ||
+      order?.order_id ||
+      providerMeta?.provider_reference ||
+      providerMeta?.order_id ||
+      providerMeta?.bigship?.draft?.data?.CustomGlobalOrderId ||
+      providerMeta?.bigship?.place?.data?.reference_number ||
+      order?.provider_request_id ||
+      order?.shipment_id ||
+      order?.awb_number ||
       '',
   ).trim()
+}
 
 const isProviderCancellationVerified = (value: unknown) => {
   const text = cancellationResponseText(value)
@@ -324,8 +354,94 @@ const cancelB2BOrderShipment = async (order: any) => {
     throw new Error(`Order is already ${currentStatus} and cannot be cancelled`)
   }
 
+  if (integration === 'bigship') {
+    const bigshipReference = getBigshipCancellationReference(order)
+    if (!bigshipReference) {
+      throw new Error('Bigship cancellation requires provider order reference')
+    }
+
+    const svc = new BigshipService()
+    const cancellationResult = await svc.cancelShipment(bigshipReference)
+    const isSuccess = isCancellationAccepted(cancellationResult)
+
+    console.log('Bigship B2B cancellation response validation:', {
+      orderId: order.id,
+      bigshipReference,
+      isSuccess,
+      response: cancellationResult,
+    })
+
+    if (!isSuccess) {
+      throw new Error(getCancellationErrorMessage(cancellationResult))
+    }
+
+    const finalStatus = 'cancelled'
+    const cancelledAt = new Date()
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(b2b_orders)
+        .set({
+          order_status: finalStatus,
+          provider_last_status: finalStatus,
+          delivery_message: getCancellationDeliveryMessage(cancellationResult),
+          provider_meta: {
+            ...providerMeta,
+            cancellation: {
+              provider: 'bigship',
+              requested_at: cancelledAt.toISOString(),
+              provider_reference: bigshipReference,
+              awb_number: order.awb_number || null,
+              result: cancellationResult,
+            },
+          },
+          updated_at: cancelledAt,
+        } as any)
+        .where(eq(b2b_orders.id, order.id))
+
+      await applyCancellationRefundOnce(tx, order, 'pickup_cancel_api_bigship_b2b')
+    })
+
+    await logTrackingEvent({
+      orderId: order.id,
+      userId: order.user_id,
+      awbNumber: order.awb_number || bigshipReference || null,
+      courier: order.courier_partner || 'Bigship B2B',
+      statusCode: finalStatus,
+      statusText: 'Bigship B2B shipment cancelled',
+      raw: cancellationResult,
+    }).catch((err) => {
+      console.warn('Failed to log Bigship B2B cancellation tracking event:', err)
+    })
+
+    await sendWebhookEvent(order.user_id, 'tracking.updated', {
+      awb_number: order.awb_number || null,
+      provider_reference: bigshipReference,
+      order_id: order.id,
+      order_number: order.order_number,
+      status: finalStatus,
+      raw_status: finalStatus,
+      courier_partner: order.courier_partner,
+    }).catch((err) => {
+      console.warn('Failed to send Bigship B2B cancellation tracking webhook:', err)
+    })
+
+    await sendWebhookEvent(order.user_id, 'order.cancelled', {
+      awb_number: order.awb_number || null,
+      provider_reference: bigshipReference,
+      order_id: order.id,
+      order_number: order.order_number,
+      status: finalStatus,
+      courier_partner: order.courier_partner,
+    }).catch((err) => {
+      console.warn('Failed to send Bigship B2B order cancellation webhook:', err)
+    })
+
+    return cancellationResult
+  }
+
   if (integration !== 'delhivery') {
-    throw new Error('Only Delhivery B2B is supported for B2B cancellation')
+    throw new Error('Only Delhivery and Bigship B2B are supported for B2B cancellation')
   }
 
   if (!lrn) {
@@ -556,7 +672,7 @@ export async function cancelOrderShipment(orderId: string) {
     throw new Error('Delhivery cancellation requires an AWB number')
   }
 
-  if (integration !== 'amazon' && !awbNumber) {
+  if (integration !== 'amazon' && integration !== 'bigship' && !awbNumber) {
     cancellationResult = {
       success: true,
       localOnly: true,
@@ -661,6 +777,14 @@ export async function cancelOrderShipment(orderId: string) {
       order,
       credentials: amazonCredentials,
     })
+  } else if (integration === 'bigship') {
+    const bigshipReference = getBigshipCancellationReference(order)
+    if (!bigshipReference) {
+      throw new Error('Bigship cancellation requires provider order reference')
+    }
+
+    const svc = new BigshipService()
+    cancellationResult = await svc.cancelShipment(bigshipReference)
   } else {
     const svc = new XpressbeesService()
     cancellationResult = await svc.cancelShipment(awbNumber)
