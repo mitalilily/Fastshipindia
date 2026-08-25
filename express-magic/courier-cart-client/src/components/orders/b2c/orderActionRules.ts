@@ -19,7 +19,7 @@ const B2C_CANCELLABLE_STATUSES = new Set([
   'pickup_initiated',
   'manifest_generated',
 ])
-const B2C_CANCELLABLE_PROVIDERS = new Set(['delhivery', 'deliveryone'])
+const B2C_CANCELLABLE_PROVIDERS = new Set(['delhivery', 'deliveryone', 'bigship'])
 const B2C_MANIFESTABLE_STATUSES = new Set([
   'pending',
   'booked',

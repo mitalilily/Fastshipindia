@@ -132,7 +132,7 @@ const isB2BProviderCancellationVerified = (order: Order) => {
   )
 }
 
-const isB2BDelhiveryCancelEligible = (order: Order) => {
+const isB2BCourierCancelEligible = (order: Order) => {
   if (String(order.type || order.source_type || '').toLowerCase() !== 'b2b') return false
 
   const status = String(order.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
@@ -145,8 +145,9 @@ const isB2BDelhiveryCancelEligible = (order: Order) => {
     .toLowerCase()
     .trim()
   const isDelhivery = providerText.includes('delhivery') || providerText.split(/\s+/).includes('99')
+  const isBigship = providerText.includes('bigship')
 
-  return isDelhivery && Boolean(getTrackingReference(order))
+  return (isDelhivery || isBigship) && Boolean(getTrackingReference(order))
 }
 
 const actionMenuItemSx = {
@@ -1579,7 +1580,7 @@ const AllOrders = () => {
                 disabled:
                   !(
                     (row.type === 'b2c' && isB2CCancelEligible(row)) ||
-                    isB2BDelhiveryCancelEligible(row)
+                    isB2BCourierCancelEligible(row)
                   ) || cancellingShipment,
                 loading: cancellingShipment,
                 danger: true,
