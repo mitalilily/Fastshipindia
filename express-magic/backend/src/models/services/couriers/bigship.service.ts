@@ -88,7 +88,7 @@ const inferBigshipLocationFromPincode = (pincode: string) => {
 
   if (/^110\d{3}$/.test(pin)) {
     return {
-      city: 'DELHI',
+      city: 'NEW DELHI',
       state: 'DELHI',
     }
   }
@@ -344,6 +344,21 @@ export class BigshipService {
     ])
   }
 
+  private buildShippingCityCandidates(params: ShipmentParams) {
+    const inferredLocation = inferBigshipLocationFromPincode(
+      normalizeText(params.consignee?.pincode),
+    )
+    const formCity = normalizeBigshipLocation(params.consignee?.city)
+    const inferredCity = normalizeBigshipLocation(inferredLocation?.city)
+
+    return uniqueTexts([
+      inferredCity,
+      ...(BIGSHIP_CITY_ALIASES[inferredCity] || []),
+      formCity,
+      ...(BIGSHIP_CITY_ALIASES[formCity] || []),
+    ])
+  }
+
   private async resolveWarehouseId(params: ShipmentParams) {
     const explicitWarehouseId = normalizeText(
       (params as any).bigship_warehouse_id || (params as any).bigshipWarehouseId,
@@ -468,6 +483,18 @@ export class BigshipService {
       normalizeText(item?.name) ||
       normalizeText(params.courier_partner) ||
       'Goods'
+    const shippingPincode = normalizeText(params.consignee?.pincode)
+    const inferredShippingLocation = inferBigshipLocationFromPincode(shippingPincode)
+    const shippingState = normalizeBigshipLocation(
+      (params as any).bigship_shipping_state ||
+        inferredShippingLocation?.state ||
+        params.consignee?.state,
+    )
+    const shippingCity = normalizeBigshipLocation(
+      (params as any).bigship_shipping_city ||
+        inferredShippingLocation?.city ||
+        params.consignee?.city,
+    )
 
     const payload: Record<string, any> = {
       segment_type: segmentType,
@@ -490,10 +517,10 @@ export class BigshipService {
         (params as any).delivery_landmark || params.consignee?.city || 'N/A',
         'N/A',
       ),
-      MasterOrderShippingZipCode: normalizeText(params.consignee?.pincode),
+      MasterOrderShippingZipCode: shippingPincode,
       MasterOrderShippingCountry: normalizeText(params.consignee?.country, 'India') || 'India',
-      MasterOrderShippingState: normalizeText(params.consignee?.state),
-      MasterOrderShippingCity: normalizeText(params.consignee?.city),
+      MasterOrderShippingState: shippingState,
+      MasterOrderShippingCity: shippingCity,
       totalNumOfBoxes: segmentType === 'domestic_b2c' ? 1 : totalNumOfBoxes,
       boxes:
         segmentType === 'domestic_b2c'
@@ -562,14 +589,42 @@ export class BigshipService {
     segmentType: 'domestic_b2b' | 'domestic_b2c',
   ) {
     const bigshipWarehouseId = await this.resolveWarehouseId(params)
-    const draftPayload = this.buildCreateOrderPayload(
-      { ...params, bigship_warehouse_id: bigshipWarehouseId } as ShipmentParams,
-      segmentType,
-    )
-    const draft = await this.request('post', '/api/outbound/create-order', draftPayload)
-    const customGlobalOrderId = normalizeText(draft?.data?.CustomGlobalOrderId)
-    if (draft?.status === false || !customGlobalOrderId) {
-      throw new HttpError(502, extractBigshipError(draft) || 'Bigship draft order creation failed')
+    const paramsWithWarehouse = {
+      ...params,
+      bigship_warehouse_id: bigshipWarehouseId,
+    } as ShipmentParams
+    const shippingCityCandidates = this.buildShippingCityCandidates(paramsWithWarehouse)
+    let draft: any = null
+    let customGlobalOrderId = ''
+    let lastDraftError: any = null
+
+    for (const shippingCity of shippingCityCandidates.length ? shippingCityCandidates : ['']) {
+      const draftPayload = this.buildCreateOrderPayload(
+        { ...paramsWithWarehouse, bigship_shipping_city: shippingCity } as ShipmentParams,
+        segmentType,
+      )
+
+      try {
+        const candidateDraft = await this.request('post', '/api/outbound/create-order', draftPayload)
+        const candidateOrderId = normalizeText(candidateDraft?.data?.CustomGlobalOrderId)
+        if (candidateDraft?.status !== false && candidateOrderId) {
+          draft = candidateDraft
+          customGlobalOrderId = candidateOrderId
+          break
+        }
+
+        const message = extractBigshipError(candidateDraft) || 'Bigship draft order creation failed'
+        lastDraftError = new HttpError(Number(candidateDraft?.status_code || 502), message)
+        if (!message.toLowerCase().includes('shipping city')) throw lastDraftError
+      } catch (error: any) {
+        lastDraftError = error
+        const message = String(error?.message || '').toLowerCase()
+        if (!message.includes('shipping city')) throw error
+      }
+    }
+
+    if (!draft || !customGlobalOrderId) {
+      throw lastDraftError || new HttpError(502, 'Bigship draft order creation failed')
     }
 
     const rateResponse = await this.request('post', '/api/outbound/courier-wise-shipment-cost', {
