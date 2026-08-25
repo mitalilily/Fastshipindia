@@ -73,6 +73,12 @@ const getResponseData = (response: any) => response?.data ?? response
 
 const pickFirst = (...values: unknown[]) => values.map((value) => normalizeText(value)).find(Boolean) || ''
 
+const buildShipmozoOrderId = (...values: unknown[]) => {
+  const digits = values.map((value) => normalizeText(value)).join('').replace(/\D/g, '')
+  const seed = digits.length >= 6 ? digits : `${digits}${Date.now()}`
+  return seed.slice(-18)
+}
+
 export class ShipmozoService {
   private apiBase = 'https://shipping-api.com/app/api/v1'
   private username = ''
@@ -360,7 +366,8 @@ export class ShipmozoService {
 
   async createShipment(params: ShipmentParams) {
     const warehouseId = await this.resolveWarehouseId(params)
-    const orderId = normalizeText(params.order_number)
+    const fastshipOrderNumber = normalizeText(params.order_number)
+    const orderId = buildShipmozoOrderId(params.order_number, (params as any).order_id)
     const paymentType = params.payment_type === 'cod' ? 'COD' : 'PREPAID'
     const codAmount = paymentType === 'COD' ? String(Math.max(0, toNumber(params.order_amount, 0))) : ''
     const orderDate =
@@ -458,6 +465,7 @@ export class ShipmozoService {
       status: true,
       order_id: orderId,
       shipment_id: orderId,
+      fastship_order_number: fastshipOrderNumber,
       awb_number: awb,
       courier_name: pickFirst(selectedRate?.name, assignData?.courier, 'Shipmozo'),
       courier_id: Number(selectedRate.id),
@@ -467,6 +475,8 @@ export class ShipmozoService {
       provider_service: pickFirst(selectedRate?.name, assignData?.courier),
       provider_mode: 'surface',
       shipmozo: {
+        fastship_order_number: fastshipOrderNumber,
+        shipmozo_order_id: orderId,
         push,
         rates,
         selected_rate: selectedRate,
