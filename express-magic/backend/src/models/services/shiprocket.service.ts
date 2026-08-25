@@ -8441,7 +8441,7 @@ export const createB2CShipmentService = async (
           shipmozoAwb ??
           undefined,
         awb_number: shipmozoAwb,
-        courier_name: shipmentData?.courier_name ?? 'Shipmozo',
+        courier_name: params.courier_partner || 'Shipmozo',
         courier_id: params.courier_id ? Number(params.courier_id) : null,
         label: undefined,
         manifest: undefined,
@@ -11299,7 +11299,7 @@ export const createB2BShipmentService = async (
           order_id: String(shipmentData?.order_id || '').trim() || null,
           shipment_id: String(shipmentData?.shipment_id || providerReference).trim(),
           awb_number: String(shipmozoAwb),
-          courier_partner: shipmentData?.courier_name || params.courier_partner || 'Shipmozo B2B',
+          courier_partner: params.courier_partner || 'Shipmozo B2B',
           courier_id: courierId ?? null,
           label: typeof shipmentData?.label === 'string' ? shipmentData.label : null,
           courier_cost: shipmentData?.courier_cost ?? params?.courier_cost ?? null,
@@ -11326,7 +11326,7 @@ export const createB2BShipmentService = async (
         order_number: normalizedOrderNumber,
         awb_number: shipmozoAwb,
         status: 'pickup_initiated',
-        courier_partner: shipmentData?.courier_name || 'Shipmozo B2B',
+        courier_partner: params.courier_partner || 'Shipmozo B2B',
         courier_id: courierId ?? null,
         shipment_id: providerReference,
         integration_type: 'shipmozo',
@@ -16593,10 +16593,7 @@ const mapShipmozoTracking = (raw: any, order: OrderSummary): ProviderNormalizedT
   return {
     history,
     status,
-    courier_name: sanitizeString(
-      tracking?.courierName || tracking?.courier_name || payload?.courierName || payload?.courier_name,
-      'Shipmozo',
-    ),
+    courier_name: order.source_type === 'b2b' ? 'Shipmozo B2B' : 'Shipmozo',
     edd:
       sanitizeString(
         tracking?.edd ||
@@ -17580,7 +17577,11 @@ export const trackByAwbService = async (awb: string): Promise<TrackingServiceRes
   }
 
   const providerDisplayName =
-    providerMetaCourierName || getCourierProviderDisplayName(providerKey) || order.courier_partner
+    providerKey === 'shipmozo'
+      ? order.source_type === 'b2b'
+        ? 'Shipmozo B2B'
+        : 'Shipmozo'
+      : providerMetaCourierName || getCourierProviderDisplayName(providerKey) || order.courier_partner
   const shouldRepairProviderFields =
     order.source_type === 'b2c' &&
     (normalizeCourierProviderKey(order.integration_type) !== providerKey ||

@@ -344,7 +344,19 @@ const TrackingDetails = ({ order }: { order: OrderDetailsDialogProps['order'] })
   const lrn = String(order?.provider_reference || order?.shipment_id || '').trim()
   const shipmentId = String(order?.shipment_id || order?.provider_reference || '').trim()
   const isB2B = isB2BOrder(order)
+  const integrationType = String(order?.integration_type || '').trim().toLowerCase()
+  const providerDisplayName =
+    integrationType === 'shipmozo'
+      ? isB2B
+        ? 'Shipmozo B2B'
+        : 'Shipmozo'
+      : integrationType === 'bigship'
+        ? isB2B
+          ? 'Bigship B2B'
+          : 'Bigship'
+        : undefined
   const courierName = getCourierDisplayName({
+    displayName: providerDisplayName,
     name: order?.courier_partner,
     courier_id: order?.courier_id,
     integration_type: order?.integration_type,

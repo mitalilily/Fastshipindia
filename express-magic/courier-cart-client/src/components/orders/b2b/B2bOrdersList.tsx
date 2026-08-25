@@ -532,6 +532,16 @@ const B2BOrdersList = ({
       minWidth: 140,
       render: (value, row) =>
         getCourierDisplayName({
+          displayName:
+            String((row as B2BOrder & { integration_type?: string }).integration_type || '')
+              .trim()
+              .toLowerCase() === 'shipmozo'
+              ? 'Shipmozo B2B'
+              : String((row as B2BOrder & { integration_type?: string }).integration_type || '')
+                    .trim()
+                    .toLowerCase() === 'bigship'
+                ? 'Bigship B2B'
+                : undefined,
           name: value,
           courier_id: row.courier_id,
           integration_type: (row as B2BOrder & { integration_type?: string }).integration_type,
