@@ -8,14 +8,20 @@ import {
   PackageSearch, Phone, Plane, Route, Scale, Search, ShieldCheck, Sparkles,
   Truck, Warehouse, X, Zap,
 } from 'lucide-react'
-import { Link, NavLink, Route as RouterRoute, Routes, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { brandIdentity } from '../../theme/brand'
 import './FastShipLanding.css'
 
 const navItems = [
-  ['Tracking', '/tracking'],
-  ['Rate calculator', '/rate-calculator'],
-  ['Weight calculator', '/weight-calculator'],
+  ['Platform', '/integrations'],
+  ['Sales', '/integrations/sales-channels'],
+  ['Couriers', '/integrations/courier-partners'],
+  ['Blogs', '/blogs'],
+  ['About', '/about'],
+  ['Tracking', '/tracking', Search],
+  ['Rates', '/rate-calculator'],
+  ['Weight', '/weight-calculator'],
+  ['Contact', '/contact'],
 ]
 
 const loginPath = '/login'
@@ -58,8 +64,17 @@ function Header() {
     <div className="nav-shell">
       <Link to="/" className="brand" onClick={() => setOpen(false)}><Logo /></Link>
       <nav className={`main-nav ${open ? 'is-open' : ''}`}>
-        {navItems.map(([label, to]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}>{label}</NavLink>)}
-        <NavLink className="nav-track" to="/tracking" onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</NavLink>
+        {navItems.map(([label, to, Icon]) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) => `${Icon ? 'nav-track ' : ''}${isActive ? 'active' : ''}`.trim() || undefined}
+            onClick={() => setOpen(false)}
+          >
+            {Icon ? <Icon size={16} /> : null}
+            {label}
+          </NavLink>
+        ))}
         <Link className="nav-login-mobile" to={loginPath} state={loginEntryState} onClick={() => setOpen(false)}>Log in</Link>
       </nav>
       <div className="nav-actions"><Link className="text-link login-link" to={loginPath} state={loginEntryState}>Log in</Link><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>
@@ -299,4 +314,30 @@ function FinalCta() { return <section className="final-cta"><div className="shel
 
 function Footer() { return <footer><div className="shell footer-grid"><div><Logo /><p>Shipping infrastructure with a little more clarity, care and momentum.</p><div className="socials"><a href="#" aria-label="LinkedIn"><Linkedin /></a><a href="#" aria-label="Instagram"><Instagram /></a></div></div><div><h4>Explore</h4><Link to="/integrations">Platform</Link><Link to="/integrations/courier-partners">Courier network</Link><Link to="/blogs">Journal</Link></div><div><h4>Tools</h4><Link to="/rate-calculator">Rate calculator</Link><Link to="/weight-calculator">Weight calculator</Link><Link to="/tracking">Track a parcel</Link></div><div><h4>Say hello</h4><a href="mailto:hello@fastshipindia.com">hello@fastshipindia.com</a><a href="tel:+918487881121">+91 84878 81121</a><Link to="/contact">Contact page <ArrowRight size={14} /></Link></div></div><div className="shell footer-bottom"><span>{'\u00a9'} 2026 Fastship India</span><span>Privacy {'\u00b7'} Terms {'\u00b7'} Security</span></div></footer> }
 
-export default function App() { return <><RouteEffects /><Header /><main><Routes><RouterRoute path="/" element={<Home />} /><RouterRoute path="/integrations" element={<StandardPage type="integrations" />} /><RouterRoute path="/integrations/sales-channels" element={<StandardPage type="salesChannels" />} /><RouterRoute path="/integrations/courier-partners" element={<StandardPage type="courierPartners" />} /><RouterRoute path="/blogs" element={<StandardPage type="blogs" />} /><RouterRoute path="/about" element={<StandardPage type="about" />} /><RouterRoute path="/weight-calculator" element={<WeightCalculator />} /><RouterRoute path="/rate-calculator" element={<RateCalculator />} /><RouterRoute path="/tracking" element={<Tracking />} /><RouterRoute path="/contact" element={<Contact />} /><RouterRoute path="*" element={<Home />} /></Routes></main><Footer /></> }
+function LandingContent() {
+  const { pathname } = useLocation()
+  const route = pathname.replace(/\/+$/, '') || '/'
+
+  if (route === '/integrations') return <StandardPage type="integrations" />
+  if (route === '/integrations/sales-channels') return <StandardPage type="salesChannels" />
+  if (route === '/integrations/courier-partners') return <StandardPage type="courierPartners" />
+  if (route === '/blogs') return <StandardPage type="blogs" />
+  if (route === '/about') return <StandardPage type="about" />
+  if (route === '/weight-calculator') return <WeightCalculator />
+  if (route === '/rate-calculator') return <RateCalculator />
+  if (route === '/tracking') return <Tracking />
+  if (route === '/contact') return <Contact />
+
+  return <Home />
+}
+
+export default function App() {
+  return (
+    <>
+      <RouteEffects />
+      <Header />
+      <main><LandingContent /></main>
+      <Footer />
+    </>
+  )
+}
