@@ -18,6 +18,8 @@ type DashboardOrder = {
   order_amount: unknown
   order_type: string
   order_status: string | null
+  pickup_status?: string | null
+  provider_last_status?: string | null
   shipping_charges: unknown
   freight_charges: unknown
   courier_partner: string | null
@@ -25,6 +27,28 @@ type DashboardOrder = {
   state: string
   created_at: Date | null
   updated_at: Date | null
+}
+
+const parseDashboardDateValue = (value: unknown) => {
+  if (value instanceof Date) return value
+  if (typeof value === 'number') return new Date(value)
+
+  const raw = String(value || '').trim()
+  if (!raw) return new Date(Number.NaN)
+
+  const isoDate = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/)
+  if (isoDate) {
+    const [, year, month, day] = isoDate
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  const dayFirstDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[T\s].*)?$/)
+  if (dayFirstDate) {
+    const [, day, month, year] = dayFirstDate
+    return new Date(Number(year), Number(month) - 1, Number(day))
+  }
+
+  return new Date(raw)
 }
 
 export const getIncomingPickups = async (userId: string) => {
@@ -230,6 +254,8 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
     order_amount: b2c_orders.order_amount,
     order_type: b2c_orders.order_type,
     order_status: b2c_orders.order_status,
+    pickup_status: b2c_orders.pickup_status,
+    provider_last_status: b2c_orders.provider_last_status,
     shipping_charges: b2c_orders.shipping_charges,
     freight_charges: b2c_orders.freight_charges,
     courier_partner: b2c_orders.courier_partner,
@@ -250,6 +276,8 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
       order_amount: b2b_orders.order_amount,
       order_type: b2b_orders.order_type,
       order_status: b2b_orders.order_status,
+      pickup_status: sql<string | null>`NULL`,
+      provider_last_status: b2b_orders.provider_last_status,
       shipping_charges: b2b_orders.shipping_charges,
       freight_charges: b2b_orders.freight_charges,
       courier_partner: b2b_orders.courier_partner,
@@ -299,14 +327,81 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
   const getFirstValidDate = (...values: unknown[]) => {
     for (const value of values) {
       if (!value) continue
-      const parsed = new Date(value as string | number | Date)
+      const parsed = parseDashboardDateValue(value)
       if (!isNaN(parsed.getTime())) return parsed
     }
     return new Date(0)
   }
 
+  const normalizeStatus = (...values: unknown[]) =>
+    values
+      .map((value) =>
+        String(value || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[\s-]+/g, '_'),
+      )
+      .filter(Boolean)
+      .join(' ')
+
+  const statusHas = (order: DashboardOrder, tokens: string[]) => {
+    const status = normalizeStatus(
+      order.order_status,
+      order.pickup_status,
+      order.provider_last_status,
+    )
+    return tokens.some((token) => status.includes(token))
+  }
+
+  const isCancelledOrder = (order: DashboardOrder) =>
+    statusHas(order, ['cancelled', 'canceled', 'cancel_request'])
+
+  const isDeliveredOrder = (order: DashboardOrder) =>
+    statusHas(order, ['delivered']) && !statusHas(order, ['rto_delivered', 'return_delivered'])
+
+  const isRtoOrder = (order: DashboardOrder) =>
+    statusHas(order, ['rto', 'return_to_origin', 'returned_to_origin'])
+
+  const isNdrOrder = (order: DashboardOrder) =>
+    statusHas(order, ['ndr', 'undelivered', 'delivery_attempt_failed', 'attempt_failed', 'door_closed', 'address_issue'])
+
+  const isPendingOrder = (order: DashboardOrder) =>
+    !isCancelledOrder(order) &&
+    !isDeliveredOrder(order) &&
+    !isRtoOrder(order) &&
+    !isNdrOrder(order) &&
+    statusHas(order, [
+      'pending',
+      'booked',
+      'new',
+      'processing',
+      'ready_to_ship',
+      'pickup',
+      'manifest',
+    ])
+
+  const isInTransitOrder = (order: DashboardOrder) =>
+    !isCancelledOrder(order) &&
+    !isDeliveredOrder(order) &&
+    !isRtoOrder(order) &&
+    !isNdrOrder(order) &&
+    statusHas(order, [
+      'in_transit',
+      'shipment_created',
+      'transit',
+      'shipped',
+      'dispatched',
+      'out_for_delivery',
+      'ofd',
+      'reached_hub',
+      'in_scan',
+      'bagged',
+    ])
+
   const getOrderTimestamp = (order: any) =>
     getFirstValidDate(order.order_date, order.created_at, order.updated_at)
+  const getDeliveredTimestamp = (order: any) =>
+    getFirstValidDate((order as any).delivered_at, order.updated_at, order.created_at)
   const isOnOrBeforeSelectedDate = (date: Date) =>
     !isNaN(date.getTime()) && date.getTime() <= now.getTime()
   const isSameLocalDay = (date: Date, target: Date) =>
@@ -325,16 +420,10 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
   const eligibleOrders = allOrders.filter((order) => isOnOrBeforeSelectedDate(getOrderTimestamp(order)))
 
   const todayOrders = eligibleOrders.filter((order) => isSameLocalDay(getOrderTimestamp(order), today))
-  const pendingOrders = todayOrders.filter((order) =>
-    ['pending', 'booked', 'pickup_initiated'].includes(String(order.order_status || '').toLowerCase()),
-  )
-  const inTransitOrders = todayOrders.filter((order) =>
-    ['shipment_created', 'in_transit', 'out_for_delivery'].includes(
-      String(order.order_status || '').toLowerCase(),
-    ),
-  )
-  const deliveredToday = todayOrders.filter(
-    (order) => String(order.order_status || '').toLowerCase() === 'delivered',
+  const pendingOrders = eligibleOrders.filter(isPendingOrder)
+  const inTransitOrders = eligibleOrders.filter(isInTransitOrder)
+  const deliveredToday = eligibleOrders.filter(
+    (order) => isDeliveredOrder(order) && isSameLocalDay(getDeliveredTimestamp(order), today),
   )
 
   const todayRevenue = todayOrders.reduce((sum, order) => sum + getCustomerProfit(order), 0)
@@ -375,23 +464,19 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
     )
 
   const totalOrders = eligibleOrders.length
-  const nonCancelledOrders = eligibleOrders.filter(
-    (order) => String((order as any).order_status || '').toLowerCase() !== 'cancelled',
-  )
+  const nonCancelledOrders = eligibleOrders.filter((order) => !isCancelledOrder(order))
   const deliveredOrders = eligibleOrders.filter((order) => {
-    const deliveredAt = getFirstValidDate(
-      (order as any).delivered_at,
-      (order as any).updated_at,
-      (order as any).created_at,
-    )
-    return (
-      String(order.order_status || '').toLowerCase() === 'delivered' &&
-      isOnOrBeforeSelectedDate(deliveredAt)
-    )
+    const deliveredAt = getDeliveredTimestamp(order)
+    return isDeliveredOrder(order) && isOnOrBeforeSelectedDate(deliveredAt)
   })
   const operationalBaseCount = nonCancelledOrders.length
+  const deliveryOutcomeOrders = eligibleOrders.filter(
+    (order) => isDeliveredOrder(order) || isNdrOrder(order) || isRtoOrder(order),
+  )
   const deliverySuccessRate =
-    operationalBaseCount > 0 ? Math.round((deliveredOrders.length / operationalBaseCount) * 100) : 0
+    deliveryOutcomeOrders.length > 0
+      ? Math.round((deliveredOrders.length / deliveryOutcomeOrders.length) * 100)
+      : 0
 
   const ndrEvents = await db
     .select({ orderId: ndr_events.order_id })
@@ -434,11 +519,11 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
   const courierPerformance = eligibleOrders.reduce((acc, order) => {
     const courier = (order as any).courier_partner || 'Unknown'
     if (!acc[courier]) acc[courier] = { count: 0, delivered: 0, revenue: 0, deliveryRate: 0 }
-    if (String((order as any).order_status || '').toLowerCase() !== 'cancelled') {
+    if (!isCancelledOrder(order)) {
       acc[courier].count += 1
     }
     acc[courier].revenue += getCustomerProfit(order)
-    if (String((order as any).order_status || '').toLowerCase() === 'delivered') {
+    if (isDeliveredOrder(order)) {
       acc[courier].delivered += 1
     }
     return acc

@@ -2,6 +2,7 @@ import {
   alpha,
   Box,
   Button,
+  CircularProgress,
   Container,
   Grid,
   Typography,
@@ -102,6 +103,8 @@ export default function Dashboard() {
   const {
     data: stats,
     refetch,
+    isLoading,
+    error,
     isRefetching,
     isPlaceholderData,
   } = useMerchantDashboardStats(selectedDate)
@@ -174,7 +177,31 @@ export default function Dashboard() {
     URL.revokeObjectURL(url)
   }
 
-  if (!stats) {
+  if (!stats && isLoading) {
+    return (
+      <Box
+        sx={{
+          minHeight: '58vh',
+          display: 'grid',
+          placeItems: 'center',
+          bgcolor: dashboardPalette.page,
+          ...getDashboardCssVars(theme.palette.mode),
+        }}
+      >
+        <Box textAlign="center" sx={{ p: 4 }}>
+          <CircularProgress size={28} sx={{ color: dashboardPalette.blue, mb: 2 }} />
+          <Typography variant="h6" fontWeight={700} color={dashboardPalette.ink}>
+            Syncing dashboard
+          </Typography>
+          <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+            Fetching your latest order values and shipment movement.
+          </Typography>
+        </Box>
+      </Box>
+    )
+  }
+
+  if (!stats || error) {
     return (
       <Box
         sx={{
@@ -191,7 +218,7 @@ export default function Dashboard() {
             Connectivity Issue
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 3 }}>
-            We encountered an error while syncing your command center.
+            We encountered an error while syncing your dashboard.
           </Typography>
           <Button
             variant="contained"

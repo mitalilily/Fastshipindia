@@ -9,10 +9,14 @@ interface InsightsCardProps {
     ndrRate: number
     rtoRate: number
     avgDeliveryTime: number
+    totalOrders?: number
+    deliveredOrders?: number
   }
   trends: {
     ordersGrowth: number
     revenueGrowth: number
+    thisWeekOrders?: number
+    lastWeekOrders?: number
   }
   actions: {
     ndrCount: number
@@ -29,14 +33,19 @@ export default function InsightsCard({ operational, trends, actions }: InsightsC
     message: string
     icon: React.ReactNode
   }> = []
+  const analysedOrders = Number(operational.totalOrders || 0)
+  const deliveredOrders = Number(operational.deliveredOrders || 0)
+  const hasDeliveryOutcome =
+    deliveredOrders > 0 || Number(operational.ndrRate || 0) > 0 || Number(operational.rtoRate || 0) > 0
+  const hasTrendBase = Number(trends.thisWeekOrders || 0) > 0 || Number(trends.lastWeekOrders || 0) > 0
 
-  if (operational.deliverySuccessRate >= 90) {
+  if (analysedOrders > 0 && hasDeliveryOutcome && operational.deliverySuccessRate >= 90) {
     insights.push({
       type: 'good',
       message: `Delivery success is strong at ${operational.deliverySuccessRate}%.`,
       icon: <MdCheckCircle size={18} />,
     })
-  } else if (operational.deliverySuccessRate < 75) {
+  } else if (analysedOrders > 0 && hasDeliveryOutcome && operational.deliverySuccessRate < 75) {
     insights.push({
       type: 'warning',
       message: `Delivery success dropped to ${operational.deliverySuccessRate}%. Prioritize interventions.`,
@@ -44,13 +53,13 @@ export default function InsightsCard({ operational, trends, actions }: InsightsC
     })
   }
 
-  if (trends.ordersGrowth > 0) {
+  if (hasTrendBase && trends.ordersGrowth > 0) {
     insights.push({
       type: 'good',
       message: `Orders are growing by ${trends.ordersGrowth}% vs previous week.`,
       icon: <MdTrendingUp size={18} />,
     })
-  } else if (trends.ordersGrowth < 0) {
+  } else if (hasTrendBase && trends.ordersGrowth < 0) {
     insights.push({
       type: 'warning',
       message: `Orders are down ${Math.abs(trends.ordersGrowth)}% this week.`,
@@ -71,6 +80,17 @@ export default function InsightsCard({ operational, trends, actions }: InsightsC
       type: 'warning',
       message: `Average delivery time is ${operational.avgDeliveryTime} days. Consider faster lanes.`,
       icon: <MdWarning size={18} />,
+    })
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      type: analysedOrders > 0 ? 'good' : 'notice',
+      message:
+        analysedOrders > 0
+          ? 'Dashboard is synced with your current order data.'
+          : 'No order movement is available for this dashboard date yet.',
+      icon: analysedOrders > 0 ? <MdCheckCircle size={18} /> : <MdInfo size={18} />,
     })
   }
 

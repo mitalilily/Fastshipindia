@@ -86,73 +86,6 @@ const readDashboardCache = (selectedDate?: string): MerchantDashboardStats | und
   }
 }
 
-const createEmptyDashboardStats = (selectedDate?: string): MerchantDashboardStats => ({
-  asOfDate: selectedDate || new Date().toISOString().slice(0, 10),
-  todayOperations: { orders: 0, pending: 0, inTransit: 0, delivered: 0 },
-  financial: {
-    walletBalance: 0,
-    todayRevenue: 0,
-    totalRevenue: 0,
-    totalShippingCharges: 0,
-    totalFreightCharges: 0,
-    profit: 0,
-    codAmount: 0,
-    codRemittanceDue: 0,
-    codRemittanceCredited: 0,
-  },
-  operational: {
-    deliverySuccessRate: 0,
-    ndrRate: 0,
-    rtoRate: 0,
-    avgDeliveryTime: 0,
-    totalOrders: 0,
-    deliveredOrders: 0,
-    ndrCount: 0,
-    rtoCount: 0,
-  },
-  actions: {
-    ndrCount: 0,
-    rtoCount: 0,
-    weightDiscrepancyCount: 0,
-    openTickets: 0,
-    inProgressTickets: 0,
-    pendingInvoices: 0,
-    pendingInvoiceAmount: 0,
-    overdueInvoices: 0,
-    overdueInvoiceAmount: 0,
-  },
-  couriers: { performance: {}, distribution: [] },
-  geographic: { topDestinations: [] },
-  charts: {
-    ordersByDate: [],
-    revenueByDate: [],
-    ordersByDate30: [],
-    revenueByDate30: [],
-    ordersByStatus: [],
-    revenueByOrderType: [],
-    ordersByCourier: [],
-    revenueByCourier: [],
-  },
-  metrics: {
-    avgOrderValue: 0,
-    totalPrepaidOrders: 0,
-    totalCodOrders: 0,
-    prepaidRevenue: 0,
-    codRevenue: 0,
-    topRevenueCities: [],
-  },
-  recentOrders: [],
-  trends: {
-    ordersGrowth: 0,
-    revenueGrowth: 0,
-    thisWeekOrders: 0,
-    lastWeekOrders: 0,
-    thisWeekRevenue: 0,
-    lastWeekRevenue: 0,
-  },
-  recentActivity: { transactions: [], recentOrders: [] },
-})
-
 export const useMerchantDashboardStats = (selectedDate?: string) => {
   return useQuery<MerchantDashboardStats, Error>({
     queryKey: ['merchantDashboardStats', selectedDate || 'today'],
@@ -172,8 +105,8 @@ export const useMerchantDashboardStats = (selectedDate?: string) => {
 
       return data
     },
-    initialData: () => readDashboardCache(selectedDate) ?? createEmptyDashboardStats(selectedDate),
-    initialDataUpdatedAt: () => 0,
+    initialData: () => readDashboardCache(selectedDate),
+    initialDataUpdatedAt: () => (readDashboardCache(selectedDate) ? Date.now() - 60 * 1000 : undefined),
     placeholderData: (previousData) => previousData,
     staleTime: 0,
     gcTime: 30 * 60 * 1000,
