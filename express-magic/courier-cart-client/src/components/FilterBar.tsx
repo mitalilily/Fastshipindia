@@ -55,8 +55,8 @@ interface GlassFilterBarProps<T extends Record<string, any>> {
   compact?: boolean
 }
 
-const DE_BLUE = '#0052CC'
-const DE_AMBER = '#FFAB00'
+const DE_BLUE = '#2563EB'
+const DE_AMBER = '#14B8A6'
 
 export const FilterBar = <T extends Record<string, any>>({
   fields,

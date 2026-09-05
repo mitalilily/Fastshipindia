@@ -3,7 +3,6 @@ import { useTheme } from '@mui/material/styles'
 import { motion } from 'framer-motion'
 import React from 'react'
 import { TbSparkles } from 'react-icons/tb'
-import { brand, brandGradients } from '../../../theme/brand'
 
 interface PageHeadingProps {
   title: string | React.ReactNode
@@ -24,6 +23,83 @@ const normalizeHeadingText = (value: string) =>
     .replace(/Â©/g, '©')
     .replace(/Â®/g, '®')
 
+const getHeadingProfile = (title: string | React.ReactNode, eyebrow?: string | React.ReactNode) => {
+  const key = [title, eyebrow]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase()
+
+  if (/billing|recharge|wallet|passbook|invoice|cod|remittance|ledger|credit|debit/.test(key)) {
+    return {
+      accent: '#0F766E',
+      secondary: '#14B8A6',
+      wash: '#ECFDF5',
+      panel: '#F7FEFB',
+    }
+  }
+
+  if (/ndr|non-delivery|failed|pending action/.test(key)) {
+    return {
+      accent: '#B42318',
+      secondary: '#F59E0B',
+      wash: '#FFF7ED',
+      panel: '#FFFCF7',
+    }
+  }
+
+  if (/rto|return|reverse/.test(key)) {
+    return {
+      accent: '#C2410C',
+      secondary: '#DC2626',
+      wash: '#FFF7ED',
+      panel: '#FFFBF7',
+    }
+  }
+
+  if (/report|analytics|dashboard|metric|insight/.test(key)) {
+    return {
+      accent: '#4F46E5',
+      secondary: '#06B6D4',
+      wash: '#EEF2FF',
+      panel: '#F8FAFF',
+    }
+  }
+
+  if (/order|shipment|pickup|courier|channel|integration|tracking/.test(key)) {
+    return {
+      accent: '#2563EB',
+      secondary: '#0D9488',
+      wash: '#EFF6FF',
+      panel: '#F8FBFF',
+    }
+  }
+
+  if (/support|ticket|help|resource/.test(key)) {
+    return {
+      accent: '#D97706',
+      secondary: '#F59E0B',
+      wash: '#FFFBEB',
+      panel: '#FFFDF7',
+    }
+  }
+
+  if (/weight|discrepancy|reconciliation|rate|calculator|tools/.test(key)) {
+    return {
+      accent: '#7C3AED',
+      secondary: '#0D9488',
+      wash: '#F5F3FF',
+      panel: '#FBFAFF',
+    }
+  }
+
+  return {
+    accent: '#475569',
+    secondary: '#0F766E',
+    wash: '#F8FAFC',
+    panel: '#FFFFFF',
+  }
+}
+
 const PageHeading: React.FC<PageHeadingProps> = ({
   title,
   subtitle,
@@ -39,6 +115,7 @@ const PageHeading: React.FC<PageHeadingProps> = ({
     typeof subtitle === 'string' ? normalizeHeadingText(subtitle) : subtitle
   const normalizedEyebrow = typeof eyebrow === 'string' ? normalizeHeadingText(eyebrow) : eyebrow
   const hasSubtitle = Boolean(normalizedSubtitle)
+  const profile = getHeadingProfile(normalizedTitle, normalizedEyebrow)
 
   return (
     <Box
@@ -46,12 +123,12 @@ const PageHeading: React.FC<PageHeadingProps> = ({
         position: 'relative',
         overflow: 'hidden',
         borderRadius: '8px',
-        border: `1px solid ${isDark ? alpha('#f8fafc', 0.12) : alpha(brand.ink, 0.1)}`,
+        border: `1px solid ${isDark ? alpha('#f8fafc', 0.12) : alpha(profile.accent, 0.16)}`,
         background: isDark
           ? 'linear-gradient(135deg, #151b23 0%, #111822 100%)'
           : `
-            linear-gradient(90deg, ${alpha(brand.ink, 0.05)} 0%, transparent 28%),
-            linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,254,0.96) 54%, rgba(237,242,250,0.98) 100%)
+            linear-gradient(90deg, ${alpha(profile.accent, 0.07)} 0%, transparent 30%),
+            linear-gradient(135deg, rgba(255,255,255,0.98) 0%, ${alpha(profile.panel, 0.98)} 56%, ${alpha(profile.wash, 0.96)} 100%)
           `,
         px: hasSubtitle ? { xs: 2, sm: 2.8 } : { xs: 1.6, sm: 1.8 },
         py: hasSubtitle ? { xs: 2, sm: 2.4 } : { xs: 1.25, sm: 1.35 },
@@ -64,7 +141,7 @@ const PageHeading: React.FC<PageHeadingProps> = ({
           position: 'absolute',
           inset: 0,
           width: 5,
-          background: `linear-gradient(180deg, ${brand.ink} 0%, ${brand.accent} 100%)`,
+          background: `linear-gradient(180deg, ${profile.accent} 0%, ${profile.secondary} 100%)`,
         },
         '&:after': {
           content: '""',
@@ -74,8 +151,8 @@ const PageHeading: React.FC<PageHeadingProps> = ({
           width: { xs: 180, sm: 260 },
           height: { xs: 180, sm: 220 },
           background: `
-            linear-gradient(135deg, ${alpha(brand.accent, isDark ? 0.18 : 0.1)} 0%, transparent 54%),
-            linear-gradient(180deg, ${alpha(brand.ink, isDark ? 0.18 : 0.08)} 0%, transparent 72%)
+            linear-gradient(135deg, ${alpha(profile.secondary, isDark ? 0.16 : 0.1)} 0%, transparent 54%),
+            linear-gradient(180deg, ${alpha(profile.accent, isDark ? 0.15 : 0.07)} 0%, transparent 72%)
           `,
           transform: 'rotate(12deg)',
           borderRadius: '8px',
@@ -110,8 +187,8 @@ const PageHeading: React.FC<PageHeadingProps> = ({
                 height: hasSubtitle ? { xs: 42, sm: 46 } : 36,
                 borderRadius: '8px',
                 background: isDark
-                  ? `linear-gradient(135deg, ${brand.ink} 0%, ${alpha(brand.accent, 0.78)} 100%)`
-                  : brandGradients.button,
+                  ? `linear-gradient(135deg, ${profile.accent} 0%, ${alpha(profile.secondary, 0.84)} 100%)`
+                  : `linear-gradient(135deg, ${profile.accent} 0%, ${profile.secondary} 100%)`,
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -119,7 +196,7 @@ const PageHeading: React.FC<PageHeadingProps> = ({
                 border: `1px solid ${alpha('#FFFFFF', 0.42)}`,
                 boxShadow: isDark
                   ? `0 14px 24px ${alpha('#000000', 0.24)}`
-                  : `0 14px 28px ${alpha(brand.ink, 0.18)}`,
+                  : `0 14px 28px ${alpha(profile.accent, 0.18)}`,
               }}
             >
               {icon}

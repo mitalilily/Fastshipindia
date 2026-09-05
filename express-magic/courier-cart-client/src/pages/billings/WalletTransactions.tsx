@@ -147,6 +147,8 @@ const WalletTransactions = () => {
   const surface = isDark ? '#151b23' : '#FFFFFF'
   const borderColor = isDark ? alpha('#f8fafc', 0.1) : '#E2E8F0'
   const cardShadow = isDark ? '0 14px 34px rgba(0,0,0,0.18)' : '0 2px 8px rgba(0,0,0,0.06)'
+  const financeAccent = '#0F766E'
+  const financeSecondary = '#14B8A6'
 
   const filterFields: FilterField[] = []
 
@@ -190,24 +192,50 @@ const WalletTransactions = () => {
           Live wallet transactions are temporarily unavailable. This page remains usable and will update on refresh.
         </Alert>
       )}
-      {/* Wallet Balance Card (back to your original solid look) */}
       <Card
         sx={{
           mb: 3,
-          backgroundColor: surface,
-          border: `1px solid ${borderColor}`,
-          borderRadius: 2,
-          boxShadow: cardShadow,
+          position: 'relative',
+          overflow: 'hidden',
+          background: isDark
+            ? surface
+            : `
+              linear-gradient(90deg, ${alpha(financeAccent, 0.07)} 0%, transparent 38%),
+              linear-gradient(135deg, #FFFFFF 0%, #F7FEFB 58%, #ECFDF5 100%)
+            `,
+          border: `1px solid ${isDark ? borderColor : alpha(financeAccent, 0.16)}`,
+          borderRadius: 1,
+          boxShadow: isDark ? cardShadow : `0 16px 34px ${alpha(financeAccent, 0.1)}`,
+          '&:before': {
+            content: '""',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 3,
+            background: `linear-gradient(90deg, ${financeAccent} 0%, ${financeSecondary} 100%)`,
+          },
+          '&:after': {
+            content: '""',
+            position: 'absolute',
+            right: -28,
+            top: -56,
+            width: 210,
+            height: 160,
+            borderRadius: 1,
+            background: `linear-gradient(135deg, ${alpha(financeSecondary, 0.16)} 0%, transparent 70%)`,
+            transform: 'rotate(12deg)',
+          },
         }}
       >
-        <CardContent>
+        <CardContent sx={{ position: 'relative', zIndex: 1, px: 2.5, py: 2.2 }}>
           <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
             Current Wallet Balance
           </Typography>
           {showLoading ? (
             <Skeleton variant="text" width={120} height={48} />
           ) : (
-            <Typography variant="h4" fontWeight="bold" color="text.primary">
+            <Typography variant="h4" fontWeight="bold" sx={{ color: financeAccent }}>
               ₹{Number(data?.wallet?.balance)?.toFixed(2)}
             </Typography>
           )}
@@ -217,7 +245,15 @@ const WalletTransactions = () => {
       <Button
         variant="contained"
         onClick={() => setRechargeDialogOpen(true)}
-        sx={{ alignSelf: 'flex-start', textTransform: 'none', fontWeight: 700 }}
+        sx={{
+          alignSelf: 'flex-start',
+          textTransform: 'none',
+          fontWeight: 700,
+          background: `linear-gradient(135deg, ${financeAccent} 0%, ${financeSecondary} 100%)`,
+          '&:hover': {
+            background: `linear-gradient(135deg, ${financeAccent} 0%, ${financeSecondary} 100%)`,
+          },
+        }}
       >
         Recharge Wallet
       </Button>
@@ -237,10 +273,10 @@ const WalletTransactions = () => {
       {/* Transaction List */}
       <Paper
         sx={{
-          borderRadius: 2,
+          borderRadius: 1,
           overflow: 'hidden',
           backgroundColor: surface,
-          border: `1px solid ${borderColor}`,
+          border: `1px solid ${isDark ? borderColor : alpha(financeAccent, 0.14)}`,
           boxShadow: cardShadow,
         }}
       >
@@ -253,7 +289,14 @@ const WalletTransactions = () => {
           <Typography fontWeight={800} color="text.primary">
             {pageConfig.tableTitle}
           </Typography>
-          <Chip size="small" label={`${totalCount} entries`} />
+          <Chip
+            size="small"
+            label={`${totalCount} entries`}
+            sx={{
+              backgroundColor: alpha(financeAccent, isDark ? 0.18 : 0.1),
+              color: isDark ? '#A7F3D0' : financeAccent,
+            }}
+          />
         </Stack>
         {showLoading ? (
           <Stack gap={1.5} p={3}>
