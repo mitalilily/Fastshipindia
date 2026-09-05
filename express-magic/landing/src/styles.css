@@ -519,3 +519,390 @@ footer .brand-logo-image { width:220px; height:74px; filter:none; }
   .site-header { top:8px; }
 }
 
+/* Landing alignment polish */
+html,
+body,
+#root {
+  width:100%;
+  max-width:100%;
+}
+
+body {
+  overflow-x:hidden;
+}
+
+main {
+  overflow-x:clip;
+}
+
+h1,
+h2,
+h3,
+p,
+a,
+button,
+input,
+select,
+textarea {
+  letter-spacing:0;
+}
+
+h1,
+h2 {
+  line-height:1.02;
+}
+
+p {
+  line-height:1.65;
+}
+
+.site-header {
+  width:min(1240px,calc(100% - 32px));
+  border-radius:8px;
+}
+
+.nav-shell {
+  width:100%;
+  max-width:1240px;
+  min-height:68px;
+  gap:22px;
+  padding-inline:18px;
+}
+
+.brand {
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  min-width:0;
+}
+
+.brand-logo-image,
+footer .brand-logo-image {
+  width:176px;
+  height:52px;
+}
+
+.main-nav {
+  flex:1 1 auto;
+  justify-content:center;
+  min-width:0;
+  margin-left:8px;
+  gap:22px;
+}
+
+.main-nav a,
+.button {
+  white-space:nowrap;
+}
+
+.main-nav a {
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+}
+
+.nav-actions {
+  flex:0 0 auto;
+  gap:12px;
+}
+
+.button {
+  min-height:46px;
+  border-radius:8px;
+  padding:12px 18px;
+}
+
+.button-small {
+  min-height:40px;
+  padding:10px 14px;
+}
+
+.shell,
+.hero-layout {
+  width:min(1180px,calc(100% - 48px));
+  max-width:1180px;
+}
+
+.hero-layout {
+  min-height:calc(100svh - 132px);
+  padding:92px 0 72px;
+}
+
+.hero-copy {
+  max-width:720px;
+}
+
+.hero h1,
+.page-hero h1,
+.tool-intro h1,
+.contact-page h1 {
+  max-width:12ch;
+}
+
+.hero p,
+.page-hero p,
+.tool-intro > p,
+.contact-page .shell > p {
+  max-width:720px;
+}
+
+.hero-actions {
+  align-items:center;
+}
+
+.hero-media,
+.hero-visual,
+.feature-card,
+.campaign-card,
+.testimonial,
+.showcase-note,
+.planner-panel,
+.drawer-panel,
+.tool-card,
+.contact-form,
+.calculator-card,
+.tracking-card {
+  min-width:0;
+  border-radius:8px;
+}
+
+.feature-grid,
+.campaign-grid,
+.testimonial-grid,
+.step-grid {
+  align-items:stretch;
+}
+
+.section-head,
+.gallery-heading,
+.final-cta-inner,
+.split-intro {
+  align-items:flex-end;
+  gap:24px;
+}
+
+.section-head > *,
+.gallery-heading > *,
+.final-cta-inner > *,
+.split-intro > *,
+.page-hero-grid > *,
+.image-story-grid > *,
+.workbench-layout > *,
+.tool-grid > *,
+.contact-grid > * {
+  min-width:0;
+}
+
+.page-hero-grid,
+.image-story-grid,
+.workbench-layout,
+.tool-grid,
+.contact-grid {
+  align-items:center;
+}
+
+.tool-card,
+.contact-form {
+  width:100%;
+  justify-self:stretch;
+}
+
+.tool-art-image {
+  display:block;
+  width:min(100%,420px);
+  height:auto;
+}
+
+.table-wrap {
+  width:100%;
+  overflow-x:auto;
+}
+
+.planner-panel table {
+  min-width:620px;
+}
+
+.home-stack-card > section,
+.home-stack-card > .final-cta {
+  min-height:auto;
+}
+
+.feature-card a,
+.campaign-card a,
+.gallery-copy a,
+.drawer-copy a,
+footer a {
+  min-height:32px;
+  display:inline-flex;
+  align-items:center;
+}
+
+@media (max-width:1100px) and (min-width:901px) {
+  .nav-shell {
+    gap:14px;
+    padding-inline:14px;
+  }
+
+  .brand-logo-image {
+    width:154px;
+    height:48px;
+  }
+
+  .main-nav {
+    gap:14px;
+    margin-left:0;
+  }
+
+  .nav-actions {
+    gap:8px;
+  }
+
+  .button-small {
+    padding-inline:12px;
+  }
+}
+
+@media (max-width:900px) {
+  .site-header {
+    width:calc(100% - 16px);
+    border-radius:8px;
+  }
+
+  .nav-shell {
+    min-height:62px;
+    gap:10px;
+    padding-inline:12px;
+  }
+
+  .brand-logo-image {
+    width:142px;
+    height:46px;
+  }
+
+  .menu-button {
+    display:grid;
+    place-items:center;
+    width:40px;
+    height:40px;
+    flex:0 0 40px;
+  }
+
+  .main-nav {
+    top:calc(100% + 8px);
+    max-height:calc(100svh - 92px);
+    overflow:auto;
+    align-items:stretch;
+    gap:4px;
+  }
+
+  .main-nav a {
+    justify-content:flex-start;
+    width:100%;
+  }
+
+  .shell,
+  .hero-layout {
+    width:calc(100% - 32px);
+  }
+
+  .hero-layout {
+    min-height:auto;
+    padding:72px 0 56px;
+  }
+
+  .hero-copy,
+  .hero h1,
+  .page-hero h1,
+  .tool-intro h1,
+  .contact-page h1,
+  .hero p,
+  .page-hero p,
+  .tool-intro > p,
+  .contact-page .shell > p {
+    max-width:100%;
+  }
+
+  .section-head,
+  .gallery-heading,
+  .final-cta-inner,
+  .split-intro,
+  .hero-actions {
+    align-items:stretch;
+  }
+
+  .home-stack-card {
+    position:relative;
+    top:auto;
+    min-height:0;
+    border-radius:14px 14px 0 0;
+  }
+
+  .home-stack-card > section,
+  .home-stack-card > .final-cta {
+    min-height:0;
+  }
+
+  .button,
+  .hero-actions .under-link,
+  .final-cta .button,
+  .tool-card .button,
+  .contact-form .button {
+    width:100%;
+    justify-content:center;
+  }
+}
+
+@media (max-width:560px) {
+  .site-header {
+    margin-top:6px;
+  }
+
+  .nav-shell {
+    min-height:58px;
+    padding-inline:10px;
+  }
+
+  .brand-logo-image,
+  footer .brand-logo-image {
+    width:132px;
+    height:42px;
+  }
+
+  .hero h1 {
+    font-size:clamp(42px,13vw,58px);
+  }
+
+  .page-hero h1,
+  .tool-intro h1,
+  .contact-page h1 {
+    font-size:clamp(36px,11vw,52px);
+  }
+
+  .feature-section,
+  .campaign-section,
+  .visual-gallery,
+  .workbench,
+  .testimonials,
+  .final-cta,
+  .tool-page,
+  .page-hero,
+  .contact-page {
+    padding-block:64px;
+  }
+}
+
+.under-link,
+.showcase-note a,
+.planner-ad a,
+.contact-details a {
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+}
+
+.socials a {
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+}
+
