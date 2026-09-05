@@ -911,6 +911,20 @@ footer a {
   color:var(--coral);
 }
 
+.brand-logo-image {
+  width:148px;
+  height:48px;
+}
+
+.main-nav {
+  gap:11px;
+}
+
+.main-nav a {
+  gap:6px;
+  font-size:13px;
+}
+
 @media (max-width:1200px) and (min-width:901px) {
   .site-header {
     width:min(1160px,calc(100% - 24px));
@@ -927,7 +941,7 @@ footer a {
   }
 
   .main-nav a {
-    font-size:13px;
+    font-size:12px;
   }
 
   .nav-actions {

@@ -468,8 +468,8 @@ footer::after {
 }
 
 .brand-logo-image {
-  width:168px;
-  height:52px;
+  width:148px;
+  height:48px;
   object-fit:contain;
   object-position:left center;
 }
@@ -479,14 +479,15 @@ footer::after {
   justify-content:center;
   min-width:0;
   margin-left:4px;
-  gap:15px;
+  gap:11px;
 }
 
 .main-nav a {
   min-height:40px;
   display:inline-flex;
   align-items:center;
-  gap:7px;
+  gap:6px;
+  font-size:13px;
   white-space:nowrap;
 }
 
@@ -494,10 +495,7 @@ footer::after {
   color:var(--coral);
 }
 
-.nav-actions {
-  flex:0 0 auto;
-  gap:12px;
-}
+.nav-actions { flex:0 0 auto; gap:10px; }
 
 .button-small {
   min-height:40px;
@@ -525,7 +523,7 @@ footer::after {
   }
 
   .main-nav a {
-    font-size:13px;
+    font-size:12px;
   }
 
   .login-link {

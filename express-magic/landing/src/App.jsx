@@ -6,16 +6,18 @@ import {
   PackageSearch, Phone, Plane, Route, Scale, Search, ShieldCheck, Sparkles,
   Truck, Warehouse, X, Zap,
 } from 'lucide-react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, Route as RouterRoute, Routes, useLocation } from 'react-router-dom'
 
 const navItems = [
   ['Platform', '/integrations'],
+  ['Sales', '/integrations/sales-channels'],
   ['Couriers', '/integrations/courier-partners'],
   ['Blogs', '/blogs'],
   ['About', '/about'],
   ['Tracking', '/tracking', Search],
   ['Rates', '/rate-calculator'],
   ['Weight', '/weight-calculator'],
+  ['Contact', '/contact'],
 ]
 
 function RouteEffects() {
@@ -263,36 +265,20 @@ function FinalCta() { return <section className="final-cta"><div className="shel
 
 function Footer() { return <footer><div className="shell footer-grid"><div><Logo light /><p>Shipping infrastructure with a little more clarity, care and momentum.</p><div className="socials"><a href="#" aria-label="LinkedIn"><Linkedin /></a><a href="#" aria-label="Instagram"><Instagram /></a></div></div><div><h4>Explore</h4><Link to="/integrations">Platform</Link><Link to="/integrations/courier-partners">Courier network</Link><Link to="/blogs">Journal</Link></div><div><h4>Tools</h4><Link to="/rate-calculator">Rate calculator</Link><Link to="/weight-calculator">Weight calculator</Link><Link to="/tracking">Track a parcel</Link></div><div><h4>Say hello</h4><a href="mailto:hello@fastshipindia.com">hello@fastshipindia.com</a><a href="tel:+918487881121">+91 84878 81121</a><Link to="/contact">Contact page <ArrowRight size={14} /></Link></div></div><div className="shell footer-bottom"><span>{'\u00a9'} 2026 Fastship India</span><span>Privacy {'\u00b7'} Terms {'\u00b7'} Security</span></div></footer> }
 
-function normalizePath(pathname) {
-  return pathname.replace(/\/+$/, '') || '/'
-}
-
 function PageRouter() {
-  const { pathname } = useLocation()
-  switch (normalizePath(pathname)) {
-    case '/':
-      return <Home />
-    case '/integrations':
-      return <StandardPage type="integrations" />
-    case '/integrations/sales-channels':
-      return <StandardPage type="salesChannels" />
-    case '/integrations/courier-partners':
-      return <StandardPage type="courierPartners" />
-    case '/blogs':
-      return <StandardPage type="blogs" />
-    case '/about':
-      return <StandardPage type="about" />
-    case '/weight-calculator':
-      return <WeightCalculator />
-    case '/rate-calculator':
-      return <RateCalculator />
-    case '/tracking':
-      return <Tracking />
-    case '/contact':
-      return <Contact />
-    default:
-      return <Home />
-  }
+  return <Routes>
+    <RouterRoute path="/" element={<Home />} />
+    <RouterRoute path="/integrations" element={<StandardPage type="integrations" />} />
+    <RouterRoute path="/integrations/sales-channels" element={<StandardPage type="salesChannels" />} />
+    <RouterRoute path="/integrations/courier-partners" element={<StandardPage type="courierPartners" />} />
+    <RouterRoute path="/blogs" element={<StandardPage type="blogs" />} />
+    <RouterRoute path="/about" element={<StandardPage type="about" />} />
+    <RouterRoute path="/weight-calculator" element={<WeightCalculator />} />
+    <RouterRoute path="/rate-calculator" element={<RateCalculator />} />
+    <RouterRoute path="/tracking" element={<Tracking />} />
+    <RouterRoute path="/contact" element={<Contact />} />
+    <RouterRoute path="*" element={<Home />} />
+  </Routes>
 }
 
 export default function App() { return <><RouteEffects /><Header /><main><PageRouter /></main><Footer /></> }
