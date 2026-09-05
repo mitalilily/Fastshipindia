@@ -13,15 +13,9 @@ import { brandIdentity } from '../../theme/brand'
 import './FastShipLanding.css'
 
 const navItems = [
-  ['Platform', '/integrations'],
-  ['Sales', '/integrations/sales-channels'],
-  ['Couriers', '/integrations/courier-partners'],
-  ['Blogs', '/blogs'],
-  ['About', '/about'],
-  ['Tracking', '/tracking', Search],
-  ['Rates', '/rate-calculator'],
-  ['Weight', '/weight-calculator'],
-  ['Contact', '/contact'],
+  ['Tracking', '/tracking'],
+  ['Rate calculator', '/rate-calculator'],
+  ['Weight calculator', '/weight-calculator'],
 ]
 
 const loginPath = '/login'
@@ -64,17 +58,16 @@ function Header() {
     <div className="nav-shell">
       <Link to="/" className="brand" onClick={() => setOpen(false)}><Logo /></Link>
       <nav className={`main-nav ${open ? 'is-open' : ''}`}>
-        {navItems.map(([label, to, Icon]) => (
+        {navItems.map(([label, to]) => (
           <NavLink
             key={to}
             to={to}
-            className={({ isActive }) => `${Icon ? 'nav-track ' : ''}${isActive ? 'active' : ''}`.trim() || undefined}
             onClick={() => setOpen(false)}
           >
-            {Icon ? <Icon size={16} /> : null}
             {label}
           </NavLink>
         ))}
+        <NavLink className="nav-track" to="/tracking" onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</NavLink>
         <Link className="nav-login-mobile" to={loginPath} state={loginEntryState} onClick={() => setOpen(false)}>Log in</Link>
       </nav>
       <div className="nav-actions"><Link className="text-link login-link" to={loginPath} state={loginEntryState}>Log in</Link><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>
