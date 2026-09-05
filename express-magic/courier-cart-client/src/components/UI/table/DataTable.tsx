@@ -262,9 +262,10 @@ export default function DataTable<T extends { id: string | number }>(props: Data
             sx={{
               px: isShipmentVariant ? { xs: 0, sm: 0.05 } : isCompact ? { xs: 0.1, sm: 0.2 } : { xs: 0.4, sm: 0.6 },
               py: isShipmentVariant ? 0 : isCompact ? { xs: 0.1, sm: 0.25 } : { xs: 0.5, sm: 0.8 },
+              minWidth: 0,
             }}
           >
-            <Stack spacing={isCompact ? 0.3 : 0.8}>
+            <Stack spacing={isCompact ? 0.3 : 0.8} sx={{ minWidth: 0, flex: '1 1 auto' }}>
               {title && (
                 <Typography
                   sx={{
@@ -274,6 +275,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                     fontWeight: 700,
                     letterSpacing: 0,
                     color: textPrimary,
+                    overflowWrap: 'anywhere',
                   }}
                 >
                   {title}
@@ -308,9 +310,14 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                   backgroundColor: isDark ? alpha(surface, 0.96) : alpha('#ffffff', 0.92),
                   border: `1px solid ${borderColor}`,
                   boxShadow: isCompact ? 'none' : `0 10px 24px ${alpha(textPrimary, 0.06)}`,
+                  maxWidth: '100%',
+                  alignSelf: { xs: 'stretch', sm: 'center' },
                   '& .MuiToolbar-root': {
                     minHeight: isShipmentVariant ? 28 : isCompact ? 34 : undefined,
-                    px: isCompact ? 0.5 : undefined,
+                    px: isCompact ? 0.5 : { xs: 0.75, sm: undefined },
+                    flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                    justifyContent: { xs: 'flex-end', sm: 'initial' },
+                    rowGap: 0.5,
                   },
                   '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
                     fontSize: isCompact ? '11px' : '12px',

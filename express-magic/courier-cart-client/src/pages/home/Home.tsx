@@ -25,10 +25,10 @@ import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
 
 const NAVY = '#0B3A78'
 const RED = '#E31B23'
-const PURPLE = NAVY
-const ORANGE = RED
-const BLUE = NAVY
-const GREEN = NAVY
+const PURPLE = '#4F46E5'
+const ORANGE = '#C2410C'
+const BLUE = '#2563EB'
+const GREEN = '#0F766E'
 
 const toLocalDateInput = (date = new Date()) => {
   const year = date.getFullYear()

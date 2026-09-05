@@ -100,7 +100,7 @@ export default function QuickStatsCards({
   }
 
   return (
-    <Grid container spacing={2} mb={2.5}>
+    <Grid container spacing={2} mb={2.5} sx={{ alignItems: 'stretch' }}>
       {stats.map((stat) => {
         const statusStyle = statusStyles[stat.statusTone as keyof typeof statusStyles]
 
@@ -128,15 +128,16 @@ export default function QuickStatsCards({
                   minHeight: 164,
                   display: 'flex',
                   alignItems: 'stretch',
+                  minWidth: 0,
                   '&:focus-visible': {
                     outline: `3px solid ${alpha(stat.color, 0.28)}`,
                     outlineOffset: -3,
                   },
                 }}
               >
-                <CardContent sx={{ p: '18px !important', width: '100%' }}>
+                <CardContent sx={{ p: '18px !important', width: '100%', minWidth: 0 }}>
                   <Stack spacing={1.35} height="100%">
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
                       <Typography
                         sx={{
                           color: dashboardPalette.muted,
@@ -144,6 +145,8 @@ export default function QuickStatsCards({
                           fontWeight: 700,
                           letterSpacing: 0,
                           textTransform: 'uppercase',
+                          lineHeight: 1.25,
+                          overflowWrap: 'anywhere',
                         }}
                       >
                         {stat.title}
@@ -179,7 +182,13 @@ export default function QuickStatsCards({
                       {stat.value}
                     </Typography>
 
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-end" gap={1} mt="auto">
+                    <Stack
+                      direction={{ xs: 'column', xl: 'row' }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: 'stretch', xl: 'flex-end' }}
+                      gap={1}
+                      mt="auto"
+                    >
                       <Stack
                         direction="row"
                         alignItems="center"
@@ -191,16 +200,22 @@ export default function QuickStatsCards({
                           borderRadius: '6px',
                           color: statusStyle.color,
                           bgcolor: statusStyle.background,
+                          maxWidth: '100%',
                         }}
                       >
                         <Box sx={{ display: 'grid', placeItems: 'center', flexShrink: 0, '& svg': { width: 14, height: 14 } }}>
                           {stat.statusIcon}
                         </Box>
-                        <Typography sx={{ fontSize: '0.7rem', fontWeight: 650, lineHeight: 1.2 }} noWrap>
+                        <Typography sx={{ fontSize: '0.7rem', fontWeight: 650, lineHeight: 1.25 }}>
                           {stat.status}
                         </Typography>
                       </Stack>
-                      <Stack direction="row" alignItems="center" spacing={0.25} sx={{ color: stat.color, flexShrink: 0 }}>
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={0.25}
+                        sx={{ color: stat.color, flexShrink: 0, justifyContent: { xs: 'flex-start', xl: 'flex-end' } }}
+                      >
                         <Typography sx={{ fontSize: '0.7rem', fontWeight: 700 }}>{stat.action}</Typography>
                         <TbArrowUpRight size={15} />
                       </Stack>

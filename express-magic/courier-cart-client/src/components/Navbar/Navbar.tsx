@@ -112,7 +112,12 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         boxShadow: isDark ? 'none' : '0 8px 24px rgba(15, 23, 42, 0.06)',
       }}
     >
-      <Stack direction="row" spacing={{ xs: 2, md: 1.5 }} alignItems="center" sx={{ minWidth: 0 }}>
+      <Stack
+        direction="row"
+        spacing={{ xs: 1.2, md: 1.5 }}
+        alignItems="center"
+        sx={{ minWidth: 0, flex: '0 1 auto' }}
+      >
         <IconButton
           size="small"
           onClick={handleDrawerToggle}
@@ -135,7 +140,8 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
             color: textColor,
             fontSize: { xs: '1rem', sm: '1.05rem', md: '1rem' },
             fontWeight: 650,
-            letterSpacing: '-0.02em',
+            letterSpacing: 0,
+            minWidth: 0,
           }}
           noWrap
         >
@@ -160,7 +166,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         spacing={{ xs: 0.7, sm: 1 }}
         alignItems="center"
         justifyContent="flex-end"
-        sx={{ minWidth: 0 }}
+        sx={{ minWidth: 0, flexShrink: 0 }}
       >
         <QuickActions />
 
@@ -171,7 +177,7 @@ export default function Navbar({ handleDrawerToggle, pinned }: NavbarProps) {
         <Box
           onClick={() => navigate('/support/tickets')}
           sx={{
-            display: { xs: 'none', md: 'inline-flex' },
+            display: { xs: 'none', xl: 'inline-flex' },
             alignItems: 'center',
             gap: 0.8,
             height: 36,

@@ -28,12 +28,12 @@ export default function QuickActionsCard() {
 
   return (
     <Card sx={dashboardCardSx}>
-      <CardContent sx={{ p: 2.4 }}>
+      <CardContent sx={{ p: 2.4, minWidth: 0 }}>
         <Stack direction="row" spacing={1.2} alignItems="center" mb={2.2}>
           <Box sx={dashboardIconSx(dashboardPalette.blue)}>
             <MdLocalShipping size={20} />
           </Box>
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: dashboardPalette.ink }}>
               Quick Actions
             </Typography>
@@ -49,7 +49,7 @@ export default function QuickActionsCard() {
             const color = locked ? dashboardPalette.amber : dashboardPalette.blue
 
             return (
-              <Grid size={{ xs: 6 }} key={action.label}>
+              <Grid size={{ xs: 12, sm: 6 }} key={action.label}>
                 <Box
                   onClick={() => navigate(locked ? firstIncompleteStep?.path || '/home' : action.path)}
                   sx={{
@@ -58,6 +58,7 @@ export default function QuickActionsCard() {
                     border: `1px solid ${alpha(color, 0.16)}`,
                     bgcolor: locked ? alpha(color, 0.06) : dashboardPalette.tile,
                     cursor: 'pointer',
+                    minWidth: 0,
                     minHeight: 58,
                     display: 'flex',
                     alignItems: 'center',
@@ -68,7 +69,7 @@ export default function QuickActionsCard() {
                     },
                   }}
                 >
-                  <Stack direction="row" spacing={1.1} alignItems="center" sx={{ minWidth: 0 }}>
+                  <Stack direction="row" spacing={1.1} alignItems="center" sx={{ minWidth: 0, width: '100%' }}>
                     <Box
                       sx={{
                         width: 30,
@@ -90,6 +91,7 @@ export default function QuickActionsCard() {
                         color,
                         lineHeight: 1.2,
                         overflowWrap: 'anywhere',
+                        minWidth: 0,
                       }}
                     >
                       {locked ? 'Unlock' : action.label}

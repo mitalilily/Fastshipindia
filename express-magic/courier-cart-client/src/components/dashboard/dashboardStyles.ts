@@ -1,5 +1,5 @@
 import { alpha, type PaletteMode, type SxProps, type Theme } from '@mui/material/styles'
-import { brand, brandFonts } from '../../theme/brand'
+import { brandFonts } from '../../theme/brand'
 
 export const dashboardPalette = {
   page: 'var(--dashboard-page)',
@@ -8,14 +8,14 @@ export const dashboardPalette = {
   ink: 'var(--dashboard-ink)',
   muted: 'var(--dashboard-muted)',
   line: 'var(--dashboard-line)',
-  orange: brand.red,
-  orangeDark: '#B8141A',
-  orangeSoft: '#2b171a',
-  blue: brand.navy,
-  blueDark: '#072B5B',
-  green: brand.navy,
-  amber: brand.red,
-  red: brand.red,
+  orange: '#C2410C',
+  orangeDark: '#9A3412',
+  orangeSoft: '#FFF7ED',
+  blue: '#2563EB',
+  blueDark: '#1D4ED8',
+  green: '#0F766E',
+  amber: '#D97706',
+  red: '#DC2626',
   track: 'var(--dashboard-track)',
 }
 
