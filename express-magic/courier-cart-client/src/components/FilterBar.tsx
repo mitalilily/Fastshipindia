@@ -77,7 +77,7 @@ export const FilterBar = <T extends Record<string, any>>({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const isDark = theme.palette.mode === 'dark'
   const surface = isDark ? '#151b23' : '#FFFFFF'
-  const borderColor = isDark ? alpha('#f8fafc', 0.12) : alpha(DE_BLUE, 0.16)
+  const borderColor = isDark ? alpha('#f8fafc', 0.12) : alpha(DE_BLUE, 0.14)
   const actionColor = isDark ? '#60a5fa' : DE_BLUE
 
   const primaryFields = fields.filter((f) => !f.isAdvanced)
@@ -308,17 +308,29 @@ export const FilterBar = <T extends Record<string, any>>({
             width: '100%',
             overflow: 'hidden',
             background: `
-              radial-gradient(560px 170px at 0% 0%, ${alpha(DE_AMBER, isDark ? 0.12 : 0.08)} 0%, transparent 75%),
-              radial-gradient(560px 170px at 100% 0%, ${alpha(actionColor, isDark ? 0.14 : 0.1)} 0%, transparent 75%),
+              linear-gradient(90deg, ${alpha(DE_AMBER, isDark ? 0.1 : 0.06)} 0%, transparent 26%),
+              linear-gradient(180deg, ${isDark ? alpha('#ffffff', 0.03) : alpha('#ffffff', 0.98)} 0%, ${isDark ? alpha('#ffffff', 0.01) : alpha('#F8FAFC', 0.96)} 100%),
               ${surface}
             `,
             border: `1px solid ${borderColor}`,
             borderRadius: 1,
             boxShadow: isDark
               ? 'none'
-              : compact ? '0 3px 10px rgba(0, 82, 204, 0.08)' : '0 6px 18px rgba(0, 82, 204, 0.1)',
-            px: compact ? { xs: 0.8, md: 0.95 } : { xs: 1.25, md: 1.5 },
-            py: compact ? { xs: 0.5, md: 0.58 } : { xs: 1.1, md: 1.3 },
+              : compact
+                ? '0 8px 18px rgba(15, 44, 67, 0.05)'
+                : '0 14px 30px rgba(15, 44, 67, 0.07)',
+            px: compact ? { xs: 0.8, md: 0.95 } : { xs: 1.35, md: 1.6 },
+            py: compact ? { xs: 0.5, md: 0.58 } : { xs: 1.15, md: 1.35 },
+            '&:before': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 3,
+              background: `linear-gradient(90deg, ${DE_BLUE} 0%, ${DE_AMBER} 100%)`,
+              opacity: isDark ? 0.7 : 0.75,
+            },
           }}
         >
           {bgOverlayImg && (

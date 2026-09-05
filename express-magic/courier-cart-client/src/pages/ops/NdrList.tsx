@@ -301,7 +301,7 @@ export default function NdrList() {
         loading={showTableLoading}
       />
 
-      <Paper sx={{ borderRadius: 2, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+      <Paper sx={{ borderRadius: 1, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
         {showTableLoading ? (
           <Typography p={3}>Loading NDRs...</Typography>
         ) : (

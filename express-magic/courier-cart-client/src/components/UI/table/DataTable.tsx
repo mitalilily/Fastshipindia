@@ -108,13 +108,13 @@ export default function DataTable<T extends { id: string | number }>(props: Data
     ? shipmentHeader
     : isDark
       ? '#1b2430'
-      : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,242,236,0.98) 100%)'
-  const tableBg = isDark ? '#101720' : isShipmentVariant ? '#F5F6F8' : '#FFFCF8'
+      : 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)'
+  const tableBg = isDark ? '#101720' : isShipmentVariant ? '#F5F6F8' : '#FFFFFF'
   const selectionColumnWidth = isShipmentVariant ? 56 : 48
   const rowHover = alpha(primary, 0.045)
   const mobileCardBg = isDark
     ? 'linear-gradient(180deg, #151b23 0%, #101720 100%)'
-    : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(249,244,238,0.96) 100%)'
+    : 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)'
   const isCompact = density === 'compact'
 
   const [localPage, setLocalPage] = React.useState(0)
@@ -213,18 +213,18 @@ export default function DataTable<T extends { id: string | number }>(props: Data
         position: 'relative',
         width: '100%',
         overflow: 'hidden',
-        borderRadius: isShipmentVariant || isCompact ? '8px' : '14px',
+        borderRadius: '8px',
         border: `1px solid ${isShipmentVariant ? alpha(textPrimary, 0.08) : borderColor}`,
         background: isShipmentVariant
           ? tableBg
           : isDark
             ? surfaceMuted
-          : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(252,247,241,0.98) 100%)',
+          : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%)',
         boxShadow: isShipmentVariant
           ? `0 8px 18px ${alpha(textPrimary, 0.04)}`
           : isCompact
           ? `0 8px 20px ${alpha(textPrimary, 0.06)}`
-          : `0 20px 42px ${alpha(textPrimary, 0.07)}`,
+          : `0 18px 40px ${alpha(textPrimary, 0.07)}`,
         p: 0,
       }}
     >
@@ -271,7 +271,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                     fontSize: isShipmentVariant
                       ? { xs: '0.9rem', sm: '0.96rem' }
                       : isCompact ? { xs: '0.95rem', sm: '1.02rem' } : { xs: '1.02rem', sm: '1.18rem' },
-                    fontWeight: 600,
+                    fontWeight: 700,
                     letterSpacing: 0,
                     color: textPrimary,
                   }}
@@ -303,11 +303,11 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 sx={{
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   px: isShipmentVariant ? 0.2 : isCompact ? 0.4 : 1.2,
                   backgroundColor: isDark ? alpha(surface, 0.96) : alpha('#ffffff', 0.92),
                   border: `1px solid ${borderColor}`,
-                  boxShadow: isCompact ? 'none' : `0 10px 24px ${alpha(textPrimary, 0.05)}`,
+                  boxShadow: isCompact ? 'none' : `0 10px 24px ${alpha(textPrimary, 0.06)}`,
                   '& .MuiToolbar-root': {
                     minHeight: isShipmentVariant ? 28 : isCompact ? 34 : undefined,
                     px: isCompact ? 0.5 : undefined,
@@ -342,7 +342,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
               sx={{
                 minHeight: 150,
                 py: 3,
-                borderRadius: isCompact ? '8px' : '12px',
+                borderRadius: '8px',
                 border: `1px solid ${borderColor}`,
                 background: mobileCardBg,
               }}
@@ -466,7 +466,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
             </Stack>
           )
         ) : (
-          <Box sx={{ overflowX: 'auto', borderRadius: isCompact ? '8px' : '14px' }}>
+          <Box sx={{ overflowX: 'auto', borderRadius: '8px' }}>
             <TableContainer
               component={Paper}
               sx={{
@@ -475,7 +475,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                 minWidth: '100%',
                 maxHeight,
                 boxShadow: 'none',
-                borderRadius: isCompact ? '8px' : '12px',
+                borderRadius: '8px',
                 backdropFilter: 'none',
                 overflowX: 'auto',
               }}
@@ -556,7 +556,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                             minWidth: isShipmentVariant ? 0 : col.minWidth || (isCompact ? 80 : 100),
                             width: isShipmentVariant ? col.minWidth || 100 : undefined,
                             maxWidth: isShipmentVariant ? col.minWidth || 100 : undefined,
-                            fontWeight: 600,
+                          fontWeight: 600,
                             fontSize: isShipmentVariant ? '11.3px' : isCompact ? '10.5px' : '11px',
                             textTransform: isShipmentVariant ? 'none' : 'uppercase',
                             letterSpacing: 0,
@@ -652,16 +652,18 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                           onClick={onRowClick ? () => onRowClick(row) : undefined}
                           sx={{
                             borderBottom: isShipmentVariant ? 'none' : `1px solid ${softBorderColor}`,
-                            backgroundColor: isDark ? surface : isShipmentVariant ? '#FFFFFF' : '#fffdfa',
+                            backgroundColor: isDark ? surface : '#FFFFFF',
+                            boxShadow: isShipmentVariant
+                              ? `0 1px 0 ${alpha(textPrimary, 0.08)}`
+                              : `inset 0 -1px 0 ${softBorderColor}`,
                             transition: 'background-color .18s ease, box-shadow .18s ease',
                             '&:nth-of-type(even)': isShipmentVariant
                               ? undefined
                               : {
-                              backgroundColor: isDark ? '#18212c' : alpha('#F7F1EB', 0.5),
-                            },
+                                  backgroundColor: isDark ? '#18212c' : '#F8FAFC',
+                                },
                             ...(isShipmentVariant
                               ? {
-                                  boxShadow: `0 1px 0 ${alpha(textPrimary, 0.08)}`,
                                   '& > td:first-of-type': {
                                     borderTopLeftRadius: '8px',
                                     borderBottomLeftRadius: '8px',
