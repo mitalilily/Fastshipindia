@@ -6,12 +6,16 @@ import {
   PackageSearch, Phone, Plane, Route, Scale, Search, ShieldCheck, Sparkles,
   Truck, Warehouse, X, Zap,
 } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 
 const navItems = [
-  ['Tracking', '/tracking'],
-  ['Rate calculator', '/rate-calculator'],
-  ['Weight calculator', '/weight-calculator'],
+  ['Platform', '/integrations'],
+  ['Couriers', '/integrations/courier-partners'],
+  ['Blogs', '/blogs'],
+  ['About', '/about'],
+  ['Tracking', '/tracking', Search],
+  ['Rates', '/rate-calculator'],
+  ['Weight', '/weight-calculator'],
 ]
 
 const RENDER_CLIENT_LOGIN_URL = 'https://fastshipindia-1.onrender.com/#/login'
@@ -57,7 +61,6 @@ function Logo({ light = false }) {
 
 function Header() {
   const [open, setOpen] = useState(false)
-  const { pathname } = useLocation()
   const loginHref = resolveLoginHref(
     import.meta.env.VITE_AUTH_APP_URL ||
     import.meta.env.VITE_PLATFORM_LOGIN_URL ||
@@ -67,8 +70,17 @@ function Header() {
     <div className="nav-shell">
       <Link to="/" className="brand" onClick={() => setOpen(false)}><Logo /></Link>
       <nav className={`main-nav ${open ? 'is-open' : ''}`}>
-        {navItems.map(([label, href]) => <Link key={href} to={href} className={pathname === href ? 'active' : undefined} aria-current={pathname === href ? 'page' : undefined} onClick={() => setOpen(false)}>{label}</Link>)}
-        <Link className={`nav-track${pathname === '/tracking' ? ' active' : ''}`} to="/tracking" aria-current={pathname === '/tracking' ? 'page' : undefined} onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</Link>
+        {navItems.map(([label, href, Icon]) => (
+          <NavLink
+            key={href}
+            to={href}
+            className={({ isActive }) => `${Icon ? 'nav-track ' : ''}${isActive ? 'active' : ''}`.trim() || undefined}
+            onClick={() => setOpen(false)}
+          >
+            {Icon ? <Icon size={16} /> : null}
+            {label}
+          </NavLink>
+        ))}
         <a className="nav-login-mobile" href={loginHref} onClick={() => setOpen(false)}>Log in</a>
       </nav>
       <div className="nav-actions"><a className="text-link login-link" href={loginHref}>Log in</a><Link className="button button-dark button-small" to="/rate-calculator">Start shipping <ArrowRight size={15} /></Link></div>

@@ -906,3 +906,36 @@ footer a {
   flex:0 0 36px;
 }
 
+/* Keep the expanded multi-page navbar usable in both landing builds. */
+.main-nav a.active {
+  color:var(--coral);
+}
+
+@media (max-width:1200px) and (min-width:901px) {
+  .site-header {
+    width:min(1160px,calc(100% - 24px));
+  }
+
+  .brand-logo-image {
+    width:142px;
+    height:46px;
+  }
+
+  .main-nav {
+    gap:10px;
+    margin-left:0;
+  }
+
+  .main-nav a {
+    font-size:13px;
+  }
+
+  .nav-actions {
+    gap:8px;
+  }
+
+  .button-small {
+    padding-inline:12px;
+  }
+}
+

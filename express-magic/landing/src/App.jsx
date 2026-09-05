@@ -9,9 +9,13 @@ import {
 import { Link, NavLink, useLocation } from 'react-router-dom'
 
 const navItems = [
-  ['Tracking', '/tracking'],
-  ['Rate calculator', '/rate-calculator'],
-  ['Weight calculator', '/weight-calculator'],
+  ['Platform', '/integrations'],
+  ['Couriers', '/integrations/courier-partners'],
+  ['Blogs', '/blogs'],
+  ['About', '/about'],
+  ['Tracking', '/tracking', Search],
+  ['Rates', '/rate-calculator'],
+  ['Weight', '/weight-calculator'],
 ]
 
 function RouteEffects() {
@@ -51,8 +55,17 @@ function Header() {
     <div className="nav-shell">
       <Link to="/" className="brand" onClick={() => setOpen(false)}><Logo /></Link>
       <nav className={`main-nav ${open ? 'is-open' : ''}`}>
-        {navItems.map(([label, to]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}>{label}</NavLink>)}
-        <NavLink className="nav-track" to="/tracking" onClick={() => setOpen(false)}><Search size={16} /> Track a parcel</NavLink>
+        {navItems.map(([label, to, Icon]) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) => `${Icon ? 'nav-track ' : ''}${isActive ? 'active' : ''}`.trim() || undefined}
+            onClick={() => setOpen(false)}
+          >
+            {Icon ? <Icon size={16} /> : null}
+            {label}
+          </NavLink>
+        ))}
       </nav>
       <div className="nav-actions">
         <a className="button button-coral button-small" href="https://fastshipindia-1.onrender.com/#/login">Sign in <ArrowRight size={15} /></a>
