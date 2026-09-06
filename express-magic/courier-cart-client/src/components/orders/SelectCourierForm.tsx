@@ -706,6 +706,66 @@ export const SelectCourierForm = ({
               const finalChargeLabel = isBookable ? formatCurrency(finalCourierCharge) : 'Unavailable'
               const b2bRateBreakdown =
                 shipment_type === 'b2b' ? getB2BRateBreakdown(courier) : null
+              const priceBreakdownItems =
+                shipment_type === 'b2b' && b2bRateBreakdown
+                  ? [
+                      {
+                        label: 'Rate/kg',
+                        value:
+                          b2bRateBreakdown.ratePerKg > 0
+                            ? formatCurrency(b2bRateBreakdown.ratePerKg)
+                            : '',
+                        highlight: false,
+                        strong: false,
+                      },
+                      {
+                        label: 'Base freight',
+                        value:
+                          b2bRateBreakdown.freightBeforeMinimum > 0
+                            ? formatCurrency(b2bRateBreakdown.freightBeforeMinimum)
+                            : '',
+                        highlight: false,
+                        strong: false,
+                      },
+                      {
+                        label: 'Minimum',
+                        value:
+                          b2bRateBreakdown.minimumChargeApplied &&
+                          b2bRateBreakdown.minimumCharge > 0
+                            ? formatCurrency(b2bRateBreakdown.minimumCharge)
+                            : '',
+                        highlight: true,
+                        strong: false,
+                      },
+                      { label: 'Final', value: finalChargeLabel, highlight: false, strong: true },
+                    ].filter((item) => item.value)
+                  : [
+                      {
+                        label: 'Freight',
+                        value: freightCharge > 0 ? formatCurrency(freightCharge) : '',
+                        highlight: false,
+                        strong: false,
+                      },
+                      {
+                        label: 'COD',
+                        value: codCharge > 0 ? formatCurrency(codCharge) : '',
+                        highlight: false,
+                        strong: false,
+                      },
+                      {
+                        label: 'Other',
+                        value: otherCharge > 0 ? formatCurrency(otherCharge) : '',
+                        highlight: false,
+                        strong: false,
+                      },
+                      {
+                        label: 'Insurance',
+                        value: insuranceCharge > 0 ? formatCurrency(insuranceCharge) : '',
+                        highlight: false,
+                        strong: false,
+                      },
+                      { label: 'Final', value: finalChargeLabel, highlight: false, strong: true },
+                    ].filter((item) => item.value)
 
               return (
                 <Paper
@@ -744,10 +804,10 @@ export const SelectCourierForm = ({
                     clearErrors('courierPartnerId')
                   }}
                   sx={{
-                    p: { xs: 1.15, sm: 1.25 },
+                    p: { xs: 0.9, sm: 1 },
                     cursor: isBookable ? 'pointer' : 'not-allowed',
                     opacity: isBookable ? 1 : 0.72,
-                    borderRadius: 2,
+                    borderRadius: 1.75,
                     border: isSelected
                       ? `2px solid ${alpha(ACCENT, 0.42)}`
                       : `1px solid ${alpha(isBookable ? '#102A54' : '#8A1F11', isBookable ? 0.12 : 0.2)}`,
@@ -765,19 +825,19 @@ export const SelectCourierForm = ({
                     },
                   }}
                 >
-                  <Stack spacing={1}>
+                  <Stack spacing={0.75}>
                     <Stack
                       direction={{ xs: 'column', sm: 'row' }}
                       justifyContent="space-between"
                       alignItems={{ xs: 'flex-start', sm: 'center' }}
-                      spacing={0.9}
+                      spacing={0.7}
                     >
-                      <Stack direction="row" spacing={0.9} alignItems="center">
+                      <Stack direction="row" spacing={0.75} alignItems="center">
                         <Box
                           sx={{
-                            width: 42,
-                            height: 42,
-                            borderRadius: 2,
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1.5,
                             bgcolor: SURFACE,
                             border: `1px solid ${alpha(ACCENT, 0.08)}`,
                             display: 'grid',
@@ -788,13 +848,13 @@ export const SelectCourierForm = ({
                           <img
                             src={getCourierLogo(courier, defaultLogo)}
                             alt={courier?.name}
-                            style={{ width: 28, height: 28, objectFit: 'contain' }}
+                            style={{ width: 24, height: 24, objectFit: 'contain' }}
                           />
                         </Box>
                         <Box>
                           <Stack direction="row" spacing={0.8} alignItems="center" flexWrap="wrap">
                             {getModeIcon(local?.forward?.mode || local?.mode)}
-                            <Typography sx={{ fontWeight: 800, color: TEXT_PRIMARY }}>
+                            <Typography sx={{ fontSize: 16, fontWeight: 800, color: TEXT_PRIMARY }}>
                               {getCourierDisplayName(courier)}
                             </Typography>
                             {isBookable && courier?.tag === 'fastest' && (
@@ -812,23 +872,23 @@ export const SelectCourierForm = ({
                               />
                             )}
                           </Stack>
-                          <Typography sx={{ mt: 0.35, fontSize: 13, color: TEXT_SECONDARY }}>
+                          <Typography sx={{ mt: 0.2, fontSize: 12.5, color: TEXT_SECONDARY }}>
                             {courier?.edd ? `Estimated delivery: ${courier.edd}` : 'EDD unavailable'}
                           </Typography>
                         </Box>
                       </Stack>
 
                       <Stack alignItems={{ xs: 'flex-start', sm: 'flex-end' }} spacing={0.25}>
-                        <Typography sx={{ fontSize: 12, color: TEXT_SECONDARY }}>
+                        <Typography sx={{ fontSize: 11.5, color: TEXT_SECONDARY }}>
                           Courier Charge
                         </Typography>
-                        <Typography sx={{ fontSize: 22, fontWeight: 900, color: TEXT_PRIMARY }}>
+                        <Typography sx={{ fontSize: 21, fontWeight: 900, color: TEXT_PRIMARY }}>
                           {finalChargeLabel}
                         </Typography>
                       </Stack>
                     </Stack>
 
-                    <Grid container spacing={0.8}>
+                    <Grid container spacing={0.6}>
                       {[
                         ['Courier Charge', finalChargeLabel],
                         ['Chargeable', formatCourierWeightKg(courier?.chargeable_weight)],
@@ -838,14 +898,14 @@ export const SelectCourierForm = ({
                         <Grid key={label} size={{ xs: 6, lg: 3 }}>
                           <Box
                             sx={{
-                              p: 0.9,
-                              borderRadius: 2,
+                              p: 0.7,
+                              borderRadius: 1.5,
                               bgcolor: SURFACE,
                               border: '1px solid rgba(13,59,142,0.08)',
                             }}
                           >
                             <Typography sx={{ fontSize: 11, color: TEXT_SECONDARY }}>{label}</Typography>
-                            <Typography sx={{ mt: 0.35, fontWeight: 800, color: TEXT_PRIMARY }}>
+                            <Typography sx={{ mt: 0.2, fontSize: 15, fontWeight: 800, color: TEXT_PRIMARY }}>
                               {value}
                             </Typography>
                           </Box>
@@ -853,32 +913,67 @@ export const SelectCourierForm = ({
                       ))}
                     </Grid>
 
-                    {b2bRateBreakdown && (
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
-                        {b2bRateBreakdown.ratePerKg > 0 && (
-                          <Chip
-                            size="small"
-                            label={`Rate/kg ${formatCurrency(b2bRateBreakdown.ratePerKg)}`}
-                          />
-                        )}
-                        {b2bRateBreakdown.freightBeforeMinimum > 0 && (
-                          <Chip
-                            size="small"
-                            label={`Base ${formatCurrency(b2bRateBreakdown.freightBeforeMinimum)}`}
-                          />
-                        )}
-                        {b2bRateBreakdown.minimumChargeApplied && (
-                          <Chip
-                            size="small"
-                            color="warning"
-                            variant="outlined"
-                            label={`Minimum ${formatCurrency(b2bRateBreakdown.minimumCharge)}`}
-                          />
-                        )}
-                      </Stack>
+                    {priceBreakdownItems.length > 0 && (
+                      <Box
+                        sx={{
+                          px: 0.8,
+                          py: 0.55,
+                          borderRadius: 1.5,
+                          bgcolor: alpha(ACCENT, 0.035),
+                          border: `1px solid ${alpha(ACCENT, 0.08)}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.55,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            mr: 0.15,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: TEXT_SECONDARY,
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          Price breakdown
+                        </Typography>
+                        {priceBreakdownItems.map((item) => (
+                          <Box
+                            key={item.label}
+                            sx={{
+                              px: 0.75,
+                              py: 0.3,
+                              borderRadius: 1.25,
+                              bgcolor: item.strong
+                                ? alpha(ACCENT, 0.08)
+                                : item.highlight
+                                  ? alpha('#F97316', 0.12)
+                                  : '#fff',
+                              border: `1px solid ${
+                                item.strong
+                                  ? alpha(ACCENT, 0.16)
+                                  : item.highlight
+                                    ? alpha('#F97316', 0.18)
+                                    : alpha(ACCENT, 0.08)
+                              }`,
+                              display: 'inline-flex',
+                              alignItems: 'baseline',
+                              gap: 0.4,
+                            }}
+                          >
+                            <Typography sx={{ fontSize: 11, color: TEXT_SECONDARY }}>
+                              {item.label}
+                            </Typography>
+                            <Typography sx={{ fontSize: 13, fontWeight: 900, color: TEXT_PRIMARY }}>
+                              {item.value}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
                     )}
 
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                    <Stack direction="row" spacing={0.6} flexWrap="wrap">
                       {courier?.prepaid === false && (
                         <Chip size="small" variant="outlined" color="error" label="Prepaid N/A" />
                       )}
@@ -891,9 +986,9 @@ export const SelectCourierForm = ({
                     </Stack>
 
                     {isSelected && isBookable && (
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <BiCheckCircle size={20} color={ACCENT} />
-                        <Typography sx={{ fontWeight: 800, color: ACCENT }}>
+                      <Stack direction="row" spacing={0.7} alignItems="center">
+                        <BiCheckCircle size={18} color={ACCENT} />
+                        <Typography sx={{ fontSize: 15, fontWeight: 800, color: ACCENT }}>
                           Selected for booking
                         </Typography>
                       </Stack>
