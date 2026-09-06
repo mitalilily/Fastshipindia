@@ -27,10 +27,50 @@ type B2CRateSeed = {
   codPercent: number
   zones: Record<'A' | 'B' | 'C' | 'D' | 'E', number>
   additional: Record<'A' | 'B' | 'C' | 'D' | 'E', number>
+  slabs?: Record<'A' | 'B' | 'C' | 'D' | 'E', RateCardSlabSeed[]>
+}
+
+type RateCardSlabSeed = {
+  weightFromKg: number
+  weightToKg: number | null
+  rate: number
+  extraRate?: number | null
+  extraWeightUnitKg?: number | null
+}
+
+type B2BCourierSeed = {
+  id: number
+  name: string
+  serviceProvider: string
 }
 
 const BASIC_PLAN_NAME = 'Basic'
 const DELHIVERY_B2B_COURIER_ID = 101
+const HOLZER_B2B_VOLUME_FACTOR = 3857.14
+
+const delhiveryB2BCourierSeed: B2BCourierSeed = {
+  id: DELHIVERY_B2B_COURIER_ID,
+  name: 'Delhivery B2B LTL',
+  serviceProvider: 'delhivery',
+}
+
+const holzerB2BCourierSeeds: B2BCourierSeed[] = [
+  {
+    id: 3101,
+    name: 'Holzer Delhivery Parcel',
+    serviceProvider: 'delhivery',
+  },
+  {
+    id: 3102,
+    name: 'Holzer Movin Parcel',
+    serviceProvider: 'movin',
+  },
+  {
+    id: 3103,
+    name: 'Holzer XP India Parcel',
+    serviceProvider: 'xpindia',
+  },
+]
 
 const b2cZoneSeeds: Record<B2CZoneCode, { name: string; description: string; region: string }> = {
   WITHIN_CITY: {
@@ -522,6 +562,61 @@ const b2cRateSeeds: B2CRateSeed[] = [
     additional: { A: 12, B: 24, C: 28, D: 34, E: 38 },
   },
   {
+    id: 3104,
+    name: 'Holzer BlueDart Courier',
+    serviceProvider: 'bluedart',
+    mode: 'air',
+    type: 'forward',
+    baseWeightKg: 0.5,
+    additionalWeightKg: 0,
+    codCharges: 0,
+    codPercent: 0,
+    zones: { A: 80, B: 100, C: 140, D: 160, E: 200 },
+    additional: { A: 0, B: 0, C: 0, D: 0, E: 0 },
+    slabs: {
+      A: [
+        { weightFromKg: 0, weightToKg: 0.5, rate: 80 },
+        { weightFromKg: 0.5, weightToKg: 1, rate: 110 },
+        { weightFromKg: 1, weightToKg: 2, rate: 150 },
+        { weightFromKg: 2, weightToKg: 5, rate: 250 },
+        { weightFromKg: 5, weightToKg: 10, rate: 350 },
+        { weightFromKg: 10, weightToKg: 15, rate: 440 },
+      ],
+      B: [
+        { weightFromKg: 0, weightToKg: 0.5, rate: 100 },
+        { weightFromKg: 0.5, weightToKg: 1, rate: 120 },
+        { weightFromKg: 1, weightToKg: 2, rate: 160 },
+        { weightFromKg: 2, weightToKg: 5, rate: 320 },
+        { weightFromKg: 5, weightToKg: 10, rate: 420 },
+        { weightFromKg: 10, weightToKg: 15, rate: 500 },
+      ],
+      C: [
+        { weightFromKg: 0, weightToKg: 0.5, rate: 140 },
+        { weightFromKg: 0.5, weightToKg: 1, rate: 170 },
+        { weightFromKg: 1, weightToKg: 2, rate: 210 },
+        { weightFromKg: 2, weightToKg: 5, rate: 350 },
+        { weightFromKg: 5, weightToKg: 10, rate: 480 },
+        { weightFromKg: 10, weightToKg: 15, rate: 530 },
+      ],
+      D: [
+        { weightFromKg: 0, weightToKg: 0.5, rate: 160 },
+        { weightFromKg: 0.5, weightToKg: 1, rate: 180 },
+        { weightFromKg: 1, weightToKg: 2, rate: 220 },
+        { weightFromKg: 2, weightToKg: 5, rate: 440 },
+        { weightFromKg: 5, weightToKg: 10, rate: 520 },
+        { weightFromKg: 10, weightToKg: 15, rate: 580 },
+      ],
+      E: [
+        { weightFromKg: 0, weightToKg: 0.5, rate: 200 },
+        { weightFromKg: 0.5, weightToKg: 1, rate: 220 },
+        { weightFromKg: 1, weightToKg: 2, rate: 310 },
+        { weightFromKg: 2, weightToKg: 5, rate: 460 },
+        { weightFromKg: 5, weightToKg: 10, rate: 640 },
+        { weightFromKg: 10, weightToKg: 15, rate: 700 },
+      ],
+    },
+  },
+  {
     id: 2008,
     name: 'Delhivery Heavy MPS Reverse',
     serviceProvider: 'delhivery',
@@ -590,6 +685,40 @@ const b2bMatrix: Record<(typeof b2bZoneCodes)[number], number[]> = {
   E2: [10.5, 10.5, 10.5, 11.7, 10.7, 10.7, 10.5, 10.9, 14.9, 14.9, 14.9, 15.5, 7.2, 7.2, 11.1, 11.1],
   NE1: [11.1, 11.1, 11.1, 14.8, 10.9, 10.9, 11.7, 13.3, 13.7, 13.7, 13.7, 15.3, 9.9, 9.9, 7.2, 7.2],
   NE2: [11.1, 11.1, 11.1, 14.8, 10.9, 10.9, 11.7, 13.3, 13.7, 13.7, 13.7, 15.3, 9.9, 9.9, 7.2, 7.2],
+}
+
+const holzerB2BZoneCodes = [
+  'N1',
+  'N2',
+  'N3',
+  'C1',
+  'C2',
+  'W1',
+  'W2',
+  'E1',
+  'E2',
+  'S1',
+  'S2',
+  'S3',
+  'NE1',
+  'NE2',
+] as const
+
+const holzerB2BMatrix: Record<(typeof holzerB2BZoneCodes)[number], number[]> = {
+  N1: [9, 15, 18, 17, 18, 20, 21, 21, 22, 21, 22, 23, 29, 34],
+  N2: [],
+  N3: [],
+  C1: [],
+  C2: [],
+  W1: [],
+  W2: [],
+  E1: [],
+  E2: [],
+  S1: [],
+  S2: [],
+  S3: [],
+  NE1: [],
+  NE2: [],
 }
 
 const loadEnv = () => {
@@ -667,11 +796,11 @@ const ensureB2CZones = async (client: PoolClient, zonesTable: string) => {
   return zoneIds
 }
 
-const ensureB2BCourier = async (client: PoolClient) => {
+const ensureB2BCourier = async (client: PoolClient, courier: B2BCourierSeed) => {
   await client.query(
     `insert into couriers
       (id, name, "serviceProvider", "isEnabled", business_type, created_at, updated_at)
-     values ($1, 'Delhivery B2B LTL', 'delhivery', true, '["b2b"]'::jsonb, now(), now())
+     values ($1, $2, $3, true, '["b2b"]'::jsonb, now(), now())
      on conflict (id, "serviceProvider") do update set
        name = excluded.name,
        "isEnabled" = true,
@@ -680,7 +809,7 @@ const ensureB2BCourier = async (client: PoolClient) => {
          else coalesce(couriers.business_type, '[]'::jsonb) || '["b2b"]'::jsonb
        end,
        updated_at = now()`,
-    [DELHIVERY_B2B_COURIER_ID],
+    [courier.id, courier.name, courier.serviceProvider],
   )
 }
 
@@ -708,6 +837,7 @@ const upsertB2CRate = async (
   zoneId: string,
   baseRate: number,
   additionalRate: number,
+  slabs?: RateCardSlabSeed[],
 ) => {
   const existing = await client.query(
     `select id from shipping_rates
@@ -771,12 +901,35 @@ const upsertB2CRate = async (
   }
 
   await client.query(`delete from shipping_rate_slabs where shipping_rate_id = $1`, [rateId])
-  await client.query(
-    `insert into shipping_rate_slabs
-      (id, shipping_rate_id, weight_from, weight_to, rate, extra_rate, extra_weight_unit, created_at, updated_at)
-     values ($1, $2, 0, $3, $4, $5, $6, now(), now())`,
-    [randomUUID(), rateId, seed.baseWeightKg, baseRate, additionalRate, seed.additionalWeightKg],
-  )
+  const rateSlabs =
+    slabs && slabs.length
+      ? slabs
+      : [
+          {
+            weightFromKg: 0,
+            weightToKg: seed.baseWeightKg,
+            rate: baseRate,
+            extraRate: additionalRate,
+            extraWeightUnitKg: seed.additionalWeightKg,
+          },
+        ]
+
+  for (const slab of rateSlabs) {
+    await client.query(
+      `insert into shipping_rate_slabs
+        (id, shipping_rate_id, weight_from, weight_to, rate, extra_rate, extra_weight_unit, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6, $7, now(), now())`,
+      [
+        randomUUID(),
+        rateId,
+        slab.weightFromKg,
+        slab.weightToKg,
+        slab.rate,
+        slab.extraRate ?? null,
+        slab.extraWeightUnitKg ?? null,
+      ],
+    )
+  }
 }
 
 const seedB2CRates = async (client: PoolClient, planId: string, zonesTable: string) => {
@@ -817,6 +970,7 @@ const seedB2CRates = async (client: PoolClient, planId: string, zonesTable: stri
           zoneId,
           seed.zones[pdfZone],
           seed.additional[pdfZone],
+          seed.slabs?.[pdfZone],
         )
         saved += 1
       }
@@ -875,6 +1029,9 @@ const upsertB2BMatrixRate = async (
   originZoneId: string,
   destinationZoneId: string,
   ratePerKg: number,
+  courier: B2BCourierSeed,
+  source: string,
+  volumetricFactor = 4500,
 ) => {
   const existing = await client.query(
     `select id from shiplifi_b2b_zone_to_zone_rates
@@ -882,23 +1039,24 @@ const upsertB2BMatrixRate = async (
        and origin_zone_id = $2
        and destination_zone_id = $3
        and courier_id = $4
-       and lower(coalesce(service_provider, '')) = 'delhivery'
+       and lower(coalesce(service_provider, '')) = lower($5)
      order by created_at nulls first, id limit 1`,
-    [planId, originZoneId, destinationZoneId, DELHIVERY_B2B_COURIER_ID],
+    [planId, originZoneId, destinationZoneId, courier.id, courier.serviceProvider],
   )
 
   if (existing.rows[0]?.id) {
     await client.query(
       `update shiplifi_b2b_zone_to_zone_rates
        set rate_per_kg = $1,
-           volumetric_factor = 4500,
+           volumetric_factor = $2,
            is_active = true,
-           metadata = $2::jsonb,
+           metadata = $3::jsonb,
            updated_at = now()
-       where id = $3`,
+       where id = $4`,
       [
         ratePerKg,
-        JSON.stringify({ source: 'b2b price list.pdf', courier_name: 'Delhivery B2B LTL' }),
+        volumetricFactor,
+        JSON.stringify({ source, courier_name: courier.name }),
         existing.rows[0].id,
       ],
     )
@@ -909,15 +1067,17 @@ const upsertB2BMatrixRate = async (
     `insert into shiplifi_b2b_zone_to_zone_rates
       (id, plan_id, origin_zone_id, destination_zone_id, courier_id, service_provider,
        rate_per_kg, volumetric_factor, effective_from, is_active, metadata, created_at, updated_at)
-     values ($1, $2, $3, $4, $5, 'delhivery', $6, 4500, now(), true, $7::jsonb, now(), now())`,
+     values ($1, $2, $3, $4, $5, $6, $7, $8, now(), true, $9::jsonb, now(), now())`,
     [
       randomUUID(),
       planId,
       originZoneId,
       destinationZoneId,
-      DELHIVERY_B2B_COURIER_ID,
+      courier.id,
+      courier.serviceProvider,
       ratePerKg,
-      JSON.stringify({ source: 'b2b price list.pdf', courier_name: 'Delhivery B2B LTL' }),
+      volumetricFactor,
+      JSON.stringify({ source, courier_name: courier.name }),
     ],
   )
 }
@@ -998,8 +1158,102 @@ const upsertB2BAdditionalCharges = async (client: PoolClient, planId: string) =>
   )
 }
 
+const upsertHolzerB2BAdditionalCharges = async (
+  client: PoolClient,
+  planId: string,
+  courier: B2BCourierSeed,
+) => {
+  const existing = await client.query(
+    `select id from shiplifi_b2b_additional_charges
+     where plan_id = $1 and courier_id = $2 and lower(coalesce(service_provider, '')) = lower($3)
+     limit 1`,
+    [planId, courier.id, courier.serviceProvider],
+  )
+
+  const values = [
+    planId,
+    courier.id,
+    courier.serviceProvider,
+    100,
+    7,
+    500,
+    20,
+    19,
+    500,
+    3,
+    100,
+    0.1,
+    5000,
+    JSON.stringify({
+      source: 'HOLZER INDIA PARPOSAL.pdf',
+      client: 'HOLZER INDIA PVT LTD',
+      courier_name: courier.name,
+      minimum_chargeable: '20 kg and Rs 500 minimum chargeable amount',
+      volumetric_formula: 'L*B*H/27000*7 in centimeters',
+      gst: '18%',
+      no_hidden_charge: true,
+      handling_above_150_kg: '3 kg or Rs 500 whichever is higher',
+      risk_cover: '1.5% invoice declared value when opted',
+    }),
+  ]
+
+  if (existing.rows[0]?.id) {
+    await client.query(
+      `update shiplifi_b2b_additional_charges
+       set awb_charges = $4,
+           cft_factor = $5,
+           minimum_chargeable_amount = $6,
+           minimum_chargeable_weight = $7,
+           minimum_chargeable_method = 'whichever_is_higher',
+           fuel_surcharge_percentage = $8,
+           green_tax = 0,
+           oda_charges = $9,
+           oda_per_kg_charge = $10,
+           oda_method = 'whichever_is_higher',
+           cod_fixed_amount = 0,
+           cod_percentage = 0,
+           cod_method = 'whichever_is_higher',
+           rov_fixed_amount = $11,
+           rov_percentage = $12,
+           rov_method = 'whichever_is_higher',
+           liability_limit = $13,
+           liability_method = 'whichever_is_lower',
+           public_holiday_pickup_charge = 500,
+           custom_fields = jsonb_build_object(
+             'risk_cover_percentage', 1.5,
+             'handling_above_150_kg_amount', 500,
+             'handling_above_150_kg_weight', 3
+           ),
+           metadata = $14::jsonb,
+           updated_at = now()
+       where id = $15`,
+      [...values, existing.rows[0].id],
+    )
+    return
+  }
+
+  await client.query(
+    `insert into shiplifi_b2b_additional_charges
+      (id, plan_id, courier_id, service_provider, awb_charges, cft_factor,
+       minimum_chargeable_amount, minimum_chargeable_weight, minimum_chargeable_method,
+       fuel_surcharge_percentage, green_tax, oda_charges, oda_per_kg_charge,
+       oda_method, cod_fixed_amount, cod_percentage, cod_method,
+       rov_fixed_amount, rov_percentage, rov_method, liability_limit, liability_method,
+       public_holiday_pickup_charge, custom_fields, metadata, created_at, updated_at)
+     values ($15, $1, $2, $3, $4, $5, $6, $7, 'whichever_is_higher',
+       $8, 0, $9, $10, 'whichever_is_higher', 0, 0, 'whichever_is_higher',
+       $11, $12, 'whichever_is_higher', $13, 'whichever_is_lower',
+       500, jsonb_build_object(
+         'risk_cover_percentage', 1.5,
+         'handling_above_150_kg_amount', 500,
+         'handling_above_150_kg_weight', 3
+       ), $14::jsonb, now(), now())`,
+    [...values, randomUUID()],
+  )
+}
+
 const seedB2BRates = async (client: PoolClient, planId: string, zonesTable: string) => {
-  await ensureB2BCourier(client)
+  await ensureB2BCourier(client, delhiveryB2BCourierSeed)
   const zoneIds = await ensureB2BZones(client, zonesTable)
   let saved = 0
 
@@ -1010,12 +1264,47 @@ const seedB2BRates = async (client: PoolClient, planId: string, zonesTable: stri
       const destination = b2bZoneCodes[index]
       const destinationZoneId = zoneIds.get(destination)
       if (!destinationZoneId) continue
-      await upsertB2BMatrixRate(client, planId, originZoneId, destinationZoneId, b2bMatrix[origin][index])
+      await upsertB2BMatrixRate(
+        client,
+        planId,
+        originZoneId,
+        destinationZoneId,
+        b2bMatrix[origin][index],
+        delhiveryB2BCourierSeed,
+        'b2b price list.pdf',
+      )
       saved += 1
     }
   }
 
   await upsertB2BAdditionalCharges(client, planId)
+
+  for (const courier of holzerB2BCourierSeeds) {
+    await ensureB2BCourier(client, courier)
+    for (const origin of holzerB2BZoneCodes) {
+      const originZoneId = zoneIds.get(origin)
+      const originRates = holzerB2BMatrix[origin]
+      if (!originZoneId || !originRates.length) continue
+      for (let index = 0; index < holzerB2BZoneCodes.length; index += 1) {
+        const destination = holzerB2BZoneCodes[index]
+        const destinationZoneId = zoneIds.get(destination)
+        const ratePerKg = originRates[index]
+        if (!destinationZoneId || ratePerKg === undefined) continue
+        await upsertB2BMatrixRate(
+          client,
+          planId,
+          originZoneId,
+          destinationZoneId,
+          ratePerKg,
+          courier,
+          'HOLZER INDIA PARPOSAL.pdf',
+          HOLZER_B2B_VOLUME_FACTOR,
+        )
+        saved += 1
+      }
+    }
+    await upsertHolzerB2BAdditionalCharges(client, planId, courier)
+  }
   return saved
 }
 
