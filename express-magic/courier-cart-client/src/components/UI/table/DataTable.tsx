@@ -121,8 +121,13 @@ export default function DataTable<T extends { id: string | number }>(props: Data
   const [localRowsPerPage, setLocalRowsPerPage] = React.useState(defaultRowsPerPage)
   const [selectedIds, setSelectedIds] = React.useState<Array<T['id']>>([])
   const [expandedRowId, setExpandedRowId] = React.useState<T['id'] | null>(null)
+  const [topScrollbarWidth, setTopScrollbarWidth] = React.useState(0)
+  const [showTopScrollbar, setShowTopScrollbar] = React.useState(false)
 
   const expandedRef = useRef<HTMLDivElement | null>(null)
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
+  const topScrollRef = useRef<HTMLDivElement | null>(null)
+  const syncingScrollRef = useRef(false)
   const onSelectRowsRef = useRef(onSelectRows)
 
   const page = currentPage ?? localPage
@@ -206,6 +211,78 @@ export default function DataTable<T extends { id: string | number }>(props: Data
     ? visibleColumns.reduce((total, col) => total + (col.minWidth || 100), selectable ? 38 : 0) +
       (expandable && renderExpandedRow ? 40 : 0)
     : undefined
+  const updateHorizontalScrollMetrics = React.useCallback(() => {
+    const tableScrollElement = tableScrollRef.current
+    if (!tableScrollElement || isMobile) {
+      setShowTopScrollbar(false)
+      setTopScrollbarWidth(0)
+      return
+    }
+
+    const nextScrollWidth = tableScrollElement.scrollWidth
+    const hasHorizontalOverflow = nextScrollWidth > tableScrollElement.clientWidth + 1
+    setTopScrollbarWidth(nextScrollWidth)
+    setShowTopScrollbar(hasHorizontalOverflow)
+
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollLeft = tableScrollElement.scrollLeft
+    }
+  }, [isMobile])
+
+  useEffect(() => {
+    updateHorizontalScrollMetrics()
+
+    const tableScrollElement = tableScrollRef.current
+    if (!tableScrollElement || isMobile) return
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(updateHorizontalScrollMetrics)
+        : null
+    resizeObserver?.observe(tableScrollElement)
+    if (tableScrollElement.firstElementChild) {
+      resizeObserver?.observe(tableScrollElement.firstElementChild)
+    }
+
+    const resizeFrame = window.requestAnimationFrame(updateHorizontalScrollMetrics)
+    window.addEventListener('resize', updateHorizontalScrollMetrics)
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.cancelAnimationFrame(resizeFrame)
+      window.removeEventListener('resize', updateHorizontalScrollMetrics)
+    }
+  }, [
+    columns.length,
+    isMobile,
+    maxHeight,
+    rows.length,
+    shipmentTableMinWidth,
+    updateHorizontalScrollMetrics,
+    visibleColumns.length,
+  ])
+
+  const handleTopScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    if (syncingScrollRef.current) return
+    syncingScrollRef.current = true
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollLeft = event.currentTarget.scrollLeft
+    }
+    window.requestAnimationFrame(() => {
+      syncingScrollRef.current = false
+    })
+  }
+
+  const handleTableScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    if (syncingScrollRef.current) return
+    syncingScrollRef.current = true
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollLeft = event.currentTarget.scrollLeft
+    }
+    window.requestAnimationFrame(() => {
+      syncingScrollRef.current = false
+    })
+  }
 
   return (
     <CardContent
@@ -473,9 +550,43 @@ export default function DataTable<T extends { id: string | number }>(props: Data
             </Stack>
           )
         ) : (
-          <Box sx={{ overflowX: 'auto', borderRadius: '8px' }}>
+          <Box sx={{ overflow: 'hidden', borderRadius: '8px' }}>
+            {showTopScrollbar && (
+              <Box
+                ref={topScrollRef}
+                onScroll={handleTopScroll}
+                sx={{
+                  mb: 0.45,
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  scrollbarGutter: 'stable',
+                  borderRadius: '8px',
+                  border: `1px solid ${alpha(textPrimary, 0.08)}`,
+                  backgroundColor: isDark ? alpha('#f8fafc', 0.06) : alpha('#0f172a', 0.035),
+                  '&::-webkit-scrollbar': {
+                    height: 12,
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: isDark ? alpha('#f8fafc', 0.08) : alpha('#0f172a', 0.06),
+                    borderRadius: 999,
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: isDark ? alpha('#f8fafc', 0.28) : alpha('#0f172a', 0.22),
+                    borderRadius: 999,
+                    border: `2px solid ${isDark ? '#151b23' : '#FFFFFF'}`,
+                  },
+                  '&::-webkit-scrollbar-thumb:hover': {
+                    backgroundColor: isDark ? alpha('#f8fafc', 0.38) : alpha('#0f172a', 0.32),
+                  },
+                }}
+              >
+                <Box sx={{ width: topScrollbarWidth, height: 1 }} />
+              </Box>
+            )}
             <TableContainer
+              ref={tableScrollRef}
               component={Paper}
+              onScroll={handleTableScroll}
               sx={{
                 background: tableBg,
                 border: isShipmentVariant ? 'none' : `1px solid ${borderColor}`,
