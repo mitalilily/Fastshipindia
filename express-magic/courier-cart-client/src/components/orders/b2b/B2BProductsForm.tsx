@@ -1,13 +1,4 @@
-import {
-  Box,
-  Button,
-  CircularProgress,
-  Divider,
-  IconButton,
-  Paper,
-  Stack,
-  Typography,
-} from '@mui/material'
+import { Box, Button, CircularProgress, IconButton, Paper, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
@@ -17,7 +8,6 @@ import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import CustomInput from '../../UI/inputs/CustomInput'
 import type { B2BFormData } from './B2BOrderForm'
 
-const emptyProduct = { productName: '', quantity: 1, unitPrice: 0 }
 const emptyBox = { quantity: 1, lengthCm: 0, breadthCm: 0, heightCm: 0, weightKg: 0 }
 const DEFAULT_B2B_VOLUMETRIC_DIVISOR = 4500
 
@@ -55,18 +45,12 @@ const ProductBoxesForm = () => {
   })
 
   const {
-    fields: productFields,
-    append: appendProduct,
-    remove: removeProduct,
-  } = useFieldArray({ control, name: 'products' })
-  const {
     fields: boxFields,
     append: appendBox,
     remove: removeBox,
   } = useFieldArray({ control, name: 'boxes' })
 
   const boxes = useWatch({ control, name: 'boxes' }) || []
-  const products = useWatch({ control, name: 'products' }) || []
   const pickupPincode = watch('pickupLocationPincode')
   const deliveryPincode = watch('pincode')
   const totalBoxes = boxes.reduce((sum, box) => sum + getBoxQuantity(box), 0)
@@ -170,18 +154,6 @@ const ProductBoxesForm = () => {
     500,
   )
 
-  const handleAddProduct = async () => {
-    const lastIndex = productFields.length - 1
-    const valid =
-      lastIndex < 0 ||
-      (await trigger([
-        `products.${lastIndex}.productName`,
-        `products.${lastIndex}.quantity`,
-        `products.${lastIndex}.unitPrice`,
-      ]))
-    if (valid) appendProduct(emptyProduct)
-  }
-
   const handleAddBox = async () => {
     const lastIndex = boxFields.length - 1
     const valid =
@@ -196,10 +168,6 @@ const ProductBoxesForm = () => {
     if (valid) appendBox(emptyBox)
   }
 
-  const productsTotal = products.reduce(
-    (sum, product) => sum + Number(product.quantity || 0) * Number(product.unitPrice || 0),
-    0,
-  )
   const volumetricFormula =
     weightCalculations.cftFactor <= 100
       ? `max(Actual, Volumetric) - Volumetric uses CFT factor ${weightCalculations.cftFactor}`
@@ -223,117 +191,6 @@ const ProductBoxesForm = () => {
 
   return (
     <Stack spacing={1.1}>
-      <Box>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
-          <Box>
-            <Typography fontWeight={700} color="#102A54">
-              Shipment Products
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Add every product included in this B2B shipment.
-            </Typography>
-          </Box>
-          <Typography variant="body2" fontWeight={700} color="#333369">
-            Total ₹{productsTotal.toFixed(2)}
-          </Typography>
-        </Stack>
-
-        <Stack spacing={1}>
-          {productFields.map((product, productIndex) => (
-            <Paper
-              key={product.id}
-              variant="outlined"
-              sx={{ p: 1.1, borderRadius: 2, borderColor: '#E0E6ED' }}
-            >
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'minmax(0, 2fr) minmax(110px, 0.75fr) minmax(130px, 0.9fr) 40px',
-                  },
-                  gap: 1,
-                  alignItems: 'start',
-                }}
-              >
-                <Controller
-                  name={`products.${productIndex}.productName`}
-                  control={control}
-                  rules={{ required: 'Product name is required' }}
-                  render={({ field, fieldState }) => (
-                    <CustomInput
-                      {...field}
-                      label="Product Name"
-                      placeholder="e.g. Cotton T-shirt"
-                      required
-                      topMargin={false}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                    />
-                  )}
-                />
-                <Controller
-                  name={`products.${productIndex}.quantity`}
-                  control={control}
-                  rules={{
-                    required: 'Quantity is required',
-                    min: { value: 1, message: 'Minimum 1' },
-                    validate: (value) => Number.isInteger(Number(value)) || 'Use a whole number',
-                  }}
-                  render={({ field, fieldState }) => (
-                    <CustomInput
-                      {...field}
-                      label="Quantity"
-                      type="number"
-                      required
-                      topMargin={false}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      slotProps={{ htmlInput: { min: 1, step: 1 } }}
-                    />
-                  )}
-                />
-                <Controller
-                  name={`products.${productIndex}.unitPrice`}
-                  control={control}
-                  rules={{
-                    required: 'Unit price is required',
-                    min: { value: 0.01, message: 'Enter a valid price' },
-                  }}
-                  render={({ field, fieldState }) => (
-                    <CustomInput
-                      {...field}
-                      label="Unit Price (₹)"
-                      type="number"
-                      required
-                      topMargin={false}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                      slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
-                    />
-                  )}
-                />
-                <IconButton
-                  color="error"
-                  aria-label={`Remove product ${productIndex + 1}`}
-                  disabled={productFields.length === 1}
-                  onClick={() => removeProduct(productIndex)}
-                  sx={{ mt: { xs: 0, sm: 3.2 } }}
-                >
-                  <AiOutlineDelete />
-                </IconButton>
-              </Box>
-            </Paper>
-          ))}
-        </Stack>
-
-        <Button variant="outlined" onClick={handleAddProduct} sx={{ mt: 0.75 }}>
-          + Add Product
-        </Button>
-      </Box>
-
-      <Divider />
-
       <Box>
         <Box mb={0.6}>
           <Typography fontWeight={700} color="#102A54">

@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Grid, IconButton, Paper, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Divider, Grid, IconButton, Paper, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
@@ -14,6 +14,8 @@ const getTodayDate = () => {
   return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
 }
 
+const emptyInvoiceProduct = { productName: '', quantity: 1, unitPrice: 0, sku: '', hsnCode: '' }
+
 export default function B2BInvoicesForm() {
   const { control, watch, setValue, getValues, trigger, setError, clearErrors } =
     useFormContext<B2BFormData>()
@@ -28,6 +30,14 @@ export default function B2BInvoicesForm() {
   } = useFieldArray({
     control,
     name: 'invoices',
+  })
+  const {
+    fields: productFields,
+    append: appendProduct,
+    remove: removeProduct,
+  } = useFieldArray({
+    control,
+    name: 'products',
   })
 
   const boxes = useWatch({ control, name: 'boxes' }) || []
@@ -73,6 +83,7 @@ export default function B2BInvoicesForm() {
     (sum, invoice) => sum + Number(invoice?.invoiceValue || 0),
     0,
   )
+  const totalsMatch = Math.abs(totalInvoiceValue - productsTotal) < 0.01
 
   // Function to check if last invoice is valid before adding new one
   const canAddNewInvoice = async () => {
@@ -98,9 +109,177 @@ export default function B2BInvoicesForm() {
     })
   }
 
+  const handleAddProduct = async () => {
+    const lastIndex = productFields.length - 1
+    const valid =
+      lastIndex < 0 ||
+      (await trigger([
+        `products.${lastIndex}.productName`,
+        `products.${lastIndex}.quantity`,
+        `products.${lastIndex}.unitPrice`,
+      ]))
+    if (valid) appendProduct(emptyInvoiceProduct)
+  }
+
   return (
     <Box>
       <Stack spacing={1}>
+        <Paper
+          sx={{
+            p: { xs: 1, md: 1.25 },
+            border: '1px solid #E0E6ED',
+            borderRadius: 2,
+            background: '#FAFBFC',
+          }}
+          elevation={0}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            spacing={0.75}
+            mb={0.9}
+          >
+            <Box>
+              <Typography fontWeight={700} color="#102A54">
+                Invoice Products
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Add every product shown on this invoice.
+              </Typography>
+            </Box>
+            <Typography variant="body2" fontWeight={700} color="#333369">
+              Product Total ₹{productsTotal.toFixed(2)}
+            </Typography>
+          </Stack>
+
+          <Stack spacing={0.9}>
+            {productFields.map((product, productIndex) => (
+              <Paper
+                key={product.id}
+                variant="outlined"
+                sx={{ p: 1, borderRadius: 2, borderColor: '#E0E6ED', background: '#FFFFFF' }}
+              >
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      md:
+                        'minmax(180px, 1.5fr) minmax(90px, 0.6fr) minmax(110px, 0.7fr) minmax(120px, 0.75fr) minmax(120px, 0.75fr) 40px',
+                    },
+                    gap: 0.9,
+                    alignItems: 'start',
+                  }}
+                >
+                  <Controller
+                    name={`products.${productIndex}.productName`}
+                    control={control}
+                    rules={{
+                      required: 'Product name is required',
+                      validate: (value) =>
+                        String(value || '').trim().length > 0 || 'Product name is required',
+                    }}
+                    render={({ field, fieldState }) => (
+                      <CustomInput
+                        {...field}
+                        label="Product Name"
+                        placeholder="e.g. Cotton T-shirt"
+                        required
+                        topMargin={false}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`products.${productIndex}.quantity`}
+                    control={control}
+                    rules={{
+                      required: 'Quantity is required',
+                      min: { value: 1, message: 'Minimum 1' },
+                      validate: (value) => Number.isInteger(Number(value)) || 'Use a whole number',
+                    }}
+                    render={({ field, fieldState }) => (
+                      <CustomInput
+                        {...field}
+                        label="Qty"
+                        type="number"
+                        required
+                        topMargin={false}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        slotProps={{ htmlInput: { min: 1, step: 1 } }}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`products.${productIndex}.unitPrice`}
+                    control={control}
+                    rules={{
+                      required: 'Unit price is required',
+                      min: { value: 0.01, message: 'Enter a valid price' },
+                    }}
+                    render={({ field, fieldState }) => (
+                      <CustomInput
+                        {...field}
+                        label="Unit Price (₹)"
+                        type="number"
+                        required
+                        topMargin={false}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`products.${productIndex}.sku`}
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <CustomInput
+                        {...field}
+                        label="SKU (Optional)"
+                        topMargin={false}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name={`products.${productIndex}.hsnCode`}
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <CustomInput
+                        {...field}
+                        label="HSN Code (Optional)"
+                        topMargin={false}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <IconButton
+                    color="error"
+                    aria-label={`Remove product ${productIndex + 1}`}
+                    disabled={productFields.length === 1}
+                    onClick={() => removeProduct(productIndex)}
+                    sx={{ mt: { xs: 0, md: 3.2 } }}
+                  >
+                    <AiOutlineDelete />
+                  </IconButton>
+                </Box>
+              </Paper>
+            ))}
+          </Stack>
+
+          <Button variant="outlined" size="small" onClick={handleAddProduct} sx={{ mt: 0.9 }}>
+            + Add Product
+          </Button>
+        </Paper>
+
+        <Divider />
+
         {invoiceFields.map((invoice, index) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoiceValue = watch(`invoices.${index}.invoiceValue` as any)
@@ -558,27 +737,50 @@ export default function B2BInvoicesForm() {
           </Button>
         </Box>
 
-        {/* Total Invoice Value Summary */}
-        {invoiceFields.length > 1 && totalInvoiceValue > 0 && (
-          <Paper
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              background: '#F5F7FA',
-              border: '1px solid #E0E6ED',
-            }}
-            elevation={0}
-          >
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2" fontWeight={600} color="#4A5568">
-                Total Invoice Value:
+        {/* Grand total summary */}
+        <Paper
+          sx={{
+            p: { xs: 1.1, md: 1.25 },
+            borderRadius: 2,
+            background: '#F5F7FA',
+            border: `1px solid ${totalsMatch ? '#D9E2EC' : '#F59E0B'}`,
+          }}
+          elevation={0}
+        >
+          <Stack spacing={0.75}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+              spacing={0.5}
+            >
+              <Typography variant="body2" fontWeight={700} color="#4A5568">
+                Invoice Grand Total
               </Typography>
-              <Typography variant="h6" fontWeight={700} color="#333369">
+              <Typography variant="h6" fontWeight={800} color="#333369">
                 ₹{totalInvoiceValue.toFixed(2)}
               </Typography>
             </Stack>
-          </Paper>
-        )}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+              spacing={0.5}
+            >
+              <Typography variant="caption" fontWeight={600} color="#64748B">
+                Product Grand Total
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="#102A54">
+                ₹{productsTotal.toFixed(2)}
+              </Typography>
+            </Stack>
+            {!totalsMatch && (
+              <Alert severity="warning" sx={{ py: 0.25 }}>
+                Invoice grand total must match product grand total.
+              </Alert>
+            )}
+          </Stack>
+        </Paper>
       </Stack>
     </Box>
   )

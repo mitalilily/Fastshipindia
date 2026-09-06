@@ -49,6 +49,8 @@ export type Product = {
   productName: string
   quantity: number
   unitPrice: number
+  sku?: string
+  hsnCode?: string
 }
 
 // Invoice structure - array of invoices
@@ -178,6 +180,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           productName: '',
           quantity: 1,
           unitPrice: 0,
+          sku: '',
+          hsnCode: '',
         },
       ],
       invoices: [
@@ -347,13 +351,13 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           })) ?? [],
 
         order_items:
-          data?.products?.map((product, index) => ({
+          data?.products?.map((product) => ({
             name: product.productName.trim(),
-            sku: `PRODUCT-${index + 1}`,
+            sku: String(product.sku || '').trim(),
             qty: Number(product.quantity || 0),
             quantity: Number(product.quantity || 0),
             price: Number(product.unitPrice || 0),
-            hsn: '',
+            hsn: String(product.hsnCode || '').trim(),
             discount: 0,
             tax_rate: 0,
           })) ?? [],
@@ -736,8 +740,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                 <B2BInvoicesForm />
               </FormSectionAccordion>
 
-              {/* Products and package dimensions */}
-              <FormSectionAccordion title="Products & Boxes" icon={<FaBox />} defaultExpanded compact>
+              {/* Package dimensions */}
+              <FormSectionAccordion title="Package Boxes" icon={<FaBox />} defaultExpanded compact>
                 <B2BProductsForm />
               </FormSectionAccordion>
 
