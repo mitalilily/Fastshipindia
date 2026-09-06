@@ -75,6 +75,9 @@ const getOrderDefaults = (order: B2COrder | null): B2CFormData => {
     height: Number(order?.height ?? 0),
     orderId: order?.order_number || '',
     orderDate: normalizeDateInput(order?.order_date),
+    invoiceNumber: String((order as any)?.invoice_number || order?.order_number || ''),
+    invoiceDate: normalizeDateInput((order as any)?.invoice_date || order?.order_date),
+    invoiceValue: Number((order as any)?.invoice_amount ?? order?.order_amount ?? 0),
     orderType: order?.order_type || 'prepaid',
     courierPartner: '',
     shippingCharges: Number(order?.shipping_charges ?? 0),
@@ -164,7 +167,7 @@ export default function B2CSelectCourierDialog({
       return
     }
 
-    const subtotal = getSubtotal(data.products || [])
+    const subtotal = Number(data.invoiceValue || 0) || getSubtotal(data.products || [])
     const shippingCharges = Number(data.shippingCharges || 0)
     const transactionFee = Number(data.transactionFee || 0)
     const giftWrap = Number(data.giftWrap || 0)
@@ -192,6 +195,9 @@ export default function B2CSelectCourierDialog({
       prepaid_amount: data.prepaidAmount,
       is_rto_different: data.isRtoSame ? 'no' : 'yes',
       discount: data.discount ?? 0,
+      invoice_number: data.invoiceNumber,
+      invoice_date: data.invoiceDate,
+      invoice_amount: Number(data.invoiceValue || subtotal || 0),
       integration_type: data.integrationType,
       transaction_fee: data.transactionFee,
       gift_wrap: data.giftWrap,
@@ -227,14 +233,14 @@ export default function B2CSelectCourierDialog({
           pincode: data.rtoLocationPincode ?? '',
         },
       }),
-      order_items: data.products.map((product) => ({
+      order_items: data.products.slice(0, 1).map((product) => ({
         name: product.productName,
         sku: product.sku ?? 'NA',
         qty: product.quantity,
-        price: product.price,
+        price: subtotal / Math.max(1, Number(product.quantity || 1)),
         hsn: product.hsnCode ?? '',
-        discount: product.discount ?? 0,
-        tax_rate: product.taxRate ?? 0,
+        discount: 0,
+        tax_rate: 0,
       })),
       courier_id: Number(data.courierPartnerId),
       courier_option_key: data.courierOptionKey,

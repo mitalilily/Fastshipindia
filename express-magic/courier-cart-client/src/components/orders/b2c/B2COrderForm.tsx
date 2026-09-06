@@ -2,12 +2,11 @@ import { Alert, Box, Button, Chip, Paper, Stack, Typography, alpha } from '@mui/
 import { useEffect, useRef, useState } from 'react'
 import {
   FormProvider,
-  useFieldArray,
   useForm,
   type FieldPath,
 } from 'react-hook-form'
 import { BiRupee } from 'react-icons/bi'
-import { FaBox, FaTruck, FaUser } from 'react-icons/fa'
+import { FaBox, FaFileInvoice, FaTruck, FaUser } from 'react-icons/fa'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fetchLocations } from '../../../api/locations'
 import type { CreateShipmentParams } from '../../../api/order.service'
@@ -60,6 +59,9 @@ export type B2CFormData = {
   height: number
   orderId: string
   orderDate: string
+  invoiceNumber: string
+  invoiceDate: string
+  invoiceValue: number
   orderType: 'prepaid' | 'cod'
   courierPartner: string
   shippingCharges?: number
@@ -142,6 +144,9 @@ export default function B2COrderFormSteps({
 
   const baseDefaultValues: Partial<B2CFormData> = {
     products: [{ productName: '', price: 0, quantity: 1 }],
+    invoiceNumber: '',
+    invoiceDate: getLocalDateInputValue(),
+    invoiceValue: 0,
     weight: 0,
     length: 0,
     breadth: 0,
@@ -171,7 +176,6 @@ export default function B2COrderFormSteps({
     handleSubmit,
     trigger,
   } = methods
-  const { fields, append, remove } = useFieldArray({ control, name: 'products' })
 
   const shippingCharges = Number(watch('shippingCharges') || 0)
   const transactionFee = Number(watch('transactionFee') || 0)
@@ -179,6 +183,9 @@ export default function B2COrderFormSteps({
   const discount = Number(watch('discount') || 0)
   const prepaidAmount = Number(watch('prepaidAmount') || 0)
   const orderType = watch('orderType') || getDefaultOrderType()
+  const invoiceValue = Number(watch('invoiceValue') || 0)
+  const productQuantity = Math.max(1, Number(watch('products.0.quantity') || 1))
+  const derivedUnitPrice = Number((invoiceValue / productQuantity).toFixed(2))
 
   // Ensure orderType is valid based on payment options
   useEffect(() => {
@@ -198,13 +205,14 @@ export default function B2COrderFormSteps({
     }
   }, [paymentOptions, orderType, setValue])
 
-  const subtotal = fields.reduce(
-    (sum, _, idx) =>
-      sum +
-      (watch(`products.${idx}.price`) || 0) * (watch(`products.${idx}.quantity`) || 0) -
-      (watch(`products.${idx}.discount`) || 0),
-    0,
-  )
+  useEffect(() => {
+    setValue('products.0.price', derivedUnitPrice, {
+      shouldDirty: false,
+      shouldValidate: false,
+    })
+  }, [derivedUnitPrice, setValue])
+
+  const subtotal = Math.max(0, invoiceValue)
 
   // Calculate total order value (customer-facing)
   // Includes: subtotal + shipping + transaction_fee + gift_wrap - discount
@@ -242,6 +250,9 @@ export default function B2COrderFormSteps({
         prepaid_amount: data?.prepaidAmount,
         is_rto_different: data?.isRtoSame ? 'no' : 'yes',
         discount: data.discount ?? 0,
+        invoice_number: data.invoiceNumber,
+        invoice_date: data.invoiceDate,
+        invoice_amount: Number(data.invoiceValue || 0),
         integration_type: data?.integrationType,
         transaction_fee: data?.transactionFee,
         gift_wrap: data?.giftWrap,
@@ -278,14 +289,14 @@ export default function B2COrderFormSteps({
             pincode: data?.rtoLocationPincode ?? '',
           },
         }),
-        order_items: data.products.map((p) => ({
+        order_items: data.products.slice(0, 1).map((p) => ({
           name: p.productName,
           sku: p.sku ?? 'NA',
           qty: p.quantity,
-          price: p.price,
+          price: Number(data.invoiceValue || 0) / Math.max(1, Number(p.quantity || 1)),
           hsn: p.hsnCode ?? '',
-          discount: p.discount ?? 0,
-          tax_rate: p.taxRate ?? 0,
+          discount: 0,
+          tax_rate: 0,
         })),
         pickup_date: data.pickupDate,
         pickup_time: data.pickupTime,
@@ -337,15 +348,12 @@ export default function B2COrderFormSteps({
 
   const validateStep = async () => {
     if (currentStep === 0) {
-      const productFields = fields.flatMap((_, idx) =>
-        ['productName', 'price', 'quantity'].map(
-          (key) => `products.${idx}.${key}` as FieldPath<B2CFormData>,
-        ),
-      )
-
       const step1Fields: FieldPath<B2CFormData>[] = [
         'orderId',
         'orderDate',
+        'invoiceNumber',
+        'invoiceDate',
+        'invoiceValue',
         'buyerName',
         'buyerPhone',
         'address',
@@ -353,7 +361,8 @@ export default function B2COrderFormSteps({
         'orderType',
         'city',
         'state',
-        ...productFields,
+        'products.0.productName',
+        'products.0.quantity',
         'weight',
         'length',
         'breadth',
@@ -367,12 +376,14 @@ export default function B2COrderFormSteps({
         )
         const fieldLabel = (field: FieldPath<B2CFormData>) => {
           if (field.includes('.productName')) return 'Product name'
-          if (field.includes('.price')) return 'Product price'
           if (field.includes('.quantity')) return 'Product quantity'
 
           const labels: Partial<Record<FieldPath<B2CFormData>, string>> = {
             orderId: 'Order ID',
             orderDate: 'Order date',
+            invoiceNumber: 'Invoice number',
+            invoiceDate: 'Invoice date',
+            invoiceValue: 'Invoice value',
             buyerName: 'Recipient name',
             buyerPhone: 'Recipient phone',
             address: 'Delivery address',
@@ -660,13 +671,8 @@ export default function B2COrderFormSteps({
                 <DeliveryDetailsForm />
               </FormSectionAccordion>
 
-              <FormSectionAccordion title="Products" icon={<FaBox />} defaultExpanded>
-                <PackageDetailsForm
-                  append={append}
-                  control={control}
-                  fields={fields}
-                  remove={remove}
-                />
+              <FormSectionAccordion title="Invoices" icon={<FaFileInvoice />} defaultExpanded>
+                <PackageDetailsForm control={control} />
               </FormSectionAccordion>
 
               <FormSectionAccordion defaultExpanded title="Package Details" icon={<FaBox />}>

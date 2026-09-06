@@ -21,6 +21,9 @@ export interface CreateShipmentParams {
   cod_charge_basis?: number
   codChargeBasis?: number
   discount?: number
+  invoice_number?: string
+  invoice_date?: string
+  invoice_amount?: number
   order_date: string
   order_amount: number
   consignee: {
