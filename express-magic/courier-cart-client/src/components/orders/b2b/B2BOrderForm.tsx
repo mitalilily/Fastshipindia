@@ -449,7 +449,6 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         'city',
         'state',
         'address',
-        'weight',
         ...productFields,
         ...invoiceFields,
         ...boxFields,

@@ -46,7 +46,6 @@ const calculateTotalVolumetricWeight = (
 
 const ProductBoxesForm = () => {
   const { control, trigger, watch, setValue } = useFormContext<B2BFormData>()
-  const [isTotalWeightEdited, setIsTotalWeightEdited] = useState(false)
   const [weightCalculations, setWeightCalculations] = useState({
     totalActualWeight: 0,
     totalVolumetricWeight: 0,
@@ -68,24 +67,20 @@ const ProductBoxesForm = () => {
 
   const boxes = useWatch({ control, name: 'boxes' }) || []
   const products = useWatch({ control, name: 'products' }) || []
-  const totalWeight = useWatch({ control, name: 'weight' })
   const pickupPincode = watch('pickupLocationPincode')
   const deliveryPincode = watch('pincode')
   const totalBoxes = boxes.reduce((sum, box) => sum + getBoxQuantity(box), 0)
   const automaticActualWeight = roundWeight(
     boxes.reduce((sum, box) => sum + b2bBoxWeightInputToKg(box.weightKg) * getBoxQuantity(box), 0),
   )
-  const enteredActualWeight = Number(totalWeight || 0)
-  const effectiveActualWeight = enteredActualWeight > 0 ? enteredActualWeight : automaticActualWeight
+  const effectiveActualWeight = automaticActualWeight
 
   useEffect(() => {
-    if (isTotalWeightEdited) return
-
     setValue('weight', automaticActualWeight, {
       shouldDirty: false,
-      shouldValidate: true,
+      shouldValidate: false,
     })
-  }, [automaticActualWeight, isTotalWeightEdited, setValue])
+  }, [automaticActualWeight, setValue])
 
   useDebouncedEffect(
     () => {
@@ -411,30 +406,21 @@ const ProductBoxesForm = () => {
               </Box>
             )}
 
-            <Controller
-              name="weight"
-              control={control}
-              rules={{
-                required: 'Total actual weight is required',
-                min: { value: 0.01, message: 'Must be greater than 0' },
+            <Box
+              sx={{
+                p: 1,
+                border: '1px solid #D9E2EC',
+                borderRadius: 1.5,
+                background: '#FFFFFF',
               }}
-              render={({ field, fieldState }) => (
-                <CustomInput
-                  {...field}
-                  label="Total Actual Weight (kg)"
-                  type="number"
-                  required
-                  topMargin={false}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  onChange={(event) => {
-                    const value = Number(event.target.value || 0)
-                    setIsTotalWeightEdited(value > 0 && value !== automaticActualWeight)
-                    field.onChange(event)
-                  }}
-                />
-              )}
-            />
+            >
+              <Typography variant="caption" fontWeight={700} color="#64748B">
+                Total Actual Weight
+              </Typography>
+              <Typography variant="h6" fontWeight={800} color="#102A54">
+                {automaticActualWeight.toFixed(2)} kg
+              </Typography>
+            </Box>
 
             <Box
               sx={{
