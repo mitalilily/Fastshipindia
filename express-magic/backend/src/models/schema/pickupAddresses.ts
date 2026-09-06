@@ -1,5 +1,6 @@
 // drizzle/schema/pickupAddresses.ts
 
+import { sql } from 'drizzle-orm'
 import { boolean, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { users } from './users'
 
@@ -33,6 +34,10 @@ export const addresses = pgTable('addresses', {
 // pickup_addresses table just becomes a link
 export const pickupAddresses = pgTable('pickup_addresses', {
   id: uuid('id').defaultRandom().primaryKey(),
+  pickupCode: varchar('pickup_code', { length: 20 })
+    .notNull()
+    .unique()
+    .default(sql`'FS' || nextval('pickup_code_seq')::text`),
   userId: uuid('userId').references(() => users.id, { onDelete: 'cascade' }),
   addressId: uuid('addressId').references(() => addresses.id, { onDelete: 'cascade' }),
   rtoAddressId: uuid('rtoAddressId').references(() => addresses.id, { onDelete: 'set null' }),

@@ -234,6 +234,8 @@ const PickupAddresses = () => {
     address.pickup?.contactName ||
     `${address.pickup?.city || 'Pickup'} ${address.pickup?.pincode || ''}`.trim()
 
+  const getWarehouseDisplayId = (address: HydratedPickup) => address.pickupCode || address.pickupId
+
   const getWarehouseDescription = (address: HydratedPickup) =>
     [
       address.pickup?.addressLine1,
@@ -411,6 +413,9 @@ const PickupAddresses = () => {
                   <Box>
                     <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
                       {getWarehouseLabel(option)}
+                    </Typography>
+                    <Typography sx={{ color: brand.navy, fontSize: 12, fontWeight: 800 }}>
+                      {getWarehouseDisplayId(option)}
                     </Typography>
                     <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>
                       {getWarehouseDescription(option)}

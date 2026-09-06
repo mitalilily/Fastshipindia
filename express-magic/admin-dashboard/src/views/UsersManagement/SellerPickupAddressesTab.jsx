@@ -32,6 +32,7 @@ export default function SellerPickupAddressesTab({ userId }) {
                 {row.isPrimary ? <Badge colorScheme="purple">Primary</Badge> : null}
               </Box>
               <Text fontSize="lg" fontWeight="800">{address.addressNickname || address.contactName || 'Pickup address'}</Text>
+              <Text color="#0B3A78" fontSize="sm" fontWeight="800">{row.pickupCode || row.pickup_code || row.pickupId || address.id}</Text>
               <Text color="#536786"><IconMapPin size={16} style={{ display: 'inline', marginRight: 7 }} />{[address.addressLine1, address.addressLine2, address.city, address.state, address.pincode].filter(Boolean).join(', ')}</Text>
               <Text color="#536786"><IconPhone size={16} style={{ display: 'inline', marginRight: 7 }} />{address.contactName || '—'} · {address.contactPhone || '—'}</Text>
               {address.contactEmail ? <Text color="#607397" fontSize="sm">{address.contactEmail}</Text> : null}

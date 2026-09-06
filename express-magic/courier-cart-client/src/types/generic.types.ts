@@ -44,6 +44,7 @@ export interface HydratedPickup {
   addressId: string
   rtoAddressId?: string | null
   pickupId: string
+  pickupCode?: string | null
   isPrimary: boolean
   isPickupEnabled: boolean
   pickup: IAddress

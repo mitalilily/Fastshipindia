@@ -62,10 +62,13 @@ const formatFullAddress = (address: HydratedPickup) =>
     .filter(Boolean)
     .join(', ')
 
-const formatShortId = (value?: string) => {
+const formatShortId = (value?: string | null) => {
   if (!value) return '-'
   return value.length > 8 ? value.slice(0, 8).toUpperCase() : value.toUpperCase()
 }
+
+const getPickupDisplayId = (address: HydratedPickup) =>
+  address.pickupCode || formatShortId(address.pickupId)
 
 const PickupAddressesList = ({
   listData,
@@ -236,7 +239,7 @@ const PickupAddressesList = ({
                       </TableCell>
                       <TableCell>
                         <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: brand.navy }}>
-                          {formatShortId(address.pickupId)}
+                          {getPickupDisplayId(address)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -465,9 +468,12 @@ const PickupAddressesList = ({
                                 WebkitBoxOrient: 'vertical',
                               }}
                             >
-                              {formatWarehouseName(address)}
-                            </Typography>
-                            {address.pickup?.contactName && (
+                            {formatWarehouseName(address)}
+                          </Typography>
+                          <Typography sx={{ mt: 0.45, color: brand.navy, fontSize: 12, fontWeight: 900 }}>
+                            {getPickupDisplayId(address)}
+                          </Typography>
+                          {address.pickup?.contactName && (
                               <Typography
                                 sx={{
                                   mt: 0.8,

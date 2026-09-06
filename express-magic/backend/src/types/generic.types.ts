@@ -68,6 +68,7 @@ export interface UpdatePickupDto {
 
 export interface HydratedPickupAddress {
   pickupId: string
+  pickupCode?: string | null
   isPrimary: boolean
   isPickupEnabled: boolean
   pickup: IAddress

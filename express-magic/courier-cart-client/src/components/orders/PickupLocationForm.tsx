@@ -40,6 +40,8 @@ const normalizeTaxInput = (value: unknown) =>
 const getPickupLabel = (loc: HydratedPickup | null) =>
   String(loc?.pickup?.addressNickname || loc?.pickup?.contactName || loc?.pickupId || '').trim()
 
+const getPickupDisplayId = (loc: HydratedPickup) => loc.pickupCode || loc.pickupId
+
 const getPickupDescription = (loc: HydratedPickup) =>
   [
     loc.pickup?.addressLine1,
@@ -311,6 +313,9 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                           <Typography sx={{ fontWeight: 800, fontSize: 13 }}>
                             {getPickupLabel(option)}
                           </Typography>
+                          <Typography sx={{ color: ACCENT, fontSize: 12, fontWeight: 800 }} noWrap>
+                            {getPickupDisplayId(option)}
+                          </Typography>
                           <Typography sx={{ color: 'text.secondary', fontSize: 12 }} noWrap>
                             {getPickupDescription(option)}
                           </Typography>
@@ -424,6 +429,9 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                         />
                       )}
                     </Stack>
+                    <Typography sx={{ color: ACCENT, fontSize: 12, fontWeight: 800 }}>
+                      {getPickupDisplayId(loc)}
+                    </Typography>
                     <Typography variant="body2">{loc.pickup?.addressLine1}</Typography>
                     {loc.pickup?.addressLine2 && (
                       <Typography variant="body2">{loc.pickup?.addressLine2}</Typography>

@@ -8,6 +8,8 @@ import { createAmazonShippingWarehouse } from './amazonShipping.service'
 import { DelhiveryService } from './couriers/delhivery.service'
 import { EkartService } from './couriers/ekart.service'
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function parseCoordinate(value: string | null | undefined) {
   if (value === null || value === undefined) return undefined
 
@@ -420,8 +422,23 @@ export async function updatePickupAddressService(
   data: UpdatePickupDto & { id?: string },
 ) {
   try {
-    const targetPickupId = pickupId ?? data.id
-    if (!targetPickupId) throw new Error('Pickup ID is required')
+    const pickupIdentifier = pickupId ?? data.id
+    if (!pickupIdentifier) throw new Error('Pickup ID is required')
+
+    const identifierConditions = [eq(pickupAddresses.pickupCode, pickupIdentifier)]
+    if (UUID_PATTERN.test(pickupIdentifier)) {
+      identifierConditions.push(eq(pickupAddresses.id, pickupIdentifier))
+    }
+
+    const [targetPickup] = await db
+      .select({ id: pickupAddresses.id })
+      .from(pickupAddresses)
+      .where(and(eq(pickupAddresses.userId, userId), or(...identifierConditions)))
+      .limit(1)
+
+    if (!targetPickup) return null
+
+    const targetPickupId = targetPickup.id
 
     // ✅ Handle primary switch (if making this the new primary)
     if (data.isPrimary) {
@@ -641,6 +658,7 @@ export async function getPickupAddressesService(
   const data = await db
     .select({
       pickupId: pickupAddresses.id,
+      pickupCode: pickupAddresses.pickupCode,
       isPrimary: pickupAddresses.isPrimary,
       isPickupEnabled: pickupAddresses.isPickupEnabled,
       isRTOSame: pickupAddresses.isRTOSame,

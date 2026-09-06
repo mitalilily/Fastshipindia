@@ -114,6 +114,7 @@ export async function exportPickupAddressesHandler(req: any, res: Response) {
     const { data } = await getPickupAddressesService(userId, req.query, 1, 9999)
 
     const transformed = data?.map((row) => ({
+      'Pickup ID': row.pickupCode || row.pickupId,
       'Pickup Contact': row.pickup.contactName,
       'Pickup Phone': row.pickup.contactPhone,
       'Pickup City': row.pickup.city,

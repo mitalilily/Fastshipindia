@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, or } from 'drizzle-orm'
 import { Response } from 'express'
 import { db } from '../../models/client'
 import { DelhiveryService } from '../../models/services/couriers/delhivery.service'
@@ -7,6 +7,17 @@ import {
   updatePickupAddressService,
 } from '../../models/services/pickupAddresses.service'
 import { addresses, b2c_orders, pickupAddresses } from '../../schema/schema'
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const pickupIdentifierCondition = (identifier: string, userId: string) => {
+  const conditions = [eq(pickupAddresses.pickupCode, identifier)]
+  if (UUID_PATTERN.test(identifier)) {
+    conditions.push(eq(pickupAddresses.id, identifier))
+  }
+
+  return and(or(...conditions), eq(pickupAddresses.userId, userId))
+}
 
 /**
  * Create/Register pickup address
@@ -107,6 +118,7 @@ export const createPickupAddressController = async (req: any, res: Response) => 
       message: 'Pickup address registered successfully',
       data: {
         id: created.id,
+        pickup_code: created.pickupCode,
         is_primary: created.isPrimary,
         is_pickup_enabled: created.isPickupEnabled,
         pickup_address: pickupAddr
@@ -160,6 +172,7 @@ export const getPickupAddressesController = async (req: any, res: Response) => {
     const pickups = await db
       .select({
         id: pickupAddresses.id,
+        pickup_code: pickupAddresses.pickupCode,
         address_id: pickupAddresses.addressId,
         rto_address_id: pickupAddresses.rtoAddressId,
         is_primary: pickupAddresses.isPrimary,
@@ -189,6 +202,7 @@ export const getPickupAddressesController = async (req: any, res: Response) => {
 
         return {
           id: pickup.id,
+          pickup_code: pickup.pickup_code,
           is_primary: pickup.is_primary,
           is_pickup_enabled: pickup.is_pickup_enabled,
           pickup_address: pickupAddr
@@ -330,6 +344,7 @@ export const updatePickupAddressController = async (req: any, res: Response) => 
       message: 'Pickup address updated successfully',
       data: {
         id: updated.id,
+        pickup_code: updated.pickupCode,
         is_primary: updated.isPrimary,
         is_pickup_enabled: updated.isPickupEnabled,
         pickup_address: pickupAddr
@@ -452,7 +467,7 @@ export const requestPickupController = async (req: any, res: Response) => {
         })
         .from(pickupAddresses)
         .innerJoin(addresses, eq(pickupAddresses.addressId, addresses.id))
-        .where(and(eq(pickupAddresses.id, String(pickup_address_id)), eq(pickupAddresses.userId, userId)))
+        .where(pickupIdentifierCondition(String(pickup_address_id), userId))
         .limit(1)
 
       if (!pickupAddress) {
