@@ -219,15 +219,19 @@ export default function DataTable<T extends { id: string | number }>(props: Data
       return
     }
 
-    const nextScrollWidth = tableScrollElement.scrollWidth
+    const forcedShipmentWidth =
+      isShipmentVariant && visibleColumns.length > 0 ? tableScrollElement.clientWidth + 320 : 0
+    const nextScrollWidth = Math.ceil(
+      Math.max(tableScrollElement.scrollWidth, shipmentTableMinWidth || 0, forcedShipmentWidth),
+    )
     const hasHorizontalOverflow = nextScrollWidth > tableScrollElement.clientWidth + 1
     setTopScrollbarWidth(nextScrollWidth)
-    setShowTopScrollbar(hasHorizontalOverflow)
+    setShowTopScrollbar(hasHorizontalOverflow || (isShipmentVariant && visibleColumns.length > 0))
 
     if (topScrollRef.current) {
       topScrollRef.current.scrollLeft = tableScrollElement.scrollLeft
     }
-  }, [isMobile])
+  }, [isMobile, isShipmentVariant, shipmentTableMinWidth, visibleColumns.length])
 
   useEffect(() => {
     updateHorizontalScrollMetrics()
@@ -556,27 +560,30 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                 ref={topScrollRef}
                 onScroll={handleTopScroll}
                 sx={{
-                  mb: 0.45,
+                  mb: 0.6,
+                  height: 18,
+                  width: '100%',
+                  display: 'block',
                   overflowX: 'auto',
                   overflowY: 'hidden',
                   scrollbarGutter: 'stable',
                   borderRadius: '8px',
-                  border: `1px solid ${alpha(textPrimary, 0.08)}`,
-                  backgroundColor: isDark ? alpha('#f8fafc', 0.06) : alpha('#0f172a', 0.035),
+                  border: `1px solid ${alpha(textPrimary, 0.12)}`,
+                  backgroundColor: isDark ? alpha('#f8fafc', 0.08) : alpha('#0D3B8E', 0.055),
                   '&::-webkit-scrollbar': {
-                    height: 12,
+                    height: 14,
                   },
                   '&::-webkit-scrollbar-track': {
-                    backgroundColor: isDark ? alpha('#f8fafc', 0.08) : alpha('#0f172a', 0.06),
+                    backgroundColor: isDark ? alpha('#f8fafc', 0.1) : alpha('#0D3B8E', 0.08),
                     borderRadius: 999,
                   },
                   '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: isDark ? alpha('#f8fafc', 0.28) : alpha('#0f172a', 0.22),
+                    backgroundColor: isDark ? alpha('#f8fafc', 0.44) : alpha('#0D3B8E', 0.42),
                     borderRadius: 999,
                     border: `2px solid ${isDark ? '#151b23' : '#FFFFFF'}`,
                   },
                   '&::-webkit-scrollbar-thumb:hover': {
-                    backgroundColor: isDark ? alpha('#f8fafc', 0.38) : alpha('#0f172a', 0.32),
+                    backgroundColor: isDark ? alpha('#f8fafc', 0.58) : alpha('#0D3B8E', 0.58),
                   },
                 }}
               >
