@@ -73,6 +73,26 @@ const ensureLocationsTableShape = async () => {
   }
 }
 
+const ensurePickupCodeSchema = async () => {
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: env === 'production' ? { rejectUnauthorized: false } : false,
+  })
+
+  try {
+    const tableResult = await pool.query(
+      "select to_regclass('public.pickup_addresses') as table_name",
+    )
+    if (!tableResult.rows[0]?.table_name) return
+
+    const migrationPath = path.join(backendRoot, 'migration_add_pickup_code_sequence.sql')
+    await pool.query(fs.readFileSync(migrationPath, 'utf8'))
+    console.log('Pickup code schema is ready')
+  } finally {
+    await pool.end()
+  }
+}
+
 async function bootstrapDatabase() {
   const hasUsersTable = await usersTableExists()
 
@@ -88,6 +108,7 @@ async function bootstrapDatabase() {
   if (hasUsersTable) {
     await ensureSupportTicketMessagesTable()
     await ensureLocationsTableShape()
+    await ensurePickupCodeSchema()
   }
 
   try {

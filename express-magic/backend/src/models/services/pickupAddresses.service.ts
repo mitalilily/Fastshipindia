@@ -1,7 +1,7 @@
 // services/pickupAddresses.service.ts
 import { and, asc, desc, eq, ilike, ne, or, sql } from 'drizzle-orm'
 import { CreatePickupDto, HydratedPickupAddress, UpdatePickupDto } from '../../types/generic.types'
-import { db } from '../client'
+import { db, pool } from '../client'
 import { courier_registration_errors } from '../schema/courierRegistrationErrors'
 import { addresses, pickupAddresses } from '../schema/pickupAddresses'
 import { createAmazonShippingWarehouse } from './amazonShipping.service'
@@ -9,6 +9,66 @@ import { DelhiveryService } from './couriers/delhivery.service'
 import { EkartService } from './couriers/ekart.service'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const PICKUP_CODE_SCHEMA_SQL = `
+CREATE SEQUENCE IF NOT EXISTS pickup_code_seq START 1000;
+
+ALTER TABLE pickup_addresses
+ADD COLUMN IF NOT EXISTS pickup_code VARCHAR(20);
+
+WITH numbered_pickups AS (
+  SELECT
+    pa.id,
+    999 + ROW_NUMBER() OVER (
+      ORDER BY COALESCE(a."createdAt", NOW()), pa.id
+    ) AS pickup_number
+  FROM pickup_addresses pa
+  LEFT JOIN addresses a ON a.id = pa."addressId"
+  WHERE pa.pickup_code IS NULL OR pa.pickup_code = ''
+)
+UPDATE pickup_addresses pa
+SET pickup_code = 'FS' || numbered_pickups.pickup_number::text
+FROM numbered_pickups
+WHERE pa.id = numbered_pickups.id;
+
+SELECT setval(
+  'pickup_code_seq',
+  COALESCE(
+    (
+      SELECT MAX(substring(pickup_code FROM '^FS([0-9]+)$')::bigint) + 1
+      FROM pickup_addresses
+      WHERE pickup_code ~ '^FS[0-9]+$'
+    ),
+    1000
+  ),
+  false
+);
+
+ALTER TABLE pickup_addresses
+ALTER COLUMN pickup_code SET DEFAULT 'FS' || nextval('pickup_code_seq')::text;
+
+ALTER TABLE pickup_addresses
+ALTER COLUMN pickup_code SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS pickup_addresses_pickup_code_unique
+ON pickup_addresses (pickup_code);
+`
+
+let pickupCodeSchemaReady: Promise<void> | null = null
+
+async function ensurePickupCodeSchemaReady() {
+  if (!pickupCodeSchemaReady) {
+    pickupCodeSchemaReady = pool
+      .query(PICKUP_CODE_SCHEMA_SQL)
+      .then(() => undefined)
+      .catch((error) => {
+        pickupCodeSchemaReady = null
+        throw error
+      })
+  }
+
+  await pickupCodeSchemaReady
+}
 
 function parseCoordinate(value: string | null | undefined) {
   if (value === null || value === undefined) return undefined
@@ -160,6 +220,8 @@ const logCourierRegistrationError = async ({
  */
 
 export async function createPickupAddressService(data: CreatePickupDto, userId: string) {
+  await ensurePickupCodeSchemaReady()
+
   return await db.transaction(async (txn) => {
     const existing = await txn.query.pickupAddresses.findFirst({
       where: eq(pickupAddresses.userId, userId),
@@ -422,6 +484,8 @@ export async function updatePickupAddressService(
   data: UpdatePickupDto & { id?: string },
 ) {
   try {
+    await ensurePickupCodeSchemaReady()
+
     const pickupIdentifier = pickupId ?? data.id
     if (!pickupIdentifier) throw new Error('Pickup ID is required')
 
@@ -598,6 +662,8 @@ export async function getPickupAddressesService(
   page = 1,
   limit = 10,
 ): Promise<{ data: HydratedPickupAddress[]; totalCount: number }> {
+  await ensurePickupCodeSchemaReady()
+
   const conditions: any[] = [eq(pickupAddresses.userId, userId)]
 
   // ✅ Pickup status filters
