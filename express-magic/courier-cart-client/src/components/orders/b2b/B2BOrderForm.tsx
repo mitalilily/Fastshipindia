@@ -58,8 +58,6 @@ export type Invoice = {
   invoiceNumber: string
   invoiceDate: string
   invoiceValue: number
-  carrierName?: string
-  carrierTransportId?: string
   invoiceFileUrl?: string
 }
 
@@ -195,8 +193,6 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
         invoiceNumber: '',
         invoiceDate: getTodayDate(),
         invoiceValue: 0,
-        carrierName: '',
-        carrierTransportId: '',
         invoiceFileUrl: '',
       },
     ],
@@ -313,6 +309,12 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
       const packageSummary = getPackageSummary(data.boxes, data.weight)
       const billingPanNumber = String(data.billingPanNumber || '').trim().toUpperCase()
       const billingGstin = String(data.billingGstin || '').trim().toUpperCase()
+      const invoiceGrandTotal =
+        data?.invoices?.reduce((sum, invoice) => sum + Number(invoice.invoiceValue || 0), 0) ?? 0
+      const visibleProduct = data?.products?.[0]
+      const totalProductQuantity = Math.max(1, Number(visibleProduct?.quantity || 1))
+      const derivedUnitPrice =
+        totalProductQuantity > 0 ? Number((invoiceGrandTotal / totalProductQuantity).toFixed(2)) : 0
 
       // Prepare B2B shipment payload
       const payload: CreateB2BShipmentParams = {
@@ -377,12 +379,12 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
           })) ?? [],
 
         order_items:
-          data?.products?.map((product) => ({
+          (visibleProduct ? [visibleProduct] : []).map((product) => ({
             name: product.productName.trim(),
             sku: String(product.sku || '').trim(),
             qty: Number(product.quantity || 0),
             quantity: Number(product.quantity || 0),
-            price: Number(product.unitPrice || 0),
+            price: derivedUnitPrice,
             hsn: String(product.hsnCode || '').trim(),
             discount: 0,
             tax_rate: 0,
@@ -394,10 +396,6 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
             invoiceNumber: invoice.invoiceNumber,
             invoiceDate: invoice.invoiceDate,
             invoiceValue: Number(invoice.invoiceValue || 0),
-            carrierName: invoice.carrierName || undefined,
-            carrierTransportId: invoice.carrierTransportId || undefined,
-            transporterId: invoice.carrierTransportId || undefined,
-            transportId: invoice.carrierTransportId || undefined,
             invoiceFileUrl: invoice.invoiceFileUrl || undefined,
           })) ?? [],
         courier_id: Number(data.courierPartnerId),
@@ -450,12 +448,9 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
   const getStepFields = () => {
     if (currentStep === 0) {
       const values = getValues()
-      const productFields =
-        values.products?.flatMap((_, index) => [
-          `products.${index}.productName`,
-          `products.${index}.quantity`,
-          `products.${index}.unitPrice`,
-        ]) ?? []
+      const productFields = values.products?.length
+        ? ['products.0.productName', 'products.0.quantity']
+        : []
       const invoiceFields =
         values.invoices?.flatMap((_, index) => [
           `invoices.${index}.invoiceNumber`,
@@ -509,7 +504,6 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
     if (field.includes('.productName')) return 'Product name'
     if (field.includes('.quantity') && field.includes('boxes.')) return 'No. of boxes'
     if (field.includes('.quantity')) return 'Product quantity'
-    if (field.includes('.unitPrice')) return 'Product price'
     if (field.includes('.invoiceNumber')) return 'Invoice number'
     if (field.includes('.invoiceDate')) return 'Invoice date'
     if (field.includes('.invoiceValue')) return 'Invoice value'

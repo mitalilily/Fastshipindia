@@ -2,10 +2,8 @@ import {
   Alert,
   Box,
   Button,
-  Divider,
   Grid,
   IconButton,
-  MenuItem,
   Paper,
   Stack,
   Typography,
@@ -14,7 +12,6 @@ import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
 import { validateInvoiceContent } from '../../../api/b2b.api'
-import { useCarrierTransportIds } from '../../../hooks/useCarrierTransportIds'
 import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import CustomInput from '../../UI/inputs/CustomInput'
 import FileUploader, { type UploadedFileInfo } from '../../UI/uploader/FileUploader'
@@ -26,12 +23,9 @@ const getTodayDate = () => {
   return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`
 }
 
-const emptyInvoiceProduct = { productName: '', quantity: 1, unitPrice: 0, sku: '', hsnCode: '' }
-
 export default function B2BInvoicesForm() {
   const { control, watch, setValue, getValues, trigger, setError, clearErrors } =
     useFormContext<B2BFormData>()
-  const { data: carrierTransportIds = [] } = useCarrierTransportIds()
 
   // State to track invoice content validation warnings
   const [invoiceWarnings, setInvoiceWarnings] = useState<Record<number, string>>({})
@@ -44,22 +38,10 @@ export default function B2BInvoicesForm() {
     control,
     name: 'invoices',
   })
-  const {
-    fields: productFields,
-    append: appendProduct,
-    remove: removeProduct,
-  } = useFieldArray({
-    control,
-    name: 'products',
-  })
-
   const boxes = useWatch({ control, name: 'boxes' }) || []
   const products = useWatch({ control, name: 'products' }) || []
   const invoices = useWatch({ control, name: 'invoices' }) || []
-  const productsTotal = products.reduce(
-    (sum, product) => sum + Number(product.quantity || 0) * Number(product.unitPrice || 0),
-    0,
-  )
+  const firstProductQuantity = Math.max(1, Number(products[0]?.quantity || 1))
 
   useEffect(() => {
     invoiceFields.forEach((_, index) => {
@@ -70,13 +52,16 @@ export default function B2BInvoicesForm() {
   }, [getValues, invoiceFields, setValue])
 
   useEffect(() => {
-    if (invoiceFields.length !== 1) return
+    const totalInvoiceValue = invoices.reduce(
+      (sum, invoice) => sum + Number(invoice?.invoiceValue || 0),
+      0,
+    )
 
-    setValue('invoices.0.invoiceValue', Number(productsTotal.toFixed(2)), {
-      shouldDirty: true,
-      shouldValidate: true,
+    setValue('products.0.unitPrice', Number((totalInvoiceValue / firstProductQuantity).toFixed(2)), {
+      shouldDirty: false,
+      shouldValidate: false,
     })
-  }, [invoiceFields.length, productsTotal, setValue])
+  }, [firstProductQuantity, invoices, setValue])
 
   // Calculate total chargeable weight for EBN validation
   const calculateTotalChargeableWeight = () => {
@@ -96,7 +81,6 @@ export default function B2BInvoicesForm() {
     (sum, invoice) => sum + Number(invoice?.invoiceValue || 0),
     0,
   )
-  const totalsMatch = Math.abs(totalInvoiceValue - productsTotal) < 0.01
 
   // Function to check if last invoice is valid before adding new one
   const canAddNewInvoice = async () => {
@@ -118,183 +102,13 @@ export default function B2BInvoicesForm() {
       invoiceNumber: '',
       invoiceDate: getTodayDate(),
       invoiceValue: 0,
-      carrierName: '',
-      carrierTransportId: '',
       invoiceFileUrl: '',
     })
-  }
-
-  const handleAddProduct = async () => {
-    const lastIndex = productFields.length - 1
-    const valid =
-      lastIndex < 0 ||
-      (await trigger([
-        `products.${lastIndex}.productName`,
-        `products.${lastIndex}.quantity`,
-        `products.${lastIndex}.unitPrice`,
-      ]))
-    if (valid) appendProduct(emptyInvoiceProduct)
   }
 
   return (
     <Box>
       <Stack spacing={1}>
-        <Paper
-          sx={{
-            p: { xs: 1, md: 1.25 },
-            border: '1px solid #E0E6ED',
-            borderRadius: 2,
-            background: '#FAFBFC',
-          }}
-          elevation={0}
-        >
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            justifyContent="space-between"
-            alignItems={{ xs: 'flex-start', sm: 'center' }}
-            spacing={0.75}
-            mb={0.9}
-          >
-            <Box>
-              <Typography fontWeight={700} color="#102A54">
-                Invoice Products
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Add every product shown on this invoice.
-              </Typography>
-            </Box>
-            <Typography variant="body2" fontWeight={700} color="#333369">
-              Product Total ₹{productsTotal.toFixed(2)}
-            </Typography>
-          </Stack>
-
-          <Stack spacing={0.9}>
-            {productFields.map((product, productIndex) => (
-              <Paper
-                key={product.id}
-                variant="outlined"
-                sx={{ p: 1, borderRadius: 2, borderColor: '#E0E6ED', background: '#FFFFFF' }}
-              >
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: '1fr',
-                      md:
-                        'minmax(180px, 1.5fr) minmax(90px, 0.6fr) minmax(110px, 0.7fr) minmax(120px, 0.75fr) minmax(120px, 0.75fr) 40px',
-                    },
-                    gap: 0.9,
-                    alignItems: 'start',
-                  }}
-                >
-                  <Controller
-                    name={`products.${productIndex}.productName`}
-                    control={control}
-                    rules={{
-                      required: 'Product name is required',
-                      validate: (value) =>
-                        String(value || '').trim().length > 0 || 'Product name is required',
-                    }}
-                    render={({ field, fieldState }) => (
-                      <CustomInput
-                        {...field}
-                        label="Product Name"
-                        placeholder="e.g. Cotton T-shirt"
-                        required
-                        topMargin={false}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`products.${productIndex}.quantity`}
-                    control={control}
-                    rules={{
-                      required: 'Quantity is required',
-                      min: { value: 1, message: 'Minimum 1' },
-                      validate: (value) => Number.isInteger(Number(value)) || 'Use a whole number',
-                    }}
-                    render={({ field, fieldState }) => (
-                      <CustomInput
-                        {...field}
-                        label="Qty"
-                        type="number"
-                        required
-                        topMargin={false}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        slotProps={{ htmlInput: { min: 1, step: 1 } }}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`products.${productIndex}.unitPrice`}
-                    control={control}
-                    rules={{
-                      required: 'Unit price is required',
-                      min: { value: 0.01, message: 'Enter a valid price' },
-                    }}
-                    render={({ field, fieldState }) => (
-                      <CustomInput
-                        {...field}
-                        label="Unit Price (₹)"
-                        type="number"
-                        required
-                        topMargin={false}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`products.${productIndex}.sku`}
-                    control={control}
-                    render={({ field, fieldState }) => (
-                      <CustomInput
-                        {...field}
-                        label="SKU (Optional)"
-                        topMargin={false}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <Controller
-                    name={`products.${productIndex}.hsnCode`}
-                    control={control}
-                    render={({ field, fieldState }) => (
-                      <CustomInput
-                        {...field}
-                        label="HSN Code (Optional)"
-                        topMargin={false}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                  <IconButton
-                    color="error"
-                    aria-label={`Remove product ${productIndex + 1}`}
-                    disabled={productFields.length === 1}
-                    onClick={() => removeProduct(productIndex)}
-                    sx={{ mt: { xs: 0, md: 3.2 } }}
-                  >
-                    <AiOutlineDelete />
-                  </IconButton>
-                </Box>
-              </Paper>
-            ))}
-          </Stack>
-
-          <Button variant="outlined" size="small" onClick={handleAddProduct} sx={{ mt: 0.9 }}>
-            + Add Product
-          </Button>
-        </Paper>
-
-        <Divider />
-
         {invoiceFields.map((invoice, index) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoiceValue = watch(`invoices.${index}.invoiceValue` as any)
@@ -380,9 +194,6 @@ export default function B2BInvoicesForm() {
                     rules={{
                       required: 'Invoice Value is required',
                       min: { value: 0.01, message: 'Invoice Value must be greater than ₹0' },
-                      validate: () =>
-                        Math.abs(totalInvoiceValue - productsTotal) < 0.01 ||
-                        `Combined invoice value must equal product total ₹${productsTotal.toFixed(2)}`,
                     }}
                     render={({ field, fieldState }) => (
                       <CustomInput
@@ -395,79 +206,101 @@ export default function B2BInvoicesForm() {
                         inputProps={{
                           min: 0.01,
                           step: 0.01,
-                          readOnly: invoiceFields.length === 1,
                         }}
                         error={!!fieldState.error}
-                        helperText={
-                          fieldState.error?.message ||
-                          (invoiceFields.length === 1
-                            ? 'Automatically calculated from Quantity × Unit Price'
-                            : 'Split the product total across all invoices')
-                        }
+                        helperText={fieldState.error?.message}
                       />
                     )}
                   />
                 </Grid>
 
-                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
-                  <Controller
-                    name={`invoices.${index}.carrierName`}
-                    control={control}
-                    render={({ field }) => (
-                      <CustomInput
-                        {...field}
-                        select
-                        fullWidth
-                        label="Transporter"
-                        topMargin={false}
-                        helperText="Select carrier to fill Transport ID"
-                        onChange={(event) => {
-                          const carrierName = String(event.target.value || '')
-                          const selectedCarrier = carrierTransportIds.find(
-                            (carrier) => carrier.carrierName === carrierName,
-                          )
-                          field.onChange(carrierName)
-                          setValue(
-                            `invoices.${index}.carrierTransportId`,
-                            selectedCarrier?.transportId || '',
-                            { shouldDirty: true, shouldValidate: true },
-                          )
+                {index === 0 && (
+                  <>
+                    <Grid size={{ lg: 4, md: 6, xs: 12 }}>
+                      <Controller
+                        name="products.0.productName"
+                        control={control}
+                        rules={{
+                          required: 'Product name is required',
+                          validate: (value) =>
+                            String(value || '').trim().length > 0 || 'Product name is required',
                         }}
-                      >
-                        <MenuItem value="">Select Transporter</MenuItem>
-                        {carrierTransportIds.map((carrier) => (
-                          <MenuItem key={carrier.carrierKey} value={carrier.carrierName}>
-                            {carrier.carrierName}
-                          </MenuItem>
-                        ))}
-                      </CustomInput>
-                    )}
-                  />
-                </Grid>
-
-                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
-                  <Controller
-                    name={`invoices.${index}.carrierTransportId`}
-                    control={control}
-                    render={({ field }) => (
-                      <CustomInput
-                        {...field}
-                        fullWidth
-                        label="Transport ID"
-                        placeholder="Auto-filled"
-                        topMargin={false}
-                        helperText="Click field to select the ID"
-                        inputProps={{ readOnly: true }}
-                        onClick={(event) => {
-                          const input = event.currentTarget.querySelector(
-                            'input',
-                          ) as HTMLInputElement | null
-                          input?.select()
-                        }}
+                        render={({ field, fieldState }) => (
+                          <CustomInput
+                            {...field}
+                            label="Product Name"
+                            placeholder="e.g. Cotton T-shirt"
+                            required
+                            fullWidth
+                            topMargin={false}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                </Grid>
+                    </Grid>
+
+                    <Grid size={{ lg: 4, md: 6, xs: 12 }}>
+                      <Controller
+                        name="products.0.quantity"
+                        control={control}
+                        rules={{
+                          required: 'Quantity is required',
+                          min: { value: 1, message: 'Minimum 1' },
+                          validate: (value) =>
+                            Number.isInteger(Number(value)) || 'Use a whole number',
+                        }}
+                        render={({ field, fieldState }) => (
+                          <CustomInput
+                            {...field}
+                            label="Qty"
+                            type="number"
+                            required
+                            fullWidth
+                            topMargin={false}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                            slotProps={{ htmlInput: { min: 1, step: 1 } }}
+                          />
+                        )}
+                      />
+                    </Grid>
+
+                    <Grid size={{ lg: 4, md: 6, xs: 12 }}>
+                      <Controller
+                        name="products.0.sku"
+                        control={control}
+                        render={({ field, fieldState }) => (
+                          <CustomInput
+                            {...field}
+                            label="SKU (Optional)"
+                            fullWidth
+                            topMargin={false}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                    </Grid>
+
+                    <Grid size={{ lg: 4, md: 6, xs: 12 }}>
+                      <Controller
+                        name="products.0.hsnCode"
+                        control={control}
+                        render={({ field, fieldState }) => (
+                          <CustomInput
+                            {...field}
+                            label="HSN Code (Optional)"
+                            fullWidth
+                            topMargin={false}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                    </Grid>
+                  </>
+                )}
 
                 <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
@@ -801,6 +634,25 @@ export default function B2BInvoicesForm() {
                   />
                 </Grid>
               </Grid>
+
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                justifyContent="space-between"
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                spacing={0.5}
+                sx={{
+                  mt: 1,
+                  pt: 0.9,
+                  borderTop: '1px solid #E0E6ED',
+                }}
+              >
+                <Typography variant="body2" fontWeight={700} color="#4A5568">
+                  Invoice Grand Total
+                </Typography>
+                <Typography variant="h6" fontWeight={800} color="#333369">
+                  ₹{totalInvoiceValue.toFixed(2)}
+                </Typography>
+              </Stack>
             </Paper>
           )
         })}
@@ -811,51 +663,6 @@ export default function B2BInvoicesForm() {
             + Add Invoice
           </Button>
         </Box>
-
-        {/* Grand total summary */}
-        <Paper
-          sx={{
-            p: { xs: 1.1, md: 1.25 },
-            borderRadius: 2,
-            background: '#F5F7FA',
-            border: `1px solid ${totalsMatch ? '#D9E2EC' : '#F59E0B'}`,
-          }}
-          elevation={0}
-        >
-          <Stack spacing={0.75}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              justifyContent="space-between"
-              alignItems={{ xs: 'flex-start', sm: 'center' }}
-              spacing={0.5}
-            >
-              <Typography variant="body2" fontWeight={700} color="#4A5568">
-                Invoice Grand Total
-              </Typography>
-              <Typography variant="h6" fontWeight={800} color="#333369">
-                ₹{totalInvoiceValue.toFixed(2)}
-              </Typography>
-            </Stack>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              justifyContent="space-between"
-              alignItems={{ xs: 'flex-start', sm: 'center' }}
-              spacing={0.5}
-            >
-              <Typography variant="caption" fontWeight={600} color="#64748B">
-                Product Grand Total
-              </Typography>
-              <Typography variant="body2" fontWeight={700} color="#102A54">
-                ₹{productsTotal.toFixed(2)}
-              </Typography>
-            </Stack>
-            {!totalsMatch && (
-              <Alert severity="warning" sx={{ py: 0.25 }}>
-                Invoice grand total must match product grand total.
-              </Alert>
-            )}
-          </Stack>
-        </Paper>
       </Stack>
     </Box>
   )
