@@ -98,9 +98,9 @@ const toDateInputValue = (date: Date) => {
 }
 
 const getToday = () => toDateInputValue(new Date())
-const getPastDate = (days: number) => {
+const getRollingStartDate = (days: number) => {
   const d = new Date()
-  d.setDate(d.getDate() - days)
+  d.setDate(d.getDate() - Math.max(days - 1, 0))
   return toDateInputValue(d)
 }
 const getMonthStart = () => {
@@ -117,11 +117,11 @@ const getLastMonthRange = () => {
 
 const DATE_PRESETS = [
   { label: 'Today', getRange: () => ({ fromDate: getToday(), toDate: getToday() }) },
-  { label: 'Last 7 Days', getRange: () => ({ fromDate: getPastDate(7), toDate: getToday() }) },
+  { label: 'Last 7 Days', getRange: () => ({ fromDate: getRollingStartDate(7), toDate: getToday() }) },
+  { label: 'Last 15 Days', getRange: () => ({ fromDate: getRollingStartDate(15), toDate: getToday() }) },
+  { label: 'Last 30 Days', getRange: () => ({ fromDate: getRollingStartDate(30), toDate: getToday() }) },
   { label: 'This Month', getRange: () => ({ fromDate: getMonthStart(), toDate: getToday() }) },
   { label: 'Last Month', getRange: getLastMonthRange },
-  { label: 'Last 15 Days', getRange: () => ({ fromDate: getPastDate(15), toDate: getToday() }) },
-  { label: 'Last 30 Days', getRange: () => ({ fromDate: getPastDate(30), toDate: getToday() }) },
 ]
 
 export default function Reports() {
@@ -134,6 +134,14 @@ export default function Reports() {
 
   const allSelected = selectedFields.length === ALL_FIELD_KEYS.length
   const isDatePresetOpen = Boolean(datePresetAnchorEl)
+  const selectedDatePreset = useMemo(
+    () =>
+      DATE_PRESETS.find((preset) => {
+        const range = preset.getRange()
+        return fromDate === range.fromDate && toDate === range.toDate
+      }),
+    [fromDate, toDate],
+  )
 
   const selectedByGroup = useMemo(() => {
     const selectedSet = new Set(selectedFields)
@@ -164,6 +172,10 @@ export default function Reports() {
   const onDownload = async () => {
     if (!fromDate || !toDate) {
       toast.open({ message: 'Please select date range', severity: 'warning' })
+      return
+    }
+    if (new Date(fromDate).getTime() > new Date(toDate).getTime()) {
+      toast.open({ message: 'From date cannot be after to date', severity: 'warning' })
       return
     }
     if (selectedFields.length === 0) {
@@ -242,7 +254,7 @@ export default function Reports() {
                   aria-expanded={isDatePresetOpen ? 'true' : undefined}
                   sx={{ textTransform: 'none', borderRadius: 99, minWidth: 150 }}
                 >
-                  Quick Range
+                  {selectedDatePreset?.label || 'Custom Range'}
                 </Button>
                 <Menu
                   id="report-date-range-menu"

@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { Response } from 'express'
 import { db } from '../models/client'
 import { b2b_orders } from '../models/schema/b2bOrders'
@@ -98,11 +98,13 @@ export const exportCustomReportCsvController = async (req: any, res: Response) =
       fromDate,
       toDate: toDateStr,
       selectedFields,
+      paymentType,
     }: {
       fromDate?: string
       toDate?: string
       sections?: SectionKey[]
       selectedFields?: string[]
+      paymentType?: 'all' | 'prepaid' | 'cod'
     } = req.body || {}
 
     const from = parseDate(fromDate)
@@ -110,6 +112,9 @@ export const exportCustomReportCsvController = async (req: any, res: Response) =
 
     if (!from || !to) {
       return res.status(400).json({ success: false, message: 'Valid fromDate and toDate are required' })
+    }
+    if (from.getTime() > to.getTime()) {
+      return res.status(400).json({ success: false, message: 'fromDate cannot be after toDate' })
     }
 
     const fields =
@@ -121,16 +126,26 @@ export const exportCustomReportCsvController = async (req: any, res: Response) =
       return res.status(400).json({ success: false, message: 'At least one field must be selected' })
     }
 
-    const dateClauseB2C = and(
+    const normalizedPaymentType =
+      paymentType === 'cod' || paymentType === 'prepaid' ? paymentType : 'all'
+    const b2cConditions = [
       eq(b2c_orders.user_id, userId),
       gte(b2c_orders.created_at, from),
       lte(b2c_orders.created_at, endOfDay(to)),
-    )
-    const dateClauseB2B = and(
+    ]
+    const b2bConditions = [
       eq(b2b_orders.user_id, userId),
       gte(b2b_orders.created_at, from),
       lte(b2b_orders.created_at, endOfDay(to)),
-    )
+    ]
+
+    if (normalizedPaymentType !== 'all') {
+      b2cConditions.push(sql`lower(${b2c_orders.order_type}) = ${normalizedPaymentType}`)
+      b2bConditions.push(sql`lower(${b2b_orders.order_type}) = ${normalizedPaymentType}`)
+    }
+
+    const dateClauseB2C = and(...b2cConditions)
+    const dateClauseB2B = and(...b2bConditions)
 
     const [b2cRows, b2bRows] = await Promise.all([
       db.select().from(b2c_orders).where(dateClauseB2C).orderBy(asc(b2c_orders.created_at)),
