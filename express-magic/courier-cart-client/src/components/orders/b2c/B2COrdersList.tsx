@@ -56,7 +56,6 @@ import { downloadClientOrdersCsv } from '../../../utils/orderCsvExport'
 import { FilterBar, type FilterField } from '../../FilterBar'
 import { toast } from '../../UI/Toast'
 import CustomDrawer from '../../UI/drawer/CustomDrawer'
-import { SmartTabs } from '../../UI/tab/Tabs'
 import DataTable, { type Column } from '../../UI/table/DataTable'
 import TableSkeleton from '../../UI/table/TableSkeleton'
 import { useFastLoading } from '../../../hooks/useFastLoading'
@@ -125,6 +124,7 @@ const orderStatusFilterTabs = [
 ] as const
 
 type OrderStatusFilterValue = (typeof orderStatusFilterTabs)[number]['value']
+type OrderStatusFilterTab = (typeof orderStatusFilterTabs)[number]
 
 const orderStatusFilterMap = orderStatusFilterTabs.reduce<
   Record<string, readonly string[] | undefined>
@@ -242,6 +242,13 @@ const statusChipPalette = {
   info: { color: '#1D4ED8', background: '#3B82F6', border: '#1D4ED8' },
 } as const
 
+const quickFilterTonePalette = {
+  primary: { main: '#1D2842', hover: '#152038' },
+  success: { main: '#05BD7E', hover: '#049B67' },
+  warning: { main: '#F59E0B', hover: '#D97706' },
+  error: { main: '#EF4444', hover: '#DC2626' },
+} as const
+
 /* ───────────── Shipping Statuses ───────────── */
 const shippingStatusMap: Record<string, string> = {
   pending: 'Pending',
@@ -268,6 +275,11 @@ const shippingStatusMap: Record<string, string> = {
 const B2COrdersList = () => {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
+  const surface = isDark ? '#151b23' : '#FFFFFF'
+  const borderColor = isDark ? alpha('#f8fafc', 0.12) : alpha('#1D2842', 0.1)
+  const textPrimary = isDark ? '#f8fafc' : '#1D2842'
+  const textSecondary = isDark ? '#9badc3' : '#64748B'
+  const quietSurface = isDark ? alpha('#ffffff', 0.05) : 'rgba(29, 40, 66, 0.04)'
   const location = useLocation()
   const navigate = useNavigate()
   const isXs = useMediaQuery(theme.breakpoints.down('sm')) // mobile
@@ -1771,13 +1783,6 @@ const B2COrdersList = () => {
     },
   ]
 
-  /* ───────────── Tabs ───────────── */
-  const tabs = orderStatusFilterTabs.map((tab) => ({
-    label: tab.label,
-    value: tab.value,
-    statusColor: tab.statusColor,
-  }))
-
   return (
     <Stack spacing={0.65} sx={{ pt: 0, pb: 0.5 }}>
       {isError && (
@@ -1825,14 +1830,64 @@ const B2COrdersList = () => {
         </Stack>
       </Stack>
 
-      {/* 🔹 Status Tabs Row */}
-      <SmartTabs
-        tabs={tabs}
-        value={selectedTab}
-        onChange={handleTabChange}
-        compact
-        desktopVisibleCount={7}
-      />
+      {/* Status quick filters */}
+      <Box
+        sx={{
+          px: { xs: 0.8, md: 1 },
+          py: 0.9,
+          border: `1px solid ${borderColor}`,
+          borderRadius: 1,
+          bgcolor: surface,
+          overflowX: 'auto',
+          '&::-webkit-scrollbar': { height: 6 },
+          '&::-webkit-scrollbar-thumb': {
+            borderRadius: 999,
+            backgroundColor: isDark ? alpha('#ffffff', 0.18) : alpha('#1D2842', 0.18),
+          },
+        }}
+      >
+        <Stack direction="row" gap={0.75} sx={{ width: 'max-content', minWidth: '100%' }}>
+          {orderStatusFilterTabs.map((tab: OrderStatusFilterTab) => {
+            const selected = selectedTab === tab.value
+            const tabTone = quickFilterTonePalette[tab.statusColor]
+
+            return (
+              <Button
+                key={tab.value}
+                type="button"
+                onClick={() => handleTabChange(tab.value)}
+                sx={{
+                  minHeight: 30,
+                  px: 1.15,
+                  borderRadius: 1,
+                  whiteSpace: 'nowrap',
+                  textTransform: 'none',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: selected ? '#FFFFFF' : textSecondary,
+                  bgcolor: selected ? tabTone.main : 'transparent',
+                  border: `1px solid ${selected ? tabTone.main : borderColor}`,
+                  '&:hover': {
+                    bgcolor: selected ? tabTone.hover : quietSurface,
+                    borderColor: selected ? tabTone.hover : alpha('#1D2842', 0.2),
+                  },
+                }}
+              >
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: 'inherit',
+                    fontWeight: 'inherit',
+                    color: selected ? '#FFFFFF' : textPrimary,
+                  }}
+                >
+                  {tab.label}
+                </Typography>
+              </Button>
+            )
+          })}
+        </Stack>
+      </Box>
 
       {/* 🔹 Advanced Filter Bar */}
       <FilterBar
