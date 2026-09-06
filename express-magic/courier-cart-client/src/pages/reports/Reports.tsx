@@ -10,12 +10,14 @@ import {
   FormControlLabel,
   FormGroup,
   Grid,
+  Menu,
   MenuItem,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
 import { useMemo, useState } from 'react'
+import { MdKeyboardArrowDown } from 'react-icons/md'
 import { downloadCustomReportCsv } from '../../api/reports.api'
 import PageHeading from '../../components/UI/heading/PageHeading'
 import { toast } from '../../components/UI/Toast'
@@ -88,23 +90,38 @@ const formatUiDate = (value: string) => {
   return `${d}/${m}/${y}`
 }
 
-const getToday = () => new Date().toISOString().slice(0, 10)
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getToday = () => toDateInputValue(new Date())
 const getPastDate = (days: number) => {
   const d = new Date()
   d.setDate(d.getDate() - days)
-  return d.toISOString().slice(0, 10)
+  return toDateInputValue(d)
 }
 const getMonthStart = () => {
   const d = new Date()
   d.setDate(1)
-  return d.toISOString().slice(0, 10)
+  return toDateInputValue(d)
+}
+const getLastMonthRange = () => {
+  const today = new Date()
+  const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const lastDay = new Date(today.getFullYear(), today.getMonth(), 0)
+  return { fromDate: toDateInputValue(firstDay), toDate: toDateInputValue(lastDay) }
 }
 
 const DATE_PRESETS = [
-  { label: 'Today', days: 0 },
-  { label: 'Last 7 days', days: 7 },
-  { label: 'Last 15 days', days: 15 },
-  { label: 'Last 30 days', days: 30 },
+  { label: 'Today', getRange: () => ({ fromDate: getToday(), toDate: getToday() }) },
+  { label: 'Last 7 Days', getRange: () => ({ fromDate: getPastDate(7), toDate: getToday() }) },
+  { label: 'This Month', getRange: () => ({ fromDate: getMonthStart(), toDate: getToday() }) },
+  { label: 'Last Month', getRange: getLastMonthRange },
+  { label: 'Last 15 Days', getRange: () => ({ fromDate: getPastDate(15), toDate: getToday() }) },
+  { label: 'Last 30 Days', getRange: () => ({ fromDate: getPastDate(30), toDate: getToday() }) },
 ]
 
 export default function Reports() {
@@ -113,8 +130,10 @@ export default function Reports() {
   const [paymentType, setPaymentType] = useState<'all' | 'prepaid' | 'cod'>('all')
   const [selectedFields, setSelectedFields] = useState<string[]>(ALL_FIELD_KEYS)
   const [downloading, setDownloading] = useState(false)
+  const [datePresetAnchorEl, setDatePresetAnchorEl] = useState<null | HTMLElement>(null)
 
   const allSelected = selectedFields.length === ALL_FIELD_KEYS.length
+  const isDatePresetOpen = Boolean(datePresetAnchorEl)
 
   const selectedByGroup = useMemo(() => {
     const selectedSet = new Set(selectedFields)
@@ -133,6 +152,13 @@ export default function Reports() {
 
   const toggleSelectAll = () => {
     setSelectedFields((prev) => (prev.length === ALL_FIELD_KEYS.length ? [] : ALL_FIELD_KEYS))
+  }
+
+  const applyDatePreset = (preset: (typeof DATE_PRESETS)[number]) => {
+    const range = preset.getRange()
+    setFromDate(range.fromDate)
+    setToDate(range.toDate)
+    setDatePresetAnchorEl(null)
   }
 
   const onDownload = async () => {
@@ -205,22 +231,51 @@ export default function Reports() {
               gap={2}
             >
               <Typography fontWeight={600}>Date Range:</Typography>
-              <Stack direction="row" gap={1} flexWrap="wrap" useFlexGap>
-                {DATE_PRESETS.map((preset) => (
-                  <Button
-                    key={preset.label}
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      setFromDate(preset.days === 0 ? getToday() : getPastDate(preset.days))
-                      setToDate(getToday())
-                    }}
-                    sx={{ textTransform: 'none', borderRadius: 99 }}
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
-              </Stack>
+              <Box>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  endIcon={<MdKeyboardArrowDown />}
+                  onClick={(event) => setDatePresetAnchorEl(event.currentTarget)}
+                  aria-controls={isDatePresetOpen ? 'report-date-range-menu' : undefined}
+                  aria-haspopup="menu"
+                  aria-expanded={isDatePresetOpen ? 'true' : undefined}
+                  sx={{ textTransform: 'none', borderRadius: 99, minWidth: 150 }}
+                >
+                  Quick Range
+                </Button>
+                <Menu
+                  id="report-date-range-menu"
+                  anchorEl={datePresetAnchorEl}
+                  open={isDatePresetOpen}
+                  onClose={() => setDatePresetAnchorEl(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  slotProps={{
+                    paper: {
+                      sx: {
+                        mt: 0.75,
+                        minWidth: 180,
+                        borderRadius: 2,
+                      },
+                    },
+                  }}
+                >
+                  {DATE_PRESETS.map((preset) => {
+                    const range = preset.getRange()
+                    const selected = fromDate === range.fromDate && toDate === range.toDate
+                    return (
+                      <MenuItem
+                        key={preset.label}
+                        selected={selected}
+                        onClick={() => applyDatePreset(preset)}
+                      >
+                        {preset.label}
+                      </MenuItem>
+                    )
+                  })}
+                </Menu>
+              </Box>
               <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
                 <TextField
                   type="date"
