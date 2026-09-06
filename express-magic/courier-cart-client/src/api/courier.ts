@@ -64,6 +64,14 @@ export interface CourierSummary {
   updatedAt?: string
 }
 
+export interface CarrierTransportId {
+  carrierKey: string
+  carrierName: string
+  transportId: string
+  isActive: boolean
+  sortOrder: number
+}
+
 // src/api/courier.ts
 
 export interface CourierListResponse {
@@ -109,6 +117,13 @@ export const getCouriers = async ({
 export const getCourierById = async (id: number): Promise<Courier> => {
   const res = await axiosInstance.get<{ status: string; data: Courier }>(`/couriers/${id}`)
   return res.data.data
+}
+
+export const getCarrierTransportIds = async (): Promise<CarrierTransportId[]> => {
+  const res = await axiosInstance.get<{ success: boolean; data: CarrierTransportId[] }>(
+    '/couriers/transport-ids',
+  )
+  return res.data.data || []
 }
 
 interface FetchCouriersResponse {

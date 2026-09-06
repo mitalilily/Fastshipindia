@@ -6010,6 +6010,10 @@ export interface ShipmentParams {
     invoiceNumber?: string
     invoiceDate?: string
     invoiceValue?: number
+    carrierName?: string
+    carrierTransportId?: string
+    transporterId?: string
+    transportId?: string
     invoiceFileUrl?: string
     ewaybill?: string
     eway_bill?: string
@@ -10395,6 +10399,16 @@ export const createB2BShipmentService = async (
             invoice?.invoiceDate || invoice?.invoice_date || params.order_date || '',
           ).trim(),
           invoiceValue: Number(invoice?.invoiceValue ?? invoice?.invoice_value ?? 0),
+          carrierName: String(invoice?.carrierName || invoice?.carrier_name || '').trim(),
+          carrierTransportId: String(
+            invoice?.carrierTransportId ||
+              invoice?.carrier_transport_id ||
+              invoice?.transporterId ||
+              invoice?.transporter_id ||
+              invoice?.transportId ||
+              invoice?.transport_id ||
+              '',
+          ).trim(),
           ewaybill: String(invoice?.ewaybill || invoice?.eway_bill || '').trim(),
           qrCode: String(invoice?.invQrCode || invoice?.inv_qr_code || '').trim(),
           invoiceFileUrl:

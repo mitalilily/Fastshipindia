@@ -75,6 +75,20 @@ export const fetchServiceProviders = async () => {
   return data.data
 }
 
+export const fetchCarrierTransportIds = async () => {
+  const { data } = await api.get('/couriers/transport-ids', {
+    params: { includeInactive: true },
+  })
+  if (!data?.success) throw new Error('Failed to fetch carrier transport IDs')
+  return data.data || []
+}
+
+export const updateCarrierTransportIds = async (entries) => {
+  const { data } = await api.put('/couriers/transport-ids', { entries })
+  if (!data?.success) throw new Error(data?.error || 'Failed to update carrier transport IDs')
+  return data.data || []
+}
+
 export const updateServiceProviderStatus = async ({ serviceProvider, isEnabled }) => {
   const { data } = await api.patch(`/couriers/providers/${serviceProvider}`, {
     isEnabled,

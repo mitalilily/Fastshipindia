@@ -10,6 +10,10 @@ import {
 } from '../controllers/admin/courier.controller'
 import { getShippingRatesForUserController } from '../controllers/courier.controller'
 import {
+  getCarrierTransportIdsController,
+  updateCarrierTransportIdsController,
+} from '../controllers/carrierTransportId.controller'
+import {
   createCourierController,
   calculateB2BRateForUserController,
   fetchAvailableCouriers,
@@ -24,6 +28,8 @@ import { isAdminMiddleware } from '../middlewares/isAdmin'
 const router = Router()
 
 router.get('/shipping-rates', requireAuth, getShippingRatesForUserController)
+router.get('/transport-ids', requireAuth, getCarrierTransportIdsController)
+router.put('/transport-ids', requireAuth, isAdminMiddleware, updateCarrierTransportIdsController)
 router.get('/full-list', requireAuth, getAllCouriersListController)
 router.get('/list', requireAuth, getAllCouriersController)
 router.get(

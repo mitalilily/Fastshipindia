@@ -1,8 +1,20 @@
-import { Alert, Box, Button, Divider, Grid, IconButton, Paper, Stack, Typography } from '@mui/material'
+import {
+  Alert,
+  Box,
+  Button,
+  Divider,
+  Grid,
+  IconButton,
+  MenuItem,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
 import { validateInvoiceContent } from '../../../api/b2b.api'
+import { useCarrierTransportIds } from '../../../hooks/useCarrierTransportIds'
 import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import CustomInput from '../../UI/inputs/CustomInput'
 import FileUploader, { type UploadedFileInfo } from '../../UI/uploader/FileUploader'
@@ -19,6 +31,7 @@ const emptyInvoiceProduct = { productName: '', quantity: 1, unitPrice: 0, sku: '
 export default function B2BInvoicesForm() {
   const { control, watch, setValue, getValues, trigger, setError, clearErrors } =
     useFormContext<B2BFormData>()
+  const { data: carrierTransportIds = [] } = useCarrierTransportIds()
 
   // State to track invoice content validation warnings
   const [invoiceWarnings, setInvoiceWarnings] = useState<Record<number, string>>({})
@@ -105,6 +118,8 @@ export default function B2BInvoicesForm() {
       invoiceNumber: '',
       invoiceDate: getTodayDate(),
       invoiceValue: 0,
+      carrierName: '',
+      carrierTransportId: '',
       invoiceFileUrl: '',
     })
   }
@@ -389,6 +404,66 @@ export default function B2BInvoicesForm() {
                             ? 'Automatically calculated from Quantity × Unit Price'
                             : 'Split the product total across all invoices')
                         }
+                      />
+                    )}
+                  />
+                </Grid>
+
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
+                  <Controller
+                    name={`invoices.${index}.carrierName`}
+                    control={control}
+                    render={({ field }) => (
+                      <CustomInput
+                        {...field}
+                        select
+                        fullWidth
+                        label="Transporter"
+                        topMargin={false}
+                        helperText="Select carrier to fill Transport ID"
+                        onChange={(event) => {
+                          const carrierName = String(event.target.value || '')
+                          const selectedCarrier = carrierTransportIds.find(
+                            (carrier) => carrier.carrierName === carrierName,
+                          )
+                          field.onChange(carrierName)
+                          setValue(
+                            `invoices.${index}.carrierTransportId`,
+                            selectedCarrier?.transportId || '',
+                            { shouldDirty: true, shouldValidate: true },
+                          )
+                        }}
+                      >
+                        <MenuItem value="">Select Transporter</MenuItem>
+                        {carrierTransportIds.map((carrier) => (
+                          <MenuItem key={carrier.carrierKey} value={carrier.carrierName}>
+                            {carrier.carrierName}
+                          </MenuItem>
+                        ))}
+                      </CustomInput>
+                    )}
+                  />
+                </Grid>
+
+                <Grid size={{ lg: 4, md: 6, xs: 12 }}>
+                  <Controller
+                    name={`invoices.${index}.carrierTransportId`}
+                    control={control}
+                    render={({ field }) => (
+                      <CustomInput
+                        {...field}
+                        fullWidth
+                        label="Transport ID"
+                        placeholder="Auto-filled"
+                        topMargin={false}
+                        helperText="Click field to select the ID"
+                        inputProps={{ readOnly: true }}
+                        onClick={(event) => {
+                          const input = event.currentTarget.querySelector(
+                            'input',
+                          ) as HTMLInputElement | null
+                          input?.select()
+                        }}
                       />
                     )}
                   />

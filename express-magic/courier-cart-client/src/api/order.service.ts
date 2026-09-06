@@ -215,6 +215,10 @@ export type CreateB2BShipmentParams = {
     invoiceNumber: string
     invoiceDate: string
     invoiceValue: number
+    carrierName?: string
+    carrierTransportId?: string
+    transporterId?: string
+    transportId?: string
     invoiceFileUrl?: string
   }>
 

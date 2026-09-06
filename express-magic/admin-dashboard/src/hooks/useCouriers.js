@@ -5,6 +5,7 @@ import {
   createCourier,
   deleteCourier,
   deleteShippingRateAPI,
+  fetchCarrierTransportIds,
   fetchCourierCredentials,
   fetchAllCouriersList,
   fetchAvailableCouriers,
@@ -14,6 +15,7 @@ import {
   testDelhiveryB2BCredentials,
   testShipmozoCredentials,
   updateBigshipCredentials,
+  updateCarrierTransportIds,
   updateDelhiveryB2BCredentials,
   updateDelhiveryCredentials,
   updateShipmozoCredentials,
@@ -102,6 +104,25 @@ export const useServiceProviders = () => {
     queryKey: ['serviceProviders'],
     queryFn: () => fetchServiceProviders(),
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+export const useCarrierTransportIds = () => {
+  return useQuery({
+    queryKey: ['carrierTransportIds'],
+    queryFn: fetchCarrierTransportIds,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export const useUpdateCarrierTransportIds = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateCarrierTransportIds,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['carrierTransportIds'] })
+    },
   })
 }
 

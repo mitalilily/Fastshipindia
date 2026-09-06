@@ -4,10 +4,13 @@ import {
   HStack,
   Icon,
   IconButton,
+  Input,
+  SimpleGrid,
   Spinner,
   Switch,
   Text,
   Tooltip,
+  VStack,
   useDisclosure,
   useToast,
 } from "@chakra-ui/react";
@@ -34,13 +37,15 @@ import {
 } from "components/AdminUI/AdminPage";
 import AddCourierModal from "components/Modal/AddCourierModal";
 import {
+  useCarrierTransportIds,
   useCouriers,
   useCreateCourier,
   useDeleteCourier,
+  useUpdateCarrierTransportIds,
   useUpdateCourierStatus,
 } from "hooks/useCouriers";
 import { useDebounce } from "hooks/useDebounce";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const providerColors = {
   Delhivery: ["#FFECEC", "#E31B23"],
@@ -170,16 +175,34 @@ const Couriers = () => {
     status: "",
   });
   const debouncedSearch = useDebounce(filters.search, 500);
-  const { data: couriers = [], isLoading, error } = useCouriers({
+  const { data: couriers = [], isLoading: isCouriersLoading, error } = useCouriers({
     search: debouncedSearch || undefined,
     serviceProvider: filters.serviceProvider || undefined,
     businessType: filters.businessType || undefined,
   });
+  const {
+    data: carrierTransportIds = [],
+    isLoading: isTransportIdsLoading,
+  } = useCarrierTransportIds();
   const createCourier = useCreateCourier();
   const deleteCourier = useDeleteCourier();
   const updateCourierStatus = useUpdateCourierStatus();
+  const updateCarrierTransportIds = useUpdateCarrierTransportIds();
   const toast = useToast();
   const addCourierModal = useDisclosure();
+  const [transportDraft, setTransportDraft] = useState([]);
+
+  useEffect(() => {
+    setTransportDraft(
+      carrierTransportIds.map((carrier, index) => ({
+        carrierKey: carrier.carrierKey,
+        carrierName: carrier.carrierName,
+        transportId: carrier.transportId || "",
+        isActive: carrier.isActive !== false,
+        sortOrder: carrier.sortOrder ?? (index + 1) * 10,
+      }))
+    );
+  }, [carrierTransportIds]);
 
   const rows = useMemo(() => {
     const source = couriers.length ? couriers : fallbackCouriers;
@@ -233,7 +256,31 @@ const Couriers = () => {
     );
   };
 
-  if (isLoading && !couriers.length) {
+  const handleTransportDraftChange = (carrierKey, field, value) => {
+    setTransportDraft((previous) =>
+      previous.map((carrier) =>
+        carrier.carrierKey === carrierKey ? { ...carrier, [field]: value } : carrier
+      )
+    );
+  };
+
+  const handleSaveTransportIds = () => {
+    updateCarrierTransportIds.mutate(transportDraft, {
+      onSuccess: () =>
+        toast({
+          title: "Carrier transport IDs updated",
+          status: "success",
+        }),
+      onError: (saveError) =>
+        toast({
+          title: "Failed to update transport IDs",
+          description: saveError?.message,
+          status: "error",
+        }),
+    });
+  };
+
+  if (isCouriersLoading && !couriers.length) {
     return (
       <AdminStack>
         <Spinner size="md" />
@@ -430,6 +477,78 @@ const Couriers = () => {
             </Box>
           </HStack>
         </Box>
+      </AdminCard>
+
+      <AdminCard p="24px">
+        <HStack justify="space-between" align="flex-start" mb="18px" spacing="16px" wrap="wrap">
+          <Box>
+            <Text fontSize="20px" fontWeight="800" color={adminUi.text}>
+              Carrier Transport IDs
+            </Text>
+            <Text fontSize="14px" color={adminUi.muted} mt="4px">
+              These IDs appear in B2B invoice transporter selection.
+            </Text>
+          </Box>
+          <Button
+            colorScheme="purple"
+            size="sm"
+            isLoading={updateCarrierTransportIds.isPending}
+            onClick={handleSaveTransportIds}
+          >
+            Save IDs
+          </Button>
+        </HStack>
+
+        {isTransportIdsLoading ? (
+          <Spinner size="sm" />
+        ) : (
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing="14px">
+            {transportDraft.map((carrier) => (
+              <VStack
+                key={carrier.carrierKey}
+                align="stretch"
+                spacing="10px"
+                border="1px solid #E6EBF2"
+                borderRadius="8px"
+                p="14px"
+                bg="#FFFFFF"
+              >
+                <HStack justify="space-between">
+                  <Text fontWeight="800" color={adminUi.text}>
+                    {carrier.carrierName}
+                  </Text>
+                  <Switch
+                    size="sm"
+                    colorScheme="purple"
+                    isChecked={carrier.isActive}
+                    onChange={(event) =>
+                      handleTransportDraftChange(
+                        carrier.carrierKey,
+                        "isActive",
+                        event.target.checked
+                      )
+                    }
+                  />
+                </HStack>
+                <Input
+                  value={carrier.transportId}
+                  onChange={(event) =>
+                    handleTransportDraftChange(
+                      carrier.carrierKey,
+                      "transportId",
+                      event.target.value.toUpperCase()
+                    )
+                  }
+                  h="38px"
+                  borderColor="#DDE5F0"
+                  fontSize="14px"
+                  fontWeight="800"
+                  letterSpacing="0"
+                />
+              </VStack>
+            ))}
+          </SimpleGrid>
+        )}
       </AdminCard>
 
       <DataTable
