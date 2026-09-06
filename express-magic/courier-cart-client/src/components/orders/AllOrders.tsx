@@ -35,7 +35,7 @@ import {
   MdTrackChanges,
   MdVisibility,
 } from 'react-icons/md'
-import { TbDownload, TbFilter, TbPlus, TbRefresh } from 'react-icons/tb'
+import { TbDownload, TbFilter, TbPlus } from 'react-icons/tb'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchOrdersForCsvExport, generateManifestService } from '../../api/order.service'
 import {
@@ -53,6 +53,7 @@ import type { B2COrder } from '../../types/generic.types'
 import { FilterBar, type FilterField } from '../FilterBar'
 import { toast } from '../UI/Toast'
 import CustomDrawer from '../UI/drawer/CustomDrawer'
+import CustomDatePicker from '../UI/inputs/CustomDatePicker'
 import DataTable, { type Column } from '../UI/table/DataTable'
 import { statusColorMap } from './b2c/B2COrdersList'
 import B2COrderFormSteps, { type B2CFormData } from './b2c/B2COrderForm'
@@ -1699,13 +1700,32 @@ const AllOrders = () => {
       placeholder: 'Product name or SKU',
       isAdvanced: true,
     },
-    { name: 'fromDate', label: 'From Date', type: 'date', placeholder: 'YYYY-MM-DD', isAdvanced: true },
-    { name: 'toDate', label: 'To Date', type: 'date', placeholder: 'YYYY-MM-DD', isAdvanced: true },
   ]
 
   const activeFilterCount = Object.values(filters).filter((value) =>
     Array.isArray(value) ? value.length > 0 : Boolean(String(value || '').trim()),
   ).length
+  const hasDateRange = Boolean(filters.fromDate || filters.toDate)
+  const handleDateRangeChange = (name: 'fromDate' | 'toDate', value: string) => {
+    setFilters((previous) => ({
+      ...previous,
+      [name]: value || undefined,
+    }))
+    setPage(1)
+    clearSelection()
+    setBulkFeedback(null)
+  }
+
+  const clearDateRange = () => {
+    setFilters((previous) => ({
+      ...previous,
+      fromDate: undefined,
+      toDate: undefined,
+    }))
+    setPage(1)
+    clearSelection()
+    setBulkFeedback(null)
+  }
 
   return (
     <Stack gap={0.8}>
@@ -1749,15 +1769,6 @@ const AllOrders = () => {
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap">
             <Button
               variant="outlined"
-              startIcon={<TbRefresh size={16} />}
-              onClick={() => activeQuery.refetch()}
-              disabled={activeQuery.isRefetching}
-              sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
-            >
-              {activeQuery.isRefetching ? 'Refreshing' : 'Refresh'}
-            </Button>
-            <Button
-              variant="outlined"
               startIcon={<TbFilter size={16} />}
               onClick={() => setIsFilterPanelOpen((open) => !open)}
               aria-expanded={isFilterPanelOpen}
@@ -1765,14 +1776,6 @@ const AllOrders = () => {
               sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
             >
               Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<MdTrackChanges size={16} />}
-              onClick={() => navigate('/tools/order_tracking')}
-              sx={{ borderRadius: 1, minHeight: 34, fontSize: 12 }}
-            >
-              Track By
             </Button>
             <Button
               variant="outlined"
@@ -1801,6 +1804,49 @@ const AllOrders = () => {
             </Button>
           </Stack>
         </Stack>
+
+        <Box
+          sx={{
+            px: { xs: 1.15, md: 1.5 },
+            py: 0.75,
+            borderBottom: `1px solid ${borderColor}`,
+            bgcolor: isDark ? alpha('#ffffff', 0.025) : '#FFFFFF',
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            alignItems={{ xs: 'stretch', md: 'flex-end' }}
+            gap={0.8}
+          >
+            <Box sx={{ width: { xs: '100%', md: 210 } }}>
+              <CustomDatePicker
+                label="From Date"
+                placeholder="From"
+                value={filters.fromDate || null}
+                topMargin={false}
+                onChange={(event) => handleDateRangeChange('fromDate', event.target.value)}
+              />
+            </Box>
+            <Box sx={{ width: { xs: '100%', md: 210 } }}>
+              <CustomDatePicker
+                label="To Date"
+                placeholder="To"
+                value={filters.toDate || null}
+                topMargin={false}
+                onChange={(event) => handleDateRangeChange('toDate', event.target.value)}
+              />
+            </Box>
+            {hasDateRange && (
+              <Button
+                variant="outlined"
+                onClick={clearDateRange}
+                sx={{ borderRadius: 1, minHeight: 34, fontSize: 12, textTransform: 'none' }}
+              >
+                Clear Dates
+              </Button>
+            )}
+          </Stack>
+        </Box>
 
         <Box
           sx={{
