@@ -61,16 +61,6 @@ const filterFields: FilterField[] = [
     placeholder: 'Search for name...',
   },
   {
-    name: 'isPrimary',
-    label: 'Primary',
-    type: 'select',
-    options: [
-      { label: 'All', value: '' },
-      { label: 'Yes', value: true },
-      { label: 'No', value: false },
-    ],
-  },
-  {
     name: 'pincode',
     label: 'Pincode',
     isAdvanced: true,
@@ -111,7 +101,6 @@ const initialFilterValues = {
   pincode: '',
   sortBy: '',
   isPickupEnabled: '',
-  isPrimary: '',
 }
 
 const PickupAddresses = () => {

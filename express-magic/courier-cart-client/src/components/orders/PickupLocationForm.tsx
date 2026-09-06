@@ -412,23 +412,9 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                 >
                   {/* Pickup info */}
                   <Stack spacing={0.35} mb={0.65}>
-                    <Stack direction="row" alignItems="center" spacing={0.75}>
-                      <Typography variant="subtitle1" fontWeight="bold" sx={{ color: TEXT_PRIMARY }}>
-                        {loc.pickup?.addressNickname}
-                      </Typography>
-                      {loc.isPrimary && (
-                        <Chip
-                          label="Primary"
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            borderColor: alpha(ACCENT, 0.35),
-                            color: ACCENT,
-                            bgcolor: alpha(ACCENT, 0.03),
-                          }}
-                        />
-                      )}
-                    </Stack>
+                    <Typography variant="subtitle1" fontWeight="bold" sx={{ color: TEXT_PRIMARY }}>
+                      {loc.pickup?.addressNickname}
+                    </Typography>
                     <Typography sx={{ color: ACCENT, fontSize: 12, fontWeight: 800 }}>
                       {getPickupDisplayId(loc)}
                     </Typography>

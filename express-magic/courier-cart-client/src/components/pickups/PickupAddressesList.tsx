@@ -1,7 +1,6 @@
 import {
   alpha,
   Box,
-  Button,
   Card,
   CardContent,
   Chip,
@@ -23,7 +22,6 @@ import {
 } from '@mui/material'
 import moment from 'moment'
 import { useState } from 'react'
-import { BiCheckCircle } from 'react-icons/bi'
 import { CiEdit } from 'react-icons/ci'
 import { MdOutlineWarehouse } from 'react-icons/md'
 import { useUpdatePickupAddress } from '../../hooks/Pickup/usePickupAddresses'
@@ -97,10 +95,6 @@ const PickupAddressesList = ({
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedAddress, setSelectedAddress] = useState<HydratedPickup | undefined>(undefined)
-
-  const handleMakePrimary = (id: string) => {
-    updatePickupAddress({ id, payload: { isPrimary: true } })
-  }
 
   const handleEdit = (address: HydratedPickup) => {
     setSelectedAddress(address)
@@ -255,22 +249,6 @@ const PickupAddressesList = ({
                           >
                             {formatWarehouseName(address)}
                           </Typography>
-                          {address.isPrimary && (
-                            <Chip
-                              label="Primary"
-                              size="small"
-                              icon={<BiCheckCircle style={{ fontSize: 14 }} />}
-                              sx={{
-                                height: 23,
-                                borderRadius: '999px',
-                                fontSize: 11,
-                                fontWeight: 800,
-                                color: brand.red,
-                                bgcolor: alpha(brand.red, 0.1),
-                                '& .MuiChip-icon': { color: brand.red },
-                              }}
-                            />
-                          )}
                         </Stack>
                       </TableCell>
                       <TableCell>
@@ -356,27 +334,6 @@ const PickupAddressesList = ({
                       </TableCell>
                       <TableCell align="center">
                         <Stack direction="row" spacing={0.6} justifyContent="center">
-                          {!address.isPrimary && (
-                            <Tooltip title="Make primary">
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleMakePrimary(address.pickupId)
-                                }}
-                                sx={{
-                                  minWidth: 0,
-                                  px: 0.9,
-                                  borderRadius: '8px',
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                }}
-                              >
-                                Primary
-                              </Button>
-                            </Tooltip>
-                          )}
                           <Tooltip title="Edit address">
                             <IconButton
                               size="small"
@@ -487,22 +444,6 @@ const PickupAddressesList = ({
                               </Typography>
                             )}
                           </Box>
-                          {address.isPrimary && (
-                            <Tooltip title="Primary pickup address">
-                              <Chip
-                                label="Primary"
-                                size="small"
-                                icon={<BiCheckCircle style={{ fontSize: 15 }} />}
-                                sx={{
-                                  borderRadius: '8px',
-                                  fontWeight: 800,
-                                  color: brand.red,
-                                  bgcolor: alpha(brand.red, 0.1),
-                                  '& .MuiChip-icon': { color: brand.red },
-                                }}
-                              />
-                            </Tooltip>
-                          )}
                         </Stack>
 
                         <Tooltip title={fullAddress} arrow disableInteractive>
@@ -542,25 +483,6 @@ const PickupAddressesList = ({
                                 checked={Boolean(address.isPickupEnabled)}
                               />
                             </Box>
-                            {!address.isPrimary && (
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleMakePrimary(address.pickupId)
-                                }}
-                                sx={{
-                                  minWidth: 0,
-                                  px: 1,
-                                  borderRadius: '8px',
-                                  fontSize: 11,
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                Primary
-                              </Button>
-                            )}
                             <Tooltip title="Edit address">
                               <IconButton
                                 size="small"
