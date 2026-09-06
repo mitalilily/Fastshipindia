@@ -63,11 +63,11 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
     }, [value])
 
     return (
-      <Box sx={{ mt: topMargin ? 2 : 0, width }}>
+      <Box sx={{ mt: topMargin ? 1.1 : 0, width }}>
         {label && (
           <Typography
             sx={{
-              mb: isReferenceAuth ? 0.7 : 0.9,
+              mb: isReferenceAuth ? 0.55 : 0.45,
               fontSize: isReferenceAuth ? '0.9rem' : '0.74rem',
               fontWeight: isReferenceAuth ? 500 : 700,
               letterSpacing: 0,
@@ -135,7 +135,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
               },
             },
             '& .MuiInputBase-input': {
-              py: isReferenceAuth ? 0.82 : 1.12,
+              py: isReferenceAuth ? 0.75 : 0.86,
               color: theme.palette.text.primary,
               fontWeight: 600,
               fontSize: isReferenceAuth ? '0.88rem' : '0.94rem',
@@ -143,7 +143,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
             },
             '& .MuiFormHelperText-root': {
               ml: 0.3,
-              mt: 0.75,
+              mt: 0.35,
               fontWeight: 600,
               fontSize: '0.76rem',
             },
@@ -186,7 +186,7 @@ const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
         />
 
         {helpText ? (
-          <Box sx={{ mt: 0.8, display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+          <Box sx={{ mt: 0.45, display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
             <Typography
               variant="caption"
               sx={{

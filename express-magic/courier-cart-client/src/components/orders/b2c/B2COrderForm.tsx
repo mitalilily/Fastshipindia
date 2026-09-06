@@ -498,12 +498,12 @@ export default function B2COrderFormSteps({
   return (
     <FormProvider {...methods}>
       <Stack
-        gap={2}
+        gap={1.25}
         sx={{
           height: '100%',
           position: 'relative',
-          p: { xs: 1, sm: 1.5, md: 2 },
-          borderRadius: 4,
+          p: { xs: 0.75, sm: 1, md: 1.25 },
+          borderRadius: 3,
           border: `1px solid ${alpha(ACCENT, 0.14)}`,
           background: '#ffffff',
           boxShadow: `0 12px 30px ${alpha(ACCENT, 0.08)}`,
@@ -512,14 +512,14 @@ export default function B2COrderFormSteps({
         <Paper
           elevation={0}
           sx={{
-            px: { xs: 2, sm: 2.5, md: 3 },
-            py: { xs: 2, sm: 2.25 },
-            borderRadius: 3,
+            px: { xs: 1.25, sm: 1.5, md: 1.75 },
+            py: { xs: 1.1, sm: 1.25 },
+            borderRadius: 2,
             border: `1px solid ${alpha(ACCENT, 0.14)}`,
             background: alpha(ACCENT, 0.03),
           }}
         >
-          <Stack gap={1}>
+          <Stack gap={0.55}>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               justifyContent="space-between"
@@ -549,7 +549,7 @@ export default function B2COrderFormSteps({
               sx={{
                 mt: 0.5,
                 width: '100%',
-                height: 8,
+                height: 6,
                 borderRadius: 99,
                 overflow: 'hidden',
                 bgcolor: alpha(ACCENT, 0.08),
@@ -575,8 +575,8 @@ export default function B2COrderFormSteps({
           sx={{
             flex: 1,
             overflowY: 'auto',
-            p: { xs: 0.5, sm: 1, md: 1.5 },
-            pr: { xs: 1, sm: 2, md: 2.5 },
+            p: { xs: 0.25, sm: 0.5, md: 0.75 },
+            pr: { xs: 0.75, sm: 1.25, md: 1.5 },
             '&::-webkit-scrollbar': {
               width: '8px',
             },
@@ -590,7 +590,7 @@ export default function B2COrderFormSteps({
             },
           }}
         >
-          <Stack direction={{ xs: 'column', md: 'row' }} gap={1.25} mb={2.5}>
+          <Stack direction={{ xs: 'column', md: 'row' }} gap={0.8} mb={1.25}>
             {stepLabels.map((step, index) => {
               const isActive = index === currentStep
               const isCompleted = index < currentStep
@@ -600,9 +600,9 @@ export default function B2COrderFormSteps({
                   elevation={0}
                   sx={{
                     flex: 1,
-                    px: 1.5,
-                    py: 1.25,
-                    borderRadius: 2.5,
+                    px: 1.1,
+                    py: 0.75,
+                    borderRadius: 2,
                     border: `1px solid ${
                       isActive
                         ? alpha(ACCENT, 0.3)
@@ -619,11 +619,11 @@ export default function B2COrderFormSteps({
                     transition: 'all 200ms ease',
                   }}
                 >
-                  <Stack direction="row" gap={1.25} alignItems="center">
+                  <Stack direction="row" gap={0.8} alignItems="center">
                     <Box
                       sx={{
-                        width: 28,
-                        height: 28,
+                        width: 24,
+                        height: 24,
                         borderRadius: '50%',
                         display: 'grid',
                         placeItems: 'center',
@@ -651,7 +651,7 @@ export default function B2COrderFormSteps({
 
           {/* Step content */}
           {currentStep === 0 && (
-            <Stack gap={2} mb={2}>
+            <Stack gap={1} mb={1}>
               <FormSectionAccordion title="Order Details" icon={<FaBox />} defaultExpanded>
                 <OrderDetailsForm />
               </FormSectionAccordion>
@@ -685,7 +685,7 @@ export default function B2COrderFormSteps({
           )}
 
           {currentStep === 1 && (
-            <Stack gap={2} mb={2}>
+            <Stack gap={1} mb={1}>
               <PickupLocationForm />
               <FormSectionAccordion title="Booking Review" icon={<BiRupee />} defaultExpanded>
                 <BookingReviewSummary
@@ -711,15 +711,15 @@ export default function B2COrderFormSteps({
           {/* Sticky footer inside scroll */}
           <Box
             sx={{
-              py: 1.5,
-              px: { xs: 1.5, sm: 2.25 },
+              py: 1,
+              px: { xs: 1, sm: 1.4 },
               background: '#ffffff',
               border: `1px solid ${alpha(ACCENT, 0.16)}`,
-              borderRadius: '14px',
+              borderRadius: '10px',
               position: 'sticky',
               bottom: 0,
               zIndex: 10,
-              mt: 2.5,
+              mt: 1.25,
               boxShadow: `0 10px 20px ${alpha(ACCENT, 0.08)}`,
             }}
           >

@@ -419,23 +419,23 @@ export const SelectCourierForm = ({
     : 0
 
   return (
-    <Grid container spacing={showSummary ? 3 : 0}>
+    <Grid container spacing={showSummary ? 1.5 : 0}>
       {showSummary && (
       <Grid size={{ md: 4.5, xs: 12 }}>
-        <Stack spacing={2.5} sx={{ position: { md: 'sticky' }, top: { md: 16 } }}>
+        <Stack spacing={1.25} sx={{ position: { md: 'sticky' }, top: { md: 12 } }}>
           <Paper
             sx={{
               p: 0,
               overflow: 'hidden',
-              borderRadius: 4,
+              borderRadius: 2,
               border: `1px solid ${alpha(ACCENT, 0.14)}`,
               boxShadow: '0 22px 44px rgba(13,59,142,0.08)',
             }}
           >
             <Box
               sx={{
-                px: 2.5,
-                py: 2.25,
+                px: 1.5,
+                py: 1.25,
                 color: '#fff',
                 background:
                   'linear-gradient(135deg, #0D3B8E 0%, #1A5DD1 55%, #3D8BFF 100%)',
@@ -455,8 +455,8 @@ export const SelectCourierForm = ({
               </Typography>
             </Box>
 
-            <Box sx={{ p: 2.5, bgcolor: '#fff' }}>
-              <Grid container spacing={1.5}>
+            <Box sx={{ p: 1.4, bgcolor: '#fff' }}>
+              <Grid container spacing={0.9}>
                 {[
                   { label: 'Customer Total', value: formatCurrency(totalOrderValue) },
                   { label: 'Courier Options', value: String(availableCouriers.length) },
@@ -466,8 +466,8 @@ export const SelectCourierForm = ({
                   <Grid key={item.label} size={{ xs: 6 }}>
                     <Box
                       sx={{
-                        p: 1.5,
-                        borderRadius: 3,
+                        p: 0.9,
+                        borderRadius: 2,
                         bgcolor: SURFACE,
                         border: '1px solid rgba(13,59,142,0.08)',
                       }}
@@ -481,7 +481,7 @@ export const SelectCourierForm = ({
                 ))}
               </Grid>
 
-              <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 1.1 }} />
 
               <Stack spacing={1.2}>
                 <Typography sx={{ fontSize: 12, fontWeight: 800, color: TEXT_SECONDARY }}>
@@ -533,7 +533,7 @@ export const SelectCourierForm = ({
 
               {shouldShowWalletDebitPreview && (
                 <>
-                  <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ my: 1.1 }} />
                   <Stack spacing={1.2}>
                     <Typography sx={{ fontSize: 12, fontWeight: 800, color: TEXT_SECONDARY }}>
                       Wallet Debit Preview
@@ -564,9 +564,9 @@ export const SelectCourierForm = ({
             </Box>
           </Paper>
 
-          <Paper sx={{ p: 2.25, borderRadius: 4, bgcolor: '#fff' }}>
+          <Paper sx={{ p: 1.4, borderRadius: 2, bgcolor: '#fff' }}>
             <Typography sx={{ fontWeight: 800, color: TEXT_PRIMARY }}>Delivery Summary</Typography>
-            <Stack spacing={1.2} sx={{ mt: 1.5 }}>
+            <Stack spacing={0.8} sx={{ mt: 0.9 }}>
               <Stack direction="row" spacing={1.2} alignItems="flex-start">
                 <BiUser color={ACCENT} size={18} />
                 <Box>
@@ -599,9 +599,9 @@ export const SelectCourierForm = ({
             </Stack>
           </Paper>
 
-          <Paper sx={{ p: 2.25, borderRadius: 4, bgcolor: '#fff' }}>
+          <Paper sx={{ p: 1.4, borderRadius: 2, bgcolor: '#fff' }}>
             <Typography sx={{ fontWeight: 800, color: TEXT_PRIMARY }}>Pickup Summary</Typography>
-            <Stack spacing={1.2} sx={{ mt: 1.5 }}>
+            <Stack spacing={0.8} sx={{ mt: 0.9 }}>
               <Stack direction="row" spacing={1.2} alignItems="flex-start">
                 <BiCalendar color={ACCENT} size={18} />
                 <Box>
@@ -619,8 +619,8 @@ export const SelectCourierForm = ({
                   <Divider />
                   <Box
                     sx={{
-                      p: 1.5,
-                      borderRadius: 3,
+                      p: 1,
+                      borderRadius: 2,
                       bgcolor: alpha(ACCENT, 0.05),
                       border: `1px solid ${alpha(ACCENT, 0.12)}`,
                     }}
@@ -653,8 +653,8 @@ export const SelectCourierForm = ({
       <Grid size={showSummary ? { md: 7.5, xs: 12 } : { xs: 12 }}>
         <Paper
           sx={{
-            p: 2.5,
-            borderRadius: 4,
+            p: { xs: 1.25, sm: 1.5 },
+            borderRadius: 2,
             border: `1px solid ${alpha(ACCENT, 0.1)}`,
             boxShadow: '0 18px 40px rgba(16,42,84,0.06)',
           }}
@@ -664,13 +664,13 @@ export const SelectCourierForm = ({
             justifyContent="space-between"
             alignItems={{ xs: 'flex-start', md: 'center' }}
             spacing={1}
-            sx={{ mb: 2.5 }}
+            sx={{ mb: 1.25 }}
           >
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, color: TEXT_PRIMARY }}>
                 Select Courier Partner
               </Typography>
-              <Typography sx={{ mt: 0.5, color: TEXT_SECONDARY }}>
+              <Typography sx={{ mt: 0.25, color: TEXT_SECONDARY, fontSize: 13 }}>
                 {shipment_type === 'b2b'
                   ? 'Select an available B2B courier rate for this route.'
                   : 'Compare freight, speed and chargeable weight before locking the shipment.'}
@@ -687,7 +687,7 @@ export const SelectCourierForm = ({
             />
           </Stack>
 
-          <Stack spacing={2}>
+          <Stack spacing={1}>
             {availableCouriers?.map((courier) => {
               const local = courier?.localRates
               const courierOptionKey = String(
@@ -744,10 +744,10 @@ export const SelectCourierForm = ({
                     clearErrors('courierPartnerId')
                   }}
                   sx={{
-                    p: 2,
+                    p: { xs: 1.15, sm: 1.25 },
                     cursor: isBookable ? 'pointer' : 'not-allowed',
                     opacity: isBookable ? 1 : 0.72,
-                    borderRadius: 4,
+                    borderRadius: 2,
                     border: isSelected
                       ? `2px solid ${alpha(ACCENT, 0.42)}`
                       : `1px solid ${alpha(isBookable ? '#102A54' : '#8A1F11', isBookable ? 0.12 : 0.2)}`,
@@ -765,19 +765,19 @@ export const SelectCourierForm = ({
                     },
                   }}
                 >
-                  <Stack spacing={1.75}>
+                  <Stack spacing={1}>
                     <Stack
                       direction={{ xs: 'column', sm: 'row' }}
                       justifyContent="space-between"
                       alignItems={{ xs: 'flex-start', sm: 'center' }}
-                      spacing={1.5}
+                      spacing={0.9}
                     >
-                      <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Stack direction="row" spacing={0.9} alignItems="center">
                         <Box
                           sx={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: 3,
+                            width: 42,
+                            height: 42,
+                            borderRadius: 2,
                             bgcolor: SURFACE,
                             border: `1px solid ${alpha(ACCENT, 0.08)}`,
                             display: 'grid',
@@ -788,7 +788,7 @@ export const SelectCourierForm = ({
                           <img
                             src={getCourierLogo(courier, defaultLogo)}
                             alt={courier?.name}
-                            style={{ width: 34, height: 34, objectFit: 'contain' }}
+                            style={{ width: 28, height: 28, objectFit: 'contain' }}
                           />
                         </Box>
                         <Box>
@@ -822,13 +822,13 @@ export const SelectCourierForm = ({
                         <Typography sx={{ fontSize: 12, color: TEXT_SECONDARY }}>
                           Courier Charge
                         </Typography>
-                        <Typography sx={{ fontSize: 28, fontWeight: 900, color: TEXT_PRIMARY }}>
+                        <Typography sx={{ fontSize: 22, fontWeight: 900, color: TEXT_PRIMARY }}>
                           {finalChargeLabel}
                         </Typography>
                       </Stack>
                     </Stack>
 
-                    <Grid container spacing={1.1}>
+                    <Grid container spacing={0.8}>
                       {[
                         ['Courier Charge', finalChargeLabel],
                         ['Chargeable', formatCourierWeightKg(courier?.chargeable_weight)],
@@ -838,8 +838,8 @@ export const SelectCourierForm = ({
                         <Grid key={label} size={{ xs: 6, lg: 3 }}>
                           <Box
                             sx={{
-                              p: 1.25,
-                              borderRadius: 3,
+                              p: 0.9,
+                              borderRadius: 2,
                               bgcolor: SURFACE,
                               border: '1px solid rgba(13,59,142,0.08)',
                             }}

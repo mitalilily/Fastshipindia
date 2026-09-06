@@ -331,13 +331,13 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
   return (
     <Grid
       container
-      columnSpacing={isCompactB2B ? 1.5 : 2}
-      rowSpacing={isCompactB2B ? 1 : 2}
+      columnSpacing={1.25}
+      rowSpacing={isCompactB2B ? 0.9 : 1.15}
     >
       <Grid size={12}>
         <Stack
           direction={{ xs: 'column', md: 'row' }}
-          spacing={1.2}
+          spacing={0.9}
           alignItems={{ xs: 'stretch', md: 'flex-end' }}
         >
           <Autocomplete
@@ -363,6 +363,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
                 {...params}
                 label="Saved Delivery Address"
                 placeholder="Select saved address"
+                size="small"
                 inputProps={{
                   ...params.inputProps,
                   autoComplete: 'new-password',
@@ -386,8 +387,8 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
             variant="outlined"
             onClick={handleSaveAddress}
             sx={{
-              minHeight: 40,
-              px: 2,
+              minHeight: 36,
+              px: 1.5,
               borderRadius: '10px',
               whiteSpace: 'nowrap',
               fontWeight: 800,
@@ -397,7 +398,7 @@ const DeliveryDetailsForm = ({ type = 'b2c' }: { type?: FormType }) => {
           </Button>
         </Stack>
         {saveMessage ? (
-          <Typography sx={{ mt: 0.7, color: canSaveAddress ? 'success.main' : 'text.secondary', fontSize: 12 }}>
+          <Typography sx={{ mt: 0.35, color: canSaveAddress ? 'success.main' : 'text.secondary', fontSize: 12 }}>
             {saveMessage}
           </Typography>
         ) : null}

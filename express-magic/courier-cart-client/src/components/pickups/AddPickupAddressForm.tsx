@@ -96,14 +96,14 @@ const AddPickupAddressForm = ({
       onSubmit={handleSubmit(onSubmit)}
       sx={{
         color: '#fff',
-        p: { xs: 1.25, sm: 2 },
+        p: { xs: 0.75, sm: 1 },
         width: '100%',
         minWidth: 0,
         overflow: 'visible',
         WebkitOverflowScrolling: 'touch',
         touchAction: 'auto',
       }}
-      gap={2}
+      gap={1}
     >
       {serverError && (
         <Box mb={1}>
@@ -138,7 +138,7 @@ const AddPickupAddressForm = ({
       </Accordion>
 
       {/* RTO toggle + section */}
-      <Box mt={2} sx={{ ...glassStyles, width: '100%', minWidth: 0 }} p={2}>
+      <Box mt={0.75} sx={{ ...glassStyles, width: '100%', minWidth: 0 }} p={1.25}>
         <FormControlLabel
           control={
             <Controller
@@ -153,7 +153,7 @@ const AddPickupAddressForm = ({
         />
 
         {useDifferentRTO && (
-          <Box mt={2}>
+          <Box mt={1}>
             <Accordion defaultExpanded disableGutters sx={glassStyles}>
               <AccordionSummary expandIcon={<MdExpandMore color="#fff" />}>
                 <Typography fontWeight={600} display="flex" alignItems="center">
@@ -175,7 +175,7 @@ const AddPickupAddressForm = ({
         )}
       </Box>
 
-      <Box display="flex" justifyContent="flex-end" mt={2} sx={{ width: '100%' }}>
+      <Box display="flex" justifyContent="flex-end" mt={0.75} sx={{ width: '100%' }}>
         <Stack alignItems="flex-end" spacing={1} width="100%" sx={{ width: '100%' }}>
           {serverError && (
             <Alert severity="error" sx={{ width: '100%' }}>
@@ -191,9 +191,9 @@ const AddPickupAddressForm = ({
             loadingText={isEdit ? 'Updating address...' : 'Saving address...'}
             textColor="#ffffff"
             styles={{
-              minWidth: 184,
-              minHeight: 56,
-              px: 3.5,
+              minWidth: 168,
+              minHeight: 44,
+              px: 2.5,
               bgcolor: '#0D3B8E',
               background: '#0D3B8E',
               color: '#ffffff',

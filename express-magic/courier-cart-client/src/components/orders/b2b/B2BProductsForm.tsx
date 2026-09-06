@@ -227,9 +227,9 @@ const ProductBoxesForm = () => {
   ) as Array<['quantity' | 'weightKg' | 'lengthCm' | 'breadthCm' | 'heightCm', string]>
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={1.1}>
       <Box>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
           <Box>
             <Typography fontWeight={700} color="#102A54">
               Shipment Products
@@ -248,7 +248,7 @@ const ProductBoxesForm = () => {
             <Paper
               key={product.id}
               variant="outlined"
-              sx={{ p: 1.5, borderRadius: 2, borderColor: '#E0E6ED' }}
+              sx={{ p: 1.1, borderRadius: 2, borderColor: '#E0E6ED' }}
             >
               <Box
                 sx={{
@@ -257,7 +257,7 @@ const ProductBoxesForm = () => {
                     xs: '1fr',
                     sm: 'minmax(0, 2fr) minmax(110px, 0.75fr) minmax(130px, 0.9fr) 40px',
                   },
-                  gap: 1.5,
+                  gap: 1,
                   alignItems: 'start',
                 }}
               >
@@ -332,7 +332,7 @@ const ProductBoxesForm = () => {
           ))}
         </Stack>
 
-        <Button variant="outlined" onClick={handleAddProduct} sx={{ mt: 1 }}>
+        <Button variant="outlined" onClick={handleAddProduct} sx={{ mt: 0.75 }}>
           + Add Product
         </Button>
       </Box>
@@ -340,7 +340,7 @@ const ProductBoxesForm = () => {
       <Divider />
 
       <Box>
-        <Box mb={1}>
+        <Box mb={0.6}>
           <Typography fontWeight={700} color="#102A54">
             Package Boxes
           </Typography>
@@ -352,8 +352,8 @@ const ProductBoxesForm = () => {
         <Paper
           variant="outlined"
           sx={{
-            mb: 1.5,
-            p: 1.5,
+            mb: 1,
+            p: 1.1,
             borderRadius: 2,
             borderColor: '#D9E2EC',
             background: '#F8FAFC',
@@ -367,7 +367,7 @@ const ProductBoxesForm = () => {
                 sm: 'repeat(2, minmax(0, 1fr))',
                 lg: 'repeat(4, minmax(0, 1fr))',
               },
-              gap: 1.25,
+              gap: 0.9,
               alignItems: 'stretch',
             }}
           >
@@ -396,7 +396,7 @@ const ProductBoxesForm = () => {
             ) : (
               <Box
                 sx={{
-                  p: 1.25,
+                  p: 1,
                   border: '1px solid #D9E2EC',
                   borderRadius: 1.5,
                   background: '#FFFFFF',
@@ -438,7 +438,7 @@ const ProductBoxesForm = () => {
 
             <Box
               sx={{
-                p: 1.25,
+                p: 1,
                 border: '1px solid #D9E2EC',
                 borderRadius: 1.5,
                 background: '#FFFFFF',
@@ -458,7 +458,7 @@ const ProductBoxesForm = () => {
 
             <Box
               sx={{
-                p: 1.25,
+                p: 1,
                 border: '1px solid #D9E2EC',
                 borderRadius: 1.5,
                 background: '#FFFFFF',
@@ -483,7 +483,7 @@ const ProductBoxesForm = () => {
             <Paper
               key={box.id}
               variant="outlined"
-              sx={{ p: 1.5, borderRadius: 2, borderColor: '#E0E6ED' }}
+              sx={{ p: 1.1, borderRadius: 2, borderColor: '#E0E6ED' }}
             >
               <Box
                 sx={{
@@ -495,7 +495,7 @@ const ProductBoxesForm = () => {
                         ? 'repeat(5, minmax(110px, 1fr)) 40px'
                         : 'repeat(4, minmax(110px, 1fr)) 40px',
                   },
-                  gap: 1.5,
+                  gap: 1,
                   alignItems: 'start',
                 }}
               >
@@ -557,7 +557,7 @@ const ProductBoxesForm = () => {
       {!!boxes.length && (
         <Paper
           variant="outlined"
-          sx={{ p: 1.5, borderRadius: 2, borderColor: '#E0E6ED', background: '#F5F7FA' }}
+          sx={{ p: 1.1, borderRadius: 2, borderColor: '#E0E6ED', background: '#F5F7FA' }}
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Box>

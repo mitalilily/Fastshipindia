@@ -337,7 +337,7 @@ const PickupAddressSection = ({
   return (
     <Box sx={{ width: '100%', minWidth: 0 }}>
       {step === 1 && !isEdit && (
-        <Grid container spacing={2} sx={{ width: '100%', marginLeft: 0 }}>
+        <Grid container spacing={1.1} sx={{ width: '100%', marginLeft: 0 }}>
           <Grid size={12}>
             <AutocompleteDropdown
               label={`Search ${prefix === 'pickup' ? 'Pickup' : 'RTO'} location`}
@@ -362,7 +362,7 @@ const PickupAddressSection = ({
               }
             />
 
-            <Typography color="info" textAlign={'right'} mt={-2} fontSize={'12px'}>
+            <Typography color="info" textAlign={'right'} mt={-1} fontSize={'12px'}>
               * Search by pincode or city for more accurate results
             </Typography>
           </Grid>
@@ -397,7 +397,7 @@ const PickupAddressSection = ({
             <Grid size={12}>
               <Box
                 sx={{
-                  p: 2,
+              p: 1.2,
                   bgcolor: 'warning.light',
                   borderRadius: 1,
                   border: '1px solid',
@@ -450,9 +450,9 @@ const PickupAddressSection = ({
       )}
 
       {step === 2 && (
-        <Grid container spacing={2} sx={{ width: '100%', marginLeft: 0 }}>
+        <Grid container spacing={1.1} sx={{ width: '100%', marginLeft: 0 }}>
           <Grid size={12}>
-            <Box display="flex" alignItems="center" mb={1}>
+            <Box display="flex" alignItems="center" mb={0.4}>
               {!isEdit && (
                 <IconButton onClick={() => setStep(1)} sx={{ mr: 1 }}>
                   <IoChevronBack />
@@ -465,7 +465,7 @@ const PickupAddressSection = ({
           </Grid>
 
           <Grid size={{ md: 8, xs: 12 }} sx={{ minWidth: 0 }}>
-            <Grid container spacing={2} sx={{ width: '100%', marginLeft: 0 }}>
+            <Grid container spacing={1.1} sx={{ width: '100%', marginLeft: 0 }}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Controller
                   name={`${prefix}.addressNickname` as Path<PickupFormValues>}
@@ -601,7 +601,7 @@ const PickupAddressSection = ({
           </Grid>
 
           <Grid size={{ md: 4, xs: 12 }} sx={{ minWidth: 0 }}>
-            <Box sx={{ height: { xs: 260, md: 400 }, width: '100%', borderRadius: 2, overflow: 'hidden', boxShadow: 3 }}>
+            <Box sx={{ height: { xs: 220, md: 300 }, width: '100%', borderRadius: 2, overflow: 'hidden', boxShadow: 2 }}>
               <MapContainer
                 center={[coords.lat, coords.lng]}
                 zoom={16}

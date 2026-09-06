@@ -22,19 +22,19 @@ interface PackageDetailsFormProps {
 
 const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsFormProps) => {
   return (
-    <Stack gap={2}>
+    <Stack gap={1}>
       {fields.map((item, index) => (
         <Paper
           key={item.id}
           elevation={0}
           sx={{
-            p: { xs: 1.5, sm: 2 },
-            borderRadius: 3,
+            p: { xs: 1, sm: 1.25 },
+            borderRadius: 2,
             border: `1px solid ${alpha(ACCENT, 0.12)}`,
             background: '#FFFFFF',
           }}
         >
-          <Stack gap={1.5}>
+          <Stack gap={0.9}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="body2" fontWeight={700} sx={{ color: '#102A54' }}>
                 Product {index + 1}
@@ -52,7 +52,7 @@ const PackageDetailsForm = ({ control, fields, remove, append }: PackageDetailsF
               </IconButton>
             </Stack>
 
-            <Grid container spacing={2} alignItems="center">
+            <Grid container spacing={1.2} alignItems="center">
               <Grid size={{ xs: 12, md: 4 }}>
                 <Controller
                   name={`products.${index}.productName` as const}

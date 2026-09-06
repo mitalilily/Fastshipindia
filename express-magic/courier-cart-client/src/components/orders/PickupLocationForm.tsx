@@ -222,14 +222,14 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
         <Paper
           variant="outlined"
           sx={{
-            p: { xs: 2, sm: 3 },
-            mb: 3,
+            p: { xs: 1.25, sm: 1.5 },
+            mb: 1.25,
             borderRadius: 2,
             borderColor: alpha(ACCENT, 0.18),
             bgcolor: alpha(ACCENT, 0.025),
           }}
         >
-          <Stack spacing={1.5} alignItems="flex-start">
+          <Stack spacing={0.8} alignItems="flex-start">
             <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
               No pickup address added yet
             </Typography>
@@ -257,13 +257,13 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
       rules={{ required: 'Please select a pickup location' }}
       render={({ field, fieldState }) => (
         <>
-          <Grid container spacing={3} mb={4}>
+          <Grid container spacing={1.25} mb={1.25}>
             <Grid size={12}>
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
                 alignItems={{ xs: 'flex-start', sm: 'center' }}
                 justifyContent="space-between"
-                spacing={1.5}
+                spacing={1}
               >
                 <Box sx={{ flex: 1, width: '100%', minWidth: 0 }}>
                   <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 800 }}>
@@ -285,7 +285,7 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                     getOptionLabel={getPickupLabel}
                     isOptionEqualToValue={(option, value) => option.pickupId === value.pickupId}
                     noOptionsText="No pickup address found"
-                    sx={{ mt: 1.4, maxWidth: 760 }}
+                    sx={{ mt: 0.75, maxWidth: 760 }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -296,7 +296,7 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                         helperText={fieldState.error?.message}
                         sx={{
                           '& .MuiOutlinedInput-root': {
-                            minHeight: 48,
+                            minHeight: 42,
                             borderRadius: '10px',
                             bgcolor: '#FFFFFF',
                             '&.Mui-focused fieldset': {
@@ -396,7 +396,7 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                     }
                   }}
                   sx={{
-                    p: 2.5,
+                    p: { xs: 1.25, sm: 1.4 },
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
@@ -405,14 +405,14 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                     border: isSelected
                       ? `2px solid ${alpha(ACCENT, 0.55)}`
                       : `1px solid ${alpha(ACCENT, 0.2)}`,
-                    borderRadius: 3,
+                    borderRadius: 2,
                     bgcolor: isSelected ? alpha(ACCENT, 0.06) : '#ffffff',
                     transition: 'all 0.25s ease',
                   }}
                 >
                   {/* Pickup info */}
-                  <Stack spacing={0.5} mb={1}>
-                    <Stack direction="row" alignItems="center" spacing={1}>
+                  <Stack spacing={0.35} mb={0.65}>
+                    <Stack direction="row" alignItems="center" spacing={0.75}>
                       <Typography variant="subtitle1" fontWeight="bold" sx={{ color: TEXT_PRIMARY }}>
                         {loc.pickup?.addressNickname}
                       </Typography>
@@ -445,7 +445,7 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                   </Stack>
 
                   {/* Divider */}
-                  <Divider sx={{ my: 1 }} />
+                  <Divider sx={{ my: 0.6 }} />
 
                   {/* RTO section */}
                   {loc.isRTOSame ? (
@@ -474,7 +474,7 @@ const PickupLocationForm = ({ shipmentType = 'b2c' }: { shipmentType?: 'b2b' | '
                         {isOpen ? 'Hide RTO details' : 'Show RTO details'}
                       </Button>
                       <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                        <Stack spacing={0.5} mt={1}>
+                        <Stack spacing={0.35} mt={0.6}>
                           <Typography variant="subtitle2" fontWeight="bold">
                             {loc.rto?.addressNickname}
                           </Typography>

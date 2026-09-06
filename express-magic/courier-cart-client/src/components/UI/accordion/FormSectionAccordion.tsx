@@ -15,10 +15,10 @@ interface FormSectionAccordionProps {
 
 export const glassStyles = {
   background: '#FFFFFF',
-  borderRadius: 3,
-  mb: 2,
+  borderRadius: 2,
+  mb: 1.1,
   border: `1px solid ${alpha(BRAND_PRIMARY, 0.12)}`,
-  boxShadow: `0 4px 14px ${alpha(BRAND_PRIMARY, 0.06)}`,
+  boxShadow: `0 3px 10px ${alpha(BRAND_PRIMARY, 0.05)}`,
   overflow: 'hidden',
   color: '#1a1a1a',
   '&:before': {
@@ -40,16 +40,20 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
       disableGutters
       sx={{
         ...glassStyles,
-        mb: compact ? 1 : glassStyles.mb,
+        mb: compact ? 0.75 : glassStyles.mb,
       }}
     >
       <AccordionSummary
         expandIcon={<MdExpandMore color={BRAND_PRIMARY} />}
         sx={{
           backgroundColor: alpha(BRAND_PRIMARY, 0.03),
-          px: compact ? 2 : 2.5,
-          py: compact ? 0.5 : 1.5,
+          px: compact ? 1.5 : 1.75,
+          py: compact ? 0.2 : 0.75,
+          minHeight: compact ? 42 : 48,
           transition: 'all 0.2s ease',
+          '&.Mui-expanded': {
+            minHeight: compact ? 42 : 48,
+          },
           '&:hover': {
             backgroundColor: alpha(BRAND_PRIMARY, 0.06),
           },
@@ -62,14 +66,14 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
           },
         }}
       >
-        <Stack gap={0.5}>
+        <Stack gap={0.2}>
           <Typography
             fontWeight={700}
             display="flex"
             alignItems="center"
             sx={{
               color: '#102A54',
-              fontSize: { xs: '0.95rem', sm: '1rem' },
+              fontSize: { xs: '0.9rem', sm: compact ? '0.92rem' : '0.96rem' },
             }}
           >
             {icon && <span style={{ marginRight: 8, display: 'flex', alignItems: 'center' }}>{icon}</span>}
@@ -85,7 +89,7 @@ const FormSectionAccordion: React.FC<FormSectionAccordionProps> = ({
       <AccordionDetails
         sx={{
           px: compact ? 2 : 2.5,
-          py: compact ? 1 : 2.5,
+          py: compact ? 0.85 : 1.25,
           backgroundColor: '#FFFFFF',
         }}
       >

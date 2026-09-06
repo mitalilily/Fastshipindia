@@ -32,7 +32,7 @@ const PackageDimensionsForm = () => {
       <Alert
         severity="info"
         sx={{
-          mb: 2,
+          mb: 1,
           backgroundColor: alpha(ACCENT, 0.05),
           border: `1px solid ${alpha(ACCENT, 0.16)}`,
           color: TEXT_PRIMARY,
@@ -45,7 +45,7 @@ const PackageDimensionsForm = () => {
         Note: The minimum chargeable weight is 0.50 Kg
       </Alert>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={1.2}>
         {fields.map((key) => (
           <Grid size={{ xs: 12, md: 3 }} key={key}>
             <Controller
@@ -82,9 +82,9 @@ const PackageDimensionsForm = () => {
       <Paper
         elevation={0}
         sx={{
-          p: 2.5,
-          mt: 2.5,
-          borderRadius: 3,
+          p: 1.4,
+          mt: 1.25,
+          borderRadius: 2,
           border: `1px solid ${alpha(ACCENT, 0.14)}`,
           background: '#FFFFFF',
         }}
@@ -97,16 +97,16 @@ const PackageDimensionsForm = () => {
           <FaWeightHanging size={18} color={ACCENT} />
           Package Weight Summary
         </Typography>
-        <Typography variant="caption" sx={{ color: TEXT_MUTED, mb: 2.25, display: 'block' }}>
+        <Typography variant="caption" sx={{ color: TEXT_MUTED, mb: 1.2, display: 'block' }}>
           Chargeable weight is calculated as max of actual, volumetric, or minimum weight (0.5 kg)
         </Typography>
 
-        <Grid container spacing={1.5}>
+        <Grid container spacing={1}>
           <Grid size={{ xs: 12, md: 4 }}>
             <Paper
               elevation={0}
               sx={{
-                p: 2,
+                p: 1.25,
                 borderRadius: 2,
                 border: `1px solid ${alpha(ACCENT, 0.12)}`,
                 background: alpha(ACCENT, 0.03),
@@ -131,7 +131,7 @@ const PackageDimensionsForm = () => {
             <Paper
               elevation={0}
               sx={{
-                p: 2,
+                p: 1.25,
                 borderRadius: 2,
                 border: `1px solid ${alpha(ACCENT, 0.12)}`,
                 background: '#FFFFFF',
@@ -156,7 +156,7 @@ const PackageDimensionsForm = () => {
             <Paper
               elevation={0}
               sx={{
-                p: 2,
+                p: 1.25,
                 borderRadius: 2,
                 border: `2px solid ${alpha(ACCENT, 0.4)}`,
                 background: alpha(ACCENT, 0.05),

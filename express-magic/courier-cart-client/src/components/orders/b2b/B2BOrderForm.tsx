@@ -620,15 +620,15 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
         <Box
           component="form"
           onSubmit={requestBookingConfirmation}
-          sx={{ flex: 1, overflowY: 'auto', p: 2 }}
+          sx={{ flex: 1, overflowY: 'auto', p: { xs: 0.75, sm: 1.1 } }}
         >
           <Box
             sx={{
-              p: { xs: 2, sm: 3 },
+              p: { xs: 1.1, sm: 1.4 },
               background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%)',
-              borderRadius: '16px',
-              mb: 2,
-              boxShadow: '0 8px 24px rgba(26, 35, 126, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)',
+              borderRadius: '12px',
+              mb: 1.1,
+              boxShadow: '0 6px 16px rgba(26, 35, 126, 0.28)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
             }}
           >
@@ -637,7 +637,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
               alternativeLabel
               sx={{
                 '& .MuiStepConnector-root': {
-                  top: '22px',
+                  top: '17px',
                   left: 'calc(-50% + 20px)',
                   right: 'calc(50% + 20px)',
                 },
@@ -659,8 +659,8 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                     StepIconComponent={({ active, completed, icon }) => (
                       <Box
                         sx={{
-                          width: 44,
-                          height: 44,
+                          width: 34,
+                          height: 34,
                           borderRadius: '50%',
                           display: 'flex',
                           alignItems: 'center',
@@ -671,17 +671,17 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                             ? '#4caf50'
                             : 'rgba(255, 255, 255, 0.2)',
                           border: active
-                            ? '3px solid #ffffff'
+                            ? '2px solid #ffffff'
                             : completed
-                            ? '3px solid #ffffff'
-                            : '3px solid rgba(255, 255, 255, 0.4)',
+                            ? '2px solid #ffffff'
+                            : '2px solid rgba(255, 255, 255, 0.4)',
                           boxShadow: active
                             ? '0 0 0 4px rgba(76, 175, 80, 0.3), 0 4px 12px rgba(76, 175, 80, 0.4)'
                             : completed
                             ? '0 4px 8px rgba(76, 175, 80, 0.3)'
                             : '0 2px 4px rgba(0, 0, 0, 0.2)',
                           transition: 'all 0.3s ease',
-                          fontSize: '18px',
+                          fontSize: '15px',
                           fontWeight: 700,
                           color: '#ffffff',
                         }}
@@ -693,14 +693,14 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
                       '& .MuiStepLabel-label': {
                         color: 'rgba(255, 255, 255, 0.9)',
                         fontWeight: 600,
-                        fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' },
-                        mt: 1,
+                        fontSize: { xs: '0.72rem', sm: '0.8rem', md: '0.86rem' },
+                        mt: 0.5,
                         textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                       },
                       '& .MuiStepLabel-label.Mui-active': {
                         color: '#ffffff',
                         fontWeight: 700,
-                        fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1.05rem' },
+                        fontSize: { xs: '0.76rem', sm: '0.84rem', md: '0.92rem' },
                         textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                       },
                       '& .MuiStepLabel-label.Mui-completed': {
@@ -717,7 +717,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           </Box>
 
           {stepError && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
+            <Alert severity="warning" sx={{ mb: 1 }}>
               {stepError}
             </Alert>
           )}
@@ -746,7 +746,7 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
           )}
 
           {currentStep === 1 && (
-            <Stack gap={1.5} mb={1}>
+            <Stack gap={1} mb={1}>
               <PickupLocationForm shipmentType="b2b" />
               <FormSectionAccordion title="Booking Review" icon={<FaFileInvoice />} defaultExpanded compact>
                 <BookingReviewSummary
@@ -767,11 +767,11 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
 
           <Box
             sx={{
-              py: 2,
-              px: 2,
+              py: 1,
+              px: 1.25,
               background: '#FFFFFF',
               border: '1px solid #E2E8F0',
-              borderRadius: '15px',
+              borderRadius: '10px',
               position: 'sticky',
               bottom: 0,
               zIndex: 10,

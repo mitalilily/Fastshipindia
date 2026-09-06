@@ -7,7 +7,7 @@ const OptionalChargesForm = () => {
   const { control } = useFormContext()
 
   return (
-    <Grid container spacing={2}>
+    <Grid container spacing={1.2}>
       <Grid size={{ md: 4, xs: 12 }}>
         <Controller
           name="shippingCharges"

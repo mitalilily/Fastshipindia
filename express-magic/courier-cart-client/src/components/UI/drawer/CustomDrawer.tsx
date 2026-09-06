@@ -70,8 +70,8 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
       <Box
         sx={{
           position: 'relative',
-          px: { xs: 2.5, sm: 3.5 },
-          py: { xs: 2.25, sm: 2.8 },
+          px: { xs: 1.75, sm: 2.4 },
+          py: { xs: 1.4, sm: 1.7 },
           overflow: 'hidden',
           flexShrink: 0,
         }}
@@ -108,7 +108,7 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
                 sx={{
                   minWidth: 0,
                   px: 0,
-                  mb: 1,
+                  mb: 0.5,
                   color: theme.palette.primary.main,
                   textTransform: 'none',
                   fontWeight: 700,
@@ -125,7 +125,7 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
                 letterSpacing: '0.16em',
                 fontWeight: 800,
                 color: theme.palette.text.secondary,
-                mb: 0.5,
+                mb: 0.25,
               }}
             >
               FastShip workspace
@@ -156,7 +156,7 @@ const CustomDrawer: React.FC<GlassDrawerProps> = ({
       <Divider sx={{ borderColor: alpha(theme.palette.primary.main, 0.08) }} />
 
       <Box
-        p={{ xs: 2.5, sm: 3.5 }}
+        p={{ xs: 1.5, sm: 2 }}
         sx={{
           flex: 1,
           minHeight: 0,

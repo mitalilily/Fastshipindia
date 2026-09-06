@@ -100,7 +100,7 @@ export default function B2BInvoicesForm() {
 
   return (
     <Box>
-      <Stack spacing={2}>
+      <Stack spacing={1}>
         {invoiceFields.map((invoice, index) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoiceValue = watch(`invoices.${index}.invoiceValue` as any)
@@ -114,7 +114,7 @@ export default function B2BInvoicesForm() {
             <Paper
               key={invoice.id}
               sx={{
-                p: { xs: 1.5, md: 2 },
+                p: { xs: 1, md: 1.25 },
                 border: '1px solid #E0E6ED',
                 borderRadius: 2,
                 background: '#FAFBFC',
@@ -122,7 +122,7 @@ export default function B2BInvoicesForm() {
               }}
               elevation={0}
             >
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.6}>
                 <Typography variant="h6" fontWeight={600} color="#333369">
                   Invoice {index + 1}
                 </Typography>
@@ -138,7 +138,7 @@ export default function B2BInvoicesForm() {
                 )}
               </Stack>
 
-              <Grid container spacing={1.5}>
+              <Grid container spacing={1.1}>
                 <Grid size={{ lg: 4, md: 6, xs: 12 }}>
                   <Controller
                     name={`invoices.${index}.invoiceNumber`}

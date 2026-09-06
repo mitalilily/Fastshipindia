@@ -31,8 +31,8 @@ const StatBox = ({ label, value }: { label: string; value: string }) => (
   <Box
     sx={{
       minHeight: 64,
-      p: 1.35,
-      borderRadius: 2.5,
+      p: 1,
+      borderRadius: 2,
       bgcolor: SURFACE,
       border: `1px solid ${alpha(ACCENT, 0.1)}`,
     }}
@@ -42,7 +42,7 @@ const StatBox = ({ label, value }: { label: string; value: string }) => (
       sx={{
         mt: 0.35,
         color: TEXT_PRIMARY,
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 900,
         lineHeight: 1.15,
         wordBreak: 'break-word',
@@ -56,8 +56,8 @@ const StatBox = ({ label, value }: { label: string; value: string }) => (
 const DetailBlock = ({ title, primary, secondary }: { title: string; primary: string; secondary: string }) => (
   <Box
     sx={{
-      p: 1.35,
-      borderRadius: 2.5,
+      p: 1,
+      borderRadius: 2,
       bgcolor: '#fff',
       border: `1px solid ${alpha(ACCENT, 0.1)}`,
       height: '100%',
@@ -131,15 +131,15 @@ const BookingReviewSummary = ({
     <Paper
       sx={{
         overflow: 'hidden',
-        borderRadius: 3,
+        borderRadius: 2,
         border: `1px solid ${alpha(ACCENT, 0.14)}`,
-        boxShadow: `0 12px 26px ${alpha(ACCENT, 0.08)}`,
+        boxShadow: `0 8px 18px ${alpha(ACCENT, 0.06)}`,
       }}
     >
       <Box
         sx={{
-          px: { xs: 1.5, md: 2 },
-          py: 1.4,
+          px: { xs: 1.1, md: 1.4 },
+          py: 1,
           color: '#fff',
           background: 'linear-gradient(135deg, #0D3B8E 0%, #1A5DD1 100%)',
         }}
@@ -154,7 +154,7 @@ const BookingReviewSummary = ({
             <Typography sx={{ color: '#fff', fontSize: 11, letterSpacing: '0.08em' }}>
               SHIPMENT SNAPSHOT
             </Typography>
-            <Typography sx={{ color: '#fff', fontSize: { xs: 20, md: 24 }, fontWeight: 900 }}>
+            <Typography sx={{ color: '#fff', fontSize: { xs: 18, md: 21 }, fontWeight: 900 }}>
               {orderId}
             </Typography>
           </Box>
@@ -166,8 +166,8 @@ const BookingReviewSummary = ({
         </Stack>
       </Box>
 
-      <Box sx={{ p: { xs: 1.5, md: 2 }, bgcolor: '#fff' }}>
-        <Grid container spacing={1.2}>
+      <Box sx={{ p: { xs: 1.1, md: 1.3 }, bgcolor: '#fff' }}>
+        <Grid container spacing={0.9}>
           <Grid size={{ xs: 6, md: 3 }}>
             <StatBox label="Customer Total" value={money(totalOrderValue)} />
           </Grid>
@@ -182,7 +182,7 @@ const BookingReviewSummary = ({
           </Grid>
         </Grid>
 
-        <Grid container spacing={1.2} sx={{ mt: 1.2 }}>
+        <Grid container spacing={0.9} sx={{ mt: 0.9 }}>
           <Grid size={{ xs: 12, md: 4 }}>
             <DetailBlock title="Pickup Summary" primary={pickupName} secondary={pickupAddress} />
           </Grid>
@@ -196,8 +196,8 @@ const BookingReviewSummary = ({
           <Grid size={{ xs: 12, md: 4 }}>
             <Box
               sx={{
-                p: 1.35,
-                borderRadius: 2.5,
+                p: 1,
+                borderRadius: 2,
                 bgcolor: SURFACE,
                 border: `1px solid ${alpha(ACCENT, 0.1)}`,
                 height: '100%',
