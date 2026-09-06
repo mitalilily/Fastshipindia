@@ -304,6 +304,11 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
 
   const actualNow = new Date()
   const requestedDate = selectedDate && !Number.isNaN(selectedDate.getTime()) ? selectedDate : actualNow
+  const selectedDay = new Date(
+    requestedDate.getFullYear(),
+    requestedDate.getMonth(),
+    requestedDate.getDate(),
+  )
   const endOfRequestedDay = new Date(
     requestedDate.getFullYear(),
     requestedDate.getMonth(),
@@ -314,7 +319,7 @@ export const getMerchantDashboardStats = async (userId: string, selectedDate?: D
     999,
   )
   const now = endOfRequestedDay.getTime() > actualNow.getTime() ? actualNow : endOfRequestedDay
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const today = selectedDay
   const thisWeekStart = new Date(today)
   thisWeekStart.setDate(thisWeekStart.getDate() - 6)
   const previousWeekStart = new Date(thisWeekStart)

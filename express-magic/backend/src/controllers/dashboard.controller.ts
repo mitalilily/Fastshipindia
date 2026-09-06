@@ -10,15 +10,52 @@ import {
 import { getAdminOpsAnalytics } from '../models/services/adminOpsAnalytics.service'
 import { getMerchantScopedUserId } from '../utils/merchantScope'
 
+const APP_TIME_ZONE = 'Asia/Kolkata'
+
+const getDateKeyInAppTimeZone = (date: Date) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+
+  const partMap = new Map(parts.map((part) => [part.type, part.value]))
+  return `${partMap.get('year')}-${partMap.get('month')}-${partMap.get('day')}`
+}
+
+const parseDateOnly = (value: string) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return undefined
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const parsed = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0))
+
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null
+  }
+
+  return parsed
+}
+
 const parseDashboardDate = (value: unknown) => {
   const normalized = String(value || '').trim()
   if (!normalized) return undefined
 
-  const parsed = new Date(normalized)
+  const dateOnly = parseDateOnly(normalized)
+  if (dateOnly === null) return null
+
+  const parsed = dateOnly === undefined ? new Date(normalized) : dateOnly
   if (Number.isNaN(parsed.getTime())) return null
 
   const now = new Date()
-  if (parsed.getTime() > now.getTime()) return null
+  if (getDateKeyInAppTimeZone(parsed) > getDateKeyInAppTimeZone(now)) return null
 
   return parsed
 }
