@@ -131,7 +131,7 @@ export default function DataTable<T extends { id: string | number }>(props: Data
   const onSelectRowsRef = useRef(onSelectRows)
 
   const page = currentPage ?? localPage
-  const rowsPerPage = localRowsPerPage
+  const rowsPerPage = onRowsPerPageChange ? defaultRowsPerPage : localRowsPerPage
   const paginationPage = currentPage !== undefined ? Math.max(page - 1, 0) : page
 
   const handleChangePage = (_: unknown, newPage: number) => {

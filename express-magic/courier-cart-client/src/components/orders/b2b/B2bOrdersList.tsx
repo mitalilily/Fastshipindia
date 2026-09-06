@@ -656,6 +656,7 @@ const B2BOrdersList = ({
           expandable
           renderExpandedRow={(row) => <OrderExpandedRow type="b2b" row={row} />}
           defaultRowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
           totalCount={data?.totalCount || 0}
           onPageChange={setPage}
           onRowsPerPageChange={(newLimit) => {
