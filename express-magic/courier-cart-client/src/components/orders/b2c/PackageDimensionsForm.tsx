@@ -1,16 +1,26 @@
 import { Alert, Box, Grid, Paper, Stack, Typography, alpha } from '@mui/material'
+import { useState } from 'react'
 import { Controller, useFormContext, useWatch } from 'react-hook-form'
 import { FaWeightHanging } from 'react-icons/fa'
 import { kgToGrams, MIN_B2C_CHARGEABLE_WEIGHT_GRAMS } from '../../../utils/weight'
 import CustomInput from '../../UI/inputs/CustomInput'
+import DimensionUnitToggle, {
+  formatDimensionForUnit,
+  getDimensionUnitLabel,
+  parseDimensionToCm,
+  type DimensionUnit,
+} from '../DimensionUnitToggle'
 import type { B2CFormData } from './B2COrderForm'
 
 const ACCENT = '#0D3B8E'
 const TEXT_PRIMARY = '#102A54'
 const TEXT_MUTED = '#496189'
+const isDimensionField = (name: string) =>
+  name === 'length' || name === 'breadth' || name === 'height'
 
 const PackageDimensionsForm = () => {
   const { control } = useFormContext<B2CFormData>()
+  const [dimensionUnit, setDimensionUnit] = useState<DimensionUnit>('cm')
 
   const weight = useWatch({ control, name: 'weight' }) || 0
   const length = useWatch({ control, name: 'length' }) || 0
@@ -26,6 +36,7 @@ const PackageDimensionsForm = () => {
   const chargedByActual = Math.abs(chargedWeight - actualWeightKg) < 0.001
 
   const fields = ['weight', 'length', 'breadth', 'height'] as const
+  const dimensionUnitLabel = getDimensionUnitLabel(dimensionUnit)
 
   return (
     <>
@@ -45,6 +56,10 @@ const PackageDimensionsForm = () => {
         Note: The minimum chargeable weight is 0.50 Kg
       </Alert>
 
+      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+        <DimensionUnitToggle value={dimensionUnit} onChange={setDimensionUnit} />
+      </Stack>
+
       <Grid container spacing={1.2}>
         {fields.map((key) => (
           <Grid size={{ xs: 12, md: 3 }} key={key}>
@@ -59,21 +74,37 @@ const PackageDimensionsForm = () => {
                   ? { max: { value: 50, message: 'Use kg. For 0.5 kg enter 0.5' } }
                   : {}),
               }}
-              render={({ field, fieldState }) => (
-                <CustomInput
-                  label={
-                    key.charAt(0).toUpperCase() +
-                    key.slice(1) +
-                    (key === 'weight' ? ' (kg)' : ' (cm)')
-                  }
-                  type="number"
-                  required
-                  {...field}
-                  value={field.value === 0 ? '' : field.value}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                />
-              )}
+              render={({ field, fieldState }) => {
+                const isDimension = isDimensionField(key)
+
+                return (
+                  <CustomInput
+                    label={
+                      key.charAt(0).toUpperCase() +
+                      key.slice(1) +
+                      (key === 'weight' ? ' (kg)' : ` (${dimensionUnitLabel})`)
+                    }
+                    type="number"
+                    required
+                    {...field}
+                    value={
+                      isDimension
+                        ? formatDimensionForUnit(field.value, dimensionUnit)
+                        : field.value === 0
+                          ? ''
+                          : field.value
+                    }
+                    onChange={
+                      isDimension
+                        ? (event) =>
+                            field.onChange(parseDimensionToCm(event.target.value, dimensionUnit))
+                        : field.onChange
+                    }
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                  />
+                )
+              }}
             />
           </Grid>
         ))}

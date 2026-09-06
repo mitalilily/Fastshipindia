@@ -6,6 +6,12 @@ import axiosInstance from '../../../api/axiosInstance'
 import { useDebouncedEffect } from '../../../hooks/useDebounceEffect'
 import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import CustomInput from '../../UI/inputs/CustomInput'
+import DimensionUnitToggle, {
+  formatDimensionForUnit,
+  getDimensionUnitLabel,
+  parseDimensionToCm,
+  type DimensionUnit,
+} from '../DimensionUnitToggle'
 import type { B2BFormData } from './B2BOrderForm'
 
 const emptyBox = { quantity: 1, lengthCm: 0, breadthCm: 0, heightCm: 0, weightKg: 0 }
@@ -14,6 +20,8 @@ const DEFAULT_B2B_VOLUMETRIC_DIVISOR = 4500
 const roundWeight = (value: number) => Number(value.toFixed(2))
 const getBoxQuantity = (box?: Partial<B2BFormData['boxes'][number]>) =>
   Math.max(1, Math.floor(Number(box?.quantity || 1)))
+const isDimensionField = (name: string) =>
+  name === 'lengthCm' || name === 'breadthCm' || name === 'heightCm'
 
 const calculateTotalVolumetricWeight = (
   boxes: B2BFormData['boxes'] = [],
@@ -36,6 +44,7 @@ const calculateTotalVolumetricWeight = (
 
 const ProductBoxesForm = () => {
   const { control, trigger, watch, setValue } = useFormContext<B2BFormData>()
+  const [dimensionUnit, setDimensionUnit] = useState<DimensionUnit>('cm')
   const [weightCalculations, setWeightCalculations] = useState({
     totalActualWeight: 0,
     totalVolumetricWeight: 0,
@@ -172,33 +181,46 @@ const ProductBoxesForm = () => {
     weightCalculations.cftFactor <= 100
       ? `max(Actual, Volumetric) - Volumetric uses CFT factor ${weightCalculations.cftFactor}`
       : `max(Actual, Volumetric) - Volumetric = (LxBxH) / ${weightCalculations.cftFactor}`
+  const dimensionUnitLabel = getDimensionUnitLabel(dimensionUnit)
   const boxInputFields = (
     boxFields.length > 1
       ? [
           ['quantity', 'No. of Boxes'],
           ['weightKg', 'Per Box Weight (kg)'],
-          ['lengthCm', 'Length (cm)'],
-          ['breadthCm', 'Breadth (cm)'],
-          ['heightCm', 'Height (cm)'],
+          ['lengthCm', `Length (${dimensionUnitLabel})`],
+          ['breadthCm', `Breadth (${dimensionUnitLabel})`],
+          ['heightCm', `Height (${dimensionUnitLabel})`],
         ]
       : [
           ['weightKg', 'Per Box Weight (kg)'],
-          ['lengthCm', 'Length (cm)'],
-          ['breadthCm', 'Breadth (cm)'],
-          ['heightCm', 'Height (cm)'],
+          ['lengthCm', `Length (${dimensionUnitLabel})`],
+          ['breadthCm', `Breadth (${dimensionUnitLabel})`],
+          ['heightCm', `Height (${dimensionUnitLabel})`],
         ]
   ) as Array<['quantity' | 'weightKg' | 'lengthCm' | 'breadthCm' | 'heightCm', string]>
 
   return (
     <Stack spacing={1.1}>
       <Box>
-        <Box mb={0.6}>
-          <Typography fontWeight={700} color="#102A54">
-            Package Boxes
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Enter the dimensions and actual weight of each physical box.
-          </Typography>
+        <Box
+          mb={0.6}
+          sx={{
+            display: 'flex',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            justifyContent: 'space-between',
+            gap: 1,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Box>
+            <Typography fontWeight={700} color="#102A54">
+              Package Boxes
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Enter the dimensions and actual weight of each physical box.
+            </Typography>
+          </Box>
+          <DimensionUnitToggle value={dimensionUnit} onChange={setDimensionUnit} />
         </Box>
 
         <Paper
@@ -359,23 +381,40 @@ const ProductBoxesForm = () => {
                               Number.isInteger(Number(value)) || 'Use a whole number'
                           : undefined,
                     }}
-                    render={({ field, fieldState }) => (
-                      <CustomInput
-                        {...field}
-                        label={label}
-                        type="number"
-                        required
-                        topMargin={false}
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        slotProps={{
-                          htmlInput:
-                            name === 'quantity'
-                              ? { min: 1, step: 1 }
-                              : { min: 0.01, step: 0.01 },
-                        }}
-                      />
-                    )}
+                    render={({ field, fieldState }) => {
+                      const isDimension = isDimensionField(name)
+
+                      return (
+                        <CustomInput
+                          {...field}
+                          value={
+                            isDimension
+                              ? formatDimensionForUnit(field.value, dimensionUnit)
+                              : field.value
+                          }
+                          onChange={
+                            isDimension
+                              ? (event) =>
+                                  field.onChange(
+                                    parseDimensionToCm(event.target.value, dimensionUnit),
+                                  )
+                              : field.onChange
+                          }
+                          label={label}
+                          type="number"
+                          required
+                          topMargin={false}
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                          slotProps={{
+                            htmlInput:
+                              name === 'quantity'
+                                ? { min: 1, step: 1 }
+                                : { min: 0.01, step: 0.01 },
+                          }}
+                        />
+                      )
+                    }}
                   />
                 ))}
                 <IconButton
