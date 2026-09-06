@@ -120,14 +120,6 @@ async function bootstrapDatabase() {
   }
 
   try {
-    run(process.execPath, [path.join(backendRoot, 'dist/scripts/seedDelhiveryB2CRatecard.js')])
-  } catch (error) {
-    // Rate-card provisioning is recoverable through the admin UI. Keep the API
-    // available if an older database needs manual schema repair.
-    console.warn('Delhivery B2C rate-card seed failed during startup; continuing.', error)
-  }
-
-  try {
     run(process.execPath, [path.join(backendRoot, 'dist/scripts/seedDelhiveryCouriers.js')])
   } catch (error) {
     // Keep startup available if an older database needs manual courier-table repair.
@@ -148,6 +140,14 @@ async function bootstrapDatabase() {
     // Zone catalog entries can still be managed from the admin panel. Do not
     // keep the API offline when an older database needs manual schema repair.
     console.warn('B2B zone catalog seed failed during startup; continuing.', error)
+  }
+
+  try {
+    run(process.execPath, [path.join(backendRoot, 'dist/scripts/seedPdfRateCards.js')])
+  } catch (error) {
+    // Rate-card provisioning is recoverable through the admin UI. Keep the API
+    // available if an older database needs manual schema repair.
+    console.warn('PDF rate-card seed failed during startup; continuing.', error)
   }
 }
 
