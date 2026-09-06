@@ -30,6 +30,7 @@ import {
   MdMoreHoriz,
   MdReceipt,
   MdInfoOutline,
+  MdReplay,
   MdSync,
   MdTrackChanges,
   MdVisibility,
@@ -77,6 +78,7 @@ import OrderDetailsDialog from './OrderDetailsDialog'
 import B2CSelectCourierDialog from './b2c/B2CSelectCourierDialog'
 import { isB2CCancelEligible, isB2CPreShipmentDraft } from './b2c/orderActionRules'
 import { getB2COrderFormDefaults } from './b2c/orderFormDefaults'
+import { buildReshipCreateOrderState, isReshipEligible } from './reshipOrderDefaults'
 
 interface Order {
   id: string | number
@@ -1197,6 +1199,18 @@ const AllOrders = () => {
     }
   }
 
+  const handleReshipOrder = (order: Order) => {
+    if (!isReshipEligible(order)) {
+      toast.open({
+        message: 'Reship is available only for failed or cancelled orders.',
+        severity: 'warning',
+      })
+      return
+    }
+
+    navigate('/orders/create', { state: buildReshipCreateOrderState(order) })
+  }
+
   const columns: Column<Order>[] = [
     {
       id: 'order_number',
@@ -1402,6 +1416,7 @@ const AllOrders = () => {
         const isMenuOpen = activeActionOrderId === row.id && Boolean(actionMenuAnchor)
         const canSelectCourier = isCourierSelectionPending(row)
         const canEditDraft = row.type === 'b2c' && isB2CPreShipmentDraft(row)
+        const canReship = isReshipEligible(row)
         const trackingReference = getTrackingReference(row)
         const isSyncingThisOrder = syncingTracking && syncingTrackingOrderId === row.id
 
@@ -1521,6 +1536,13 @@ const AllOrders = () => {
                   onClick: () => handleDeleteB2COrder(row),
                   loading: deletingB2COrder,
                   danger: true,
+                })}
+              {canReship &&
+                renderActionItem({
+                  key: 'reship-order',
+                  icon: <MdReplay />,
+                  label: 'Reship Order',
+                  onClick: () => handleReshipOrder(row),
                 })}
               {renderActionItem({
                 key: 'generate-manifest',

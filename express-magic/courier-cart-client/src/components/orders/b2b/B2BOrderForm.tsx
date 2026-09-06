@@ -146,7 +146,12 @@ export type B2BFormData = {
   zoneId?: string
 }
 
-export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
+type B2BOrderFormProps = {
+  onClose?: () => void
+  initialValues?: Partial<B2BFormData>
+}
+
+export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormProps) {
   const createShipmentMutation = useCreateB2BShipment(onClose)
   const navigate = useNavigate()
   const location = useLocation()
@@ -164,39 +169,56 @@ export default function B2BOrderForm({ onClose }: { onClose?: () => void }) {
     return 'prepaid' // Final fallback
   }
 
+  const baseDefaultValues: Partial<B2BFormData> = {
+    boxes: [
+      {
+        quantity: 1,
+        lengthCm: 0,
+        breadthCm: 0,
+        heightCm: 0,
+        weightKg: 0,
+      },
+    ],
+    products: [
+      {
+        productName: '',
+        quantity: 1,
+        unitPrice: 0,
+        sku: '',
+        hsnCode: '',
+      },
+    ],
+    invoices: [
+      {
+        invoiceNumber: '',
+        invoiceDate: getTodayDate(),
+        invoiceValue: 0,
+        invoiceFileUrl: '',
+      },
+    ],
+    weight: 0,
+    length: 0,
+    breadth: 0,
+    height: 0,
+    orderType: getDefaultOrderType(),
+  }
+
   const methods = useForm<B2BFormData>({
     defaultValues: {
-      boxes: [
-        {
-          quantity: 1,
-          lengthCm: 0,
-          breadthCm: 0,
-          heightCm: 0,
-          weightKg: 0,
-        },
-      ],
-      products: [
-        {
-          productName: '',
-          quantity: 1,
-          unitPrice: 0,
-          sku: '',
-          hsnCode: '',
-        },
-      ],
-      invoices: [
-        {
-          invoiceNumber: '',
-          invoiceDate: getTodayDate(),
-          invoiceValue: 0,
-          invoiceFileUrl: '',
-        },
-      ],
-      weight: 0,
-      length: 0,
-      breadth: 0,
-      height: 0,
-      orderType: getDefaultOrderType(),
+      ...baseDefaultValues,
+      ...initialValues,
+      boxes:
+        initialValues?.boxes && initialValues.boxes.length > 0
+          ? initialValues.boxes
+          : baseDefaultValues.boxes,
+      products:
+        initialValues?.products && initialValues.products.length > 0
+          ? initialValues.products
+          : baseDefaultValues.products,
+      invoices:
+        initialValues?.invoices && initialValues.invoices.length > 0
+          ? initialValues.invoices
+          : baseDefaultValues.invoices,
     },
   })
 

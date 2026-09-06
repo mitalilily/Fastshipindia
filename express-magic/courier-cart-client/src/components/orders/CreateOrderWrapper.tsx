@@ -1,11 +1,27 @@
 import { Box, Container, Tab, Tabs } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import PageHeading from '../UI/heading/PageHeading'
 import B2BOrderForm from './b2b/B2BOrderForm'
 import B2COrderFormSteps from './b2c/B2COrderForm'
+import type { ReshipCreateOrderState } from './reshipOrderDefaults'
 
 const CreateOrderWrapper = () => {
-  const [activeTab, setActiveTab] = useState<'b2c' | 'b2b'>('b2c')
+  const location = useLocation()
+  const reshipState = location.state as Partial<ReshipCreateOrderState> | null
+  const routeActiveTab = reshipState?.mode === 'reship' ? reshipState.activeTab : undefined
+  const [activeTab, setActiveTab] = useState<'b2c' | 'b2b'>(routeActiveTab || 'b2c')
+  const formKey = useMemo(
+    () =>
+      reshipState?.mode === 'reship'
+        ? `reship-${reshipState.activeTab}-${reshipState.sourceOrderNumber || 'order'}`
+        : 'create-order',
+    [reshipState],
+  )
+
+  useEffect(() => {
+    if (routeActiveTab) setActiveTab(routeActiveTab)
+  }, [routeActiveTab])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: 'b2c' | 'b2b') => {
     setActiveTab(newValue)
@@ -26,7 +42,7 @@ const CreateOrderWrapper = () => {
           gap: { xs: 1.25, sm: 1.5 },
         }}
       >
-        <PageHeading title="Create New Order" />
+        <PageHeading title={reshipState?.mode === 'reship' ? 'Reship Order Draft' : 'Create New Order'} />
 
         <Box
           sx={{
@@ -67,7 +83,13 @@ const CreateOrderWrapper = () => {
           </Box>
 
           {/* Form Content */}
-          <Box>{activeTab === 'b2c' ? <B2COrderFormSteps /> : <B2BOrderForm />}</Box>
+          <Box>
+            {activeTab === 'b2c' ? (
+              <B2COrderFormSteps key={`${formKey}-b2c`} initialValues={reshipState?.initialValues?.b2c} />
+            ) : (
+              <B2BOrderForm key={`${formKey}-b2b`} initialValues={reshipState?.initialValues?.b2b} />
+            )}
+          </Box>
         </Box>
       </Box>
     </Container>

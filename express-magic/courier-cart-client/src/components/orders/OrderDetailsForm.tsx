@@ -28,6 +28,7 @@ const OrderDetailsForm = ({ compact = false }: { compact?: boolean }) => {
   const {
     control,
     clearErrors,
+    getValues,
     setError,
     setValue,
     watch,
@@ -55,9 +56,13 @@ const OrderDetailsForm = ({ compact = false }: { compact?: boolean }) => {
   const currentOrderId = String(watch('orderId') || '').trim()
 
   useEffect(() => {
-    setValue('orderId', generateOrderId())
-    setValue('orderDate', getTodayDate())
-  }, [setValue])
+    if (!String(getValues('orderId') || '').trim()) {
+      setValue('orderId', generateOrderId())
+    }
+    if (!String(getValues('orderDate') || '').trim()) {
+      setValue('orderDate', getTodayDate())
+    }
+  }, [getValues, setValue])
 
   useEffect(() => {
     if (!currentOrderId) {
