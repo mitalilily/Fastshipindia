@@ -1,4 +1,17 @@
-import { alpha, Box, ButtonBase, Popover, Tooltip, Typography, useTheme } from '@mui/material'
+import {
+  alpha,
+  Box,
+  ButtonBase,
+  CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Popover,
+  Tooltip,
+  Typography,
+  useTheme,
+} from '@mui/material'
 import { useState, type MouseEvent, type ReactNode } from 'react'
 import { AiTwotoneThunderbolt } from 'react-icons/ai'
 import {
@@ -8,8 +21,10 @@ import {
   TbId,
   TbPackageExport,
   TbWallet,
+  TbX,
 } from 'react-icons/tb'
 import { useNavigate } from 'react-router-dom'
+import { getCarrierTransportIds, type CarrierTransportId } from '../../api/courier'
 import { useMerchantReadiness } from '../../hooks/useMerchantReadiness'
 
 type QuickAction = {
@@ -17,8 +32,21 @@ type QuickAction = {
   icon: ReactNode
   accent: string
   path?: string
+  action?: 'transportIds'
   requiresMerchantReady?: boolean
 }
+
+const fallbackCarrierTransportIds: CarrierTransportId[] = [
+  { carrierKey: 'delhivery', carrierName: 'Delhivery', transportId: '06AAPCS9575E1ZR', isActive: true, sortOrder: 10 },
+  { carrierKey: 'movin', carrierName: 'Movin', transportId: '88AAFC17460Q1ZW', isActive: true, sortOrder: 20 },
+  { carrierKey: 'bluedart', carrierName: 'Bluedart', transportId: '27AAACB044L1ZS', isActive: true, sortOrder: 30 },
+  { carrierKey: 'xpressbees', carrierName: 'Xpressbees', transportId: '27AAGCB3904P2ZC', isActive: true, sortOrder: 40 },
+  { carrierKey: 'dtdc', carrierName: 'DTDC', transportId: '88AAACD8017H1ZX', isActive: true, sortOrder: 50 },
+  { carrierKey: 'dp-world', carrierName: 'DP World', transportId: '88AADCD1983D1ZS', isActive: true, sortOrder: 60 },
+  { carrierKey: 'ekart-ltl', carrierName: 'Ekart LTL', transportId: '07AADCI8374D2ZH', isActive: true, sortOrder: 70 },
+  { carrierKey: 'tci-express', carrierName: 'TCI Express', transportId: '06AADCT0663J4Z9', isActive: true, sortOrder: 80 },
+  { carrierKey: 'gati', carrierName: 'Gati', transportId: '88AACCA2894D1ZS', isActive: true, sortOrder: 90 },
+]
 
 const actions: QuickAction[] = [
   {
@@ -56,7 +84,7 @@ const actions: QuickAction[] = [
     name: 'Transporter ID',
     icon: <TbId />,
     accent: '#6B7280',
-    path: '/couriers/partners',
+    action: 'transportIds',
   },
 ]
 
@@ -65,6 +93,10 @@ export default function QuickActions() {
   const navigate = useNavigate()
   const { isReady, firstIncompleteStep } = useMerchantReadiness()
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const [transportDialogOpen, setTransportDialogOpen] = useState(false)
+  const [transportIds, setTransportIds] = useState<CarrierTransportId[]>([])
+  const [transportIdsLoading, setTransportIdsLoading] = useState(false)
+  const [transportIdsError, setTransportIdsError] = useState('')
   const open = Boolean(anchorEl)
   const isDark = theme.palette.mode === 'dark'
   const ink = isDark ? '#f8fafc' : '#172033'
@@ -81,6 +113,12 @@ export default function QuickActions() {
   const handleAction = (action: QuickAction) => {
     setAnchorEl(null)
 
+    if (action.action === 'transportIds') {
+      setTransportDialogOpen(true)
+      void loadTransportIds()
+      return
+    }
+
     if (!action.path) return
 
     if (action.requiresMerchantReady && !isReady) {
@@ -90,6 +128,26 @@ export default function QuickActions() {
 
     navigate(action.path)
   }
+
+  const loadTransportIds = async () => {
+    setTransportIdsLoading(true)
+    setTransportIdsError('')
+    try {
+      const entries = await getCarrierTransportIds()
+      setTransportIds(
+        entries
+          .filter((entry) => entry.isActive !== false)
+          .sort((a, b) => a.sortOrder - b.sortOrder || a.carrierName.localeCompare(b.carrierName)),
+      )
+    } catch {
+      setTransportIds(fallbackCarrierTransportIds)
+      setTransportIdsError('Latest Transport IDs could not be loaded. Showing saved defaults.')
+    } finally {
+      setTransportIdsLoading(false)
+    }
+  }
+
+  const visibleTransportIds = transportIds.length > 0 ? transportIds : fallbackCarrierTransportIds
 
   return (
     <>
@@ -268,6 +326,103 @@ export default function QuickActions() {
           ))}
         </Box>
       </Popover>
+
+      <Dialog
+        open={transportDialogOpen}
+        onClose={() => setTransportDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: '12px',
+            bgcolor: surface,
+            color: ink,
+            border: `1px solid ${border}`,
+            boxShadow: isDark
+              ? '0 24px 54px rgba(0,0,0,0.42)'
+              : '0 22px 48px rgba(15,23,42,0.18)',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            px: { xs: 2, sm: 2.4 },
+            py: 1.6,
+            pr: 6,
+            borderTop: `3px solid ${accent}`,
+            borderBottom: `1px solid ${border}`,
+            fontSize: '1rem',
+            fontWeight: 800,
+          }}
+        >
+          Transporter ID
+          <IconButton
+            aria-label="Close Transporter ID list"
+            onClick={() => setTransportDialogOpen(false)}
+            sx={{
+              position: 'absolute',
+              right: 10,
+              top: 9,
+              color: muted,
+              '&:hover': {
+                color: accent,
+                bgcolor: alpha(accent, isDark ? 0.16 : 0.08),
+              },
+            }}
+          >
+            <TbX />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: { xs: 1.5, sm: 2 }, py: 1.6 }}>
+          {transportIdsLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 }}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'grid', gap: 0.85 }}>
+              {transportIdsError && (
+                <Typography sx={{ color: '#B45309', fontSize: '0.78rem', fontWeight: 600, mb: 0.3 }}>
+                  {transportIdsError}
+                </Typography>
+              )}
+
+              {visibleTransportIds.map((entry) => (
+                <Box
+                  key={entry.carrierKey || entry.carrierName}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'minmax(150px, 0.75fr) 1fr' },
+                    gap: { xs: 0.4, sm: 1.2 },
+                    alignItems: 'center',
+                    px: { xs: 1.2, sm: 1.4 },
+                    py: 1,
+                    borderRadius: '8px',
+                    border: `1px solid ${isDark ? alpha('#FFFFFF', 0.1) : alpha('#0D3B8E', 0.1)}`,
+                    bgcolor: isDark ? alpha('#FFFFFF', 0.035) : '#fbfcfe',
+                  }}
+                >
+                  <Typography sx={{ color: ink, fontSize: '0.88rem', fontWeight: 800 }}>
+                    {entry.carrierName}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: '#0D3B8E',
+                      fontFamily: 'monospace',
+                      fontSize: '0.88rem',
+                      fontWeight: 800,
+                      letterSpacing: 0,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {entry.transportId || '-'}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </>
   )
