@@ -52,24 +52,78 @@ export const GenericTable = ({
   const headerColor = useColorModeValue('#64748B', '#8B949E')
   const borderColor = useColorModeValue('#E2E8F0', '#30363D')
   const stickyDivider = useColorModeValue('#E2E8F0', '#30363D')
+  const scrollbarTrack = useColorModeValue('#F1F5F9', '#111827')
+  const scrollbarThumb = useColorModeValue('rgba(15, 23, 42, 0.24)', 'rgba(148, 163, 184, 0.35)')
   const stickyShadow = useColorModeValue(
     '-14px 0 18px -16px rgba(15, 23, 42, 0.18)',
     '-14px 0 18px -16px rgba(1, 4, 9, 0.65)',
   )
   const scrollRef = useRef(null)
+  const topScrollRef = useRef(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [scrollMeta, setScrollMeta] = useState({ scrollWidth: 0, hasOverflow: false })
 
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
+    const tableEl = scrollRef.current
+    const topEl = topScrollRef.current
+    if (!tableEl || !topEl) return
 
-    const handleScroll = () => {
-      setIsScrolled(el.scrollLeft > 0)
+    let isSyncingScroll = false
+
+    const updateScrollMeta = () => {
+      const nextScrollWidth = tableEl.scrollWidth
+      const nextHasOverflow = tableEl.scrollWidth > tableEl.clientWidth + 1
+
+      setScrollMeta((previous) =>
+        previous.scrollWidth === nextScrollWidth && previous.hasOverflow === nextHasOverflow
+          ? previous
+          : { scrollWidth: nextScrollWidth, hasOverflow: nextHasOverflow },
+      )
+
+      topEl.scrollLeft = tableEl.scrollLeft
+      setIsScrolled(tableEl.scrollLeft > 0)
     }
 
-    el.addEventListener('scroll', handleScroll)
-    return () => el.removeEventListener('scroll', handleScroll)
-  }, [])
+    const releaseSyncLock = () => {
+      window.requestAnimationFrame(() => {
+        isSyncingScroll = false
+      })
+    }
+
+    const handleTableScroll = () => {
+      setIsScrolled(tableEl.scrollLeft > 0)
+      if (isSyncingScroll) return
+      isSyncingScroll = true
+      topEl.scrollLeft = tableEl.scrollLeft
+      releaseSyncLock()
+    }
+
+    const handleTopScroll = () => {
+      if (isSyncingScroll) return
+      isSyncingScroll = true
+      tableEl.scrollLeft = topEl.scrollLeft
+      setIsScrolled(tableEl.scrollLeft > 0)
+      releaseSyncLock()
+    }
+
+    updateScrollMeta()
+
+    tableEl.addEventListener('scroll', handleTableScroll)
+    topEl.addEventListener('scroll', handleTopScroll)
+    window.addEventListener('resize', updateScrollMeta)
+
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateScrollMeta)
+    resizeObserver?.observe(tableEl)
+    if (tableEl.firstElementChild) resizeObserver?.observe(tableEl.firstElementChild)
+
+    return () => {
+      tableEl.removeEventListener('scroll', handleTableScroll)
+      topEl.removeEventListener('scroll', handleTopScroll)
+      window.removeEventListener('resize', updateScrollMeta)
+      resizeObserver?.disconnect()
+    }
+  }, [data.length, columnKeys.length, loading])
 
   const toggleSelectAll = () => {
     let newSelection = []
@@ -114,6 +168,27 @@ export const GenericTable = ({
       </CardHeader>
 
       <CardBody p={0}>
+        <Box
+          ref={topScrollRef}
+          mx="1px"
+          mb="4px"
+          overflowX="auto"
+          overflowY="hidden"
+          display={scrollMeta.hasOverflow ? 'block' : 'none'}
+          sx={{
+            '&::-webkit-scrollbar': { height: '8px' },
+            '&::-webkit-scrollbar-track': {
+              background: scrollbarTrack,
+              borderRadius: '999px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: scrollbarThumb,
+              borderRadius: '999px',
+            },
+          }}
+        >
+          <Box h="8px" w={`${scrollMeta.scrollWidth}px`} />
+        </Box>
         <Box
           ref={scrollRef}
           borderWidth="1px"
