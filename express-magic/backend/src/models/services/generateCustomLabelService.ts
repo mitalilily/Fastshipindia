@@ -201,7 +201,12 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
     }
   }
 
-  const adminPrefs = await getAdminInvoicePreferences()
+  const adminPrefs = await getAdminInvoicePreferences().catch((err: any) => {
+    console.warn('Skipping platform logo on custom label; invoice preferences could not be loaded:', {
+      message: err?.message || err,
+    })
+    return null
+  })
   const platformLogoKey =
     adminPrefs?.includeLogo !== false && adminPrefs?.logoFile ? adminPrefs.logoFile : null
   // Always show Shiplifi platform logo (Powered by ...) when configured in admin billing prefs
