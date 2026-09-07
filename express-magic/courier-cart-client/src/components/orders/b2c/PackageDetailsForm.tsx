@@ -117,29 +117,6 @@ const PackageDetailsForm = ({ control }: PackageDetailsFormProps) => {
 
             <Grid size={{ xs: 12, md: 4 }}>
               <Controller
-                name="products.0.quantity"
-                control={control}
-                rules={{
-                  required: 'Quantity is required',
-                  min: { value: 1, message: 'Minimum 1' },
-                  validate: (value) => Number.isInteger(Number(value)) || 'Use a whole number',
-                }}
-                render={({ field, fieldState }) => (
-                  <CustomInput
-                    label="Qty"
-                    type="number"
-                    required
-                    {...field}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                    inputProps={{ min: 1, step: 1 }}
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Controller
                 name="products.0.sku"
                 control={control}
                 render={({ field, fieldState }) => (

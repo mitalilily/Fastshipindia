@@ -188,8 +188,7 @@ export default function B2COrderFormSteps({
   const prepaidAmount = Number(watch('prepaidAmount') || 0)
   const orderType = watch('orderType') || getDefaultOrderType()
   const invoiceValue = Number(watch('invoiceValue') || 0)
-  const productQuantity = Math.max(1, Number(watch('products.0.quantity') || 1))
-  const derivedUnitPrice = Number((invoiceValue / productQuantity).toFixed(2))
+  const derivedUnitPrice = Number(invoiceValue.toFixed(2))
 
   // Ensure orderType is valid based on payment options
   useEffect(() => {
@@ -305,8 +304,8 @@ export default function B2COrderFormSteps({
         order_items: data.products.slice(0, 1).map((p) => ({
           name: p.productName,
           sku: p.sku ?? 'NA',
-          qty: p.quantity,
-          price: Number(data.invoiceValue || 0) / Math.max(1, Number(p.quantity || 1)),
+          qty: 1,
+          price: Number(data.invoiceValue || 0),
           hsn: p.hsnCode ?? '',
           discount: 0,
           tax_rate: 0,
@@ -377,7 +376,6 @@ export default function B2COrderFormSteps({
         'city',
         'state',
         'products.0.productName',
-        'products.0.quantity',
         'weight',
         'length',
         'breadth',
@@ -391,7 +389,6 @@ export default function B2COrderFormSteps({
         )
         const fieldLabel = (field: FieldPath<B2CFormData>) => {
           if (field.includes('.productName')) return 'Product name'
-          if (field.includes('.quantity')) return 'Product quantity'
 
           const labels: Partial<Record<FieldPath<B2CFormData>, string>> = {
             orderId: 'Order ID',

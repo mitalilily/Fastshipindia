@@ -316,9 +316,7 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
       const invoiceGrandTotal =
         data?.invoices?.reduce((sum, invoice) => sum + Number(invoice.invoiceValue || 0), 0) ?? 0
       const visibleProduct = data?.products?.[0]
-      const totalProductQuantity = Math.max(1, Number(visibleProduct?.quantity || 1))
-      const derivedUnitPrice =
-        totalProductQuantity > 0 ? Number((invoiceGrandTotal / totalProductQuantity).toFixed(2)) : 0
+      const derivedUnitPrice = Number(invoiceGrandTotal.toFixed(2))
 
       // Prepare B2B shipment payload
       const payload: CreateB2BShipmentParams = {
@@ -386,8 +384,8 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
           (visibleProduct ? [visibleProduct] : []).map((product) => ({
             name: product.productName.trim(),
             sku: String(product.sku || '').trim(),
-            qty: Number(product.quantity || 0),
-            quantity: Number(product.quantity || 0),
+            qty: 1,
+            quantity: 1,
             price: derivedUnitPrice,
             hsn: String(product.hsnCode || '').trim(),
             discount: 0,
@@ -456,7 +454,7 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
     if (currentStep === 0) {
       const values = getValues()
       const productFields = values.products?.length
-        ? ['products.0.productName', 'products.0.quantity']
+        ? ['products.0.productName']
         : []
       const invoiceFields =
         values.invoices?.flatMap((_, index) => [
@@ -510,7 +508,6 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
   const getFieldLabel = (field: string) => {
     if (field.includes('.productName')) return 'Product name'
     if (field.includes('.quantity') && field.includes('boxes.')) return 'No. of boxes'
-    if (field.includes('.quantity')) return 'Product quantity'
     if (field.includes('.invoiceNumber')) return 'Invoice number'
     if (field.includes('.invoiceDate')) return 'Invoice date'
     if (field.includes('.invoiceValue')) return 'Invoice value'

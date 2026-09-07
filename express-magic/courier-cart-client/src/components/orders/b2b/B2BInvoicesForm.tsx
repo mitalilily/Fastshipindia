@@ -37,9 +37,7 @@ export default function B2BInvoicesForm() {
     control,
     name: 'invoices',
   })
-  const products = useWatch({ control, name: 'products' }) || []
   const invoices = useWatch({ control, name: 'invoices' }) || []
-  const firstProductQuantity = Math.max(1, Number(products[0]?.quantity || 1))
 
   useEffect(() => {
     invoiceFields.forEach((_, index) => {
@@ -55,11 +53,11 @@ export default function B2BInvoicesForm() {
       0,
     )
 
-    setValue('products.0.unitPrice', Number((totalInvoiceValue / firstProductQuantity).toFixed(2)), {
+    setValue('products.0.unitPrice', Number(totalInvoiceValue.toFixed(2)), {
       shouldDirty: false,
       shouldValidate: false,
     })
-  }, [firstProductQuantity, invoices, setValue])
+  }, [invoices, setValue])
 
   // Calculate total invoice value
   const totalInvoiceValue = invoices.reduce(
@@ -220,32 +218,6 @@ export default function B2BInvoicesForm() {
                             topMargin={false}
                             error={!!fieldState.error}
                             helperText={fieldState.error?.message}
-                          />
-                        )}
-                      />
-                    </Grid>
-
-                    <Grid size={{ lg: 4, md: 6, xs: 12 }}>
-                      <Controller
-                        name="products.0.quantity"
-                        control={control}
-                        rules={{
-                          required: 'Quantity is required',
-                          min: { value: 1, message: 'Minimum 1' },
-                          validate: (value) =>
-                            Number.isInteger(Number(value)) || 'Use a whole number',
-                        }}
-                        render={({ field, fieldState }) => (
-                          <CustomInput
-                            {...field}
-                            label="Qty"
-                            type="number"
-                            required
-                            fullWidth
-                            topMargin={false}
-                            error={!!fieldState.error}
-                            helperText={fieldState.error?.message}
-                            slotProps={{ htmlInput: { min: 1, step: 1 } }}
                           />
                         )}
                       />
