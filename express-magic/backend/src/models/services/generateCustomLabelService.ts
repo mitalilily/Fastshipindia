@@ -248,12 +248,12 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
     .toLowerCase()
 
   const pages: any[] = []
-  const primaryColor = '#1a237e'
-  const accentColor = '#eef3ff'
-  const darkTextColor = '#0f172a'
-  const mutedTextColor = '#334155'
-  const lightBorderColor = '#cbd5e1'
-  const strongBorderColor = '#111827'
+  const primaryColor = '#111827'
+  const accentColor = '#ffffff'
+  const darkTextColor = '#000000'
+  const mutedTextColor = '#1f2937'
+  const lightBorderColor = '#111827'
+  const strongBorderColor = '#000000'
   const isEnabled = (value: unknown) => (value === undefined ? true : value === true)
   const awbEnabled = isEnabled(settings.order_info?.awb)
   const showOrderId = isEnabled(settings.order_info?.orderId)
@@ -281,8 +281,8 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   const includeDeadWeight = isEnabled(settings.product_info?.deadWeight)
   const showOrderValueSection = includeCost && isEnabled(settings.product_info?.otherCharges)
   const showPlatformBranding = Boolean(settings.powered_by?.toString().trim())
-  const charLimit = Math.max(10, Number(settings.char_limit ?? 25))
-  const maxItems = Math.max(1, Number(settings.max_items ?? 3))
+  const charLimit = Math.max(10, Number(settings.char_limit ?? 36))
+  const maxItems = Math.max(1, Number(settings.max_items ?? 4))
 
   // Prefer a locally generated AWB barcode so labels do not repeat the AWB text below the bars.
   // Courier barcode images are still used as a fallback when an AWB number is unavailable.
@@ -295,9 +295,14 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   const barcodeSource =
     order.barcode_img || order.barcode_url || order.barcode_image || order.barcode || null
 
-  if (awbEnabled && order.awb_number) {
-    awbBarcode = await generateBarcodeBase64(order.awb_number)
-    console.log('✅ Generated AWB barcode locally')
+  const trackingIdentifier = String(
+    order?.awb_number || order?.provider_reference || order?.shipment_id || '',
+  ).trim()
+  const trackingIdentifierLabel = order?.awb_number ? 'AWB' : 'LRN'
+
+  if (awbEnabled && trackingIdentifier) {
+    awbBarcode = await generateBarcodeBase64(trackingIdentifier)
+    console.log(`✅ Generated ${trackingIdentifierLabel} barcode locally`)
   }
 
   if (!awbBarcode && awbEnabled && providerKey.includes('delhivery') && barcodeSource) {
@@ -495,15 +500,15 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   }
 
   const headerRightStack: any[] = []
-  if (awbEnabled && order.awb_number) {
+  if (awbEnabled && trackingIdentifier) {
     headerRightStack.push({
-      text: 'AWB',
+      text: trackingIdentifierLabel,
       color: primaryColor,
       bold: true,
       alignment: 'center',
     })
     headerRightStack.push({
-      text: order.awb_number,
+      text: trackingIdentifier,
       fontSize: 12,
       bold: true,
       alignment: 'center',
@@ -548,7 +553,7 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
               bold: true,
               alignment: 'center',
               color: '#000000',
-              fillColor: paymentType === 'cod' ? '#fef3c7' : '#dcfce7',
+              fillColor: '#ffffff',
               margin: [0, 2, 0, 2],
             },
           ],
@@ -577,31 +582,31 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   })
 
   const shipToStack: any[] = [
-    { text: 'SHIP TO', bold: true, fontSize: 8, color: primaryColor, margin: [0, 0, 0, 2] },
-    { text: trimText(consignee.name, 36), fontSize: 8, bold: true },
+    { text: 'SHIP TO', bold: true, fontSize: 9, color: primaryColor, margin: [0, 0, 0, 3] },
+    { text: trimText(consignee.name, 42), fontSize: 9.5, bold: true, color: darkTextColor },
     {
-      text: trimText(
+      text:
         [
           consignee.address,
           [consignee.city, consignee.state].filter(Boolean).join(', '),
           consignee.pincode,
         ]
           .filter(Boolean)
-          .join(' | '),
-        90,
-      ),
-      fontSize: 7,
+          .join('\n') || '-',
+      fontSize: 8.5,
       color: darkTextColor,
-      margin: [0, 1, 0, 0],
+      bold: true,
+      margin: [0, 2, 0, 0],
+      lineHeight: 1.12,
     },
   ]
   if (showCustomerPhone && consignee.phone) {
     shipToStack.push({
       text: `Ph: ${trimText(consignee.phone, 20)}`,
-      fontSize: 7,
+      fontSize: 8,
       bold: true,
       color: darkTextColor,
-      margin: [0, 1, 0, 0],
+      margin: [0, 2, 0, 0],
     })
   }
 
@@ -615,19 +620,20 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
     .join(' | ')
 
   const shipFromStack: any[] = [
-    { text: 'SHIP FROM', bold: true, fontSize: 8, color: primaryColor, margin: [0, 0, 0, 2] },
+    { text: 'SHIP FROM', bold: true, fontSize: 9, color: primaryColor, margin: [0, 0, 0, 3] },
   ]
   if (showShipperAddress) {
     shipFromStack.push({
-      text: trimText(fromLine, 90),
-      fontSize: 7,
+      text: trimText(fromLine, 130),
+      fontSize: 7.8,
       color: darkTextColor,
+      lineHeight: 1.12,
     })
   }
   if (showShipperPhone && pickup.phone) {
     shipFromStack.push({
       text: `Ph: ${trimText(pickup.phone, 20)}`,
-      fontSize: 7,
+      fontSize: 7.8,
       bold: true,
       color: darkTextColor,
       margin: [0, 1, 0, 0],
@@ -636,7 +642,7 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   if (showShipperGst && pickup.gst_number) {
     shipFromStack.push({
       text: `GSTIN: ${trimText(pickup.gst_number, 25)}`,
-      fontSize: 7,
+      fontSize: 7.8,
       margin: [0, 1, 0, 0],
     })
   }
@@ -651,11 +657,11 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
       vLineColor: () => lightBorderColor,
       paddingLeft: () => 6,
       paddingRight: () => 6,
-      paddingTop: () => 5,
-      paddingBottom: () => 5,
+      paddingTop: () => 6,
+      paddingBottom: () => 6,
       fillColor: () => accentColor,
     },
-    margin: [0, 0, 0, 5],
+    margin: [0, 0, 0, 6],
   })
 
   if (shipmentMetricLines.length > 0) {
@@ -663,13 +669,13 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
       table: {
         widths: ['*'],
         body: [
-          [{ text: 'Shipment Metrics', bold: true, fontSize: 7, color: primaryColor }],
-          [{ text: shipmentMetricLines.join('\n'), fontSize: 7, margin: [0, 1, 0, 0] }],
+          [{ text: 'SHIPMENT METRICS', bold: true, fontSize: 7.5, color: primaryColor }],
+          [{ text: shipmentMetricLines.join('\n'), fontSize: 7.2, margin: [0, 1, 0, 0], color: darkTextColor }],
         ],
       },
       layout: {
-        hLineColor: () => '#dbeafe',
-        vLineColor: () => '#dbeafe',
+        hLineColor: () => lightBorderColor,
+        vLineColor: () => lightBorderColor,
         paddingLeft: () => 6,
         paddingRight: () => 6,
         paddingTop: () => 4,

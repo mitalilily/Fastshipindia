@@ -46,8 +46,8 @@ type LabelPreviewProps = {
 }
 
 export function LabelPreview({ values, order }: LabelPreviewProps) {
-  const charsLimit = Math.max(5, Number(values?.charLimit ?? 25))
-  const maxItems = Math.max(1, Number(values?.maxItems ?? 3))
+  const charsLimit = Math.max(5, Number(values?.charLimit ?? 36))
+  const maxItems = Math.max(1, Number(values?.maxItems ?? 4))
 
   const awbNumber = pickFirst(order.awb, order.awbNumber, order.awb_number)
   const courierName = getCourierDisplayName(
@@ -137,14 +137,14 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
                 sx={{
                   width: 58,
                   height: 28,
-                  bgcolor: '#d8c7ad',
+                  bgcolor: '#fff',
+                  border: '1.5px solid #111',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#9a3412',
+                  color: '#111',
                   fontSize: 9,
                   fontWeight: 800,
-                  fontStyle: 'italic',
                   lineHeight: 1,
                   textAlign: 'center',
                 }}
@@ -198,9 +198,10 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
         </Stack>
 
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Box sx={{ maxWidth: 220 }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 800 }}>To: {order.name}</Typography>
-            <Typography sx={{ fontSize: 14, lineHeight: 1.12 }}>{order.address}</Typography>
+          <Box sx={{ maxWidth: 252, border: '1.5px solid #111', p: 0.8, bgcolor: '#fff' }}>
+            <Typography sx={{ fontSize: 9, fontWeight: 900, lineHeight: 1 }}>SHIP TO</Typography>
+            <Typography sx={{ fontSize: 14, fontWeight: 900, mt: 0.5 }}>To: {order.name}</Typography>
+            <Typography sx={{ fontSize: 14, lineHeight: 1.16, fontWeight: 700, color: '#000' }}>{order.address}</Typography>
             {showCustomerPhone && <Typography sx={{ fontSize: 9 }}>Contact: {customerPhone}</Typography>}
           </Box>
           <Box
@@ -217,7 +218,7 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
         <Box sx={{ width: 214, borderTop: '2px dashed #111' }} />
 
         {showShipperBlock && (
-          <Box>
+          <Box sx={{ border: '1px solid #111', p: 0.8, bgcolor: '#fff' }}>
             {showSellerName && <Typography sx={{ fontSize: 13, fontWeight: 800 }}>From:{shipperName}</Typography>}
             {showShipperAddress && (
               <>

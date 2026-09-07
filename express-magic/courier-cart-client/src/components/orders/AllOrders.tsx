@@ -1074,7 +1074,7 @@ const AllOrders = () => {
   const isDocumentGenerationReady = (row: Order) => {
     const normalizedStatus = String(row.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
     return (
-      Boolean(String(row.manifest_key || row.manifest || row.awb_number || '').trim()) ||
+      Boolean(String(row.manifest_key || row.manifest || getTrackingReference(row)).trim()) ||
       documentGenerationStatuses.has(normalizedStatus)
     )
   }
