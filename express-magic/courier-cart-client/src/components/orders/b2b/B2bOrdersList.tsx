@@ -293,19 +293,38 @@ const B2BOrdersList = ({
           <Tooltip
             arrow
             placement="top"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: '#ffffff',
+                  color: '#003f8f',
+                  border: '1px solid #b8d7ff',
+                  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.18)',
+                  borderRadius: 1.2,
+                },
+              },
+              arrow: {
+                sx: {
+                  color: '#ffffff',
+                  '&::before': {
+                    border: '1px solid #b8d7ff',
+                  },
+                },
+              },
+            }}
             title={
-              <Box sx={{ p: 0.8, maxWidth: 360 }}>
-                <Typography sx={{ fontWeight: 900, fontSize: 13.5, mb: 0.5 }}>
+              <Box sx={{ p: 0.8, maxWidth: 380 }}>
+                <Typography sx={{ fontWeight: 900, fontSize: 13.5, mb: 0.5, color: '#003f8f' }}>
                   {displayName}
                 </Typography>
-                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45 }}>
-                  <Box component="span" sx={{ fontWeight: 800 }}>
+                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45, color: '#003f8f' }}>
+                  <Box component="span" sx={{ fontWeight: 900, color: '#002f6c' }}>
                     Mobile Number:
                   </Box>{' '}
                   {displayPhone}
                 </Typography>
-                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45 }}>
-                  <Box component="span" sx={{ fontWeight: 800 }}>
+                <Typography sx={{ fontSize: 12.5, lineHeight: 1.45, color: '#003f8f' }}>
+                  <Box component="span" sx={{ fontWeight: 900, color: '#002f6c' }}>
                     Address:
                   </Box>{' '}
                   {displayAddress}
