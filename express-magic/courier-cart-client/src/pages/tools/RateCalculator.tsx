@@ -103,6 +103,8 @@ const baseUi = {
   softNavy: alpha(brand.ink, 0.055),
 }
 
+const VOLUMETRIC_DIVISOR_CM = 4500
+
 const publicColors = {
   ink: '#0f172a',
   muted: '#667895',
@@ -255,10 +257,10 @@ const formatAmount = (value: number) =>
     maximumFractionDigits: 2,
   })
 
-const formatWeightKg = (value: unknown) => {
+const formatWeightKg = (value: unknown, shipmentType: CalculatorShipmentType = 'b2c') => {
   const numeric = toNumber(value)
   if (!numeric) return '-'
-  const kg = numeric > 20 ? numeric / 1000 : numeric
+  const kg = shipmentType === 'b2b' ? numeric : numeric > 50 ? numeric / 1000 : numeric
   return `${kg.toLocaleString('en-IN', { maximumFractionDigits: 2 })} kg`
 }
 
@@ -293,7 +295,9 @@ const getCalculatorBoxMetrics = (
     const breadth = toNumber(box.breadth)
     const height = toNumber(box.height)
     const actualWeightGrams = kgToGrams(toNumber(box.weight))
-    const volumetricWeightGrams = Math.round(((length * breadth * height) / 5000) * 1000)
+    const volumetricWeightGrams = Math.round(
+      ((length * breadth * height) / VOLUMETRIC_DIVISOR_CM) * 1000,
+    )
 
     totalBoxes += quantity
     totalActualWeightGrams += actualWeightGrams * quantity
@@ -677,7 +681,9 @@ function PublicRateResultRow({ courier }: { courier: Courier }) {
           </Typography>
         </Box>
       </Stack>
-      <Typography sx={{ color: publicColors.muted, fontWeight: 800 }}>{formatWeightKg(courier.chargeable_weight)}</Typography>
+      <Typography sx={{ color: publicColors.muted, fontWeight: 800 }}>
+        {formatWeightKg(courier.chargeable_weight)}
+      </Typography>
       <Typography sx={{ color: publicColors.purple, fontWeight: 900 }}>{zoneLabel}</Typography>
       <Typography sx={{ color: '#16a34a', fontWeight: 900 }}>
         <Box component="span">&#8377;</Box>
@@ -864,7 +870,9 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
     const breadth = toNumber(watchedBreadth)
     const height = toNumber(watchedHeight)
     const actualWeightGrams = kgToGrams(toNumber(watchedWeight))
-    const volumetricWeightGrams = Math.round(((length * breadth * height) / 5000) * 1000)
+    const volumetricWeightGrams = Math.round(
+      ((length * breadth * height) / VOLUMETRIC_DIVISOR_CM) * 1000,
+    )
     const applicableWeightGrams = Math.max(
       actualWeightGrams,
       volumetricWeightGrams,
@@ -2511,7 +2519,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                                 {mode === 'air' ? <FaPlane size={18} /> : <FaTruck size={18} />}
                               </Box>
                               <Typography noWrap sx={{ fontSize: '0.8rem', fontWeight: 800, color: ui.ink }}>
-                                {formatWeightKg(courier.chargeable_weight)}
+                                {formatWeightKg(courier.chargeable_weight, watchedShipmentType)}
                               </Typography>
                               <Box
                                 title={`Pricing zone: ${zoneLabel}`}

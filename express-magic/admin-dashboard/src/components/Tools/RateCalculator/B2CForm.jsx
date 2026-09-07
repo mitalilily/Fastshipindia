@@ -13,6 +13,8 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { TbRulerMeasure, TbScale } from 'react-icons/tb'
 
+const VOLUMETRIC_DIVISOR_CM = 4500
+
 export default function B2CForm({ formData, onChange, shipmentType }) {
   const [length, setLength] = useState(formData.length || '')
   const [breadth, setBreadth] = useState(formData.breadth || '')
@@ -27,7 +29,7 @@ export default function B2CForm({ formData, onChange, shipmentType }) {
   }, [length, breadth, height, weight])
 
   const volumetricWeightGrams = useMemo(() => {
-    const volKg = (Number(length) * Number(breadth) * Number(height)) / 5000
+    const volKg = (Number(length) * Number(breadth) * Number(height)) / VOLUMETRIC_DIVISOR_CM
     const volGrams = volKg * 1000
     return isNaN(volGrams) ? 0 : Math.round(volGrams)
   }, [length, breadth, height])

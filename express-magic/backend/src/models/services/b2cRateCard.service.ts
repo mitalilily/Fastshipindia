@@ -73,7 +73,7 @@ export interface ComputedB2CRateCardCharge {
   matched_by: 'slab' | 'last_slab_extra' | 'legacy'
 }
 
-const B2C_MIN_CHARGEABLE_WEIGHT_G = 250
+const B2C_MIN_CHARGEABLE_WEIGHT_G = 500
 
 export function computeEffectiveB2CCodCharge(params: {
   cod_charges?: number | null

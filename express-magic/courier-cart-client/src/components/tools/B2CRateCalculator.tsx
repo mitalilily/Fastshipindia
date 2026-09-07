@@ -8,6 +8,8 @@ import { brand } from '../../theme/brand'
 import { kgToGrams, MIN_B2C_CHARGEABLE_WEIGHT_GRAMS } from '../../utils/weight'
 import CustomInput from '../UI/inputs/CustomInput'
 
+const VOLUMETRIC_DIVISOR_CM = 4500
+
 export default function B2CRateCalculator() {
   const {
     register,
@@ -21,7 +23,7 @@ export default function B2CRateCalculator() {
   const actualWeightKg = useWatch({ control, name: 'weight' }) || 0
 
   const volumetricWeightGrams = useMemo(() => {
-    const volKg = (Number(length) * Number(breadth) * Number(height)) / 5000
+    const volKg = (Number(length) * Number(breadth) * Number(height)) / VOLUMETRIC_DIVISOR_CM
     const volGrams = volKg * 1000
     return isNaN(volGrams) ? 0 : Math.round(volGrams)
   }, [length, breadth, height])

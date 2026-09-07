@@ -5,7 +5,7 @@ import { VolumetricCalculatorCard } from "../components/feather/ToolCards";
 import { Reveal, SectionHeading } from "../components/feather/primitives";
 
 const stats = [
-  { value: "5000", label: "standard divisor" },
+  { value: "4500", label: "standard divisor" },
   { value: "3", label: "dimensions required" },
   { value: "1", label: "faster planning step" },
 ];

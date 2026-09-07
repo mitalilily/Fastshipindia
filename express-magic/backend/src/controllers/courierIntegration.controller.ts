@@ -804,7 +804,7 @@ export const fetchAvailableCouriers = async (req: Request, res: Response) => {
 
 export const fetchAvailableCouriersForGuestController = async (req: Request, res: Response) => {
   try {
-    const { origin, destination, payment_type, weight, length, breadth, height } = req.body
+    const { origin, destination, payment_type, weight, length, breadth, height, shipment_type, boxes } = req.body
 
     // Validate required fields
     if (!origin || !destination) {
@@ -881,16 +881,25 @@ export const fetchAvailableCouriersForGuestController = async (req: Request, res
       })
     }
 
-    const couriers = await fetchAvailableCouriersForGuest({
+    const serviceabilityOptions = buildServiceabilityOptions(req.body)
+    const serviceParams = {
       origin: originNum,
       destination: destinationNum,
       payment_type: payment_type,
       order_amount: orderAmountResult.value,
+      shipment_type: shipment_type,
       weight: weightNum,
       length: lengthNum,
       breadth: breadthNum,
       height: heightNum,
-    })
+      boxes: Array.isArray(boxes) ? boxes : undefined,
+      ...serviceabilityOptions,
+    }
+
+    const couriers =
+      shipment_type === 'b2b'
+        ? await fetchAvailableCouriersForGuest(serviceParams)
+        : await fetchB2CCouriersWithLocalFallback(serviceParams)
     const couriersWithGst = await applyGstToB2CCouriers(couriers ?? [], payment_type)
 
     return res.json({ success: true, data: couriersWithGst })

@@ -22,13 +22,13 @@ function resolveZone(pickupPincode, deliveryPincode) {
   return { label: "National", surcharge: 56, eta: "4-6 days" };
 }
 
-export function calculateBillableWeight({ packageWeight, weightInGrams, length, width, height, divisor = 5000 }) {
+export function calculateBillableWeight({ packageWeight, weightInGrams, length, width, height, divisor = 4500 }) {
   const explicitWeightKg = toPositiveNumber(packageWeight);
   const actualWeightKg = explicitWeightKg || toPositiveNumber(weightInGrams) / 1000;
   const lengthCm = toPositiveNumber(length);
   const widthCm = toPositiveNumber(width);
   const heightCm = toPositiveNumber(height);
-  const divisorValue = toPositiveNumber(divisor) || 5000;
+  const divisorValue = toPositiveNumber(divisor) || 4500;
   const volumetricWeightKg =
     lengthCm && widthCm && heightCm ? (lengthCm * widthCm * heightCm) / divisorValue : 0;
   const chargeableWeightKg = Math.max(actualWeightKg, volumetricWeightKg);

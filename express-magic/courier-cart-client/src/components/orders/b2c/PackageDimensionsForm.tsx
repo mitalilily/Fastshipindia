@@ -15,6 +15,7 @@ import type { B2CFormData } from './B2COrderForm'
 const ACCENT = '#0D3B8E'
 const TEXT_PRIMARY = '#102A54'
 const TEXT_MUTED = '#496189'
+const VOLUMETRIC_DIVISOR_CM = 4500
 const isDimensionField = (name: string) =>
   name === 'length' || name === 'breadth' || name === 'height'
 
@@ -29,7 +30,7 @@ const PackageDimensionsForm = () => {
 
   const actualWeightKg = Number(weight) || 0
   const actualWeightGrams = kgToGrams(actualWeightKg)
-  const volumetricWeight = (length * breadth * height) / 5000
+  const volumetricWeight = (length * breadth * height) / VOLUMETRIC_DIVISOR_CM
   const minimumWeightKg = MIN_B2C_CHARGEABLE_WEIGHT_GRAMS / 1000
   const chargedWeight = Math.max(actualWeightKg, volumetricWeight, minimumWeightKg)
   const chargedByMinimum = Math.abs(chargedWeight - minimumWeightKg) < 0.001
@@ -37,6 +38,8 @@ const PackageDimensionsForm = () => {
 
   const fields = ['weight', 'length', 'breadth', 'height'] as const
   const dimensionUnitLabel = getDimensionUnitLabel(dimensionUnit)
+  const volumetricFormula =
+    dimensionUnit === 'inch' ? 'L x B x H / 1728 x 6' : `L x B x H / ${VOLUMETRIC_DIVISOR_CM}`
 
   return (
     <>
@@ -178,7 +181,7 @@ const PackageDimensionsForm = () => {
                 </Typography>
               </Typography>
               <Typography variant="caption" sx={{ color: TEXT_MUTED }}>
-                L x B x H / 5000
+                {volumetricFormula}
               </Typography>
             </Paper>
           </Grid>

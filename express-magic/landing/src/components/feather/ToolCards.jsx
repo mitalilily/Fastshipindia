@@ -129,13 +129,13 @@ function removeStoredValue(key) {
 
 export function VolumetricCalculatorCard({
   className = "surface-card rounded-[2rem] p-6",
-  defaultValues = { length: "40", width: "32", height: "28", divisor: "5000" },
+  defaultValues = { length: "40", width: "32", height: "28", divisor: "4500" },
 }) {
   const [form, setForm] = usePersistentState(VOLUMETRIC_STORAGE_KEY, defaultValues);
   const length = Number(form.length) || 0;
   const width = Number(form.width) || 0;
   const height = Number(form.height) || 0;
-  const divisor = Number(form.divisor) || 5000;
+  const divisor = Number(form.divisor) || 4500;
   const volumetricWeight = length && width && height ? (length * width * height) / divisor : 0;
 
   const handleChange = (event) => {
