@@ -856,7 +856,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
   usePincodeLookup(deliveryPincode, 'delivery', setValue, setError, clearErrors)
 
   const clientMetrics = useMemo(() => {
-    if (!isPublic) {
+    if (!isPublic && watchedShipmentType === 'b2b') {
       return getCalculatorBoxMetrics(watchedBoxes, watchedShipmentType)
     }
 
@@ -886,34 +886,35 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
 
   const onSubmit = async (formData: RateCalculatorFormValues) => {
     try {
-      const boxMetrics = isPublic
-        ? clientMetrics
-        : getCalculatorBoxMetrics(formData.boxes, formData.shipmentType)
-      const length = isPublic ? toNumber(formData.length) : boxMetrics.maxLength
-      const breadth = isPublic ? toNumber(formData.breadth) : boxMetrics.maxBreadth
-      const height = isPublic ? toNumber(formData.height) : boxMetrics.maxHeight
+      const isB2BCalculator = !isPublic && formData.shipmentType === 'b2b'
+      const boxMetrics = isB2BCalculator
+        ? getCalculatorBoxMetrics(formData.boxes, 'b2b')
+        : clientMetrics
+      const length = isB2BCalculator ? boxMetrics.maxLength : toNumber(formData.length)
+      const breadth = isB2BCalculator ? boxMetrics.maxBreadth : toNumber(formData.breadth)
+      const height = isB2BCalculator ? boxMetrics.maxHeight : toNumber(formData.height)
       const shipmentValue = formData.paymentType === 'cod' ? toNumber(formData.orderAmount) : 0
 
       const result = await mutateAsync({
         pickupPincode: formData.pickupPincode,
         deliveryPincode: formData.deliveryPincode,
         weight:
-          formData.shipmentType === 'b2b'
+          isB2BCalculator
             ? Number(boxMetrics.applicableWeightKg)
             : boxMetrics.applicableWeightGrams,
         cod: formData.paymentType === 'cod' ? Math.max(shipmentValue, 1) : 0,
         length,
         breadth,
         height,
-        boxes: isPublic
-          ? undefined
-          : boxMetrics.normalizedBoxes.map((box) => ({
+        boxes: isB2BCalculator
+          ? boxMetrics.normalizedBoxes.map((box) => ({
               quantity: normalizeBoxQuantity(box.quantity),
               length: toNumber(box.length),
               breadth: toNumber(box.breadth),
               height: toNumber(box.height),
               weight: toNumber(box.weight),
-            })),
+            }))
+          : undefined,
         orderAmount: shipmentValue > 0 ? shipmentValue : undefined,
         codChargeBasis: Math.max(shipmentValue, 0),
         shipmentType: formData.shipmentType,
@@ -1993,134 +1994,186 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                   </Grid>
                 </Grid>
 
-                <Stack spacing={0.9}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
-                    <Box>
+                {watchedShipmentType === 'b2c' ? (
+                  <>
+                    <Stack spacing={0.7}>
                       <Typography sx={{ fontSize: '0.79rem', fontWeight: 900, color: ui.ink }}>
-                        Boxes
+                        Actual Weight (KG)
                       </Typography>
-                      <Typography sx={{ mt: 0.2, fontSize: '0.7rem', fontWeight: 700, color: ui.muted }}>
-                        Add each box to calculate total actual and volumetric weight.
+                      <TextField
+                        type="number"
+                        {...register('weight', {
+                          required: 'Actual weight is required',
+                          min: { value: 0.1, message: 'Weight must be greater than 0' },
+                        })}
+                        fullWidth
+                        error={!!errors.weight}
+                        helperText={errors.weight?.message || 'Minimum chargeable weight is 0.5kg'}
+                        inputProps={{ min: 0.1, step: 0.1 }}
+                        sx={inputSx}
+                      />
+                    </Stack>
+
+                    <Stack spacing={0.9}>
+                      <Typography sx={{ fontSize: '0.79rem', fontWeight: 900, color: ui.ink }}>
+                        Dimensions (L x B x H in cm)
                       </Typography>
-                    </Box>
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      startIcon={<FiPlus size={15} />}
-                      onClick={() => appendBox(emptyCalculatorBox())}
-                      sx={{
-                        minHeight: 34,
-                        px: 1.15,
-                        borderRadius: '8px',
-                        textTransform: 'none',
-                        fontSize: '0.76rem',
-                        fontWeight: 900,
-                        color: ui.accentDark,
-                        borderColor: alpha(ui.accent, 0.32),
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Add Box
-                    </Button>
-                  </Stack>
-
-                  <Stack spacing={0.8}>
-                    {boxFields.map((box, index) => {
-                      const boxErrors = errors.boxes?.[index]
-
-                      return (
-                        <Box
-                          key={box.id}
-                          sx={{
-                            p: 1,
-                            borderRadius: '8px',
-                            border: `1px solid ${alpha(ui.accent, 0.12)}`,
-                            bgcolor: isDark && !isPublic ? alpha('#ffffff', 0.035) : '#FFFFFF',
-                          }}
-                        >
-                          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
-                            <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: ui.ink }}>
-                              Box {index + 1}
-                            </Typography>
-                            <Button
-                              type="button"
-                              onClick={() => removeBox(index)}
-                              disabled={boxFields.length <= 1}
-                              title="Remove box"
-                              sx={{
-                                minWidth: 32,
-                                width: 32,
-                                height: 30,
-                                borderRadius: '8px',
-                                color: boxFields.length <= 1 ? alpha(ui.muted, 0.42) : brand.danger,
-                                p: 0,
-                              }}
-                            >
-                              <FiTrash2 size={16} />
-                            </Button>
-                          </Stack>
-                          <Grid container spacing={0.8}>
-                            <Grid size={{ xs: 6, sm: 2 }}>
-                              <TextField
-                                label="Qty"
-                                type="number"
-                                {...register(`boxes.${index}.quantity` as const, {
-                                  required: 'Required',
-                                  min: { value: 1, message: 'Min 1' },
-                                  validate: (value) => Number.isInteger(Number(value)) || 'Whole no.',
-                                })}
-                                fullWidth
-                                error={!!boxErrors?.quantity}
-                                helperText={String(boxErrors?.quantity?.message || '')}
-                                inputProps={{ min: 1, step: 1 }}
-                                sx={inputSx}
-                              />
-                            </Grid>
-                            <Grid size={{ xs: 6, sm: 2.5 }}>
-                              <TextField
-                                label="Weight (kg)"
-                                type="number"
-                                {...register(`boxes.${index}.weight` as const, {
-                                  required: 'Required',
-                                  min: { value: 0.1, message: '> 0' },
-                                })}
-                                fullWidth
-                                error={!!boxErrors?.weight}
-                                helperText={String(boxErrors?.weight?.message || '')}
-                                inputProps={{ min: 0.1, step: 0.1 }}
-                                sx={inputSx}
-                              />
-                            </Grid>
-                            {[
-                              ['length', 'L (cm)'],
-                              ['breadth', 'B (cm)'],
-                              ['height', 'H (cm)'],
-                            ].map(([name, label]) => {
-                              const key = name as 'length' | 'breadth' | 'height'
-                              return (
-                                <Grid key={name} size={{ xs: 4, sm: 2.5 }}>
-                                  <TextField
-                                    label={label}
-                                    type="number"
-                                    {...register(`boxes.${index}.${key}` as const, {
-                                      required: 'Required',
-                                      min: { value: 1, message: '> 0' },
-                                    })}
-                                    fullWidth
-                                    error={!!boxErrors?.[key]}
-                                    helperText={String(boxErrors?.[key]?.message || '')}
-                                    inputProps={{ min: 1, step: 1 }}
-                                    sx={inputSx}
-                                  />
-                                </Grid>
-                              )
-                            })}
+                      <Grid container spacing={1.05}>
+                        {[
+                          { name: 'length' as const, label: 'Length (cm)', error: 'Length is required', placeholder: 'Length' },
+                          { name: 'breadth' as const, label: 'Breadth (cm)', error: 'Breadth is required', placeholder: 'Breadth' },
+                          { name: 'height' as const, label: 'Height (cm)', error: 'Height is required', placeholder: 'Height' },
+                        ].map((field) => (
+                          <Grid key={field.name} size={{ xs: 12, sm: 4 }}>
+                            <TextField
+                              label={field.label}
+                              type="number"
+                              placeholder={field.placeholder}
+                              {...register(field.name, {
+                                required: field.error,
+                                min: { value: 1, message: 'Must be greater than 0' },
+                              })}
+                              fullWidth
+                              error={!!errors[field.name]}
+                              helperText={String(errors[field.name]?.message || 'Enter in cm')}
+                              inputProps={{ min: 1, step: 1 }}
+                              sx={inputSx}
+                            />
                           </Grid>
-                        </Box>
-                      )
-                    })}
+                        ))}
+                      </Grid>
+                    </Stack>
+                  </>
+                ) : (
+                  <Stack spacing={0.9}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                      <Box>
+                        <Typography sx={{ fontSize: '0.79rem', fontWeight: 900, color: ui.ink }}>
+                          Package Boxes
+                        </Typography>
+                        <Typography sx={{ mt: 0.2, fontSize: '0.7rem', fontWeight: 700, color: ui.muted }}>
+                          Enter large-order boxes the same way as B2B order creation.
+                        </Typography>
+                      </Box>
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        startIcon={<FiPlus size={15} />}
+                        onClick={() => appendBox(emptyCalculatorBox())}
+                        sx={{
+                          minHeight: 34,
+                          px: 1.15,
+                          borderRadius: '8px',
+                          textTransform: 'none',
+                          fontSize: '0.76rem',
+                          fontWeight: 900,
+                          color: ui.accentDark,
+                          borderColor: alpha(ui.accent, 0.32),
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Add Box
+                      </Button>
+                    </Stack>
+
+                    <Stack spacing={0.8}>
+                      {boxFields.map((box, index) => {
+                        const boxErrors = errors.boxes?.[index]
+
+                        return (
+                          <Box
+                            key={box.id}
+                            sx={{
+                              p: 1,
+                              borderRadius: '8px',
+                              border: `1px solid ${alpha(ui.accent, 0.12)}`,
+                              bgcolor: isDark && !isPublic ? alpha('#ffffff', 0.035) : '#FFFFFF',
+                            }}
+                          >
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
+                              <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: ui.ink }}>
+                                Box {index + 1}
+                              </Typography>
+                              <Button
+                                type="button"
+                                onClick={() => removeBox(index)}
+                                disabled={boxFields.length <= 1}
+                                title="Remove box"
+                                sx={{
+                                  minWidth: 32,
+                                  width: 32,
+                                  height: 30,
+                                  borderRadius: '8px',
+                                  color: boxFields.length <= 1 ? alpha(ui.muted, 0.42) : brand.danger,
+                                  p: 0,
+                                }}
+                              >
+                                <FiTrash2 size={16} />
+                              </Button>
+                            </Stack>
+                            <Grid container spacing={0.8}>
+                              <Grid size={{ xs: 6, sm: 2.4 }}>
+                                <TextField
+                                  label="No. of Boxes"
+                                  type="number"
+                                  {...register(`boxes.${index}.quantity` as const, {
+                                    required: 'Required',
+                                    min: { value: 1, message: 'Min 1' },
+                                    validate: (value) => Number.isInteger(Number(value)) || 'Whole no.',
+                                  })}
+                                  fullWidth
+                                  error={!!boxErrors?.quantity}
+                                  helperText={String(boxErrors?.quantity?.message || '')}
+                                  inputProps={{ min: 1, step: 1 }}
+                                  sx={inputSx}
+                                />
+                              </Grid>
+                              <Grid size={{ xs: 6, sm: 2.4 }}>
+                                <TextField
+                                  label="Per Box Weight (kg)"
+                                  type="number"
+                                  {...register(`boxes.${index}.weight` as const, {
+                                    required: 'Required',
+                                    min: { value: 0.1, message: '> 0' },
+                                  })}
+                                  fullWidth
+                                  error={!!boxErrors?.weight}
+                                  helperText={String(boxErrors?.weight?.message || '')}
+                                  inputProps={{ min: 0.1, step: 0.1 }}
+                                  sx={inputSx}
+                                />
+                              </Grid>
+                              {[
+                                ['length', 'Length (cm)'],
+                                ['breadth', 'Breadth (cm)'],
+                                ['height', 'Height (cm)'],
+                              ].map(([name, label]) => {
+                                const key = name as 'length' | 'breadth' | 'height'
+                                return (
+                                  <Grid key={name} size={{ xs: 4, sm: 2.4 }}>
+                                    <TextField
+                                      label={label}
+                                      type="number"
+                                      {...register(`boxes.${index}.${key}` as const, {
+                                        required: 'Required',
+                                        min: { value: 1, message: '> 0' },
+                                      })}
+                                      fullWidth
+                                      error={!!boxErrors?.[key]}
+                                      helperText={String(boxErrors?.[key]?.message || '')}
+                                      inputProps={{ min: 1, step: 1 }}
+                                      sx={inputSx}
+                                    />
+                                  </Grid>
+                                )
+                              })}
+                            </Grid>
+                          </Box>
+                        )
+                      })}
+                    </Stack>
                   </Stack>
-                </Stack>
+                )}
 
                 <Grid
                   container
@@ -2132,15 +2185,17 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                     bgcolor: ui.softAccent,
                   }}
                 >
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography sx={{ fontSize: '0.68rem', fontWeight: 900, color: ui.muted }}>
-                      Total Boxes
-                    </Typography>
-                    <Typography sx={{ mt: 0.45, fontSize: '0.98rem', fontWeight: 900, color: ui.ink }}>
-                      {clientMetrics.totalBoxes}
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
+                  {watchedShipmentType === 'b2b' && (
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography sx={{ fontSize: '0.68rem', fontWeight: 900, color: ui.muted }}>
+                        Total Boxes
+                      </Typography>
+                      <Typography sx={{ mt: 0.45, fontSize: '0.98rem', fontWeight: 900, color: ui.ink }}>
+                        {clientMetrics.totalBoxes}
+                      </Typography>
+                    </Grid>
+                  )}
+                  <Grid size={{ xs: 6, sm: watchedShipmentType === 'b2b' ? 3 : 4 }}>
                     <Typography sx={{ fontSize: '0.68rem', fontWeight: 900, color: ui.muted }}>
                       Actual Weight
                     </Typography>
@@ -2148,7 +2203,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                       {clientMetrics.totalActualWeightKg} KG
                     </Typography>
                   </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
+                  <Grid size={{ xs: 6, sm: watchedShipmentType === 'b2b' ? 3 : 4 }}>
                     <Typography sx={{ fontSize: '0.68rem', fontWeight: 900, color: ui.muted }}>
                       Volumetric Weight
                     </Typography>
@@ -2156,7 +2211,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                       {clientMetrics.volumetricWeightKg} KG
                     </Typography>
                   </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
+                  <Grid size={{ xs: 6, sm: watchedShipmentType === 'b2b' ? 3 : 4 }}>
                     <Typography sx={{ fontSize: '0.68rem', fontWeight: 900, color: ui.muted }}>
                       Applicable Weight
                     </Typography>
