@@ -12,7 +12,6 @@ import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form'
 import { AiOutlineDelete } from 'react-icons/ai'
 import { validateInvoiceContent } from '../../../api/b2b.api'
-import { b2bBoxWeightInputToKg } from '../../../utils/b2bWeight'
 import CustomInput from '../../UI/inputs/CustomInput'
 import FileUploader, { type UploadedFileInfo } from '../../UI/uploader/FileUploader'
 import type { B2BFormData } from './B2BOrderForm'
@@ -38,7 +37,6 @@ export default function B2BInvoicesForm() {
     control,
     name: 'invoices',
   })
-  const boxes = useWatch({ control, name: 'boxes' }) || []
   const products = useWatch({ control, name: 'products' }) || []
   const invoices = useWatch({ control, name: 'invoices' }) || []
   const firstProductQuantity = Math.max(1, Number(products[0]?.quantity || 1))
@@ -62,19 +60,6 @@ export default function B2BInvoicesForm() {
       shouldValidate: false,
     })
   }, [firstProductQuantity, invoices, setValue])
-
-  // Calculate total chargeable weight for EBN validation
-  const calculateTotalChargeableWeight = () => {
-    if (!Array.isArray(boxes)) return 0
-    return boxes.reduce((sum: number, box: unknown) => {
-      if (box && typeof box === 'object' && box !== null && 'weightKg' in box) {
-        const boxWithWeight = box as { quantity?: number; weightKg?: number }
-        const quantity = Math.max(1, Math.floor(Number(boxWithWeight.quantity || 1)))
-        return sum + b2bBoxWeightInputToKg(boxWithWeight.weightKg) * quantity
-      }
-      return sum
-    }, 0)
-  }
 
   // Calculate total invoice value
   const totalInvoiceValue = invoices.reduce(
@@ -102,6 +87,8 @@ export default function B2BInvoicesForm() {
       invoiceNumber: '',
       invoiceDate: getTodayDate(),
       invoiceValue: 0,
+      ebnNumber: '',
+      ebnExpiry: '',
       invoiceFileUrl: '',
     })
   }
@@ -112,11 +99,9 @@ export default function B2BInvoicesForm() {
         {invoiceFields.map((invoice, index) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const invoiceValue = watch(`invoices.${index}.invoiceValue` as any)
-          const totalChargeableWeight = calculateTotalChargeableWeight()
 
-          // EBN is required if invoice value > ₹50,000 OR total chargeable weight > 100 kg
-          const isEbnRequired =
-            (invoiceValue && Number(invoiceValue) > 50000) || totalChargeableWeight > 100
+          // EBN is required only when invoice value exceeds the e-way bill threshold.
+          const isEbnRequired = Boolean(invoiceValue && Number(invoiceValue) > 50000)
 
           return (
             <Paper
@@ -311,7 +296,7 @@ export default function B2BInvoicesForm() {
                       validate: (value) => {
                         // If EBN is required but not provided
                         if (!value && isEbnRequired) {
-                          return 'EBN Number is required when invoice value > ₹50,000 or total chargeable weight > 100 kg'
+                          return 'EBN Number is required when invoice value > ₹50,000'
                         }
 
                         // If value is provided, validate format
@@ -345,8 +330,8 @@ export default function B2BInvoicesForm() {
                         helperText={
                           fieldState.error?.message ||
                           (isEbnRequired
-                            ? 'Required: Invoice value > ₹50,000 or total chargeable weight > 100 kg'
-                            : 'Required when invoice value > ₹50,000 or total chargeable weight > 100 kg')
+                            ? 'Required: Invoice value > ₹50,000'
+                            : 'Required only when invoice value > ₹50,000')
                         }
                         inputProps={{ maxLength: 12 }}
                       />

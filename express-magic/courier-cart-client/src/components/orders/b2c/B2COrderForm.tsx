@@ -62,6 +62,8 @@ export type B2CFormData = {
   invoiceNumber: string
   invoiceDate: string
   invoiceValue: number
+  ebnNumber?: string
+  ebnExpiry?: string
   orderType: 'prepaid' | 'cod'
   courierPartner: string
   shippingCharges?: number
@@ -147,6 +149,8 @@ export default function B2COrderFormSteps({
     invoiceNumber: '',
     invoiceDate: getLocalDateInputValue(),
     invoiceValue: 0,
+    ebnNumber: '',
+    ebnExpiry: '',
     weight: 0,
     length: 0,
     breadth: 0,
@@ -253,6 +257,15 @@ export default function B2COrderFormSteps({
         invoice_number: data.invoiceNumber,
         invoice_date: data.invoiceDate,
         invoice_amount: Number(data.invoiceValue || 0),
+        ...(data.ebnNumber
+          ? {
+              ewaybill_number: String(data.ebnNumber).trim().toUpperCase(),
+              ewbn_number: String(data.ebnNumber).trim().toUpperCase(),
+              eway_bill_number: String(data.ebnNumber).trim().toUpperCase(),
+              ebn_number: String(data.ebnNumber).trim().toUpperCase(),
+              ebn_expiry: data.ebnExpiry || undefined,
+            }
+          : {}),
         integration_type: data?.integrationType,
         transaction_fee: data?.transactionFee,
         gift_wrap: data?.giftWrap,
@@ -354,6 +367,8 @@ export default function B2COrderFormSteps({
         'invoiceNumber',
         'invoiceDate',
         'invoiceValue',
+        'ebnNumber',
+        'ebnExpiry',
         'buyerName',
         'buyerPhone',
         'address',
@@ -384,6 +399,8 @@ export default function B2COrderFormSteps({
             invoiceNumber: 'Invoice number',
             invoiceDate: 'Invoice date',
             invoiceValue: 'Invoice value',
+            ebnNumber: 'EBN number',
+            ebnExpiry: 'EBN expiry',
             buyerName: 'Recipient name',
             buyerPhone: 'Recipient phone',
             address: 'Delivery address',

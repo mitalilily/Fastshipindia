@@ -58,6 +58,8 @@ export type Invoice = {
   invoiceNumber: string
   invoiceDate: string
   invoiceValue: number
+  ebnNumber?: string
+  ebnExpiry?: string
   invoiceFileUrl?: string
 }
 
@@ -193,6 +195,8 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
         invoiceNumber: '',
         invoiceDate: getTodayDate(),
         invoiceValue: 0,
+        ebnNumber: '',
+        ebnExpiry: '',
         invoiceFileUrl: '',
       },
     ],
@@ -396,6 +400,9 @@ export default function B2BOrderForm({ onClose, initialValues }: B2BOrderFormPro
             invoiceNumber: invoice.invoiceNumber,
             invoiceDate: invoice.invoiceDate,
             invoiceValue: Number(invoice.invoiceValue || 0),
+            ewaybill: String(invoice.ebnNumber || '').trim().toUpperCase() || undefined,
+            ebnNumber: String(invoice.ebnNumber || '').trim().toUpperCase() || undefined,
+            ebnExpiry: invoice.ebnExpiry || undefined,
             invoiceFileUrl: invoice.invoiceFileUrl || undefined,
           })) ?? [],
         courier_id: Number(data.courierPartnerId),

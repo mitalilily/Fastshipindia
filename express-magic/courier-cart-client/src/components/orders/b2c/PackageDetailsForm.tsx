@@ -11,6 +11,16 @@ interface PackageDetailsFormProps {
 
 const PackageDetailsForm = ({ control }: PackageDetailsFormProps) => {
   const invoiceValue = Number(useWatch({ control, name: 'invoiceValue' }) || 0)
+  const invoiceDate = String(useWatch({ control, name: 'invoiceDate' }) || '')
+  const ebnNumber = String(useWatch({ control, name: 'ebnNumber' }) || '')
+  const isEbnRequired = invoiceValue > 50000
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const minEbnExpiryDate = today.toISOString().split('T')[0]
+  const referenceDate = invoiceDate ? new Date(invoiceDate) : today
+  const maxEbnExpiryDate = new Date(referenceDate)
+  maxEbnExpiryDate.setDate(maxEbnExpiryDate.getDate() + 15)
+  const maxEbnExpiryDateValue = maxEbnExpiryDate.toISOString().split('T')[0]
 
   return (
     <Stack gap={1}>
@@ -148,6 +158,78 @@ const PackageDetailsForm = ({ control }: PackageDetailsFormProps) => {
                 name="products.0.hsnCode"
                 control={control}
                 render={({ field }) => <CustomInput label="HSN Code (Optional)" {...field} />}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Controller
+                name="ebnNumber"
+                control={control}
+                rules={{
+                  validate: (value) => {
+                    if (!value && isEbnRequired) {
+                      return 'EBN Number is required when invoice value > ₹50,000'
+                    }
+
+                    if (value) {
+                      const cleaned = String(value).replace(/\s+/g, '').toUpperCase()
+                      if (cleaned.length !== 12) return 'EBN Number must be exactly 12 characters'
+                      if (!/^[A-Z0-9]{12}$/.test(cleaned)) {
+                        return 'EBN Number must contain only letters and numbers'
+                      }
+                    }
+
+                    return true
+                  },
+                }}
+                render={({ field, fieldState }) => (
+                  <CustomInput
+                    {...field}
+                    onChange={(event) =>
+                      field.onChange(String(event.target.value || '').replace(/\s+/g, '').toUpperCase())
+                    }
+                    label={isEbnRequired ? 'EBN Number * (Required)' : 'EBN Number (Optional)'}
+                    required={isEbnRequired}
+                    error={!!fieldState.error}
+                    helperText={
+                      fieldState.error?.message || 'Required only when invoice value > ₹50,000'
+                    }
+                    inputProps={{ maxLength: 12 }}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Controller
+                name="ebnExpiry"
+                control={control}
+                rules={{
+                  validate: (value) => {
+                    if (!value && ebnNumber) return 'EBN Expiry is required when EBN Number is provided'
+                    if (!value) return true
+
+                    const expiryDate = new Date(String(value))
+                    if (expiryDate < today) return 'EBN Expiry date cannot be in the past'
+                    if (expiryDate > maxEbnExpiryDate) {
+                      return 'EBN Expiry cannot exceed 15 days from invoice date'
+                    }
+
+                    return true
+                  },
+                }}
+                render={({ field, fieldState }) => (
+                  <CustomInput
+                    {...field}
+                    type="date"
+                    label={ebnNumber ? 'EBN Expiry * (Required)' : 'EBN Expiry (Optional)'}
+                    required={Boolean(ebnNumber)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: minEbnExpiryDate, max: maxEbnExpiryDateValue }}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message || 'Required when EBN Number is provided'}
+                  />
+                )}
               />
             </Grid>
           </Grid>

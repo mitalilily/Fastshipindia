@@ -24,6 +24,11 @@ export interface CreateShipmentParams {
   invoice_number?: string
   invoice_date?: string
   invoice_amount?: number
+  ewaybill_number?: string
+  ewbn_number?: string
+  eway_bill_number?: string
+  ebn_number?: string
+  ebn_expiry?: string
   order_date: string
   order_amount: number
   consignee: {
@@ -218,6 +223,9 @@ export type CreateB2BShipmentParams = {
     invoiceNumber: string
     invoiceDate: string
     invoiceValue: number
+    ewaybill?: string
+    ebnNumber?: string
+    ebnExpiry?: string
     carrierName?: string
     carrierTransportId?: string
     transporterId?: string

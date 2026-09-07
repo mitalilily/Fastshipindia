@@ -107,6 +107,10 @@ const BookingReviewSummary = ({
   const prepaidAmount = Number(getValue('prepaidAmount') || 0)
   const boxes = (getValue('boxes') || []) as BoxLine[]
   const products = (getValue('products') || []) as unknown[]
+  const totalBoxCount = boxes.reduce(
+    (sum, box) => sum + Math.max(1, Math.floor(Number(box.quantity || 1))),
+    0,
+  )
   const enteredWeight = Number(getValue('weight') || 0)
   const boxWeight = boxes.reduce(
     (sum, box) =>
@@ -207,7 +211,7 @@ const BookingReviewSummary = ({
                 <Typography sx={{ color: TEXT_PRIMARY, fontWeight: 900 }}>Price Breakup</Typography>
                 <Chip
                   size="small"
-                  label={shipmentType === 'b2b' ? `${boxes.length} boxes` : `${products.length} products`}
+                  label={shipmentType === 'b2b' ? `${totalBoxCount} boxes` : `${products.length} products`}
                   sx={{ bgcolor: alpha(ACCENT, 0.08), color: ACCENT, fontWeight: 800 }}
                 />
               </Stack>

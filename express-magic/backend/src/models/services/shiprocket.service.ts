@@ -5950,6 +5950,9 @@ export interface ShipmentParams {
   ewb?: string
   ewbn_number?: string
   ewaybill_number?: string
+  eway_bill_number?: string
+  ebn_number?: string
+  ebn_expiry?: string
   dangerous_good?: boolean | string | number
   fragile_shipment?: boolean | string | number
   plastic_packaging?: boolean | string | number
@@ -6227,6 +6230,9 @@ export async function createB2COrder({
         order_date: params.order_date ?? new Date().toISOString().slice(0, 10), // 'YYYY-MM-DD'
         order_amount: orderAmount,
         cod_charges: storedCodCharges,
+        invoice_number: params.invoice_number ?? null,
+        invoice_date: params.invoice_date ?? null,
+        invoice_amount: params.invoice_amount ?? null,
         integration_type: params?.integration_type,
 
         // Buyer info
@@ -9663,6 +9669,13 @@ export const bookExistingB2COrderWithCourierService = async (
     invoice_number: existingOrder.invoice_number || existingOrder.order_number,
     invoice_date: existingOrder.invoice_date || new Date().toISOString().slice(0, 10),
     invoice_amount: existingOrder.invoice_amount ?? existingOrder.order_amount ?? orderAmount,
+    ewbn: payload.ewbn,
+    ewb: payload.ewb,
+    ewbn_number: payload.ewbn_number,
+    ewaybill_number: payload.ewaybill_number,
+    eway_bill_number: payload.eway_bill_number,
+    ebn_number: payload.ebn_number,
+    ebn_expiry: payload.ebn_expiry,
     tags: existingOrder.tags || undefined,
     order_id: existingOrder.order_id || undefined,
     ...(payload.chargedWeight !== undefined ? { chargedWeight: payload.chargedWeight } : {}),

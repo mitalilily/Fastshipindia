@@ -78,6 +78,14 @@ const getOrderDefaults = (order: B2COrder | null): B2CFormData => {
     invoiceNumber: String((order as any)?.invoice_number || order?.order_number || ''),
     invoiceDate: normalizeDateInput((order as any)?.invoice_date || order?.order_date),
     invoiceValue: Number((order as any)?.invoice_amount ?? order?.order_amount ?? 0),
+    ebnNumber: String(
+      (order as any)?.ewaybill_number ||
+        (order as any)?.eway_bill_number ||
+        (order as any)?.ewbn_number ||
+        (order as any)?.ebn_number ||
+        '',
+    ),
+    ebnExpiry: String((order as any)?.ebn_expiry || '').trim().slice(0, 10),
     orderType: order?.order_type || 'prepaid',
     courierPartner: '',
     shippingCharges: Number(order?.shipping_charges ?? 0),
@@ -198,6 +206,15 @@ export default function B2CSelectCourierDialog({
       invoice_number: data.invoiceNumber,
       invoice_date: data.invoiceDate,
       invoice_amount: Number(data.invoiceValue || subtotal || 0),
+      ...(data.ebnNumber
+        ? {
+            ewaybill_number: String(data.ebnNumber).trim().toUpperCase(),
+            ewbn_number: String(data.ebnNumber).trim().toUpperCase(),
+            eway_bill_number: String(data.ebnNumber).trim().toUpperCase(),
+            ebn_number: String(data.ebnNumber).trim().toUpperCase(),
+            ebn_expiry: data.ebnExpiry || undefined,
+          }
+        : {}),
       integration_type: data.integrationType,
       transaction_fee: data.transactionFee,
       gift_wrap: data.giftWrap,
