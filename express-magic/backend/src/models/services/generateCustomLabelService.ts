@@ -886,7 +886,7 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   }
 
   const returnAddress = showRto && rto.address ? buildAddress(rto) : buildAddress(pickup)
-  const merchantCompanyName = sellerBrandName || pickup?.warehouse_name || '-'
+  const merchantCompanyName = PLATFORM_LABEL_BRAND
   const returnStack: any[] = [
     {
       columns: [

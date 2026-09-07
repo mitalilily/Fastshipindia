@@ -271,7 +271,7 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
             </Box>
             <Box sx={{ p: 1 }}>
               <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Contact name : {shipperName}</Typography>
-              {showSellerName && <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Company name : {shipperName}</Typography>}
+              {showSellerName && <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Company name : {labelBrandName}</Typography>}
               {showShipperPhone && order.shipper?.phone && (
                 <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Phone : {order.shipper.phone}</Typography>
               )}
