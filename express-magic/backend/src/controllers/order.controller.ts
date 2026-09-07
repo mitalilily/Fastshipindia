@@ -673,10 +673,6 @@ export const downloadBulkB2CLabelsController = async (req: any, res: Response) =
     })
 
     const generateAndStoreLabel = async (order: any) => {
-      if (!String(order.awb_number || '').trim()) {
-        throw new Error('AWB missing')
-      }
-
       const generatedLabelKey = await generateLabelForOrder(order, userId, db)
       if (!generatedLabelKey) {
         throw new Error('label generation failed')

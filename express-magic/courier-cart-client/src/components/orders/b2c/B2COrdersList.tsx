@@ -911,6 +911,42 @@ const B2COrdersList = () => {
     return { downloadedCount, skippedCount }
   }
 
+  const getGeneratedDocumentEntry = (
+    order: B2COrder,
+    type: Exclude<DocumentType, 'manifest'>,
+    response: unknown,
+  ): DocumentEntry | null => {
+    const data = (response as { data?: Record<string, unknown> })?.data || {}
+    const generatedReference = String(
+      type === 'label' ? data.label || data.label_key : data.invoice_link || data.invoice_key,
+    ).trim()
+
+    if (!generatedReference) return null
+
+    return {
+      key: generatedReference,
+      fileName: getDownloadFileName(order, type, generatedReference),
+    }
+  }
+
+  const generateDocumentEntryForDownload = async (
+    order: B2COrder,
+    type: Exclude<DocumentType, 'manifest'>,
+  ) => {
+    const orderId = String(order.id || '').trim()
+    if (!orderId) {
+      throw new Error('Order identifier is not available.')
+    }
+
+    const response = await regenerateDocuments({
+      orderId,
+      regenerateLabel: type === 'label',
+      regenerateInvoice: type === 'invoice',
+    })
+
+    return getGeneratedDocumentEntry(order, type, response)
+  }
+
   const handleBulkDownload = async (type: DocumentType) => {
     const typeLabel = documentButtonMeta[type].label
     const typePlural = `${typeLabel.toLowerCase()}s`
@@ -997,11 +1033,16 @@ const B2COrdersList = () => {
 
     try {
       setDownloadingRowDocument(rowDownloadKey)
-      const documentEntries = getDocumentEntriesForOrders([order], type)
+      let documentEntries = getDocumentEntriesForOrders([order], type)
+
+      if (!documentEntries.length && type !== 'manifest') {
+        const generatedEntry = await generateDocumentEntryForDownload(order, type)
+        documentEntries = generatedEntry ? [generatedEntry] : []
+      }
 
       if (!documentEntries.length) {
         toast.open({
-          message: `${typeLabel} is not available for ${order.order_number} yet.`,
+          message: `${typeLabel} could not be prepared for ${order.order_number}.`,
           severity: 'error',
         })
         return
@@ -1362,7 +1403,7 @@ const B2COrdersList = () => {
   const isDocumentGenerationReady = (row: B2COrder) => {
     const normalizedStatus = String(row.order_status || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
     return (
-      Boolean(String(row.manifest_key || row.manifest || row.awb_number || '').trim()) ||
+      Boolean(String(row.manifest_key || row.manifest || getB2CManifestIdentifier(row) || row.shipment_id || '').trim()) ||
       documentGenerationStatuses.has(normalizedStatus)
     )
   }
@@ -1738,17 +1779,17 @@ const B2COrdersList = () => {
               {renderActionItem({
                 key: 'download-label',
                 icon: <MdFileDownload />,
-                label: 'Download Label',
+                label: canDownloadLabel ? 'Download Label' : 'Generate & Download Label',
                 onClick: () => handleSingleDocumentDownload(row, 'label'),
-                disabled: !canDownloadLabel || Boolean(downloadingDocumentType) || Boolean(downloadingRowDocument),
+                disabled: isCancelled || Boolean(downloadingDocumentType) || Boolean(downloadingRowDocument),
                 loading: isLabelDownloading,
               })}
               {renderActionItem({
                 key: 'download-invoice',
                 icon: <MdFileDownload />,
-                label: 'Download Invoice',
+                label: canDownloadInvoice ? 'Download Invoice' : 'Generate & Download Invoice',
                 onClick: () => handleSingleDocumentDownload(row, 'invoice'),
-                disabled: !canDownloadInvoice || Boolean(downloadingDocumentType) || Boolean(downloadingRowDocument),
+                disabled: isCancelled || Boolean(downloadingDocumentType) || Boolean(downloadingRowDocument),
                 loading: isInvoiceDownloading,
               })}
               {renderActionItem({
