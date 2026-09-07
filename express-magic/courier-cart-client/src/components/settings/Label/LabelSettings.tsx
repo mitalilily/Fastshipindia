@@ -32,8 +32,8 @@ export type LabelSettingsForm = {
 }
 const defaultValues: LabelSettingsForm = {
   printer: 'thermal',
-  charLimit: 25,
-  maxItems: 3,
+  charLimit: 36,
+  maxItems: 4,
   orderInfo: {
     orderId: true,
     invoiceNumber: true,
@@ -96,40 +96,39 @@ const productInfoOptions = [
 ]
 
 const mockOrder = {
-  name: 'Venkatesh Puri',
-  address: '111/222, XYZ, Ram Nagar, Paharganj, South Delhi, Delhi, India. 110093.',
-  phone: '+91 9560188888',
-  orderId: '8052081712989',
-  sortCode: 'JBN/JBN/PA',
+  name: 'Aarav Mehta',
+  address: 'B-214, Sector 63, Near Metro Station, Noida, Uttar Pradesh, India. 201301.',
+  phone: '+91 98765 43210',
+  orderId: 'FS-240912-1098',
+  sortCode: 'NDA/NDA/SFC',
   paymentType: 'cod',
-  invoiceNumber: 'INV-98765',
-  orderDate: '23 Mar, 2024',
-  invoiceDate: '22 Mar, 2024',
-  awb: '143263813003739',
-  codValue: 'Rs. 1350',
-  declaredValue: 'Rs. 1350',
+  invoiceNumber: 'INV-FS-1098',
+  orderDate: '07 Sep, 2026',
+  invoiceDate: '07 Sep, 2026',
+  awb: '13090325473091',
+  codValue: 'Rs. 1,350',
+  declaredValue: 'Rs. 1,350',
   courier: 'Delhivery Surface',
   integration_type: 'deliveryone',
   courierId: 99,
   shipping_mode: 'Surface',
   shipper: {
-    name: 'FastShip',
-    phone: '011 4715 2407',
-    gst: '9764713698798013',
+    name: 'FastShip Demo Store',
+    phone: '+91 11 4715 2407',
+    gst: '07ABCDE1234F1Z5',
     address:
-      'XX/YY, ABC Apartments, Pitampura, Opp. Metro Pillar 36, New Delhi, Delhi, India. 110034',
+      'Plot 18, Logistics Hub, Okhla Phase 2, New Delhi, Delhi, India. 110020',
     rtoAddress:
-      'XX/YY, ABC Apartments, Pitampura, Opp. Metro Pillar 36, New Delhi, Delhi, India. 110034',
+      'Plot 18, Logistics Hub, Okhla Phase 2, New Delhi, Delhi, India. 110020',
   },
   products: [
-    { name: 'Navy Blue T-shirt', sku: '695095207050', qty: 2, price: 'Rs. 450' },
-    { name: 'Mechanical Keyboard', sku: 'KEY456', qty: 1, price: 'Rs. 2499' },
-    { name: 'HD Webcam', sku: 'CAM789', qty: 1, price: 'Rs. 1999' },
+    { name: 'Premium Cotton T-Shirt - Navy', sku: 'TSH-NVY-42', qty: 1, price: 'Rs. 699' },
+    { name: 'Wireless Mouse', sku: 'ACC-MSE-11', qty: 1, price: 'Rs. 651' },
   ],
-  dimension: '35x34x11',
-  deadWeight: '0.73 KG',
-  otherCharges: 'Rs. 550',
-  totalAmount: 'Rs. 1900',
+  dimension: '32x24x10',
+  deadWeight: '0.80 KG',
+  otherCharges: 'Rs. 0',
+  totalAmount: 'Rs. 1,350',
 }
 
 export default function LabelSettingsPage() {
@@ -147,6 +146,10 @@ export default function LabelSettingsPage() {
 
   const onSubmit = (data: LabelSettingsForm) => {
     savePreferences(mapFormToApi(data))
+  }
+
+  const applyProfessionalDefault = () => {
+    reset(defaultValues)
   }
 
   if (isLoading) return <Typography>Loading label preferences...</Typography>
@@ -321,7 +324,9 @@ export default function LabelSettingsPage() {
 
                   {/* Actions */}
                   <Stack direction="row" spacing={2} justifyContent="flex-end">
-                    <Button variant="outlined">Set as Default</Button>
+                    <Button type="button" variant="outlined" onClick={applyProfessionalDefault}>
+                      Use Professional Default
+                    </Button>
                     <Button type="submit" variant="contained" disabled={saving}>
                       {saving ? 'Saving...' : 'Save Settings'}
                     </Button>

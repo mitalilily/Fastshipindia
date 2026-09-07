@@ -796,8 +796,8 @@ export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) 
     await tx.insert(schema.labelPreferences).values({
       user_id: user.id,
       printer_type: 'thermal',
-      char_limit: 25,
-      max_items: 3,
+      char_limit: 36,
+      max_items: 4,
       powered_by: 'Shiplifi',
       order_info: {
         orderId: true,
@@ -823,11 +823,11 @@ export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) 
       },
       product_info: {
         itemName: true,
-        productCost: true,
+        productCost: false,
         productQuantity: true,
         skuCode: true,
-        dimension: false,
-        deadWeight: false,
+        dimension: true,
+        deadWeight: true,
         otherCharges: true,
       },
       brand_logo: null,
@@ -936,8 +936,8 @@ export async function ensureUserOperationalDefaults(userId: string) {
       await tx.insert(schema.labelPreferences).values({
         user_id: userId,
         printer_type: 'thermal',
-        char_limit: 25,
-        max_items: 3,
+        char_limit: 36,
+        max_items: 4,
         powered_by: 'Shiplifi',
         order_info: {
           orderId: true,
@@ -963,11 +963,11 @@ export async function ensureUserOperationalDefaults(userId: string) {
         },
         product_info: {
           itemName: true,
-          productCost: true,
+          productCost: false,
           productQuantity: true,
           skuCode: true,
-          dimension: false,
-          deadWeight: false,
+          dimension: true,
+          deadWeight: true,
           otherCharges: true,
         },
         brand_logo: null,

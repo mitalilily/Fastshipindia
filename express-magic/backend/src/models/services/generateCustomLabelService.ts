@@ -81,8 +81,8 @@ const fonts = {
 
 const DEFAULT_LABEL_SETTINGS = {
   printer_type: 'thermal',
-  char_limit: 25,
-  max_items: 3,
+  char_limit: 36,
+  max_items: 4,
   order_info: {
     orderId: true,
     invoiceNumber: true,
@@ -107,11 +107,11 @@ const DEFAULT_LABEL_SETTINGS = {
   },
   product_info: {
     itemName: true,
-    productCost: true,
+    productCost: false,
     productQuantity: true,
     skuCode: true,
-    dimension: false,
-    deadWeight: false,
+    dimension: true,
+    deadWeight: true,
     otherCharges: true,
   },
   powered_by: 'Shiplifi',

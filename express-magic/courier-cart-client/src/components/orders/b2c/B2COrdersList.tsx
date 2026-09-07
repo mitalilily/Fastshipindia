@@ -528,7 +528,10 @@ const B2COrdersList = () => {
 
     if (!isDocumentGenerationReady(order)) {
       toast.open({
-        message: 'Generate the manifest before creating label or invoice documents.',
+        message:
+          type === 'label'
+            ? 'Label can be generated after AWB is available for this shipment.'
+            : 'Invoice can be generated after the shipment is booked or manifested.',
         severity: 'info',
       })
       return
@@ -1705,11 +1708,16 @@ const B2COrdersList = () => {
               {renderActionItem({
                 key: 'regenerate-label',
                 icon: <MdLocalOffer />,
-                label: isLabelGenerating ? 'Regenerating Label' : 'Regenerate Label',
+                label: isLabelGenerating
+                  ? canDownloadLabel
+                    ? 'Regenerating Label'
+                    : 'Generating Label'
+                  : canDownloadLabel
+                    ? 'Regenerate Label'
+                    : 'Generate Label',
                 onClick: () => handleGenerateOrderDocument(row, 'label'),
                 disabled:
                   isCancelled ||
-                  !isDocumentReady ||
                   regeneratingDocuments ||
                   Boolean(documentGenerationRef),
                 loading: isLabelGenerating,

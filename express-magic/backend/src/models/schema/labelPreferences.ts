@@ -49,18 +49,18 @@ export const labelPreferences = createTable('label_preferences', {
     .default(
       sql`'{
         "itemName": true,
-        "productCost": true,
+        "productCost": false,
         "productQuantity": true,
         "skuCode": true,
-        "dimension": false,
-        "deadWeight": false,
+        "dimension": true,
+        "deadWeight": true,
         "otherCharges": true
       }'::jsonb`,
     )
     .notNull(),
 
-  char_limit: integer('char_limit').default(25).notNull(),
-  max_items: integer('max_items').default(3).notNull(),
+  char_limit: integer('char_limit').default(36).notNull(),
+  max_items: integer('max_items').default(4).notNull(),
 
   brand_logo: text('brand_logo'), // S3 key or URL
   powered_by: varchar('powered_by', { length: 120 }).default('Shiplifi'),
