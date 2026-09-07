@@ -760,7 +760,28 @@ const AllOrders = () => {
     })
 
     try {
-      const documentEntries = getDocumentEntriesForOrders(selectedOrders, type)
+      let documentEntries = getDocumentEntriesForOrders(selectedOrders, type)
+      let generationSkippedCount = 0
+
+      if (type === 'label') {
+        const generatedEntries: DocumentEntry[] = []
+
+        for (const order of selectedOrders) {
+          try {
+            const generatedEntry = await generateDocumentEntryForDownload(order, 'label')
+            if (generatedEntry) {
+              generatedEntries.push(generatedEntry)
+            } else {
+              generationSkippedCount += 1
+            }
+          } catch (error) {
+            generationSkippedCount += 1
+            console.error('Label regeneration before download failed:', error)
+          }
+        }
+
+        documentEntries = generatedEntries
+      }
 
       if (!documentEntries.length) {
         const message = `No ${typeLabel.toLowerCase()} files are available for the selected orders.`
@@ -774,6 +795,7 @@ const AllOrders = () => {
       }
 
       const { downloadedCount, skippedCount } = await downloadDocumentEntries(documentEntries)
+      const totalSkippedCount = skippedCount + generationSkippedCount
 
       if (!downloadedCount) {
         const message = `No ${typeLabel.toLowerCase()} files could be downloaded for the selected orders.`
@@ -787,19 +809,19 @@ const AllOrders = () => {
       }
 
       const summaryMessage =
-        skippedCount > 0
-          ? `Downloaded ${downloadedCount} ${typeLabel.toLowerCase()} file(s). Skipped ${skippedCount} missing or duplicate file(s).`
+        totalSkippedCount > 0
+          ? `Downloaded ${downloadedCount} ${typeLabel.toLowerCase()} file(s). Skipped ${totalSkippedCount} missing, failed, or duplicate file(s).`
           : `Downloaded ${downloadedCount} ${typeLabel.toLowerCase()} file(s).`
 
       setBulkFeedback({
-        severity: skippedCount > 0 ? 'warning' : 'success',
+        severity: totalSkippedCount > 0 ? 'warning' : 'success',
         title:
-          skippedCount > 0
+          totalSkippedCount > 0
             ? `${typeLabel} download completed with skips`
             : `${typeLabel} download completed`,
         message: summaryMessage,
       })
-      toast.open({ message: summaryMessage, severity: skippedCount > 0 ? 'info' : 'success' })
+      toast.open({ message: summaryMessage, severity: totalSkippedCount > 0 ? 'info' : 'success' })
     } catch (error) {
       console.error(`Bulk ${type} download failed:`, error)
       const message = getActionableErrorMessage(
@@ -823,9 +845,12 @@ const AllOrders = () => {
 
     try {
       setDownloadingRowDocument(rowDownloadKey)
-      let documentEntries = getDocumentEntriesForOrders([order], type)
+      let documentEntries = type === 'label' ? [] : getDocumentEntriesForOrders([order], type)
 
-      if (!documentEntries.length && type !== 'manifest') {
+      if (type === 'label') {
+        const generatedEntry = await generateDocumentEntryForDownload(order, type)
+        if (generatedEntry) documentEntries = [generatedEntry]
+      } else if (!documentEntries.length && type !== 'manifest') {
         const generatedEntry = await generateDocumentEntryForDownload(order, type)
         documentEntries = generatedEntry ? [generatedEntry] : []
       }

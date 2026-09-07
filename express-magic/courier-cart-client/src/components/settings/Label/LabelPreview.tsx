@@ -19,15 +19,6 @@ const pickFirst = (...values: unknown[]) => values.map(normalize).find(Boolean) 
 
 const isEnabled = (value: unknown) => (value === undefined ? true : value === true)
 
-const buildDimensions = (order: any) => {
-  const dimension = normalize(order.dimension) || normalize(order.dimensions)
-  if (dimension) return dimension.replace(/x/g, ' x ')
-  if (order.length && order.breadth && order.height) {
-    return `${order.length} x ${order.breadth} x ${order.height}`
-  }
-  return ''
-}
-
 const buildWeight = (order: any) => {
   if (order.deadWeight) return normalize(order.deadWeight)
   if (order.weightKg) return `${order.weightKg} kgs`
@@ -61,10 +52,6 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
   )
   const paymentType = (normalize(order.paymentType) || normalize(order.payment_type) || 'prepaid').toLowerCase()
   const paymentLabel = paymentType === 'cod' ? 'COD' : 'Prepaid'
-  const paymentInstruction =
-    paymentType === 'cod'
-      ? `Collect ${pickFirst(order.codValue, order.cod_amount, order.totalAmount, order.orderValue)}`
-      : 'No amount to be collected'
 
   const productEntries = Array.isArray(order.products) ? order.products.slice(0, maxItems) : []
   const orderId = pickFirst(order.orderId, order.order_id, order.order_number)
@@ -73,7 +60,6 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
   const orderValue = pickFirst(order.totalAmount, order.orderValue, order.order_amount, order.declaredValue)
   const customerPhone = pickFirst(order.phone, order.buyer_phone, order.customerPhone)
   const sortCode = pickFirst(order.sortCode, order.sort_code, order.routing_code)
-  const dimensionValue = buildDimensions(order)
   const weightValue = buildWeight(order)
 
   const showLogo = isEnabled(values.shipperInfo?.brandLogo)
@@ -87,7 +73,6 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
   const showInvoiceNumber = isEnabled(values.orderInfo?.invoiceNumber) && Boolean(invoiceNumber)
   const showDeclaredValue = isEnabled(values.orderInfo?.declaredValue) && Boolean(orderValue)
   const showAwb = isEnabled(values.orderInfo?.awb) && Boolean(awbNumber)
-  const showDimensions = isEnabled(values.productInfo?.dimension) && Boolean(dimensionValue)
   const showWeight = isEnabled(values.productInfo?.deadWeight) && Boolean(weightValue)
   const showSortCode = isEnabled(values.orderInfo?.rtoRoutingCode) && Boolean(sortCode)
   const showCodBanner = isEnabled(values.orderInfo?.cod)
@@ -108,6 +93,8 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
 
   const shipperName = pickFirst(order.shipper?.name, 'Client Store')
   const shipperAddress = pickFirst(order.shipper?.rtoAddress, order.shipper?.address)
+  const returnAddress = pickFirst(order.shipper?.rtoAddress, order.shipper?.address)
+  const serviceMode = pickFirst(order.shipping_mode, 'Surface')
   const showShipperBlock =
     showSellerName ||
     showShipperAddress ||
@@ -129,112 +116,167 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
       }}
       elevation={0}
     >
-      <Stack spacing={1.15}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Box sx={{ width: 76 }}>
+      <Stack spacing={1.05}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1.08fr',
+            mx: -1.25,
+            mt: -1.25,
+            borderBottom: '1.5px solid #cbd5e1',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 1.05, bgcolor: '#fff' }}>
             {showLogo ? (
               <Box
                 sx={{
-                  width: 58,
-                  height: 28,
-                  bgcolor: '#fff',
-                  border: '1.5px solid #111',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#111',
-                  fontSize: 9,
-                  fontWeight: 800,
-                  lineHeight: 1,
-                  textAlign: 'center',
+                  width: 33,
+                  height: 33,
+                  bgcolor: '#0f2e4d',
+                  borderRadius: 1,
+                  color: '#fff',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: 8,
+                  fontWeight: 900,
                 }}
               >
-                Client
-                <br />
-                Logo
+                LOGO
               </Box>
             ) : null}
-          </Box>
-          <Box sx={{ width: 148 }}>
-            <Typography sx={{ fontSize: 16, fontWeight: 800, lineHeight: 1.1 }}>Shipping Label</Typography>
-            {showOrderId && <Typography sx={{ fontSize: 10 }}>Order# : {orderId}</Typography>}
-            <Typography sx={{ fontSize: 7 }}>Generated on: Tue, 16 Dec 2025 11:54:40 IST</Typography>
-          </Box>
-        </Stack>
-
-        {showCodBanner && (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '68px 1fr',
-              border: '1.5px solid #111',
-              '& > div': { py: 1.05, textAlign: 'center', fontSize: 14, fontWeight: 800 },
-              '& > div:first-of-type': { borderRight: '1.5px solid #111' },
-            }}
-          >
-            <Box>{paymentLabel}</Box>
-            <Box>{paymentInstruction}</Box>
-          </Box>
-        )}
-
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 800 }}>Courier: {courierName}</Typography>
-            {showDeclaredValue && (
-              <Typography sx={{ fontSize: 14, fontWeight: 800 }}>Order Value: {orderValue}</Typography>
-            )}
-            {showOrderId && <Typography sx={{ fontSize: 8 }}>Reference Order# : {referenceOrder}</Typography>}
-            {showInvoiceNumber && <Typography sx={{ fontSize: 8 }}>Invoice# : {invoiceNumber}</Typography>}
-            {showAwb && <Typography sx={{ fontSize: 8 }}>AWB# : {awbNumber}</Typography>}
-            {showDimensions && <Typography sx={{ fontSize: 8 }}>Dimensions: {dimensionValue} (L W H)</Typography>}
-            {showWeight && <Typography sx={{ fontSize: 8 }}>Weight: {weightValue}</Typography>}
-            {showSortCode && <Typography sx={{ fontSize: 8 }}>Sort Code: {sortCode}</Typography>}
-          </Box>
-          {showAwb && (
-            <Box sx={{ width: 108, overflow: 'hidden', pt: 0.25 }}>
-              <Barcode value={awbNumber} height={40} width={1.1} fontSize={12} margin={0} />
-            </Box>
-          )}
-        </Stack>
-
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-          <Box sx={{ maxWidth: 252, border: '1.5px solid #111', p: 0.8, bgcolor: '#fff' }}>
-            <Typography sx={{ fontSize: 9, fontWeight: 900, lineHeight: 1 }}>SHIP TO</Typography>
-            <Typography sx={{ fontSize: 14, fontWeight: 900, mt: 0.5 }}>To: {order.name}</Typography>
-            <Typography sx={{ fontSize: 14, lineHeight: 1.16, fontWeight: 700, color: '#000' }}>{order.address}</Typography>
-            {showCustomerPhone && <Typography sx={{ fontSize: 9 }}>Contact: {customerPhone}</Typography>}
-          </Box>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              mt: 1,
-              background:
-                'repeating-linear-gradient(90deg, #111 0 4px, transparent 4px 8px), repeating-linear-gradient(0deg, rgba(17,17,17,0.55) 0 4px, transparent 4px 8px)',
-            }}
-          />
-        </Stack>
-
-        <Box sx={{ width: 214, borderTop: '2px dashed #111' }} />
-
-        {showShipperBlock && (
-          <Box sx={{ border: '1px solid #111', p: 0.8, bgcolor: '#fff' }}>
-            {showSellerName && <Typography sx={{ fontSize: 13, fontWeight: 800 }}>From:{shipperName}</Typography>}
-            {showShipperAddress && (
-              <>
-                <Typography sx={{ fontSize: 10, fontWeight: 800 }}>
-                  {showReturnAddress ? 'Return to if undelivered:' : 'Pickup address:'}
+            <Box>
+              {showSellerName && (
+                <Typography sx={{ fontSize: 16, fontWeight: 900, lineHeight: 1.05, color: '#0f172a' }}>
+                  {clampText(shipperName, 18).toUpperCase()}
                 </Typography>
-                {showSellerName && <Typography sx={{ fontSize: 9 }}>Store name {shipperName}</Typography>}
-                <Typography sx={{ fontSize: 9, lineHeight: 1.15 }}>{shipperAddress}</Typography>
+              )}
+              <Typography sx={{ fontSize: 9, fontWeight: 900, color: '#f15a24', letterSpacing: 3 }}>
+                {serviceMode.toUpperCase()}
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ px: 1, py: 1.15, bgcolor: '#0f2e4d', textAlign: 'center' }}>
+            <Typography sx={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>
+              SHIPPING LABEL
+            </Typography>
+            <Typography sx={{ fontSize: 8, fontWeight: 800, color: '#dbeafe' }}>
+              Safe Delivery | On Time | Every Time
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+          <Box sx={{ border: '1.5px solid #cbd5e1', borderRadius: 1, overflow: 'hidden' }}>
+            <Typography sx={{ display: 'inline-block', px: 1.2, py: 0.65, bgcolor: '#0f2e4d', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1 }}>
+              DELIVER TO
+            </Typography>
+            <Box sx={{ px: 1, py: 0.9 }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 900 }}>{order.name?.toUpperCase()}</Typography>
+              {showCustomerPhone && <Typography sx={{ fontSize: 12, fontWeight: 900, color: '#0f2e4d' }}>{customerPhone}</Typography>}
+              <Typography sx={{ fontSize: 12, fontWeight: 800, lineHeight: 1.16, mt: 0.4 }}>{order.address}</Typography>
+            </Box>
+          </Box>
+          <Box sx={{ border: '1.5px solid #cbd5e1', borderRadius: 1, overflow: 'hidden' }}>
+            {[
+              showOrderId && ['Order Id', orderId],
+              ['Ref No.', referenceOrder],
+              showInvoiceNumber && ['Invoice #', invoiceNumber],
+              ['Date', order.orderDate],
+              showCodBanner && ['Payment Type', paymentLabel],
+              showWeight && ['Weight', weightValue],
+              showDeclaredValue && ['Invoice Value', orderValue],
+            ]
+              .filter(Boolean)
+              .map((row) => {
+                const [label, value] = row as string[]
+                return (
+                  <Box
+                    key={label}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      borderBottom: '1px solid #cbd5e1',
+                      '&:last-of-type': { borderBottom: 0 },
+                    }}
+                  >
+                    <Typography sx={{ px: 0.8, py: 0.45, fontSize: 10, fontWeight: 900, color: '#475569' }}>
+                      {label}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        px: 0.8,
+                        py: 0.45,
+                        fontSize: 10,
+                        fontWeight: 900,
+                        borderLeft: '1px solid #cbd5e1',
+                        color: label === 'Invoice Value' ? '#f15a24' : '#111827',
+                      }}
+                    >
+                      {value}
+                    </Typography>
+                  </Box>
+                )
+              })}
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: '0.85fr 1.7fr', border: '1.5px solid #cbd5e1', borderRadius: 1, overflow: 'hidden' }}>
+          <Box sx={{ borderRight: '1.5px dashed #cbd5e1', textAlign: 'center' }}>
+            <Typography sx={{ bgcolor: '#0f2e4d', color: '#fff', py: 0.65, fontSize: 12, fontWeight: 900, letterSpacing: 1 }}>
+              COURIER
+            </Typography>
+            <Typography sx={{ px: 1, pt: 2, pb: 0.5, fontSize: 12, fontWeight: 900, color: '#475569' }}>
+              {courierName}
+            </Typography>
+            <Typography sx={{ px: 1, pb: 1.4, fontSize: 11, fontWeight: 800, color: '#475569' }}>
+              ({serviceMode})
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center', px: 1, py: 1 }}>
+            {showAwb && (
+              <>
+                <Typography sx={{ display: 'inline-block', px: 1.2, py: 0.45, bgcolor: '#f8fafc', borderRadius: 1, fontSize: 10, fontWeight: 900 }}>
+                  AWB / TRACKING NO
+                </Typography>
+                <Typography sx={{ mt: 0.7, fontSize: 13, fontWeight: 900, letterSpacing: 2 }}>
+                  {awbNumber}
+                </Typography>
+                <Box sx={{ mx: 'auto', mt: 0.4, width: 170, overflow: 'hidden' }}>
+                  <Barcode value={awbNumber} height={44} width={1.25} fontSize={0} margin={0} displayValue={false} />
+                </Box>
               </>
             )}
-            {showShipperPhone && order.shipper?.phone && (
-              <Typography sx={{ fontSize: 9 }}>Contact: {order.shipper.phone}</Typography>
-            )}
-            {showShipperGst && order.shipper?.gst && (
-              <Typography sx={{ fontSize: 9 }}>GSTIN: {order.shipper.gst}</Typography>
-            )}
+            {showSortCode && <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Sort Code: {sortCode}</Typography>}
+          </Box>
+        </Box>
+
+        {showShipperBlock && (
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1.4fr 1.15fr', border: '1.5px solid #cbd5e1', borderRadius: 1, overflow: 'hidden' }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '30px 1fr', gap: 1, p: 1, borderRight: '1.5px dashed #cbd5e1' }}>
+              <Box sx={{ width: 28, height: 28, bgcolor: '#f15a24', borderRadius: 1, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 900 }}>
+                R
+              </Box>
+              <Box>
+                {showShipperAddress && (
+                  <>
+                    <Typography sx={{ fontSize: 8.5, fontWeight: 900 }}>
+                      {showReturnAddress ? 'If not delivered, return to:' : 'Pickup address:'}
+                    </Typography>
+                    <Typography sx={{ fontSize: 9, fontWeight: 800, lineHeight: 1.18 }}>{returnAddress || shipperAddress}</Typography>
+                  </>
+                )}
+              </Box>
+            </Box>
+            <Box sx={{ p: 1 }}>
+              <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Contact name : {shipperName}</Typography>
+              {showSellerName && <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Company name : {shipperName}</Typography>}
+              {showShipperPhone && order.shipper?.phone && (
+                <Typography sx={{ fontSize: 9, fontWeight: 900 }}>Phone : {order.shipper.phone}</Typography>
+              )}
+              {showShipperGst && order.shipper?.gst && (
+                <Typography sx={{ fontSize: 9, fontWeight: 900 }}>GSTIN : {order.shipper.gst}</Typography>
+              )}
+            </Box>
           </Box>
         )}
 
@@ -276,6 +318,11 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
             </Box>
           </Box>
         )}
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', border: '1.5px solid #cbd5e1', borderRadius: 0.8, px: 1, py: 0.75 }}>
+          <Typography sx={{ fontSize: 9, fontWeight: 900, color: '#64748b' }}>Thank you for choosing us!</Typography>
+          <Typography sx={{ fontSize: 9, fontWeight: 900, color: '#475569' }}>POWERED BY FASTSHIP</Typography>
+        </Box>
       </Stack>
     </Paper>
   )

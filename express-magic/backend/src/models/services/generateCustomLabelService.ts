@@ -433,42 +433,63 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
     return originalUnitPrice
   }
 
-  const sellerBrandName =
-    profileOfUser?.companyInfo?.companyName ||
-    profileOfUser?.companyInfo?.displayName ||
-    pickup?.warehouse_name ||
-    ''
-  const normalizedSortCode = String(order?.sort_code ?? '').trim()
+  const pickFirstText = (...values: unknown[]) =>
+    values.map((value) => String(value ?? '').trim()).find(Boolean) || ''
+  const formatDate = (value: unknown) => {
+    const raw = pickFirstText(value)
+    if (!raw) return '-'
+    const date = new Date(raw)
+    if (Number.isNaN(date.getTime())) return trimText(raw, 18)
+    return date.toLocaleDateString('en-CA')
+  }
 
-  const headerLeftStack: any[] = []
-  if (showBrandLogo && images.logo) {
-    headerLeftStack.push({ image: 'logo', width: 44, margin: [0, 0, 0, 2] })
-  }
-  if (showBrandName && sellerBrandName) {
-    headerLeftStack.push({
-      text: trimText(sellerBrandName, 40),
-      bold: true,
-      fontSize: 9,
-      color: primaryColor,
-      margin: [0, 0, 0, 2],
-    })
-  }
-  headerLeftStack.push({
-    text: (order.courier_partner || 'Courier').toUpperCase(),
-    fontSize: 8,
-    color: '#334155',
-    bold: true,
-  })
+  const sellerBrandName = pickFirstText(
+    profileOfUser?.companyInfo?.brandName,
+    profileOfUser?.companyInfo?.businessName,
+    profileOfUser?.companyInfo?.companyName,
+    profileOfUser?.companyInfo?.displayName,
+    pickup?.warehouse_name,
+  )
+  const merchantContactName = pickFirstText(
+    profileOfUser?.companyInfo?.contactPerson,
+    pickup?.name,
+    pickup?.contact_name,
+    pickup?.warehouse_name,
+  )
+  const merchantContactPhone = pickFirstText(
+    profileOfUser?.companyInfo?.contactNumber,
+    profileOfUser?.companyInfo?.companyContactNumber,
+    pickup?.phone,
+    pickup?.mobile,
+  )
+  const normalizedSortCode = pickFirstText(order?.sort_code, order?.routing_code)
+  const referenceNumber = pickFirstText(
+    order?.reference_number,
+    order?.ref_no,
+    order?.provider_reference,
+    order?.shipment_id,
+  )
+  const orderDate = formatDate(order.order_date ?? order.created_at)
+  const invoiceDate = formatDate(order.invoice_date)
+  const invoiceValue = formatCurrency(order.order_amount)
+  const paymentLabel = paymentType === 'cod' ? 'COD' : 'PREPAID'
+  const serviceMode = pickFirstText(order.shipping_mode, order.mode, order.service_type)
+  const courierName = pickFirstText(order.courier_partner, order.courier_name, order.provider, 'Courier')
 
   const dimensionLabel =
     order.length && order.breadth && order.height
       ? `${order.length} x ${order.breadth} x ${order.height} cm`
       : ''
+  const deadWeightKg = Number(order.weight ?? order.actual_weight ?? 0) / 1000
+  const volumetricWeightKg = Number(order.volumetric_weight ?? 0) / 1000
+  const chargeableWeightKg = Number(order.charged_weight ?? order.weight ?? 0) / 1000
+  const packageWeightLabel = chargeableWeightKg
+    ? `${chargeableWeightKg.toFixed(chargeableWeightKg >= 10 ? 1 : 2)} kg`
+    : deadWeightKg
+    ? `${deadWeightKg.toFixed(deadWeightKg >= 10 ? 1 : 2)} kg`
+    : '-'
   const weightLines: string[] = []
   if (includeDeadWeight) {
-    const deadWeightKg = Number(order.weight ?? order.actual_weight ?? 0) / 1000
-    const volumetricWeightKg = Number(order.volumetric_weight ?? 0) / 1000
-    const chargeableWeightKg = Number(order.charged_weight ?? order.weight ?? 0) / 1000
     const slabWeightKg =
       order.charged_slabs && chargeableWeightKg
         ? chargeableWeightKg / Number(order.charged_slabs)
@@ -499,91 +520,120 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
     shipmentMetricLines.push(...weightLines)
   }
 
-  const headerRightStack: any[] = []
-  if (awbEnabled && trackingIdentifier) {
-    headerRightStack.push({
-      text: trackingIdentifierLabel,
-      color: primaryColor,
-      bold: true,
-      alignment: 'center',
-    })
-    headerRightStack.push({
-      text: trackingIdentifier,
-      fontSize: 12,
-      bold: true,
-      alignment: 'center',
-      color: darkTextColor,
-      margin: [0, 3, 0, 2],
-    })
+  const sectionLabel = (text: string, fillColor = '#0f2e4d') => ({
+    text,
+    bold: true,
+    fontSize: 8.5,
+    color: '#ffffff',
+    fillColor,
+    margin: [5, 4, 5, 4],
+    characterSpacing: 0.7,
+  })
+  const labelText = (text: string) => ({
+    text,
+    bold: true,
+    fontSize: 7.5,
+    color: '#475569',
+    margin: [4, 3, 4, 3],
+  })
+  const valueText = (text: string, color = darkTextColor) => ({
+    text,
+    bold: true,
+    fontSize: 7.7,
+    color,
+    margin: [4, 3, 4, 3],
+  })
+  const paleBoxLayout = {
+    hLineColor: () => '#cbd5e1',
+    vLineColor: () => '#cbd5e1',
+    hLineWidth: () => 0.8,
+    vLineWidth: () => 0.8,
+    paddingLeft: () => 0,
+    paddingRight: () => 0,
+    paddingTop: () => 0,
+    paddingBottom: () => 0,
   }
-  if (awbEnabled && awbBarcode && isValidDataUrl(awbBarcode)) {
-    headerRightStack.push({
-      image: awbBarcode,
-      width: 158,
-      alignment: 'center',
-      margin: [0, 4, 0, 5],
-    })
-  } else if (awbEnabled && images.awbBarcode) {
-    headerRightStack.push({
-      image: 'awbBarcode',
-      width: 158,
-      alignment: 'center',
-      margin: [0, 4, 0, 5],
-    })
+  const orderSummaryRows = [
+    showOrderId && order.order_number ? ['Order Id', String(order.order_number)] : null,
+    referenceNumber ? ['Ref No.', referenceNumber] : null,
+    showInvoiceNumber && order.invoice_number ? ['Invoice #', String(order.invoice_number)] : null,
+    showOrderDate || orderDate !== '-' ? ['Date', orderDate] : null,
+    showInvoiceDate && invoiceDate !== '-' ? ['Inv. Date', invoiceDate] : null,
+    showCodBanner ? ['Payment Type', paymentLabel] : null,
+    includeDeadWeight ? ['Weight', packageWeightLabel] : null,
+    includeDimension && dimensionLabel ? ['Dimensions', trimText(dimensionLabel, 24)] : null,
+    showDeclaredValue ? ['Invoice Value', invoiceValue] : null,
+  ].filter(Boolean) as string[][]
+
+  const headerBrandStack: any[] = []
+  if (showBrandLogo && images.logo) {
+    headerBrandStack.push({ image: 'logo', width: 32, margin: [0, 0, 6, 0] })
   }
-  if (showRtoRoutingCode && normalizedSortCode) {
-    headerRightStack.push({
-      text: `Sort Code: ${normalizedSortCode}`,
-      fontSize: 8,
-      bold: true,
-      alignment: 'center',
-      color: primaryColor,
-      margin: [0, 0, 0, 1],
-    })
-  }
-  if (showCodBanner) {
-    headerRightStack.push({
-      table: {
-        widths: ['*'],
-        body: [
-          [
-            {
-              text: paymentType === 'cod' ? 'COD' : 'PREPAID',
-              fontSize: 10,
-              bold: true,
-              alignment: 'center',
-              color: '#000000',
-              fillColor: '#ffffff',
-              margin: [0, 2, 0, 2],
-            },
-          ],
-        ],
+  headerBrandStack.push({
+    stack: [
+      {
+        text: showBrandName && sellerBrandName ? trimText(sellerBrandName, 28).toUpperCase() : 'SHIPPER',
+        bold: true,
+        fontSize: 12,
+        color: '#0f172a',
       },
-      layout: {
-        hLineWidth: () => 0.8,
-        vLineWidth: () => 0.8,
-        hLineColor: () => strongBorderColor,
-        vLineColor: () => strongBorderColor,
-        paddingLeft: () => 0,
-        paddingRight: () => 0,
-        paddingTop: () => 0,
-        paddingBottom: () => 0,
+      {
+        text: serviceMode ? serviceMode.toUpperCase() : 'SURFACE',
+        bold: true,
+        fontSize: 7.5,
+        color: '#f15a24',
+        characterSpacing: 2,
+        margin: [0, 2, 0, 0],
       },
-      margin: [32, 2, 32, 0],
-    })
-  }
+    ],
+  })
+
   pageContent.push({
     table: {
-      widths: ['*', 166],
-      body: [[{ stack: headerLeftStack }, { stack: headerRightStack }]],
+      widths: [132, '*'],
+      body: [
+        [
+          {
+            columns: headerBrandStack,
+            columnGap: 0,
+            margin: [4, 7, 4, 7],
+            fillColor: '#ffffff',
+          },
+          {
+            stack: [
+              {
+                text: 'SHIPPING LABEL',
+                alignment: 'center',
+                bold: true,
+                color: '#ffffff',
+                fontSize: 14,
+                margin: [0, 1, 0, 3],
+                characterSpacing: 0.8,
+              },
+              {
+                text: 'Safe Delivery  |  On Time  |  Every Time',
+                alignment: 'center',
+                bold: true,
+                color: '#dbeafe',
+                fontSize: 6.5,
+              },
+            ],
+            fillColor: '#0f2e4d',
+            margin: [0, 8, 0, 8],
+          },
+        ],
+      ],
     },
-    layout: 'noBorders',
-    margin: [0, 0, 0, 6],
+    layout: paleBoxLayout,
+    margin: [-4, -4, -4, 7],
   })
 
   const shipToStack: any[] = [
-    { text: 'SHIP TO', bold: true, fontSize: 9, color: primaryColor, margin: [0, 0, 0, 3] },
-    { text: trimText(consignee.name, 42), fontSize: 9.5, bold: true, color: darkTextColor },
+    sectionLabel('DELIVER TO'),
+    { text: trimText(consignee.name, 42).toUpperCase(), fontSize: 8.8, bold: true, color: darkTextColor, margin: [6, 6, 6, 0] },
+    ...(showCustomerPhone && consignee.phone
+      ? [{ text: trimText(consignee.phone, 20), fontSize: 8.8, bold: true, color: '#0f2e4d', margin: [6, 4, 6, 0] }]
+      : []),
     {
       text:
         [
@@ -593,143 +643,136 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
         ]
           .filter(Boolean)
           .join('\n') || '-',
-      fontSize: 8.5,
+      fontSize: 8,
       color: darkTextColor,
       bold: true,
-      margin: [0, 2, 0, 0],
-      lineHeight: 1.12,
+      margin: [6, 4, 6, 0],
+      lineHeight: 1.15,
     },
   ]
-  if (showCustomerPhone && consignee.phone) {
+  if (consignee.pincode) {
     shipToStack.push({
-      text: `Ph: ${trimText(consignee.phone, 20)}`,
+      text: `PIN : ${trimText(consignee.pincode, 12)}`,
+      fontSize: 8.6,
+      bold: true,
+      color: darkTextColor,
+      margin: [6, 4, 6, 6],
+    })
+  }
+
+  const orderInfoTable = {
+    table: {
+      widths: [66, '*'],
+      body: orderSummaryRows.map(([label, value]) => [
+        labelText(label),
+        label === 'Payment Type'
+          ? {
+              text: value,
+              bold: true,
+              fontSize: 6.2,
+              color: '#ffffff',
+              fillColor: paymentType === 'cod' ? '#f15a24' : '#16853f',
+              alignment: 'center',
+              margin: [3, 2, 3, 2],
+            }
+          : valueText(value, label === 'Invoice Value' ? '#f15a24' : darkTextColor),
+      ]),
+    },
+    layout: paleBoxLayout,
+  }
+
+  pageContent.push({
+    table: {
+      widths: ['*', 134],
+      body: [[{ stack: shipToStack }, orderInfoTable]],
+    },
+    layout: paleBoxLayout,
+    margin: [0, 0, 0, 7],
+  })
+
+  const courierStack: any[] = [
+    sectionLabel('COURIER'),
+    {
+      text: trimText(courierName, 34),
+      fontSize: 9,
+      bold: true,
+      alignment: 'center',
+      color: '#475569',
+      margin: [6, 18, 6, 0],
+    },
+  ]
+  if (serviceMode) {
+    courierStack.push({
+      text: `(${trimText(serviceMode, 18)})`,
       fontSize: 8,
       bold: true,
-      color: darkTextColor,
-      margin: [0, 2, 0, 0],
+      alignment: 'center',
+      color: '#475569',
+      margin: [6, 3, 6, 8],
     })
   }
 
-  const fromLine = [
-    pickup.warehouse_name,
-    pickup.address,
-    [pickup.city, pickup.state].filter(Boolean).join(', '),
-    pickup.pincode,
-  ]
-    .filter(Boolean)
-    .join(' | ')
-
-  const shipFromStack: any[] = [
-    { text: 'SHIP FROM', bold: true, fontSize: 9, color: primaryColor, margin: [0, 0, 0, 3] },
-  ]
-  if (showShipperAddress) {
-    shipFromStack.push({
-      text: trimText(fromLine, 130),
-      fontSize: 7.8,
-      color: darkTextColor,
-      lineHeight: 1.12,
-    })
-  }
-  if (showShipperPhone && pickup.phone) {
-    shipFromStack.push({
-      text: `Ph: ${trimText(pickup.phone, 20)}`,
-      fontSize: 7.8,
+  const awbStack: any[] = []
+  if (awbEnabled && trackingIdentifier) {
+    awbStack.push({
+      text: `${trackingIdentifierLabel} / TRACKING NO`,
       bold: true,
-      color: darkTextColor,
-      margin: [0, 1, 0, 0],
+      alignment: 'center',
+      color: '#000000',
+      fontSize: 7.8,
+      fillColor: '#f8fafc',
+      margin: [0, 5, 0, 4],
+    })
+    awbStack.push({
+      text: trackingIdentifier,
+      bold: true,
+      alignment: 'center',
+      color: '#0f172a',
+      fontSize: 9.5,
+      characterSpacing: 1.7,
+      margin: [0, 0, 0, 2],
     })
   }
-  if (showShipperGst && pickup.gst_number) {
-    shipFromStack.push({
-      text: `GSTIN: ${trimText(pickup.gst_number, 25)}`,
-      fontSize: 7.8,
-      margin: [0, 1, 0, 0],
+  if (awbEnabled && awbBarcode && isValidDataUrl(awbBarcode)) {
+    awbStack.push({ image: awbBarcode, width: 150, height: 32, alignment: 'center', margin: [0, 1, 0, 7] })
+  } else if (awbEnabled && images.awbBarcode) {
+    awbStack.push({ image: 'awbBarcode', width: 150, height: 32, alignment: 'center', margin: [0, 1, 0, 7] })
+  }
+  if (showRtoRoutingCode && normalizedSortCode) {
+    awbStack.push({
+      text: `Sort Code: ${normalizedSortCode}`,
+      fontSize: 7,
+      bold: true,
+      alignment: 'center',
+      color: primaryColor,
+      margin: [0, 0, 0, 4],
     })
   }
 
   pageContent.push({
     table: {
-      widths: ['*', '*'],
-      body: [[{ stack: shipToStack }, { stack: shipFromStack }]],
+      widths: [96, '*'],
+      body: [[{ stack: courierStack }, { stack: awbStack }]],
     },
-    layout: {
-      hLineColor: () => lightBorderColor,
-      vLineColor: () => lightBorderColor,
-      paddingLeft: () => 6,
-      paddingRight: () => 6,
-      paddingTop: () => 6,
-      paddingBottom: () => 6,
-      fillColor: () => accentColor,
-    },
-    margin: [0, 0, 0, 6],
+    layout: paleBoxLayout,
+    margin: [0, 0, 0, 7],
   })
 
-  if (shipmentMetricLines.length > 0) {
-    pageContent.push({
-      table: {
-        widths: ['*'],
-        body: [
-          [{ text: 'SHIPMENT METRICS', bold: true, fontSize: 7.5, color: primaryColor }],
-          [{ text: shipmentMetricLines.join('\n'), fontSize: 7.2, margin: [0, 1, 0, 0], color: darkTextColor }],
-        ],
-      },
-      layout: {
-        hLineColor: () => lightBorderColor,
-        vLineColor: () => lightBorderColor,
-        paddingLeft: () => 6,
-        paddingRight: () => 6,
-        paddingTop: () => 4,
-        paddingBottom: () => 4,
-        fillColor: () => accentColor,
-      },
-      margin: [0, 0, 0, 5],
-    })
-  }
-
-  const infoLineParts: string[] = []
-  if (showOrderId && order.order_number) infoLineParts.push(`Order: ${order.order_number}`)
-  if (showInvoiceNumber && order.invoice_number)
-    infoLineParts.push(`Invoice: ${order.invoice_number}`)
-  if (showOrderDate && order.order_date) infoLineParts.push(`Order Dt: ${order.order_date}`)
-  if (showInvoiceDate && order.invoice_date) infoLineParts.push(`Inv Dt: ${order.invoice_date}`)
-  if (showDeclaredValue) infoLineParts.push(`Declared: ${formatCurrency(order.order_amount)}`)
-
-  if (infoLineParts.length > 0) {
-    pageContent.push({
-      text: infoLineParts.join(' | '),
-      fontSize: 7,
-      margin: [0, 0, 0, 4],
-      color: '#334155',
-      bold: true,
-    })
-  }
-
   if (includeProductName && chunk.length > 0) {
-    const productHeaders: any[] = []
+    const productHeaders: any[] = [{ text: 'Product Name', bold: true, fontSize: 7.2 }]
     const productWidths: any[] = []
-    if (includeProductName) {
-      productHeaders.push({ text: 'Item', bold: true, fontSize: 7 })
-      productWidths.push('*')
-    }
+    productWidths.push('*')
     if (includeQty) {
-      productHeaders.push({ text: 'Qty', bold: true, fontSize: 7, alignment: 'right' })
-      productWidths.push(28)
-    }
-    if (includeCost) {
-      productHeaders.push({ text: 'Price', bold: true, fontSize: 7, alignment: 'right' })
+      productHeaders.push({ text: 'Qty', bold: true, fontSize: 7.2, alignment: 'center' })
       productWidths.push(42)
     }
+    if (includeCost) {
+      productHeaders.push({ text: 'Price', bold: true, fontSize: 7.2, alignment: 'right' })
+      productWidths.push(54)
+    }
     if (includeSku) {
-      productHeaders.push({ text: 'SKU', bold: true, fontSize: 7 })
-      productWidths.push(46)
-    }
-    if (includeDimension) {
-      productHeaders.push({ text: 'Dim', bold: true, fontSize: 7 })
-      productWidths.push(46)
-    }
-    if (includeDeadWeight) {
-      productHeaders.push({ text: 'Weight', bold: true, fontSize: 7, alignment: 'right' })
-      productWidths.push(40)
+      productHeaders.splice(1, 0, { text: 'Sku', bold: true, fontSize: 7.2, alignment: 'center' })
+      productWidths.splice(1, 0, 44)
     }
 
     const productRows = chunk.map((p: any) => {
@@ -738,30 +781,11 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
       const qty = Number(p.qty ?? p.quantity ?? 1)
       const price = getDisplayedUnitPrice(p)
       const sku = p.sku ?? p.skuCode ?? '-'
-      const dim =
-        p.length && p.breadth && p.height
-          ? `${p.length}x${p.breadth}x${p.height}`
-          : order.length && order.breadth && order.height
-          ? `${order.length}x${order.breadth}x${order.height}`
-          : '-'
-      const deadWeight = order.weight ? `${order.weight}g` : '-'
 
-      if (includeProductName) {
-        rowCells.push({
-          stack: [
-            { text: String(itemName || '-').trim() || '-', fontSize: 7, bold: true, color: darkTextColor },
-            ...(includeSku && String(sku || '').trim() && String(sku || '').trim() !== '-'
-              ? [{ text: `SKU: ${String(sku).trim()}`, fontSize: 6, color: mutedTextColor, margin: [0, 1, 0, 0] }]
-              : []),
-          ],
-        })
-      }
-      if (includeQty) rowCells.push({ text: String(qty), alignment: 'right', fontSize: 7 })
-      if (includeCost)
-        rowCells.push({ text: formatCurrency(price), alignment: 'right', fontSize: 7 })
-      if (includeSku) rowCells.push({ text: String(sku || '-').trim() || '-', fontSize: 6, noWrap: false })
-      if (includeDimension) rowCells.push({ text: trimText(dim, 18), fontSize: 7 })
-      if (includeDeadWeight) rowCells.push({ text: deadWeight, alignment: 'right', fontSize: 7 })
+      rowCells.push({ text: trimText(itemName, charLimit), fontSize: 7.2, bold: true })
+      if (includeSku) rowCells.push({ text: trimText(sku, 18), fontSize: 6.7, alignment: 'center' })
+      if (includeQty) rowCells.push({ text: String(qty), alignment: 'center', fontSize: 8, bold: true })
+      if (includeCost) rowCells.push({ text: formatCurrency(price), alignment: 'right', fontSize: 7.4, bold: true })
 
       return rowCells
     })
@@ -798,12 +822,14 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
                   {
                     text: 'Total',
                     colSpan: summaryLabelColSpan,
-                    fontSize: 11,
+                    fontSize: 8.5,
                     fontWeight: '700' as any,
+                    fillColor: '#fff7ed',
+                    margin: [5, 3, 5, 3],
                   },
                   ...Array.from({ length: summaryLabelColSpan - 1 }, () => ({})),
                   ...(includeCost
-                    ? [{ text: formatCurrency(order.order_amount), alignment: 'right', fontSize: 11, fontWeight: '700' as any }]
+                    ? [{ text: formatCurrency(order.order_amount), alignment: 'right', fontSize: 8.5, bold: true, color: '#f15a24', fillColor: '#fff7ed', margin: [5, 3, 5, 3] }]
                     : []),
                 ],
               ]
@@ -811,8 +837,10 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
         ],
       },
       layout: {
-        hLineColor: () => '#e2e8f0',
-        vLineColor: () => '#e2e8f0',
+        hLineColor: () => '#cbd5e1',
+        vLineColor: () => '#cbd5e1',
+        hLineWidth: () => 0.8,
+        vLineWidth: () => 0.8,
         paddingLeft: () => 5,
         paddingRight: () => 5,
         paddingTop: () => 3,
@@ -822,112 +850,77 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
     })
   }
 
-  if (showOrderValueSection) {
-    const productValue = products.reduce((sum: number, p: any) => {
-      const qty = Math.max(1, toAmount(p?.qty ?? p?.quantity ?? 1))
-      return sum + Math.max(0, getDisplayedUnitPrice(p) * qty)
-    }, 0)
-    const normalizedOrderValue = toAmount(order.order_amount)
-    const orderValue = normalizedOrderValue > 0 ? normalizedOrderValue : productValue
-    const codCollectibleRaw = toAmount(order.cod_amount ?? order.order_amount)
-    const codCollectible =
-      paymentType === 'cod'
-        ? codCollectibleRaw > 0
-          ? codCollectibleRaw
-          : orderValue
-        : 0
-
-    const summaryParts = [`Order Value: ${formatCurrency(orderValue)}`]
-    summaryParts.push(
-      paymentType === 'cod'
-        ? `Collect on Delivery: ${formatCurrency(codCollectible)}`
-        : 'Payment: PREPAID',
-    )
-
-    pageContent.push({
-      text: summaryParts.join(' | '),
-      fontSize: 8,
-      bold: true,
-      margin: [0, 0, 0, 4],
-      color: darkTextColor,
-    })
-  }
-
-  if (showRto && rto.address) {
-    pageContent.push({
-      table: {
-        widths: ['*'],
-        body: [[{ text: `RTO: ${trimText(buildAddress(rto), 120)}`, fontSize: 7, bold: true }]],
-      },
-      layout: {
-        hLineColor: () => '#dbeafe',
-        vLineColor: () => '#dbeafe',
-        paddingLeft: () => 6,
-        paddingRight: () => 6,
-        paddingTop: () => 4,
-        paddingBottom: () => 4,
-        fillColor: () => '#f8fafc',
-      },
-      margin: [0, 0, 0, 4],
-    })
-  }
-
-  const additionalBarcodes: any[] = []
-  if (showOrderBarcode && images.orderBarcode) {
-    additionalBarcodes.push({
-      stack: [
-        { text: 'Order Barcode', fontSize: 6, alignment: 'center', color: '#64748b' },
-        { image: 'orderBarcode', width: 98, alignment: 'center', margin: [0, 1, 0, 0] },
-      ],
-    })
-  }
-  if (showInvoiceBarcode && images.invoiceBarcode) {
-    additionalBarcodes.push({
-      stack: [
-        { text: 'Invoice Barcode', fontSize: 6, alignment: 'center', color: '#64748b' },
-        { image: 'invoiceBarcode', width: 98, alignment: 'center', margin: [0, 1, 0, 0] },
-      ],
-    })
-  }
-  if (additionalBarcodes.length > 0) {
-    pageContent.push({
-      stack: [
-        { text: 'Reference Barcodes', fontSize: 7, color: primaryColor, bold: true, margin: [0, 0, 0, 2] },
+  const returnAddress = showRto && rto.address ? buildAddress(rto) : buildAddress(pickup)
+  const merchantCompanyName = sellerBrandName || pickup?.warehouse_name || '-'
+  const returnStack: any[] = [
+    {
+      columns: [
         {
-          table: {
-            widths: additionalBarcodes.map(() => '*'),
-            body: [additionalBarcodes],
-          },
-          layout: 'noBorders',
+          text: 'R',
+          width: 20,
+          bold: true,
+          alignment: 'center',
+          color: '#ffffff',
+          fillColor: '#f15a24',
+          fontSize: 9,
+          margin: [0, 5, 0, 5],
+        },
+        {
+          stack: [
+            { text: 'If not delivered, return to:', fontSize: 6.4, bold: true, margin: [5, 0, 0, 2] },
+            { text: trimText(returnAddress, 92), fontSize: 6.8, bold: true, color: '#334155', lineHeight: 1.12, margin: [5, 0, 0, 0] },
+          ],
+          width: '*',
         },
       ],
-      margin: [0, 1, 0, 5],
+      columnGap: 4,
+    },
+  ]
+  const contactStack: any[] = [
+    { text: `Contact name : ${trimText(merchantContactName || merchantCompanyName, 24)}`, fontSize: 6.9, bold: true, margin: [5, 4, 5, 2] },
+    { text: `Company name : ${trimText(merchantCompanyName, 24)}`, fontSize: 6.9, bold: true, margin: [5, 1, 5, 2] },
+  ]
+  if (showShipperPhone && merchantContactPhone) {
+    contactStack.push({ text: `Phone : ${trimText(merchantContactPhone, 22)}`, fontSize: 6.9, bold: true, margin: [5, 1, 5, 2] })
+  }
+  if (showShipperGst && pickup.gst_number) {
+    contactStack.push({ text: `GSTIN : ${trimText(pickup.gst_number, 22)}`, fontSize: 6.7, bold: true, margin: [5, 1, 5, 2] })
+  }
+
+  if (showShipperAddress || showShipperPhone || showBrandName) {
+    pageContent.push({
+      table: {
+        widths: ['*', 116],
+        body: [[{ stack: returnStack }, { stack: contactStack }]],
+      },
+      layout: paleBoxLayout,
+      margin: [0, 2, 0, 7],
     })
   }
 
   if (showTerms) {
     pageContent.push({
-      text: 'T&C: Inspect shipment before accepting. Report issues immediately to support.',
-      fontSize: 6,
+      text: 'Thank you for choosing us!',
+      fontSize: 6.8,
       color: '#64748b',
-      italics: true,
-      margin: [0, 1, 0, 2],
+      bold: true,
+      margin: [8, 0, 0, -8],
     })
   }
 
   if (showPlatformBranding) {
     const footerStack: any[] = []
     if (images.platformLogo) {
-      footerStack.push({ image: 'platformLogo', width: 40, alignment: 'center', margin: [0, 0, 0, 1] })
+      footerStack.push({ image: 'platformLogo', width: 46, alignment: 'right', margin: [0, 0, 4, 0] })
     }
     footerStack.push({
       text: `Powered by ${settings.powered_by}`,
-      fontSize: 6,
-      alignment: 'center',
-      color: '#94a3b8',
-      italics: true,
+      fontSize: 6.8,
+      alignment: images.platformLogo ? 'right' : 'center',
+      color: '#475569',
+      bold: true,
     })
-    pageContent.push({ stack: footerStack, margin: [0, 1, 0, 0] })
+    pageContent.push({ stack: footerStack, margin: [0, -1, 8, 0] })
   }
 
   // Push pageContent to pages array - CRITICAL: Without this, label will be empty!

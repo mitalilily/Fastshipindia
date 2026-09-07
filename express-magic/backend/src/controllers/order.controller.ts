@@ -23,7 +23,7 @@ import { b2c_orders } from '../models/schema/b2cOrders'
 import { b2b_orders } from '../models/schema/b2bOrders'
 import { generateLabelForOrder } from '../models/services/generateCustomLabelService'
 import { presignDownload } from '../models/services/upload.service'
-import { getOrderLabelReference, isExternalLabelReference } from '../utils/orderLabels'
+import { isExternalLabelReference } from '../utils/orderLabels'
 import { getMerchantSafeOperationalError } from '../utils/merchantErrorMessages'
 import { getMerchantScopedUserId } from '../utils/merchantScope'
 
@@ -700,17 +700,15 @@ export const downloadBulkB2CLabelsController = async (req: any, res: Response) =
     }
 
     for (const order of orderedRows) {
-      let labelReference = getOrderLabelReference(order)
+      let labelReference: string | null = null
 
-      if (!labelReference) {
-        try {
-          labelReference = await generateAndStoreLabel(order)
-        } catch (error: any) {
-          failedLabels.push(
-            `${order.order_number || order.id}: ${error?.message || 'label generation failed'}`,
-          )
-          continue
-        }
+      try {
+        labelReference = await generateAndStoreLabel(order)
+      } catch (error: any) {
+        failedLabels.push(
+          `${order.order_number || order.id}: ${error?.message || 'label generation failed'}`,
+        )
+        continue
       }
 
       try {
