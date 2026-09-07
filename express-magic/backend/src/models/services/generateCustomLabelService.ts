@@ -9,6 +9,7 @@ import { labelPreferences } from '../schema/labelPreferences'
 import { userProfiles } from '../schema/userProfile'
 import { getAdminInvoicePreferences } from './invoicePreferences.service'
 import { presignDownload, uploadBufferToStorage } from './upload.service'
+import { uploadBufferToDatabase } from './databaseUpload.service'
 
 const LABEL_ASSET_TIMEOUT_MS = 10000
 
@@ -980,14 +981,30 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
       .replace(/^-+|-+$/g, '')
       .slice(0, 46) || 'order'
 
-    // Upload directly via SDK to avoid presigned PUT timeouts from the backend.
-    const uploadTarget = await uploadBufferToStorage({
-      buffer: pdfBuffer,
-      filename: `label-${labelIdentifier}.pdf`,
-      contentType: 'application/pdf',
-      userId,
-      folderKey: 'labels',
-    })
+    const labelFilename = `label-${labelIdentifier}.pdf`
+    let uploadTarget
+
+    try {
+      // Upload directly via SDK to avoid presigned PUT timeouts from the backend.
+      uploadTarget = await uploadBufferToStorage({
+        buffer: pdfBuffer,
+        filename: labelFilename,
+        contentType: 'application/pdf',
+        userId,
+        folderKey: 'labels',
+      })
+    } catch (uploadError: any) {
+      console.warn('Object storage label upload failed; using database upload fallback:', {
+        code: uploadError?.code || 'STORAGE_UPLOAD_FAILED',
+        message: uploadError?.message || uploadError,
+      })
+      uploadTarget = await uploadBufferToDatabase({
+        buffer: pdfBuffer,
+        filename: labelFilename,
+        contentType: 'application/pdf',
+        userId,
+      })
+    }
 
     if (!uploadTarget?.key) {
       throw new Error('Label key is missing after upload')
