@@ -753,6 +753,7 @@ export const fetchAvailableCouriers = async (req: Request, res: Response) => {
       breadth,
       height,
       shipment_type,
+      boxes,
       delivery_address,
       pickup_date,
     } = req.body
@@ -785,6 +786,7 @@ export const fetchAvailableCouriers = async (req: Request, res: Response) => {
       length: Number(length),
       breadth: Number(breadth),
       height: Number(height),
+      boxes: Array.isArray(boxes) ? boxes : undefined,
       delivery_address,
       pickup_date,
       ...serviceabilityOptions,
@@ -909,6 +911,7 @@ export const fetchAvailableCouriersToUser = async (req: Request, res: Response) 
       breadth,
       height,
       shipment_type,
+      boxes,
     } = req.body
     if (!origin || !destination) {
       return res.status(400).json({
@@ -939,6 +942,7 @@ export const fetchAvailableCouriersToUser = async (req: Request, res: Response) 
       length: Number(length),
       breadth: Number(breadth),
       height: Number(height),
+      boxes: Array.isArray(boxes) ? boxes : undefined,
       ...serviceabilityOptions,
     }
 

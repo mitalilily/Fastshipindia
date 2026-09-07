@@ -2882,6 +2882,7 @@ interface NimbusServiceabilityParams {
   shipment_type?: 'b2b' | 'b2c'
   breadth?: number
   height?: number
+  boxes?: any[]
   isReverse?: boolean
   preferred_carriers?: number[]
   delivery_type?: number
