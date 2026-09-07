@@ -1,4 +1,4 @@
-import { alpha, Box, Button, Chip, Divider, Link, Paper, Stack, Typography } from '@mui/material'
+import { alpha, Box, Button, Chip, Divider, IconButton, Link, Paper, Stack, Tooltip, Typography } from '@mui/material'
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { FaFilePdf } from 'react-icons/fa'
@@ -7,6 +7,7 @@ import {
   MdLocalShipping,
   MdLocationOn,
   MdPerson,
+  MdContentCopy,
   MdReceipt,
   MdShoppingBag,
 } from 'react-icons/md'
@@ -20,6 +21,29 @@ interface OrderExpandedRowProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   row: any
   type?: 'b2b' | 'b2c'
+}
+
+const copyTrackingNumber = async (label: string, value: string) => {
+  const text = String(value || '').trim()
+  if (!text) return
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    toast.open({ message: `${label} copied`, severity: 'success' })
+  } catch {
+    toast.open({ message: `Could not copy ${label}`, severity: 'error' })
+  }
 }
 
 export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) => {
@@ -292,14 +316,26 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
             <Typography>
               <strong>LRN:</strong>{' '}
               {trackingReference ? (
-                <Link
-                  component={RouterLink}
-                  to={`/tools/order_tracking?awb=${encodeURIComponent(trackingReference)}`}
-                  underline="hover"
-                  sx={{ fontWeight: 800 }}
-                >
-                  {lrnValue || trackingReference}
-                </Link>
+                <Stack component="span" direction="row" spacing={0.4} alignItems="center">
+                  <Link
+                    component={RouterLink}
+                    to={`/tools/order_tracking?awb=${encodeURIComponent(trackingReference)}`}
+                    underline="hover"
+                    sx={{ fontWeight: 800 }}
+                  >
+                    {lrnValue || trackingReference}
+                  </Link>
+                  <Tooltip title="Copy LRN">
+                    <IconButton
+                      size="small"
+                      aria-label="Copy LRN"
+                      onClick={() => copyTrackingNumber('LRN', lrnValue || trackingReference)}
+                      sx={{ color: ACCENT }}
+                    >
+                      <MdContentCopy size={16} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
               ) : (
                 '-'
               )}
@@ -311,14 +347,26 @@ export const OrderExpandedRow = ({ row, type = 'b2c' }: OrderExpandedRowProps) =
           <Typography>
             <strong>{isB2B ? 'Box AWB' : 'AWB'}:</strong>{' '}
             {awbValue ? (
-              <Link
-                component={RouterLink}
-                to={`/tools/order_tracking?awb=${encodeURIComponent(awbValue)}`}
-                underline="hover"
-                sx={{ fontWeight: 800 }}
-              >
-                {awbValue}
-              </Link>
+              <Stack component="span" direction="row" spacing={0.4} alignItems="center">
+                <Link
+                  component={RouterLink}
+                  to={`/tools/order_tracking?awb=${encodeURIComponent(awbValue)}`}
+                  underline="hover"
+                  sx={{ fontWeight: 800 }}
+                >
+                  {awbValue}
+                </Link>
+                <Tooltip title={`Copy ${isB2B ? 'Box AWB' : 'AWB'}`}>
+                  <IconButton
+                    size="small"
+                    aria-label={`Copy ${isB2B ? 'Box AWB' : 'AWB'}`}
+                    onClick={() => copyTrackingNumber(isB2B ? 'Box AWB' : 'AWB', awbValue)}
+                    sx={{ color: ACCENT }}
+                  >
+                    <MdContentCopy size={16} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
             ) : (
               '-'
             )}

@@ -13,10 +13,12 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import {
   MdArrowBack,
+  MdContentCopy,
   MdEmail,
   MdLocationOn,
   MdNearMe,
@@ -26,6 +28,7 @@ import {
 } from 'react-icons/md'
 import type { ReactNode } from 'react'
 import { getCourierDisplayName } from '../../utils/courierDisplay'
+import { toast } from '../UI/Toast'
 
 type OrderDetailsDialogProps = {
   open: boolean
@@ -55,6 +58,29 @@ const panelBorder = '1px solid rgba(15, 23, 42, 0.08)'
 const valueOrDash = (value?: string | number | null) => {
   const text = String(value ?? '').trim()
   return text || emptyText
+}
+
+const copyDetailValue = async (label: string, value?: string | number | null) => {
+  const text = valueOrDash(value)
+  if (!text || text === emptyText) return
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    toast.open({ message: `${label} copied`, severity: 'success' })
+  } catch {
+    toast.open({ message: `Could not copy ${label}`, severity: 'error' })
+  }
 }
 
 const formatCurrency = (value?: string | number | null, decimals = 0) => {
@@ -298,11 +324,13 @@ const OrderDetailLine = ({
   value,
   chip,
   emphasized,
+  copyable,
 }: {
   label: string
   value?: string | number | null
   chip?: boolean
   emphasized?: boolean
+  copyable?: boolean
 }) => (
   <Stack direction="row" spacing={1.25} alignItems="center">
     <Typography sx={{ flex: 1, fontSize: 12.2, color: '#475569' }}>{label}</Typography>
@@ -324,17 +352,31 @@ const OrderDetailLine = ({
         }}
       />
     ) : (
-      <Typography
-        sx={{
-          minWidth: 112,
-          textAlign: 'right',
-          fontSize: emphasized ? 17 : 12.2,
-          fontWeight: emphasized ? 900 : 800,
-          color: '#0F172A',
-        }}
-      >
-        {valueOrDash(value)}
-      </Typography>
+      <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="flex-end" sx={{ minWidth: 112 }}>
+        <Typography
+          sx={{
+            textAlign: 'right',
+            fontSize: emphasized ? 17 : 12.2,
+            fontWeight: emphasized ? 900 : 800,
+            color: '#0F172A',
+            wordBreak: 'break-word',
+          }}
+        >
+          {valueOrDash(value)}
+        </Typography>
+        {copyable && valueOrDash(value) !== emptyText ? (
+          <Tooltip title={`Copy ${label}`}>
+            <IconButton
+              size="small"
+              aria-label={`Copy ${label}`}
+              onClick={() => copyDetailValue(label, value)}
+              sx={{ color: accent, p: 0.4 }}
+            >
+              <MdContentCopy size={15} />
+            </IconButton>
+          </Tooltip>
+        ) : null}
+      </Stack>
     )}
   </Stack>
 )
@@ -395,13 +437,13 @@ const TrackingDetails = ({ order }: { order: OrderDetailsDialogProps['order'] })
       <OrderDetailLine label="Courier" value={courierName || emptyText} />
       {isB2B ? (
         <>
-          <OrderDetailLine label="LRN" value={lrn || emptyText} />
-          <OrderDetailLine label="Box AWB" value={awb || emptyText} />
+          <OrderDetailLine label="LRN" value={lrn || emptyText} copyable />
+          <OrderDetailLine label="Box AWB" value={awb || emptyText} copyable />
         </>
       ) : (
         <>
-          <OrderDetailLine label="AWB" value={awb || emptyText} />
-          <OrderDetailLine label="Shipment ID" value={shipmentId || emptyText} />
+          <OrderDetailLine label="AWB" value={awb || emptyText} copyable />
+          <OrderDetailLine label="Shipment ID" value={shipmentId || emptyText} copyable />
         </>
       )}
       <OrderDetailLine label="Status" value={getStatusLabel(order?.order_status)} chip />
