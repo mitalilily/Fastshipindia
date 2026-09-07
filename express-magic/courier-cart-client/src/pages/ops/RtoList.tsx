@@ -85,7 +85,7 @@ export default function RtoList() {
   )
 
   return (
-    <Stack gap={3} p={4}>
+    <Stack gap={1.6} p={{ xs: 2, md: 2.5 }}>
       <PageHeading
         title="RTO"
         subtitle="Track return-to-origin events, filter timelines, and monitor reverse charges from a consistent operations workspace."
@@ -98,6 +98,7 @@ export default function RtoList() {
           setPage(1)
         }}
         loading={showTableLoading}
+        compact
       />
 
       <Paper sx={{ borderRadius: 2, border: '1px solid #E2E8F0', overflow: 'hidden' }}>

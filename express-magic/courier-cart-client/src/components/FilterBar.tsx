@@ -185,14 +185,14 @@ export const FilterBar = <T extends Record<string, any>>({
 
   const renderFormContent = () => (
     <form onSubmit={handleSubmit(submit)}>
-      <Stack gap={compact ? 0.55 : 1.2}>
+      <Stack gap={compact ? 0.55 : 0.85}>
         <Stack
           direction={{ xs: 'column', lg: 'row' }}
           alignItems={{ xs: 'stretch', lg: 'center' }}
           justifyContent="space-between"
-          gap={compact ? 0.65 : 1.2}
+          gap={compact ? 0.65 : 0.9}
         >
-          <Grid container spacing={compact ? 0.75 : 1.4} sx={{ flex: 1, minWidth: 0 }}>
+          <Grid container spacing={compact ? 0.75 : 1} sx={{ flex: 1, minWidth: 0 }}>
             {primaryFields.map((field) => (
               <Grid size={{ md: 4, xs: 12 }} key={field.name}>
                 <Controller
@@ -235,7 +235,7 @@ export const FilterBar = <T extends Record<string, any>>({
                   fontWeight: 700,
                   borderRadius: 1,
                   minWidth: 92,
-                  py: compact ? 0.58 : 1,
+                py: compact ? 0.58 : 0.72,
                   background: `linear-gradient(135deg, ${DE_BLUE} 0%, #2a5fbe 100%)`,
                 }}
               >
@@ -328,8 +328,8 @@ export const FilterBar = <T extends Record<string, any>>({
               : compact
                 ? '0 8px 18px rgba(15, 44, 67, 0.05)'
                 : '0 14px 30px rgba(15, 44, 67, 0.07)',
-            px: compact ? { xs: 0.8, md: 0.95 } : { xs: 1.35, md: 1.6 },
-            py: compact ? { xs: 0.5, md: 0.58 } : { xs: 1.15, md: 1.35 },
+            px: compact ? { xs: 0.8, md: 0.95 } : { xs: 1.05, md: 1.2 },
+            py: compact ? { xs: 0.5, md: 0.58 } : { xs: 0.8, md: 0.9 },
             '&:before': {
               content: '""',
               position: 'absolute',

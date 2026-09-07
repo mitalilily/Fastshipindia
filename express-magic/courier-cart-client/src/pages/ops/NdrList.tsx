@@ -286,7 +286,7 @@ export default function NdrList() {
   )
 
   return (
-    <Stack gap={3} p={4}>
+    <Stack gap={1.6} p={{ xs: 2, md: 2.5 }}>
       <PageHeading
         title="NDR"
         subtitle="Review non-delivery reports, open timelines, and trigger reattempt workflows in a operations view."
@@ -299,6 +299,7 @@ export default function NdrList() {
           setPage(1)
         }}
         loading={showTableLoading}
+        compact
       />
 
       <Paper sx={{ borderRadius: 1, border: '1px solid #E2E8F0', overflow: 'hidden' }}>

@@ -130,12 +130,12 @@ const PageHeading: React.FC<PageHeadingProps> = ({
             linear-gradient(90deg, ${alpha(profile.accent, 0.07)} 0%, transparent 30%),
             linear-gradient(135deg, rgba(255,255,255,0.98) 0%, ${alpha(profile.panel, 0.98)} 56%, ${alpha(profile.wash, 0.96)} 100%)
           `,
-        px: hasSubtitle ? { xs: 2, sm: 2.8 } : { xs: 1.6, sm: 1.8 },
-        py: hasSubtitle ? { xs: 2, sm: 2.4 } : { xs: 1.25, sm: 1.35 },
-        minHeight: hasSubtitle ? { xs: 112, sm: 132 } : 'auto',
+        px: hasSubtitle ? { xs: 1.5, sm: 2 } : { xs: 1.35, sm: 1.55 },
+        py: hasSubtitle ? { xs: 1.3, sm: 1.55 } : { xs: 1, sm: 1.05 },
+        minHeight: hasSubtitle ? { xs: 88, sm: 100 } : 'auto',
         boxShadow: isDark
-          ? '0 16px 34px rgba(0,0,0,0.22)'
-          : '0 18px 42px rgba(15,44,67,0.08)',
+          ? '0 10px 24px rgba(0,0,0,0.18)'
+          : '0 10px 26px rgba(15,44,67,0.06)',
         '&:before': {
           content: '""',
           position: 'absolute',
@@ -147,9 +147,9 @@ const PageHeading: React.FC<PageHeadingProps> = ({
           content: '""',
           position: 'absolute',
           right: { xs: -36, sm: -10 },
-          top: -50,
-          width: { xs: 180, sm: 260 },
-          height: { xs: 180, sm: 220 },
+          top: -58,
+          width: { xs: 150, sm: 220 },
+          height: { xs: 150, sm: 178 },
           background: `
             linear-gradient(135deg, ${alpha(profile.secondary, isDark ? 0.16 : 0.1)} 0%, transparent 54%),
             linear-gradient(180deg, ${alpha(profile.accent, isDark ? 0.15 : 0.07)} 0%, transparent 72%)
@@ -160,16 +160,16 @@ const PageHeading: React.FC<PageHeadingProps> = ({
       }}
     >
       <Stack
-        spacing={1.2}
+        spacing={0.7}
         textAlign={center ? 'center' : 'left'}
         position="relative"
         zIndex={1}
         justifyContent="center"
-        minHeight={hasSubtitle ? { xs: 72, sm: 84 } : 'auto'}
+        minHeight={hasSubtitle ? { xs: 58, sm: 66 } : 'auto'}
       >
         <Stack
           direction="row"
-          spacing={1.4}
+          spacing={1}
           alignItems="center"
           sx={{
             justifyContent: center ? 'center' : 'flex-start',
@@ -183,8 +183,8 @@ const PageHeading: React.FC<PageHeadingProps> = ({
           >
             <Box
               sx={{
-                width: hasSubtitle ? { xs: 42, sm: 46 } : 36,
-                height: hasSubtitle ? { xs: 42, sm: 46 } : 36,
+                width: hasSubtitle ? { xs: 36, sm: 40 } : 32,
+                height: hasSubtitle ? { xs: 36, sm: 40 } : 32,
                 borderRadius: '8px',
                 background: isDark
                   ? `linear-gradient(135deg, ${profile.accent} 0%, ${alpha(profile.secondary, 0.84)} 100%)`
@@ -195,8 +195,8 @@ const PageHeading: React.FC<PageHeadingProps> = ({
                 justifyContent: 'center',
                 border: `1px solid ${alpha('#FFFFFF', 0.42)}`,
                 boxShadow: isDark
-                  ? `0 14px 24px ${alpha('#000000', 0.24)}`
-                  : `0 14px 28px ${alpha(profile.accent, 0.18)}`,
+                  ? `0 8px 18px ${alpha('#000000', 0.2)}`
+                  : `0 8px 18px ${alpha(profile.accent, 0.14)}`,
               }}
             >
               {icon}
@@ -215,7 +215,7 @@ const PageHeading: React.FC<PageHeadingProps> = ({
               {normalizedEyebrow}
             </Typography>
             <Typography
-              fontSize={fontSize ?? { xs: '1.45rem', md: '1.95rem' }}
+              fontSize={fontSize ?? { xs: '1.25rem', md: '1.65rem' }}
               fontWeight={700}
               lineHeight={1.08}
               sx={{
@@ -233,11 +233,11 @@ const PageHeading: React.FC<PageHeadingProps> = ({
           <Typography
             sx={{
               color: theme.palette.text.secondary,
-              fontSize: { xs: '0.9rem', md: '0.96rem' },
+              fontSize: { xs: '0.84rem', md: '0.9rem' },
               maxWidth: center ? 820 : 760,
               mx: center ? 'auto' : 0,
-              lineHeight: 1.68,
-              pl: center ? 0 : { xs: 0, sm: 7.5 },
+              lineHeight: 1.45,
+              pl: center ? 0 : { xs: 0, sm: 6 },
             }}
           >
             {normalizedSubtitle}

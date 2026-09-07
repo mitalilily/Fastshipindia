@@ -273,8 +273,8 @@ export default function Sidebar({
   const navItemSx = {
     minHeight: isSidebarExpanded
       ? temporary
-        ? 'clamp(34px, 5.2vh, 43px)'
-        : 'clamp(29px, 4.25vh, 38px)'
+        ? 'clamp(32px, 4.7vh, 39px)'
+        : 'clamp(28px, 3.85vh, 34px)'
       : 44,
     borderRadius: isSidebarExpanded ? 0 : 1.5,
     px: isSidebarExpanded ? (temporary ? 3.6 : 2.75) : 0,
@@ -390,7 +390,7 @@ export default function Sidebar({
 
         {hasChildren && isSidebarExpanded && (
           <Collapse in={showExpanded} timeout="auto" unmountOnExit>
-            <List disablePadding sx={{ ml: 6.6, pr: 1.5, py: 0.35 }}>
+            <List disablePadding sx={{ ml: 6.1, pr: 1.35, py: 0.15 }}>
               {item.children?.map((sub) => {
                 const subActive = isActive(location.pathname, sub.path)
                 return (
@@ -400,9 +400,9 @@ export default function Sidebar({
                     to={sub.path}
                     onClick={handleRouteNavigate}
                     sx={{
-                      minHeight: 'clamp(28px, 3.8vh, 32px)',
-                      px: 1.2,
-                      py: 0.45,
+                      minHeight: 'clamp(25px, 3.15vh, 29px)',
+                      px: 1,
+                      py: 0.25,
                       borderRadius: 1,
                       color: subActive ? WHITE : TEXT,
                       bgcolor: subActive ? childActiveBg : 'transparent',
@@ -410,13 +410,13 @@ export default function Sidebar({
                         bgcolor: childHoverBg,
                         color: WHITE,
                       },
-                      mb: 0.25,
+                      mb: 0.12,
                     }}
                   >
                     <ListItemText
                       primary={sub.text}
                       primaryTypographyProps={{
-                        fontSize: 'clamp(0.76rem, 1.9vh, 0.88rem)',
+                        fontSize: 'clamp(0.74rem, 1.72vh, 0.84rem)',
                         fontWeight: subActive ? 650 : 500,
                       }}
                     />

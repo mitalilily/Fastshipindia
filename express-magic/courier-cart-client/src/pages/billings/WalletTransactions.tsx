@@ -181,7 +181,7 @@ const WalletTransactions = () => {
 
   return (
     <>
-      <Stack gap={3} p={4}>
+      <Stack gap={1.6} p={{ xs: 2, md: 2.5 }}>
       <PageHeading
         eyebrow="Billing Panel"
         title={pageConfig.title}
@@ -194,7 +194,7 @@ const WalletTransactions = () => {
       )}
       <Card
         sx={{
-          mb: 3,
+          mb: 0,
           position: 'relative',
           overflow: 'hidden',
           background: isDark
@@ -228,7 +228,7 @@ const WalletTransactions = () => {
           },
         }}
       >
-        <CardContent sx={{ position: 'relative', zIndex: 1, px: 2.5, py: 2.2 }}>
+        <CardContent sx={{ position: 'relative', zIndex: 1, px: 1.8, py: 1.35 }}>
           <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
             Current Wallet Balance
           </Typography>
@@ -268,6 +268,7 @@ const WalletTransactions = () => {
           setPage(1) // reset page when filters change
         }}
         loading={showLoading}
+        compact
       />
 
       {/* Transaction List */}
@@ -284,7 +285,7 @@ const WalletTransactions = () => {
           direction="row"
           justifyContent="space-between"
           alignItems="center"
-          sx={{ px: 3, py: 2, borderBottom: `1px solid ${borderColor}` }}
+          sx={{ px: 2, py: 1.3, borderBottom: `1px solid ${borderColor}` }}
         >
           <Typography fontWeight={800} color="text.primary">
             {pageConfig.tableTitle}
@@ -299,7 +300,7 @@ const WalletTransactions = () => {
           />
         </Stack>
         {showLoading ? (
-          <Stack gap={1.5} p={3}>
+          <Stack gap={1} p={2}>
             {Array.from({ length: 5 }).map((_, idx) => (
               <Skeleton key={idx} variant="rectangular" height={60} />
             ))}
@@ -308,7 +309,7 @@ const WalletTransactions = () => {
           <List disablePadding>
             {transactions.map((txn, idx) => (
               <React.Fragment key={txn.id}>
-                <ListItem sx={{ px: 3, py: 2 }}>
+                <ListItem sx={{ px: 2, py: 1.25 }}>
                   <ListItemAvatar>
                     <Avatar
                       sx={{
@@ -376,7 +377,7 @@ const WalletTransactions = () => {
             ))}
           </List>
         ) : (
-          <Typography textAlign="center" p={4} color="text.secondary">
+          <Typography textAlign="center" p={2.4} color="text.secondary">
             No entries found.
           </Typography>
         )}

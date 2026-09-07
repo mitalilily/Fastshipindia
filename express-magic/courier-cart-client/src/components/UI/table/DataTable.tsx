@@ -751,9 +751,9 @@ export default function DataTable<T extends { id: string | number }>(props: Data
                         }
                         align="center"
                         sx={{
-                          height: isCompact ? 170 : 220,
+                          height: isCompact ? 130 : 170,
                           px: 2,
-                          py: 4,
+                          py: isCompact ? 2 : 3,
                           backgroundColor: isDark ? surface : '#FFFFFF',
                         }}
                       >
