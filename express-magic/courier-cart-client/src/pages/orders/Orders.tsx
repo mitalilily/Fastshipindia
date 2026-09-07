@@ -86,7 +86,7 @@ export default function Orders() {
   ]
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 1, md: 1.45 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 0.75, md: 1 } }}>
       {!isReady && (
         <Alert
           severity="warning"
@@ -110,7 +110,7 @@ export default function Orders() {
 
       <Box
         sx={{
-          mb: 1.25,
+          mb: 1,
           borderRadius: 2.5,
           overflow: 'hidden',
           border: `1px solid ${borderColor}`,
@@ -125,8 +125,8 @@ export default function Orders() {
           gap={1.25}
           sx={{
             px: { xs: 1.25, md: 1.7 },
-            py: { xs: 1, md: 1.15 },
-            borderTop: `10px solid ${topStripe}`,
+            py: { xs: 0.85, md: 0.95 },
+            borderTop: `8px solid ${topStripe}`,
           }}
         >
           <Stack direction="row" alignItems="center" spacing={1.4}>
@@ -184,7 +184,7 @@ export default function Orders() {
           gap={0}
           sx={{
             px: { xs: 1, md: 1.35 },
-            py: 1.05,
+            py: 0.65,
             borderTop: `1px solid ${borderColor}`,
             bgcolor: nestedSurface,
           }}
@@ -200,7 +200,7 @@ export default function Orders() {
                 sx={{
                   borderRadius: 0,
                   px: 1.8,
-                  py: 1,
+                  py: 0.75,
                   mr: -0.5,
                   minWidth: 'unset',
                   border: `1px solid ${strongBorder}`,
@@ -217,10 +217,8 @@ export default function Orders() {
             )
           })}
         </Stack>
-      </Box>
 
-      <Box sx={{ mt: 0 }}>
-        <AllOrders />
+        <AllOrders embedded />
       </Box>
 
       <Popover

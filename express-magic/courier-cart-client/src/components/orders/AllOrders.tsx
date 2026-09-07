@@ -35,7 +35,7 @@ import {
   MdTrackChanges,
   MdVisibility,
 } from 'react-icons/md'
-import { TbDownload, TbFilter, TbPlus } from 'react-icons/tb'
+import { TbDownload, TbFilter } from 'react-icons/tb'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchOrdersForCsvExport, generateManifestService } from '../../api/order.service'
 import {
@@ -305,7 +305,11 @@ const isManifestEligible = (order: Order) => {
   return order.type === 'b2c' ? isB2CManifestEligible(order) : false
 }
 
-const AllOrders = () => {
+type AllOrdersProps = {
+  embedded?: boolean
+}
+
+const AllOrders = ({ embedded = false }: AllOrdersProps = {}) => {
   const theme = useTheme()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -1821,7 +1825,7 @@ const AllOrders = () => {
   }
 
   return (
-    <Stack gap={0.8}>
+    <Stack gap={embedded ? 0 : 0.8}>
       {activeQuery.isError && (
         <Alert severity="warning">
           Live orders are temporarily unavailable. The table remains open and will update on the next refresh.
@@ -1830,20 +1834,21 @@ const AllOrders = () => {
       <Box
         sx={{
           backgroundColor: surface,
-          borderRadius: '8px',
-          border: `1px solid ${borderColor}`,
-          boxShadow: panelShadow,
+          borderRadius: embedded ? 0 : '8px',
+          border: embedded ? 0 : `1px solid ${borderColor}`,
+          borderTop: embedded ? `1px solid ${borderColor}` : undefined,
+          boxShadow: embedded ? 'none' : panelShadow,
           overflow: 'hidden',
         }}
       >
         <Stack
-          direction={{ xs: 'column', lg: 'row' }}
-          alignItems={{ xs: 'flex-start', lg: 'center' }}
+          direction={{ xs: 'column', md: 'row' }}
+          alignItems={{ xs: 'flex-start', md: 'center' }}
           justifyContent="space-between"
           gap={0.75}
           sx={{
             px: { xs: 1.15, md: 1.5 },
-            py: 0.75,
+            py: embedded ? 0.6 : 0.75,
             borderBottom: `1px solid ${borderColor}`,
             bgcolor: surface,
           }}
@@ -1853,7 +1858,7 @@ const AllOrders = () => {
             sx={{
               fontWeight: 700,
               color: textPrimary,
-              fontSize: '17px',
+              fontSize: embedded ? '15px' : '17px',
             }}
           >
             Orders Management
@@ -1879,29 +1884,13 @@ const AllOrders = () => {
             >
               {exportingCsv ? 'Exporting' : 'Export CSV'}
             </Button>
-            <Button
-              variant="contained"
-              startIcon={<TbPlus size={16} />}
-              onClick={() => navigate('/orders/create')}
-              sx={{
-                borderRadius: 1,
-                minHeight: 34,
-                fontSize: 12,
-                bgcolor: '#1D2842',
-                '&:hover': {
-                  bgcolor: '#152038',
-                },
-              }}
-            >
-              Create Order
-            </Button>
           </Stack>
         </Stack>
 
         <Box
           sx={{
             px: { xs: 1.15, md: 1.5 },
-            py: 0.75,
+            py: embedded ? 0.55 : 0.75,
             borderBottom: `1px solid ${borderColor}`,
             bgcolor: isDark ? alpha('#ffffff', 0.025) : '#FFFFFF',
           }}
@@ -1944,7 +1933,7 @@ const AllOrders = () => {
         <Box
           sx={{
             px: { xs: 1.15, md: 1.5 },
-            py: 0.65,
+            py: embedded ? 0.5 : 0.65,
             borderBottom: `1px solid ${borderColor}`,
             bgcolor: isDark ? alpha('#ffffff', 0.03) : '#F8FAFC',
             overflowX: 'auto',
