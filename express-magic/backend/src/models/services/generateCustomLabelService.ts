@@ -7,11 +7,17 @@ import PdfPrinter from 'pdfmake'
 import { db } from '../client'
 import { labelPreferences } from '../schema/labelPreferences'
 import { userProfiles } from '../schema/userProfile'
+import {
+  getCourierProviderDisplayName,
+  getProviderMetaCourierName,
+  resolveCourierProviderKeyFromFields,
+} from '../../utils/courierProvider'
 import { getAdminInvoicePreferences } from './invoicePreferences.service'
 import { presignDownload, uploadBufferToStorage } from './upload.service'
 import { uploadBufferToDatabase } from './databaseUpload.service'
 
 const LABEL_ASSET_TIMEOUT_MS = 10000
+const PLATFORM_LABEL_BRAND = 'FastShip'
 
 function isValidDataUrl(str: string | null): boolean {
   return typeof str === 'string' && str.startsWith('data:image/')
@@ -115,7 +121,7 @@ const DEFAULT_LABEL_SETTINGS = {
     deadWeight: true,
     otherCharges: true,
   },
-  powered_by: 'Shiplifi',
+  powered_by: PLATFORM_LABEL_BRAND,
 }
 
 function safeParseObject(value: unknown, fallback: Record<string, any> = {}) {
@@ -210,7 +216,7 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   })
   const platformLogoKey =
     adminPrefs?.includeLogo !== false && adminPrefs?.logoFile ? adminPrefs.logoFile : null
-  // Always show Shiplifi platform logo (Powered by ...) when configured in admin billing prefs
+  // Keep labels platform-branded even when seller profile branding is configured.
   let platformLogoBase64: string | null = null
   if (platformLogoKey) {
     try {
@@ -245,6 +251,7 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   }
 
   const pickup = safeParseObject(order.pickup_details)
+  const providerMeta = safeParseObject(order.provider_meta)
 
   const rto = safeParseObject(order.rto_details)
 
@@ -286,7 +293,7 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   const includeDimension = isEnabled(settings.product_info?.dimension)
   const includeDeadWeight = isEnabled(settings.product_info?.deadWeight)
   const showOrderValueSection = includeCost && isEnabled(settings.product_info?.otherCharges)
-  const showPlatformBranding = Boolean(settings.powered_by?.toString().trim())
+  const showPlatformBranding = true
   const charLimit = Math.max(10, Number(settings.char_limit ?? 36))
   const maxItems = Math.max(1, Number(settings.max_items ?? 4))
 
@@ -480,7 +487,20 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   const invoiceValue = formatCurrency(order.order_amount)
   const paymentLabel = paymentType === 'cod' ? 'COD' : 'PREPAID'
   const serviceMode = pickFirstText(order.shipping_mode, order.mode, order.service_type)
-  const courierName = pickFirstText(order.courier_partner, order.courier_name, order.provider, 'Courier')
+  const providerKeyForDisplay = resolveCourierProviderKeyFromFields(
+    order.integration_type,
+    order.provider,
+    providerMeta.provider,
+    providerMeta.provider_name,
+    providerMeta.service_provider,
+  )
+  const providerDisplayName = getCourierProviderDisplayName(providerKeyForDisplay)
+  const providerMetaCourierName = getProviderMetaCourierName(providerMeta)
+  const shouldPreferProviderName =
+    Boolean(providerKeyForDisplay) && providerKeyForDisplay !== 'delhivery'
+  const courierName = shouldPreferProviderName
+    ? providerDisplayName
+    : pickFirstText(providerMetaCourierName, order.courier_partner, order.courier_name, providerDisplayName, 'Courier')
 
   const dimensionLabel =
     order.length && order.breadth && order.height
@@ -572,13 +592,22 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   ].filter(Boolean) as string[][]
 
   const headerBrandStack: any[] = []
-  if (showBrandLogo && images.logo) {
-    headerBrandStack.push({ image: 'logo', width: 32, margin: [0, 0, 6, 0] })
+  if (showBrandLogo) {
+    headerBrandStack.push({
+      text: 'FS',
+      bold: true,
+      fontSize: 10,
+      color: '#ffffff',
+      alignment: 'center',
+      fillColor: '#0f2e4d',
+      margin: [0, 2, 7, 0],
+      width: 24,
+    })
   }
   headerBrandStack.push({
     stack: [
       {
-        text: showBrandName && sellerBrandName ? trimText(sellerBrandName, 28).toUpperCase() : 'SHIPPER',
+        text: trimText(PLATFORM_LABEL_BRAND, 28).toUpperCase(),
         bold: true,
         fontSize: 12,
         color: '#0f172a',
@@ -920,7 +949,7 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
       footerStack.push({ image: 'platformLogo', width: 46, alignment: 'right', margin: [0, 0, 4, 0] })
     }
     footerStack.push({
-      text: `Powered by ${settings.powered_by}`,
+      text: `Powered by ${PLATFORM_LABEL_BRAND}`,
       fontSize: 6.8,
       alignment: images.platformLogo ? 'right' : 'center',
       color: '#475569',

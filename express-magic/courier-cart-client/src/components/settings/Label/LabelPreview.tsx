@@ -18,6 +18,7 @@ const clampText = (value: unknown, max = 25) => {
 const pickFirst = (...values: unknown[]) => values.map(normalize).find(Boolean) || ''
 
 const isEnabled = (value: unknown) => (value === undefined ? true : value === true)
+const PLATFORM_LABEL_BRAND = 'FastShip'
 
 const buildWeight = (order: any) => {
   if (order.deadWeight) return normalize(order.deadWeight)
@@ -92,6 +93,7 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
   }
 
   const shipperName = pickFirst(order.shipper?.name, 'Client Store')
+  const labelBrandName = PLATFORM_LABEL_BRAND
   const shipperAddress = pickFirst(order.shipper?.rtoAddress, order.shipper?.address)
   const returnAddress = pickFirst(order.shipper?.rtoAddress, order.shipper?.address)
   const serviceMode = pickFirst(order.shipping_mode, 'Surface')
@@ -141,13 +143,13 @@ export function LabelPreview({ values, order }: LabelPreviewProps) {
                   fontWeight: 900,
                 }}
               >
-                LOGO
+                  FS
               </Box>
             ) : null}
             <Box>
               {showSellerName && (
                 <Typography sx={{ fontSize: 16, fontWeight: 900, lineHeight: 1.05, color: '#0f172a' }}>
-                  {clampText(shipperName, 18).toUpperCase()}
+                  {clampText(labelBrandName, 18).toUpperCase()}
                 </Typography>
               )}
               <Typography sx={{ fontSize: 9, fontWeight: 900, color: '#f15a24', letterSpacing: 3 }}>
