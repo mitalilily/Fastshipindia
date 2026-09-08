@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { signAccessToken, signRefreshToken } from "../../utils/jwt";
 import { db } from "../client";
 import { users } from "../schema/users";
@@ -18,27 +18,7 @@ type AdminAuthUser = {
   emailVerified: boolean | null;
 };
 
-let adminAuthSchemaReady: Promise<void> | null = null;
-
-const ensureAdminAuthSchema = async () => {
-  if (!adminAuthSchemaReady) {
-    adminAuthSchemaReady = (async () => {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "passwordHash" varchar(200)`);
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "emailVerified" boolean DEFAULT false`);
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "phoneVerified" boolean DEFAULT false`);
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "accountVerified" boolean DEFAULT false`);
-    })().catch((err) => {
-      adminAuthSchemaReady = null;
-      throw err;
-    });
-  }
-
-  return adminAuthSchemaReady;
-};
-
 const findAdminAuthUserByEmail = async (email: string): Promise<AdminAuthUser | null> => {
-  await ensureAdminAuthSchema();
-
   const [user] = await db
     .select({
       id: users.id,

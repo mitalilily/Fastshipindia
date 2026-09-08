@@ -692,24 +692,6 @@ const getRefreshTokenReuseGraceMs = () => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 2 * 60 * 1000
 }
 
-let refreshTokenSchemaReady: Promise<void> | null = null
-
-const ensureRefreshTokenSchema = async () => {
-  if (!refreshTokenSchemaReady) {
-    refreshTokenSchemaReady = (async () => {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "refreshToken" varchar(500)`)
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "refreshTokenExpiresAt" timestamp`)
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "previousRefreshToken" varchar(500)`)
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "previousRefreshTokenExpiresAt" timestamp`)
-    })().catch((err) => {
-      refreshTokenSchemaReady = null
-      throw err
-    })
-  }
-
-  return refreshTokenSchemaReady
-}
-
 export const saveRefreshToken = async (
   userId: string,
   token: string | null,
@@ -717,37 +699,63 @@ export const saveRefreshToken = async (
   previousToken: string | null = null,
   previousTtlMs = getRefreshTokenReuseGraceMs(),
 ) => {
-  await ensureRefreshTokenSchema()
-
   const isClearing = token === null
   const expiresAt = isClearing ? sql`NULL` : new Date(Date.now() + ttlMs)
   const previousExpiresAt = previousToken ? new Date(Date.now() + previousTtlMs) : sql`NULL`
 
-  return db
-    .update(users)
-    .set({
-      refreshToken: isClearing ? sql`NULL` : token,
-      refreshTokenExpiresAt: expiresAt,
-      previousRefreshToken: isClearing ? sql`NULL` : previousToken,
-      previousRefreshTokenExpiresAt: previousToken ? previousExpiresAt : sql`NULL`,
-    })
-    .where(eq(users.id, userId))
-    .returning({ id: users.id })
+  try {
+    return await db
+      .update(users)
+      .set({
+        refreshToken: isClearing ? sql`NULL` : token,
+        refreshTokenExpiresAt: expiresAt,
+        previousRefreshToken: isClearing ? sql`NULL` : previousToken,
+        previousRefreshTokenExpiresAt: previousToken ? previousExpiresAt : sql`NULL`,
+      })
+      .where(eq(users.id, userId))
+      .returning({ id: users.id })
+  } catch (err: any) {
+    const message = String(err?.message || '')
+    const missingPreviousRefreshColumn =
+      /previousRefreshToken/i.test(message) || /previousRefreshTokenExpiresAt/i.test(message)
+
+    if (!missingPreviousRefreshColumn) throw err
+
+    console.warn(
+      'previousRefreshToken columns are not available; saving current refresh token only.',
+      err?.message || err,
+    )
+
+    return db
+      .update(users)
+      .set({
+        refreshToken: isClearing ? sql`NULL` : token,
+        refreshTokenExpiresAt: expiresAt,
+      })
+      .where(eq(users.id, userId))
+      .returning({ id: users.id })
+  }
 }
 
 export const clampPreviousRefreshTokenExpiry = async (
   userId: string,
   ttlMs = getRefreshTokenReuseGraceMs(),
 ) => {
-  await ensureRefreshTokenSchema()
-
-  return db
-    .update(users)
-    .set({
-      previousRefreshTokenExpiresAt: new Date(Date.now() + ttlMs),
-    })
-    .where(eq(users.id, userId))
-    .returning({ id: users.id })
+  try {
+    return await db
+      .update(users)
+      .set({
+        previousRefreshTokenExpiresAt: new Date(Date.now() + ttlMs),
+      })
+      .where(eq(users.id, userId))
+      .returning({ id: users.id })
+  } catch (err: any) {
+    if (/previousRefreshTokenExpiresAt/i.test(String(err?.message || ''))) {
+      console.warn('previousRefreshTokenExpiresAt column is not available; skipping clamp.')
+      return []
+    }
+    throw err
+  }
 }
 
 export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) {
