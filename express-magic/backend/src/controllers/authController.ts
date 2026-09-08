@@ -482,7 +482,12 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     return res.json(response)
   } catch (err) {
     console.error('Error in requestOtp:', err)
-    return res.status(500).json({ error: 'Something went wrong while requesting OTP' })
+    return res.status(500).json({
+      error:
+        (err as any)?.cause?.message ||
+        (err as any)?.message ||
+        'Something went wrong while requesting OTP',
+    })
   }
 }
 
@@ -866,7 +871,7 @@ export const adminLoginController = async (req: Request, res: Response) => {
     const isUnauthorized = err.message === 'Unauthorized' || err.message === 'Invalid credentials'
     return res
       .status(isUnauthorized ? 401 : 500)
-      .json({ error: err.message || 'Internal server error' })
+      .json({ error: err?.cause?.message || err.message || 'Internal server error' })
   }
 }
 
