@@ -118,7 +118,7 @@ const pdfZoneMap: Record<'A' | 'B' | 'C' | 'D' | 'E', B2CZoneCode[]> = {
   E: ['SPECIAL_ZONE', 'KASHMIR'],
 }
 
-const b2cRateSeeds: B2CRateSeed[] = [
+export const b2cRateSeeds: B2CRateSeed[] = [
   {
     id: 2001,
     name: 'Delhivery Air',
@@ -649,7 +649,7 @@ const b2cSeedProviderKeys = Array.from(
 )
 const b2cSeedCourierIds = b2cRateSeeds.map((seed) => seed.id)
 
-const b2bZoneCodes = [
+export const b2bZoneCodes = [
   'N1',
   'N2',
   'N3',
@@ -668,7 +668,7 @@ const b2bZoneCodes = [
   'NE2',
 ] as const
 
-const b2bMatrix: Record<(typeof b2bZoneCodes)[number], number[]> = {
+export const b2bMatrix: Record<(typeof b2bZoneCodes)[number], number[]> = {
   N1: [6.9, 6.9, 6.9, 7.3, 11.1, 11.1, 8.9, 10, 14, 14, 14, 15.3, 13, 13, 17.6, 17.6],
   N2: [6.9, 6.9, 6.9, 7.3, 11.1, 11.1, 8.9, 10, 14.8, 14.8, 14.8, 17.5, 13, 13, 17.6, 17.6],
   N3: [6.9, 6.9, 6.9, 7.3, 11.1, 11.1, 8.9, 10, 14.8, 14.8, 14.8, 17.5, 13, 13, 17.6, 17.6],
@@ -687,7 +687,7 @@ const b2bMatrix: Record<(typeof b2bZoneCodes)[number], number[]> = {
   NE2: [11.1, 11.1, 11.1, 14.8, 10.9, 10.9, 11.7, 13.3, 13.7, 13.7, 13.7, 15.3, 9.9, 9.9, 7.2, 7.2],
 }
 
-const holzerB2BZoneCodes = [
+export const holzerB2BZoneCodes = [
   'N1',
   'N2',
   'N3',
@@ -704,7 +704,7 @@ const holzerB2BZoneCodes = [
   'NE2',
 ] as const
 
-const holzerB2BMatrix: Record<(typeof holzerB2BZoneCodes)[number], number[]> = {
+export const holzerB2BMatrix: Record<(typeof holzerB2BZoneCodes)[number], number[]> = {
   N1: [9, 15, 18, 17, 18, 20, 21, 21, 22, 21, 22, 23, 29, 34],
   N2: [],
   N3: [],
