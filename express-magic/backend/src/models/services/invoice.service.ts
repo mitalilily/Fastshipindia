@@ -108,11 +108,8 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
   }`
   const isThermal = invoice.layout === 'thermal'
   const fontSize = isThermal ? 7 : 10
-  const headerFontSize = isThermal ? 10 : 18
-  const classicBaseFont = hasMerchantFont ? 'Merchant' : 'Courier'
-  // Black & white / grayscale styling for invoice
-  const accentColor = '#000000'
-  const dangerColor = '#000000'
+  const classicBaseFont = 'Helvetica'
+  const accentColor = '#0a6fa5'
   const toAmount = (value: unknown) => {
     const n = Number(value ?? 0)
     return Number.isFinite(n) ? n : 0
@@ -123,12 +120,64 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
     return `${num < 0 ? '-' : ''}Rs. ${abs}`
   }
 
-  const headerBgColor = '#ffffff'
-  const cardBgColor = '#ffffff'
-  const cardBorderColor = '#c9ced6'
+  const numberToWords = (value: number): string => {
+    const ones = [
+      '',
+      'One',
+      'Two',
+      'Three',
+      'Four',
+      'Five',
+      'Six',
+      'Seven',
+      'Eight',
+      'Nine',
+      'Ten',
+      'Eleven',
+      'Twelve',
+      'Thirteen',
+      'Fourteen',
+      'Fifteen',
+      'Sixteen',
+      'Seventeen',
+      'Eighteen',
+      'Nineteen',
+    ]
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+    const belowHundred = (num: number) =>
+      num < 20 ? ones[num] : [tens[Math.floor(num / 10)], ones[num % 10]].filter(Boolean).join(' ')
+    const belowThousand = (num: number) =>
+      [
+        num >= 100 ? `${ones[Math.floor(num / 100)]} Hundred` : '',
+        num % 100 ? belowHundred(num % 100) : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+
+    const parts: string[] = []
+    const crore = Math.floor(value / 10000000)
+    value %= 10000000
+    const lakh = Math.floor(value / 100000)
+    value %= 100000
+    const thousand = Math.floor(value / 1000)
+    value %= 1000
+
+    if (crore) parts.push(`${belowThousand(crore)} Crore`)
+    if (lakh) parts.push(`${belowThousand(lakh)} Lakh`)
+    if (thousand) parts.push(`${belowThousand(thousand)} Thousand`)
+    if (value) parts.push(belowThousand(value))
+    return parts.length ? parts.join(' ') : 'Zero'
+  }
+
+  const amountInWords = (value: number): string => {
+    const amount = Math.max(0, Number.isFinite(value) ? value : 0)
+    const rupees = Math.floor(amount)
+    const paise = Math.round((amount - rupees) * 100)
+    return `Rupees ${numberToWords(rupees)}${paise ? ` and ${numberToWords(paise)} Paise` : ''} Only`
+  }
+
   const mutedTextColor = '#4b5563'
   const sectionTitleColor = '#000000'
-  const grandTotalBg = '#eef1f4'
 
   // Helper function to validate if buffer is a valid PNG/JPEG/GIF
   const isValidImageBuffer = (buffer: Buffer): boolean => {
@@ -382,67 +431,6 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
       ? `• For support contact: ${invoice.supportEmail}`
       : null
 
-  // -------------------
-  // Product Rows + HSN Summary (for GST-style layout)
-  // -------------------
-  const hsnSummary: Record<
-    string,
-    { taxable: number; taxRate: number; cgst: number; sgst: number }
-  > = {}
-
-  const productRowsClassic = [
-    [
-      { text: 'SNo', bold: true, alignment: 'center', color: accentColor },
-      { text: 'Item Description', bold: true, color: accentColor },
-      { text: 'Qty', bold: true, alignment: 'center', color: accentColor },
-      { text: 'Rate', bold: true, alignment: 'right', color: accentColor },
-      { text: 'Tax', bold: true, alignment: 'right', color: accentColor },
-      { text: 'Amount (Rs.)', bold: true, alignment: 'right', color: accentColor },
-    ],
-    ...invoice.products.map((p, index) => {
-      const qty = toAmount(p.qty ?? 1)
-      const price = toAmount(p.price)
-      const discount = toAmount(p.discount)
-      const taxRate = toAmount(p.tax_rate)
-      const lineTaxable = Math.max(0, price * qty - discount)
-      const lineTax = (lineTaxable * taxRate) / 100
-      const cgst = lineTax / 2
-      const sgst = lineTax / 2
-      const hsnCode = p.hsn || 'NA'
-
-      if (!hsnSummary[hsnCode]) {
-        hsnSummary[hsnCode] = {
-          taxable: 0,
-          taxRate,
-          cgst: 0,
-          sgst: 0,
-        }
-      }
-      hsnSummary[hsnCode].taxable += lineTaxable
-      hsnSummary[hsnCode].cgst += cgst
-      hsnSummary[hsnCode].sgst += sgst
-
-      return [
-        { text: (index + 1).toString(), alignment: 'center' },
-        p.name ?? p.box_name ?? 'N/A',
-        { text: qty.toString(), alignment: 'center' },
-        { text: formatCurrency(price), alignment: 'right' },
-        { text: `${taxRate}%`, alignment: 'right' },
-        { text: formatCurrency(lineTaxable), alignment: 'right' },
-      ]
-    }),
-  ]
-
-  const hsnTotalRow = Object.values(hsnSummary).reduce(
-    (acc, v) => {
-      acc.taxable += v.taxable
-      acc.cgst += v.cgst
-      acc.sgst += v.sgst
-      return acc
-    },
-    { taxable: 0, cgst: 0, sgst: 0 },
-  )
-
   const productRowsThermal = [
     ['Item', 'Qty', 'Price', 'Total'],
     ...invoice.products.map((p) => {
@@ -489,7 +477,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
   let cgstTotal = 0
   let sgstTotal = 0
   let igstTotal = 0
-  const productRows: TableCell[][] = invoice.products.map((p, index) => {
+  invoice.products.forEach((p) => {
     const qty = toAmount(p.qty ?? 1)
     const price = toAmount(p.price)
     const discount = toAmount(p.discount ?? 0)
@@ -502,39 +490,6 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
     cgstTotal += lineCgst
     sgstTotal += lineSgst
     igstTotal += lineIgst
-    const lineTotal = lineTaxable + taxAmount
-
-    const hsnCode = p.hsn || 'NA'
-
-    if (!hsnSummary[hsnCode]) {
-      hsnSummary[hsnCode] = {
-        taxable: 0,
-        taxRate,
-        cgst: 0,
-        sgst: 0,
-      }
-    }
-    hsnSummary[hsnCode].taxable += lineTaxable
-    hsnSummary[hsnCode].cgst += lineCgst
-    hsnSummary[hsnCode].sgst += lineSgst
-
-    return ([
-      { text: String(index + 1), alignment: 'center', color: '#475467' },
-      {
-        text: p.name ?? p.box_name ?? 'N/A',
-        color: '#0f172a',
-        margin: [0, 2, 0, 2],
-      },
-      { text: hsnCode, alignment: 'center', color: '#475467' },
-      { text: qty.toString(), alignment: 'right', color: '#0f172a' },
-      { text: formatCurrency(price), alignment: 'right', color: '#0f172a' },
-      {
-        text: taxRate > 0 ? `${taxRate.toFixed(2)}%` : '0%',
-        alignment: 'right',
-        color: '#475467',
-      },
-      { text: formatCurrency(lineTotal), alignment: 'right', color: '#0f172a', bold: true },
-    ] as TableCell[])
   })
   const taxTotal = cgstTotal + sgstTotal + igstTotal
   const chargesBreakdown = [
@@ -553,260 +508,296 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
   const supportContact = [invoice.supportEmail, invoice.supportPhone].filter(Boolean).join(' | ')
 
 
-  const buildHeaderBand = () => ({
-    table: {
-      widths: ['58%', '42%'],
-      body: [[
-        {
-          stack: [
-            images.logo
-              ? { image: 'logo', width: 120, margin: [0, 0, 0, 6] }
-              : {
-                  text: sellerDisplayName || invoice.companyName || 'Seller',
-                  fontSize: headerFontSize,
-                  bold: true,
-                  font: classicBaseFont,
-                  color: '#000',
-                },
-            sellerDisplayName
-              ? { text: sellerDisplayName, fontSize: 13, color: '#000', font: classicBaseFont }
-              : null,
-            invoice.gstNumber
-              ? { text: `GSTIN: ${invoice.gstNumber}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont }
-              : null,
-          ].filter(Boolean),
-          margin: [10, 10, 10, 10],
-        },
-        {
-          stack: [
-            { text: 'TAX INVOICE', fontSize: 15, bold: true, alignment: 'right', font: classicBaseFont },
-            { text: invoiceNumber, fontSize: 22, bold: true, alignment: 'right', font: classicBaseFont, margin: [0, 3, 0, 3] },
-            { text: `Date: ${invoice.invoiceDate ?? '-'}`, fontSize: 12, alignment: 'right', font: classicBaseFont },
-            images.platformLogo
-              ? { image: 'platformLogo', width: 70, alignment: 'right', margin: [0, 10, 0, 0] }
-              : null,
-          ].filter(Boolean),
-          margin: [10, 10, 10, 10],
-        },
-      ]],
-    },
-    layout: borderLayout,
-    margin: [0, 0, 0, 14],
-  })
+  const buildHeaderBand = () => {
+    const headerBlue = '#0a6fa5'
+    return {
+      table: {
+        widths: ['*', 175],
+        body: [[
+          {
+            text: 'INVOICE',
+            color: '#ffffff',
+            bold: true,
+            fontSize: 24,
+            alignment: 'center',
+            margin: [0, 7, 0, 5],
+            fillColor: headerBlue,
+          },
+          {
+            stack: [
+              { text: `Invoice Number: ${invoiceNumber || '-'}`, color: '#ffffff', bold: true, fontSize: 9 },
+              { text: `Invoice Date: ${invoice.invoiceDate || '-'}`, color: '#ffffff', bold: true, fontSize: 9, margin: [0, 2, 0, 0] },
+            ],
+            alignment: 'left',
+            margin: [8, 8, 8, 5],
+            fillColor: headerBlue,
+          },
+        ]],
+      },
+      layout: {
+        hLineWidth: () => 0,
+        vLineWidth: () => 0,
+        paddingLeft: () => 0,
+        paddingRight: () => 0,
+        paddingTop: () => 0,
+        paddingBottom: () => 0,
+      },
+      margin: [0, 0, 0, 0],
+    }
+  }
 
   const buildClassicLayout = () => {
-    const fromDetails = [
-      { text: 'FROM', bold: true, fontSize: 11, font: classicBaseFont },
-      { text: sellerDisplayName || 'Seller', bold: true, fontSize: 14, font: classicBaseFont, margin: [0, 2, 0, 4] },
-      ...(sellerAddressLines.length
-        ? sellerAddressLines.map((line) => ({ text: line, fontSize: 11, color: mutedTextColor, font: classicBaseFont }))
-        : [{ text: 'Warehouse address not provided', fontSize: 11, color: mutedTextColor, font: classicBaseFont }]),
-      sellerStateCode ? { text: `State Code: ${sellerStateCode}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont } : null,
-      invoice.gstNumber ? { text: `GSTIN: ${invoice.gstNumber}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont } : null,
-      invoice.panNumber ? { text: `PAN: ${invoice.panNumber}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont } : null,
-      supportContact ? { text: `Support: ${supportContact}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont } : null,
-    ].filter(Boolean)
+    const headerBlue = '#0a6fa5'
+    const lightBlue = '#9fcae8'
+    const softBlue = '#d9edf8'
+    const gridColor = '#7f8c8d'
+    const fieldFontSize = 9
+    const valueFontSize = 9
+    const sellerName = sellerDisplayName || invoice.companyName || 'Company'
+    const sellerAddress = sellerAddressLines.length ? sellerAddressLines.join('\n') : '-'
+    const buyerAddress = buyerAddressLines.length ? buyerAddressLines.join('\n') : '-'
+    const supportEmail = toSafeString(invoice.supportEmail) || toSafeString(invoice.buyerEmail) || '-'
+    const gstin = toSafeString(invoice.gstNumber) || toSafeString(invoice.companyGST) || '-'
+    const pan = toSafeString(invoice.panNumber) || '-'
+    const taxableSubtotal = subtotal + shipping + giftWrap + txnFee + rtoCharges - discount
+    const balanceReceived = prepaid
+    const balanceDue = Math.max(0, grandTotalModern)
+    const termsValue =
+      termsText ||
+      notesText ||
+      (supportContact ? `For support contact: ${supportContact}` : 'Goods once sold will not be taken back.')
 
-    const buyerDetails = [
-      { text: 'BILL TO', bold: true, fontSize: 11, font: classicBaseFont },
-      { text: invoice.buyerName, bold: true, fontSize: 14, font: classicBaseFont, margin: [0, 2, 0, 4] },
-      ...buyerAddressLines.map((line) => ({ text: line, fontSize: 11, color: mutedTextColor, font: classicBaseFont })),
-      invoice.buyerPhone ? { text: `Phone: ${invoice.buyerPhone}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont } : null,
-      invoice.buyerEmail ? { text: `Email: ${invoice.buyerEmail}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont } : null,
-    ].filter(Boolean)
+    const formLayout = {
+      hLineColor: () => gridColor,
+      vLineColor: () => gridColor,
+      hLineWidth: () => 0.7,
+      vLineWidth: () => 0.7,
+      paddingLeft: () => 5,
+      paddingRight: () => 5,
+      paddingTop: () => 3,
+      paddingBottom: () => 3,
+    }
+
+    const labelCell = (text: string, extra: Record<string, unknown> = {}) => ({
+      text,
+      bold: true,
+      fontSize: fieldFontSize,
+      color: '#111827',
+      ...extra,
+    })
+    const valueCell = (text: string, extra: Record<string, unknown> = {}) => ({
+      text: text || '-',
+      fontSize: valueFontSize,
+      color: '#111827',
+      ...extra,
+    })
+    const blueHeaderCell = (text: string, extra: Record<string, unknown> = {}) => ({
+      text,
+      bold: true,
+      color: '#ffffff',
+      fillColor: headerBlue,
+      fontSize: 10,
+      ...extra,
+    })
+    const amountCell = (value: number, extra: Record<string, unknown> = {}) => ({
+      text: formatCurrency(value),
+      alignment: 'right',
+      fontSize: 9,
+      color: '#111827',
+      ...extra,
+    })
+
+    const companyLogoCell = {
+      rowSpan: 5,
+      stack: images.logo
+        ? [
+            { image: 'logo', width: 105, alignment: 'center', margin: [0, 4, 0, 6] },
+            { text: sellerName, bold: true, alignment: 'center', fontSize: 9, color: '#111827' },
+          ]
+        : [
+            { text: sellerName, bold: true, alignment: 'center', fontSize: 14, color: headerBlue, margin: [0, 14, 0, 4] },
+            { text: 'Company Logo', alignment: 'center', fontSize: 8, color: mutedTextColor },
+          ],
+      margin: [6, 4, 6, 4],
+    }
+
+    const companySection = {
+      table: {
+        widths: [88, '*', 140],
+        body: [
+          [labelCell('Company Name:'), valueCell(sellerName), companyLogoCell],
+          [labelCell('Address:'), valueCell(sellerAddress), {}],
+          [labelCell('Email ID:'), valueCell(supportEmail), {}],
+          [labelCell('GSTIN:'), valueCell(gstin), {}],
+          [labelCell('PAN Number:'), valueCell(pan), {}],
+        ],
+      },
+      layout: formLayout,
+      margin: [0, 0, 0, 0],
+    }
 
     const partySection = {
       table: {
         widths: ['50%', '50%'],
-        body: [[
-          { stack: fromDetails, margin: [10, 10, 10, 10] },
-          { stack: buyerDetails, margin: [10, 10, 10, 10] },
-        ]],
-      },
-      layout: borderLayout,
-      margin: [0, 0, 0, 14],
-    }
-
-    const summaryTable = {
-      table: {
-        widths: ['20%', '30%', '20%', '30%'],
         body: [
           [
-            { text: 'Order ID', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: invoice.orderId || invoiceNumber, fontSize: 11, font: classicBaseFont },
-            { text: 'Invoice Date', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: invoice.invoiceDate || '-', fontSize: 11, font: classicBaseFont },
+            blueHeaderCell('Billing To:'),
+            blueHeaderCell('Shipping To:'),
           ],
           [
-            { text: 'AWB Number', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: invoice.awbNumber || '-', fontSize: 11, font: classicBaseFont },
-            { text: 'Order Date', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: invoice.orderDate || '-', fontSize: 11, font: classicBaseFont },
+            labelCell('Name:'),
+            labelCell('Name:'),
           ],
           [
-            { text: 'Pickup Pincode', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: invoice.pickupPincode || '-', fontSize: 11, font: classicBaseFont },
-            { text: 'Delivery Pincode', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: invoice.deliveryPincode || invoice.buyerPincode || '-', fontSize: 11, font: classicBaseFont },
+            valueCell(invoice.buyerName),
+            valueCell(invoice.buyerName),
           ],
           [
-            { text: 'Payment Type', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: badgeIsCOD ? 'COD' : 'PREPAID', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: 'Collection Note', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: badgeIsCOD ? 'Amount to be collected on delivery' : 'Paid before dispatch', fontSize: 11, font: classicBaseFont },
+            labelCell('Address:'),
+            labelCell('Address:'),
+          ],
+          [
+            valueCell(buyerAddress, { minHeight: 28 }),
+            valueCell(buyerAddress, { minHeight: 28 }),
+          ],
+          [
+            labelCell('Phone Number:'),
+            labelCell('Phone Number:'),
+          ],
+          [
+            valueCell(invoice.buyerPhone),
+            valueCell(invoice.buyerPhone),
+          ],
+          [
+            labelCell('GSTIN:'),
+            labelCell('GSTIN:'),
+          ],
+          [
+            valueCell('-'),
+            valueCell('-'),
           ],
         ],
       },
-      layout: borderLayout,
-      margin: [0, 0, 0, 14],
+      layout: formLayout,
+      margin: [0, 0, 0, 0],
     }
+
+    const itemRows = invoice.products.map((p, index) => {
+      const qty = toAmount(p.qty ?? 1)
+      const price = toAmount(p.price)
+      const itemDiscount = toAmount(p.discount ?? 0)
+      const taxRate = Math.max(0, toAmount(p.tax_rate))
+      const lineTaxable = Math.max(0, price * qty - itemDiscount)
+      const lineTax = (lineTaxable * taxRate) / 100
+      const lineTotal = lineTaxable + lineTax
+      return [
+        valueCell(String(index + 1), { alignment: 'center' }),
+        valueCell(p.name ?? p.box_name ?? 'N/A'),
+        valueCell(p.hsn || 'NA', { alignment: 'center' }),
+        valueCell(qty.toString(), { alignment: 'center' }),
+        amountCell(price),
+        amountCell(lineTotal, { bold: true }),
+      ] as TableCell[]
+    })
+
+    const emptyItemRows = Array.from({ length: Math.max(0, 5 - itemRows.length) }, () => [
+      valueCell(' '),
+      valueCell(' '),
+      valueCell(' '),
+      valueCell(' '),
+      valueCell(' '),
+      valueCell(' '),
+    ] as TableCell[])
 
     const itemsTable = {
       table: {
         headerRows: 1,
-        widths: [32, '*', 70, 48, 82, 58, 90],
+        widths: [38, '*', 64, 50, 70, 82],
         body: [
           [
-            { text: 'S.No', bold: true, fontSize: 11, alignment: 'center', font: classicBaseFont },
-            { text: 'Item Description', bold: true, fontSize: 11, font: classicBaseFont },
-            { text: 'HSN/SAC', bold: true, fontSize: 11, alignment: 'center', font: classicBaseFont },
-            { text: 'Qty', bold: true, fontSize: 11, alignment: 'right', font: classicBaseFont },
-            { text: 'Unit Price', bold: true, fontSize: 11, alignment: 'right', font: classicBaseFont },
-            { text: 'Tax', bold: true, fontSize: 11, alignment: 'right', font: classicBaseFont },
-            { text: 'Line Total', bold: true, fontSize: 11, alignment: 'right', font: classicBaseFont },
+            { text: 'S.No.', bold: true, alignment: 'center', fillColor: lightBlue, color: '#ffffff', fontSize: 9 },
+            { text: 'Description', bold: true, alignment: 'center', fillColor: lightBlue, color: '#ffffff', fontSize: 9 },
+            { text: 'HSN\nCode', bold: true, alignment: 'center', fillColor: lightBlue, color: '#ffffff', fontSize: 9 },
+            { text: 'QTY', bold: true, alignment: 'center', fillColor: lightBlue, color: '#ffffff', fontSize: 9 },
+            { text: 'MRP', bold: true, alignment: 'center', fillColor: lightBlue, color: '#ffffff', fontSize: 9 },
+            { text: 'Amount', bold: true, alignment: 'center', fillColor: lightBlue, color: '#ffffff', fontSize: 9 },
           ],
-          ...productRows.map((row) =>
-            row.map((cell) => ({
-              ...(cell as any),
-              font: classicBaseFont,
-              fontSize: 11,
-              color: '#000',
-            })),
-          ),
+          ...itemRows,
+          ...emptyItemRows,
         ],
       },
-      layout: {
-        ...borderLayout,
-        fillColor: (rowIndex: number) => (rowIndex === 0 ? '#f3f4f6' : null),
-        paddingTop: () => 8,
-        paddingBottom: () => 8,
-      },
-      margin: [0, 0, 0, 14],
+      layout: formLayout,
+      margin: [0, 0, 0, 0],
     }
 
-    const filteredCharges = chargesBreakdown.filter((item) => {
-      if (item.label === 'RTO Charges' && rtoCharges === 0) return false
-      return true
-    })
-
-    const chargesTableBody: TableCell[][] = filteredCharges
-      .map((row) => [
-        { text: row.label, fontSize: 11, color: '#000', font: classicBaseFont },
-        { text: formatCurrency(row.value), fontSize: 11, alignment: 'right', color: '#000', font: classicBaseFont },
-      ] as TableCell[])
-
-    if (taxTotal > 0) {
-      chargesTableBody.push([
-        { text: 'Tax', fontSize: 11, color: '#000', font: classicBaseFont },
-        { text: formatCurrency(taxTotal), fontSize: 11, alignment: 'right', color: '#000', font: classicBaseFont },
-      ] as TableCell[])
-    }
-
-    chargesTableBody.push([
-      { text: 'Grand Total', fontSize: 13, bold: true, color: '#000', fillColor: grandTotalBg, font: classicBaseFont },
-      { text: formatCurrency(grandTotalModern), fontSize: 13, bold: true, alignment: 'right', color: '#000', fillColor: grandTotalBg, font: classicBaseFont },
-    ] as TableCell[])
-
-    const chargesCard = {
-      table: { widths: ['*', 'auto'], body: chargesTableBody },
-      layout: {
-        ...borderLayout,
-        paddingTop: () => 6,
-        paddingBottom: () => 6,
-        paddingLeft: () => 8,
-        paddingRight: () => 8,
-      },
-    }
-
-    const gstRows = [
-      { label: 'Taxable Amount', value: subtotal },
-      ...(cgstTotal > 0 ? [{ label: 'CGST', value: cgstTotal }] : []),
-      ...(sgstTotal > 0 ? [{ label: 'SGST', value: sgstTotal }] : []),
-      ...(igstTotal > 0 ? [{ label: 'IGST', value: igstTotal }] : []),
+    const totalsRows: TableCell[][] = [
+      [
+        {
+          rowSpan: 7,
+          stack: [
+            { text: 'Terms & Conditions', bold: true, fontSize: 9, margin: [0, 0, 0, 5] },
+            { text: termsValue, fontSize: 8, color: '#111827' },
+            supportContact ? { text: `Support: ${supportContact}`, fontSize: 8, color: mutedTextColor, margin: [0, 5, 0, 0] } : null,
+            invoice.orderId ? { text: `Order ID: ${invoice.orderId}`, fontSize: 8, color: mutedTextColor, margin: [0, 5, 0, 0] } : null,
+            invoice.awbNumber ? { text: `AWB: ${invoice.awbNumber}`, fontSize: 8, color: mutedTextColor } : null,
+            { text: `Payment Type: ${badgeIsCOD ? 'COD' : 'PREPAID'}`, fontSize: 8, color: mutedTextColor },
+          ].filter(Boolean),
+          margin: [5, 5, 5, 5],
+        },
+        labelCell('Subtotal'),
+        amountCell(taxableSubtotal),
+      ],
+      [{}, labelCell('CGST @'), amountCell(cgstTotal)],
+      [{}, labelCell('SGST @'), amountCell(sgstTotal)],
+      [{}, labelCell('IGST @'), amountCell(igstTotal)],
+      [{}, labelCell('Balance\nReceived:'), amountCell(balanceReceived)],
+      [{}, labelCell('Balance Due:'), amountCell(balanceDue)],
+      [
+        {},
+        labelCell('Total', { fillColor: softBlue }),
+        amountCell(grandTotalModern, { bold: true, fillColor: softBlue }),
+      ],
     ]
 
-    const gstSummary =
-      gstRows.length > 1 || (gstRows.length === 1 && gstRows[0].value > 0)
-        ? {
-            table: {
-              widths: ['*', 'auto'],
-              body: gstRows.map((row) => [
-                { text: row.label, fontSize: 11, color: '#000', font: classicBaseFont },
-                { text: formatCurrency(row.value), fontSize: 11, alignment: 'right', color: '#000', font: classicBaseFont },
-              ]),
-            },
-            layout: borderLayout,
-            margin: [0, 0, 0, 8],
-          }
-        : null
-
-    const notesBlock = notesText
-      ? {
-          table: {
-            widths: ['*'],
-            body: [[{
-              stack: [
-                { text: 'Notes', style: 'sectionTitle' },
-                { text: notesText, fontSize: 11, color: '#000', font: classicBaseFont },
-              ],
-              margin: [8, 8, 8, 8],
-            }]],
-          },
-          layout: borderLayout,
-          margin: [0, 0, 0, 8],
-        }
-      : null
-
-    const signatureSection = {
+    const termsAndTotals = {
       table: {
-        widths: ['*'],
-        body: [[{
-          stack: [
-            { text: 'Authorized Signatory', fontSize: 12, bold: true, color: '#000', font: classicBaseFont },
-            { text: `Signed by ${sellerDisplayName || invoice.companyName || 'Seller'}`, fontSize: 11, color: mutedTextColor, font: classicBaseFont, margin: [0, 2, 0, 8] },
-            images.signature
-              ? { image: 'signature', width: 170, alignment: 'left', margin: [0, 4, 0, 8] }
-              : { text: 'Signature provided via invoice settings', fontSize: 11, color: mutedTextColor, italics: true, font: classicBaseFont },
-          ],
-          margin: [10, 10, 10, 10],
-        }]],
+        widths: ['52%', '27%', '21%'],
+        body: totalsRows,
       },
-      layout: borderLayout,
-      margin: [0, 18, 0, 0],
+      layout: formLayout,
+      margin: [0, 0, 0, 0],
     }
 
-    const totalsLayout = {
-      columns: [
-        {
-          width: '*',
-          stack: [
-            gstSummary ? { stack: [{ text: 'Tax Summary', style: 'sectionTitle', margin: [0, 0, 0, 6] }, gstSummary] } : null,
-            notesBlock,
-          ].filter(Boolean),
-        },
-        {
-          width: 270,
-          stack: [
-            { text: 'Charges Breakdown', style: 'sectionTitle', margin: [0, 0, 0, 6] },
-            chargesCard,
-          ],
-        },
-      ],
-      columnGap: 16,
-      margin: [0, 0, 0, 14],
+    const finalPanel = {
+      table: {
+        widths: ['50%', '50%'],
+        body: [[
+          {
+            stack: [
+              { text: 'Total Amount in Word', bold: true, alignment: 'center', color: '#ffffff', fontSize: 10, margin: [0, 0, 0, 10] },
+              { text: amountInWords(grandTotalModern), alignment: 'center', color: '#111827', fontSize: 10, bold: true },
+            ],
+            fillColor: lightBlue,
+            margin: [6, 7, 6, 20],
+          },
+          {
+            stack: [
+              { text: 'Seal & Signature', bold: true, alignment: 'center', color: '#ffffff', fontSize: 10, margin: [0, 0, 0, 8] },
+              images.signature
+                ? { image: 'signature', width: 120, alignment: 'center', margin: [0, 0, 0, 4] }
+                : { text: 'Authorized Signatory', alignment: 'center', italics: true, color: '#111827', fontSize: 9, margin: [0, 14, 0, 4] },
+              { text: sellerName, alignment: 'center', bold: true, color: '#111827', fontSize: 9 },
+            ],
+            fillColor: lightBlue,
+            margin: [6, 7, 6, 16],
+          },
+        ]],
+      },
+      layout: formLayout,
+      margin: [0, 0, 0, 0],
     }
 
-    return [partySection, summaryTable, itemsTable, totalsLayout, signatureSection].filter(Boolean)
+    return [companySection, partySection, itemsTable, termsAndTotals, finalPanel]
   }
 
   const contentClassic: any[] = [buildHeaderBand(), ...buildClassicLayout()]
