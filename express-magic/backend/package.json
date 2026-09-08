@@ -52,6 +52,7 @@
     "seed:b2b-zones": "ts-node src/scripts/seedB2BZones.ts",
     "seed:basic-b2c-ratecard": "ts-node src/scripts/seedBasicPlanB2CRatecard.ts",
     "seed:basic-provider-ratecards": "ts-node src/scripts/seedBasicProviderRateCards.ts",
+    "seed:pdf-ratecards": "ts-node src/scripts/seedPdfRateCards.ts",
     "sync:basic-b2c-amazon-delhivery": "ts-node src/scripts/syncBasicB2CAmazonDelhiveryRates.ts",
     "sync:xpressbees-couriers": "ts-node src/scripts/syncXpressbeesCouriers.ts"
   },
