@@ -798,7 +798,7 @@ export async function createUserWithWallet(data: Partial<IUser>, txn: any = db) 
       printer_type: 'thermal',
       char_limit: 36,
       max_items: 4,
-      powered_by: 'Shiplifi',
+      powered_by: 'Fastship',
       order_info: {
         orderId: true,
         invoiceNumber: true,
@@ -938,7 +938,7 @@ export async function ensureUserOperationalDefaults(userId: string) {
         printer_type: 'thermal',
         char_limit: 36,
         max_items: 4,
-        powered_by: 'Shiplifi',
+        powered_by: 'Fastship',
         order_info: {
           orderId: true,
           invoiceNumber: true,

@@ -6,6 +6,7 @@ import twilio from 'twilio'
 import * as bcrypt from 'bcryptjs'
 import {
   clearUserEmailToken,
+  createUser,
   clearUserOtpByEmail,
   clampPreviousRefreshTokenExpiry,
   createUserWithWallet,
@@ -104,8 +105,9 @@ const createOtpLoginUser = async (params: {
   name?: string
   passwordHash?: string
   userType?: 'individual' | 'business'
+  provisionOperationalDefaults?: boolean
 }) => {
-  return createUserWithWallet({
+  const userPayload = {
     email: params.email,
     phone: params.phone,
     passwordHash: params.passwordHash,
@@ -118,6 +120,22 @@ const createOtpLoginUser = async (params: {
     firstName: params.name,
     onboardingStep: 0,
     onboardingComplete: false,
+  }
+
+  if (params.provisionOperationalDefaults) {
+    return createUserWithWallet(userPayload)
+  }
+
+  return createUser({
+    email: params.email,
+    phone: params.phone,
+    passwordHash: params.passwordHash,
+    otp: params.otp,
+    otpExpiresAt: params.otpExpiresAt,
+    emailVerified: false,
+    phoneVerified: false,
+    accountVerified: false,
+    role: 'customer',
   })
 }
 
@@ -317,6 +335,7 @@ export const registerMerchant = async (req: Request, res: Response): Promise<any
       passwordHash: await bcrypt.hash(password, 10),
       otp,
       otpExpiresAt,
+      provisionOperationalDefaults: true,
     })
 
     const otpDeliveryMode = getAuthOtpDeliveryMode()
@@ -466,7 +485,9 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     }).catch((err) => {
       console.error('Failed to send account activation email after OTP verification:', err)
     })
-    await ensureUserOperationalDefaults(user.id)
+    await ensureUserOperationalDefaults(user.id).catch((err) => {
+      console.error('Failed to ensure operational defaults after OTP verification:', err)
+    })
     const accessToken = signAccessToken(user.id, user.role ?? 'customer')
 
     const { token: refreshToken } = signRefreshToken(user.id, user.role ?? 'customer')
