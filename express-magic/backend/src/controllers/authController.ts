@@ -607,6 +607,15 @@ export const requestEmailVerification = async (req: Request, res: Response): Pro
 
     const user = result.data?.user
 
+    const otpDeliveryMode = getAuthOtpDeliveryMode()
+    if (!user && (otpDeliveryMode === 'screen' || otpDeliveryMode === 'both')) {
+      const pendingUser = await findUserByEmail(String(userEmail).trim().toLowerCase())
+      if (pendingUser?.emailVerificationToken) {
+        result.data.otp = pendingUser.emailVerificationToken
+        result.data.devOtp = pendingUser.emailVerificationToken
+      }
+    }
+
     // ✅ Employee active check
     if (user && user.role === 'employee') {
       const [employeeRecord] = await db
