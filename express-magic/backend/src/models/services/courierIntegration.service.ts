@@ -369,12 +369,13 @@ export const getUserShippingRates = async (
 
   const planId = userPlan[0]?.plan_id
 
-  // 2. Call existing getShippingRates with plan_id injected
-  const rates = planId ? await getShippingRates({ ...filters, plan_id: planId }) : []
-  if (rates.length || filters.business_type !== 'b2b') return rates
+  if (filters.business_type === 'b2b') {
+    const matrixRates = await getB2BZoneMatrixRateCard(planId)
+    if (matrixRates.length) return matrixRates
+  }
 
-  // B2B admin rate-card screen stores zone-to-zone matrix rows, not legacy shipping_rates rows.
-  return getB2BZoneMatrixRateCard(planId)
+  // 2. Call existing getShippingRates with plan_id injected
+  return planId ? getShippingRates({ ...filters, plan_id: planId }) : []
 }
 
 export interface ShippingRateUpdatePayload {

@@ -52,9 +52,11 @@ interface ShippingRate {
     [zone: string]: {
       forward?: number | string
       rto?: number | string
+      reverse_pickup?: number | string
       description?: string
       forward_per_kg?: number | string
       rto_per_kg?: number | string
+      reverse_pickup_per_kg?: number | string
       min_weight?: number
     }
   }
@@ -82,6 +84,12 @@ const getZoneEntry = (
 
 const getZoneLabel = (zone: { code?: string; name?: string }) =>
   [zone.code, zone.name].filter(Boolean).join(' - ') || 'Zone'
+
+const getReverseRate = (rates: ShippingRate['rates'][string]) =>
+  rates.reverse_pickup ?? rates.rto ?? 'NA'
+
+const getReversePerKgRate = (rates: ShippingRate['rates'][string]) =>
+  rates.reverse_pickup_per_kg ?? rates.rto_per_kg ?? getReverseRate(rates)
 
 // --- B2C Table ---
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,16 +142,16 @@ const B2CClientTable = ({ data, zones }: { data: ShippingRate[]; zones: any[] })
       (zone: { code: string; description: string; name: string }) =>
         ({
           id: zone.code,
-          label: `${getZoneLabel(zone)} (F | RTO)`,
+          label: `${getZoneLabel(zone)} (F | Reverse)`,
           label_desc: zone?.description,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           render: (_: any, row: any) => {
             const rates = getZoneEntry(row.rates, zone)
 
             const forward = rates.forward ?? 'NA'
-            const rto = rates.rto ?? 'NA'
+            const reverse = getReverseRate(rates)
 
-            return `Forward: ₹${forward} | RTO: ₹${rto}`
+            return `Forward: Rs ${forward} | Reverse: Rs ${reverse}`
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any),
@@ -185,50 +193,56 @@ const B2BClientTable = ({
 
   return (
     <Stack spacing={3}>
-      {data.map((courier) => (
-        <Card key={courier.courier_name} sx={{ p: 2 }}>
-          <CardContent>
-            <Stack spacing={1}>
-              <Typography variant="h6">
-                {getCourierDisplayName({
-                  name: courier.courier_name,
-                  service_provider: courier.service_provider,
-                  serviceProvider: courier.serviceProvider,
-                })}
-              </Typography>
-              <Typography variant="body2">Min Weight: {courier.min_weight} kg</Typography>
-              <Typography variant="body2">
-                COD: ₹{courier.cod_charges ?? '0'} | {courier.cod_percent ?? '0'}%
-              </Typography>
-              <Typography variant="body2">Other: ₹{courier.other_charges ?? '0'}</Typography>
-            </Stack>
+      {data.map((courier) => {
+        const visibleZones = zones.filter((zone) => {
+          const rates = getZoneEntry(courier.rates, zone)
+          return rates.forward_per_kg !== undefined || rates.forward !== undefined
+        })
+        const displayName = courier.courier_name.startsWith('From ')
+          ? courier.courier_name
+          : getCourierDisplayName({
+              name: courier.courier_name,
+              service_provider: courier.service_provider,
+              serviceProvider: courier.serviceProvider,
+            })
 
-            <Table size="small" sx={{ mt: 2 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Zone</TableCell>
-                  <TableCell>Forward (Per Kg)</TableCell>
-                  <TableCell>RTO (Per Kg)</TableCell>
-                  <TableCell>Min Weight</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {zones.map((zone) => {
-                  const rates = getZoneEntry(courier.rates, zone)
-                  return (
-                    <TableRow key={zone.code}>
-                      <TableCell>{getZoneLabel(zone)}</TableCell>
-                      <TableCell>₹{rates.forward_per_kg ?? rates.forward ?? 'NA'}</TableCell>
-                      <TableCell>₹{rates.rto_per_kg ?? rates.rto ?? 'NA'}</TableCell>
-                      <TableCell>{rates.min_weight ?? courier.min_weight ?? 'NA'} kg</TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ))}
+        return (
+          <Card key={courier.id || courier.courier_name} sx={{ p: 2 }}>
+            <CardContent>
+              <Stack spacing={1}>
+                <Typography variant="h6">{displayName}</Typography>
+                <Typography variant="body2">Min Weight: {courier.min_weight} kg</Typography>
+                <Typography variant="body2">
+                  COD: Rs {courier.cod_charges ?? '0'} | {courier.cod_percent ?? '0'}%
+                </Typography>
+                <Typography variant="body2">Other: Rs {courier.other_charges ?? '0'}</Typography>
+              </Stack>
+
+              <Table size="small" sx={{ mt: 2 }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Zone</TableCell>
+                    <TableCell>Forward (Per Kg)</TableCell>
+                    <TableCell>Min Weight</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {visibleZones.map((zone) => {
+                    const rates = getZoneEntry(courier.rates, zone)
+                    return (
+                      <TableRow key={zone.code}>
+                        <TableCell>{getZoneLabel(zone)}</TableCell>
+                        <TableCell>Rs {rates.forward_per_kg ?? rates.forward ?? 'NA'}</TableCell>
+                        <TableCell>{rates.min_weight ?? courier.min_weight ?? 'NA'} kg</TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )
+      })}
     </Stack>
   )
 }
@@ -267,13 +281,9 @@ const RateCard = () => {
       zones.forEach((zone: any) => {
         const zoneRates = getZoneEntry(r.rates, zone)
         if (businessType === 'b2b') {
-          base[`${getZoneLabel(zone)} (Per Kg)`] = `F: ₹${zoneRates.forward_per_kg ?? zoneRates.forward ?? 'NA'} | RTO: ₹${
-            zoneRates.rto_per_kg ?? zoneRates.rto ?? 'NA'
-          }`
+          base[`${getZoneLabel(zone)} (Per Kg)`] = `F: Rs ${zoneRates.forward_per_kg ?? zoneRates.forward ?? 'NA'} | Reverse: Rs ${getReversePerKgRate(zoneRates)}`
         } else {
-          base[`${getZoneLabel(zone)} (F | RTO)`] = `F: ₹${zoneRates.forward ?? 'NA'} | RTO: ₹${
-            zoneRates.rto ?? 'NA'
-          }`
+          base[`${getZoneLabel(zone)} (F | Reverse)`] = `F: Rs ${zoneRates.forward ?? 'NA'} | Reverse: Rs ${getReverseRate(zoneRates)}`
         }
       })
 
