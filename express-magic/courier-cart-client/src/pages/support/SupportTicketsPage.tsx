@@ -102,7 +102,7 @@ export const SupportTicketsPage = () => {
     filters: filters,
   })
   const showTableLoading = useFastLoading(isLoading)
-  const whatsappPhone = brandIdentity.supportPhone.replace(/\D/g, '')
+  const whatsappPhone = brandIdentity.supportWhatsappPhone
 
   const appliedCount = Object.entries(filters).filter(
     ([key, value]) => key !== 'sortBy' && Boolean(value),

@@ -16,7 +16,7 @@ const CancellationPolicy = () => {
                 You may cancel your account at any time by emailing us at{' '}
                 <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link>{' '}
                 or calling{' '}
-                <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
+                <Link href={brandIdentity.supportPhoneHref}>{brandIdentity.supportPhone}</Link>.
               </>
             }
           />

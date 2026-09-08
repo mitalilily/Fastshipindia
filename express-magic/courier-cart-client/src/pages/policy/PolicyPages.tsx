@@ -25,7 +25,7 @@ const PolicyPages = () => {
         <Typography paragraph>
           • You may cancel your account at any time by emailing us at{' '}
           <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link> or call{' '}
-          <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
+          <Link href={brandIdentity.supportPhoneHref}>{brandIdentity.supportPhone}</Link>.
         </Typography>
         <Typography paragraph>
           • Once your account is cancelled, all of your data and content will be permanently deleted
@@ -174,7 +174,7 @@ const PolicyPages = () => {
           <br />
           To do so, please contact us at{' '}
           <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link> or call{' '}
-          <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
+          <Link href={brandIdentity.supportPhoneHref}>{brandIdentity.supportPhone}</Link>.
         </Typography>
         <Typography paragraph>
           10. Third-Party Links
@@ -195,7 +195,7 @@ const PolicyPages = () => {
           If you have questions, complaints, or wish to exercise your privacy rights, reach out to:
           <br />
           <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link> or call{' '}
-          <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
+          <Link href={brandIdentity.supportPhoneHref}>{brandIdentity.supportPhone}</Link>.
         </Typography>
       </Box>
 

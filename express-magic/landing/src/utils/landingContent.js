@@ -334,6 +334,7 @@ export const footerGroups = [
       { label: "support@fastship.in", href: "mailto:support@fastship.in" },
       { label: "hello@fastship.in", href: "mailto:hello@fastship.in" },
       { label: "+91 82856 81158", href: "tel:+918285681158" },
+      { label: "+91 73609 13725", href: "tel:+917360913725" },
       { label: "Mon-Sat, 9:00 AM to 7:00 PM", href: "#top" },
     ],
   },
@@ -343,7 +344,7 @@ export const footerMeta = {
   address:
     "Prince Kataria Complex, Gali No. 81A, Laxman Vihar Phase 2, Gurgaon, Haryana 122001",
   supportHours: "Mon-Sat, 9:00 AM to 7:00 PM",
-  contactNumber: "+91 82856 81158",
+  contactNumber: "+91 82856 81158, +91 73609 13725",
 };
 
 export const mediaAssets = {

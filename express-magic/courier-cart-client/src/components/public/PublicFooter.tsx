@@ -82,15 +82,19 @@ export default function PublicFooter() {
               </Stack>
               <Stack direction="row" spacing={1.2} alignItems="center">
                 <FiPhone color="#6c5ce7" />
-                <Box component="a" href="tel:+919403891046" sx={{ color: alpha('#fff', 0.62), fontWeight: 600 }}>
-                  {brandIdentity.supportPhone}
-                </Box>
+                <Stack spacing={0.4}>
+                  {brandIdentity.supportPhoneNumbers.map((phone) => (
+                    <Box key={phone.href} component="a" href={phone.href} sx={{ color: alpha('#fff', 0.62), fontWeight: 600 }}>
+                      {phone.label}
+                    </Box>
+                  ))}
+                </Stack>
               </Stack>
               <Stack direction="row" spacing={1.2} alignItems="flex-start">
                 <FiMapPin color="#6c5ce7" style={{ marginTop: 3, flexShrink: 0 }} />
                 <Box
                   component="a"
-                  href="https://maps.google.com/?q=Telipara+Bilaspur+Chhattisgarh"
+                  href={brandIdentity.supportAddressMapUrl}
                   target="_blank"
                   rel="noreferrer"
                   sx={{ color: alpha('#fff', 0.62), fontWeight: 600, maxWidth: 300 }}

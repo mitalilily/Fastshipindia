@@ -56,7 +56,7 @@ const PrivacyPolicy = () => {
                 consent by contacting us at{' '}
                 <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link>{' '}
                 or{' '}
-                <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
+                <Link href={brandIdentity.supportPhoneHref}>{brandIdentity.supportPhone}</Link>.
               </>
             }
           />
@@ -83,7 +83,7 @@ const PrivacyPolicy = () => {
                 </a>
                 {' '}
                 or call{' '}
-                <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
+                <Link href={brandIdentity.supportPhoneHref}>{brandIdentity.supportPhone}</Link>.
               </>
             }
           />

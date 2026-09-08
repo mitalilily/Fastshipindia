@@ -17,7 +17,7 @@ const TermsOfService = () => {
         features, or sharing customer shipment data through FastShip.{' '}
         For any terms or account question, contact{' '}
         <Link href={`mailto:${brandIdentity.supportEmail}`}>{brandIdentity.supportEmail}</Link> or call{' '}
-        <Link href={`tel:${brandIdentity.supportPhone}`}>{brandIdentity.supportPhone}</Link>.
+        <Link href={brandIdentity.supportPhoneHref}>{brandIdentity.supportPhone}</Link>.
       </Typography>
 
       <Box sx={{ mt: 2.5 }}>

@@ -71,15 +71,20 @@ const CompanyDetails = () => {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <FiPhone size={22} color={theme.palette.primary.main} />
-            <Chip
-              clickable
-              component={Link}
-              href={`tel:${brandIdentity.supportPhone}`}
-              label={brandIdentity.supportPhone}
-              color="success"
-              variant="filled"
-              icon={<FiPhone size={16} />}
-            />
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {brandIdentity.supportPhoneNumbers.map((phone) => (
+                <Chip
+                  key={phone.href}
+                  clickable
+                  component={Link}
+                  href={phone.href}
+                  label={phone.label}
+                  color="success"
+                  variant="filled"
+                  icon={<FiPhone size={16} />}
+                />
+              ))}
+            </Box>
           </Box>
 
           <Divider sx={{ my: 2 }} />

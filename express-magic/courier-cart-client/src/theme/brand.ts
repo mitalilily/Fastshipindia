@@ -30,9 +30,17 @@ export const brandIdentity = {
   shortName: 'FastShip',
   tagline: 'Fast. Safe. Worldwide.',
   supportEmail: 'support@fastship.in',
-  supportPhone: '+91 82856 81158',
+  supportPhone: '+91 82856 81158, +91 73609 13725',
+  supportPhoneHref: 'tel:+918285681158',
+  supportWhatsappPhone: '918285681158',
+  supportPhoneNumbers: [
+    { label: '+91 82856 81158', href: 'tel:+918285681158' },
+    { label: '+91 73609 13725', href: 'tel:+917360913725' },
+  ],
   supportAddress:
     'Prince Kataria Complex, Gali No. 81A, Laxman Vihar Phase 2, Gurgaon, Haryana 122001',
+  supportAddressMapUrl:
+    'https://maps.google.com/?q=Prince+Kataria+Complex+Gali+No+81A+Laxman+Vihar+Phase+2+Gurgaon+Haryana+122001',
   logoSrc: '/brand/shipment-email-logo.png',
   markSrc: '/brand/shipment-email-mark.png',
 }
