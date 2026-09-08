@@ -332,16 +332,20 @@ export default function UserOnboarding() {
               loading={isPending}
               onClick={handleCompleteSetup}
               endIconNode={<MdArrowForward />}
-              text="Save Details & Open Dashboard"
+              text="Continue & Save Details"
               styles={{
                 flex: 1,
-                background: brandGradients.button,
-                color: brand.ink,
-                borderRadius: 999,
+                minHeight: 52,
+                background: '#0D1B4D',
+                color: '#FFFFFF',
+                borderRadius: 1,
                 fontWeight: 800,
                 fontSize: '1rem',
                 py: 1.25,
-                boxShadow: '0 16px 32px rgba(130,194,255,0.24)',
+                boxShadow: '0 12px 24px rgba(13,27,77,0.24)',
+                '&:hover': {
+                  background: '#071643',
+                },
               }}
             />
           </Stack>
