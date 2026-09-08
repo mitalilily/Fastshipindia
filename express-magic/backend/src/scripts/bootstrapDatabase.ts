@@ -4,6 +4,7 @@ import path from 'path'
 import { spawnSync } from 'child_process'
 import { Pool } from 'pg'
 import { resolveDatabaseUrl } from '../config/databaseUrl'
+import { ensureInvoicePreferencesSchema } from '../models/services/invoicePreferences.service'
 
 const env = process.env.NODE_ENV || 'development'
 dotenv.config({ path: path.resolve(__dirname, `../../.env.${env}`) })
@@ -93,6 +94,26 @@ const ensurePickupCodeSchema = async () => {
   }
 }
 
+const ensureInvoicePreferencesTableShape = async () => {
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: env === 'production' ? { rejectUnauthorized: false } : false,
+  })
+
+  try {
+    const tableResult = await pool.query(
+      "select to_regclass('public.invoice_preferences') as table_name",
+    )
+    if (!tableResult.rows[0]?.table_name) return
+
+    const migrationPath = path.join(backendRoot, 'migration_add_invoice_preferences_profile_fields.sql')
+    await pool.query(fs.readFileSync(migrationPath, 'utf8'))
+    console.log('Invoice preferences schema is ready')
+  } finally {
+    await pool.end()
+  }
+}
+
 async function bootstrapDatabase() {
   const hasUsersTable = await usersTableExists()
 
@@ -109,7 +130,10 @@ async function bootstrapDatabase() {
     await ensureSupportTicketMessagesTable()
     await ensureLocationsTableShape()
     await ensurePickupCodeSchema()
+    await ensureInvoicePreferencesTableShape()
   }
+
+  await ensureInvoicePreferencesSchema()
 
   try {
     run(process.execPath, [path.join(backendRoot, 'dist/scripts/ensureAdmin.js')])

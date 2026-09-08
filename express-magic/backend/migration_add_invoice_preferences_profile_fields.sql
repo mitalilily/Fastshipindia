@@ -1,4 +1,11 @@
 ALTER TABLE invoice_preferences
+  ADD COLUMN IF NOT EXISTS prefix varchar(10) NOT NULL DEFAULT 'INV',
+  ADD COLUMN IF NOT EXISTS suffix varchar(10) DEFAULT '',
+  ADD COLUMN IF NOT EXISTS template varchar(20) NOT NULL DEFAULT 'classic',
+  ADD COLUMN IF NOT EXISTS include_logo boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS include_signature boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS logo_file varchar(255),
+  ADD COLUMN IF NOT EXISTS signature_file varchar(255),
   ADD COLUMN IF NOT EXISTS seller_name varchar(255),
   ADD COLUMN IF NOT EXISTS brand_name varchar(255),
   ADD COLUMN IF NOT EXISTS gst_number varchar(32),

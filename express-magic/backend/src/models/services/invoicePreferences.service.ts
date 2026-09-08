@@ -1,9 +1,46 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '../client'
 import { invoicePreferences } from '../schema/invoicePreferences'
 import { users } from '../schema/users'
 
+let invoicePreferencesSchemaReady: Promise<void> | null = null
+
+export async function ensureInvoicePreferencesSchema() {
+  if (!invoicePreferencesSchemaReady) {
+    invoicePreferencesSchemaReady = db
+      .execute(sql`
+        ALTER TABLE invoice_preferences
+          ADD COLUMN IF NOT EXISTS prefix varchar(10) NOT NULL DEFAULT 'INV',
+          ADD COLUMN IF NOT EXISTS suffix varchar(10) DEFAULT '',
+          ADD COLUMN IF NOT EXISTS template varchar(20) NOT NULL DEFAULT 'classic',
+          ADD COLUMN IF NOT EXISTS include_logo boolean NOT NULL DEFAULT true,
+          ADD COLUMN IF NOT EXISTS include_signature boolean NOT NULL DEFAULT true,
+          ADD COLUMN IF NOT EXISTS logo_file varchar(255),
+          ADD COLUMN IF NOT EXISTS signature_file varchar(255),
+          ADD COLUMN IF NOT EXISTS seller_name varchar(255),
+          ADD COLUMN IF NOT EXISTS brand_name varchar(255),
+          ADD COLUMN IF NOT EXISTS gst_number varchar(32),
+          ADD COLUMN IF NOT EXISTS pan_number varchar(32),
+          ADD COLUMN IF NOT EXISTS seller_address text,
+          ADD COLUMN IF NOT EXISTS state_code varchar(10),
+          ADD COLUMN IF NOT EXISTS support_email varchar(150),
+          ADD COLUMN IF NOT EXISTS support_phone varchar(50),
+          ADD COLUMN IF NOT EXISTS invoice_notes text,
+          ADD COLUMN IF NOT EXISTS terms_and_conditions text
+      `)
+      .then(() => undefined)
+      .catch((error: any) => {
+        invoicePreferencesSchemaReady = null
+        throw error
+      })
+  }
+
+  return invoicePreferencesSchemaReady
+}
+
 export async function upsertInvoicePreferences(userId: string, data: any) {
+  await ensureInvoicePreferencesSchema()
+
   const {
     prefix,
     suffix,
@@ -139,6 +176,8 @@ export async function upsertInvoicePreferences(userId: string, data: any) {
 }
 
 export async function getInvoicePreferences(userId: string) {
+  await ensureInvoicePreferencesSchema()
+
   const result = await db
     .select()
     .from(invoicePreferences)
