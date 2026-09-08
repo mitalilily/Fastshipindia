@@ -26,6 +26,12 @@ interface GenerateInvoiceParams {
 }
 
 const formatAmount = (value: number) => `Rs. ${Number(value || 0).toFixed(2)}`
+const PLATFORM_BRAND_NAME = 'Fastship'
+const normalizePlatformBrandName = (value?: string | null) => {
+  const brandName = value?.trim()
+  if (!brandName || /^shiplifi$/i.test(brandName)) return PLATFORM_BRAND_NAME
+  return brandName
+}
 const BILLABLE_ORDER_STATUSES = [
   'shipment_created',
   'booked',
@@ -240,7 +246,7 @@ export const generateInvoiceForUser = async (
     .limit(1)
   const [sellerUser] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1)
 
-  const issuerName = adminPrefs?.brandName || 'Shiplifi'
+  const issuerName = normalizePlatformBrandName(adminPrefs?.brandName)
   const issuerAddress = adminPrefs?.sellerAddress || 'N/A'
   const issuerStateCode = adminPrefs?.stateCode || 'N/A'
   const issuerGST = adminPrefs?.gstNumber || 'N/A'
@@ -356,7 +362,7 @@ export const generateInvoiceForUser = async (
     }
   }
 
-  // Platform (Shiplifi) logo for footer branding from admin billing preferences
+  // Platform logo for footer branding from admin billing preferences
   let platformLogoDataUrl: string | undefined
   if (adminLogoFile) {
     try {
@@ -596,7 +602,7 @@ export const generateInvoiceForUser = async (
             : null,
 
           {
-            text: 'Powered by Shiplifi',
+            text: `Powered by ${issuerName}`,
             alignment: 'center',
             italics: true,
             fontSize: fontSize - 1,
@@ -874,7 +880,7 @@ export const generateInvoiceForUser = async (
 
           // FOOTER
           {
-            text: 'Thank you for trusting and doing business with Shiplifi.',
+            text: `Thank you for trusting and doing business with ${issuerName}.`,
             style: 'footer',
           },
           // Show admin signature only if includeSignature is true
@@ -902,7 +908,7 @@ export const generateInvoiceForUser = async (
               }
             : null,
           {
-            text: 'Powered by Shiplifi',
+            text: `Powered by ${issuerName}`,
             alignment: 'center',
             italics: true,
             margin: [0, 6, 0, 0],

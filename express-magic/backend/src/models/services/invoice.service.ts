@@ -11,6 +11,13 @@ import { presignDownload } from './upload.service'
 import { getAdminInvoicePreferences } from './invoicePreferences.service'
 // Product + Invoice types
 // ----------------------
+const PLATFORM_BRAND_NAME = 'Fastship'
+const normalizePlatformBrandName = (value?: string | null) => {
+  const brandName = value?.trim()
+  if (!brandName || /^shiplifi$/i.test(brandName)) return PLATFORM_BRAND_NAME
+  return brandName
+}
+
 export interface Product {
   name: string
   sku: string
@@ -303,7 +310,9 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
   const platformLogoKey =
     adminPrefs?.includeLogo !== false && adminPrefs?.logoFile ? adminPrefs.logoFile : null
 
-  // Platform (Shiplifi) logo comes from admin billing preferences only.
+  const platformBrandName = normalizePlatformBrandName(adminPrefs?.brandName)
+
+  // Platform logo comes from admin billing preferences only.
   let platformLogoDataUrl: string | undefined
   if (platformLogoKey) {
     try {
@@ -614,9 +623,14 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
             { image: 'logo', width: 105, alignment: 'center', margin: [0, 4, 0, 6] },
             { text: sellerName, bold: true, alignment: 'center', fontSize: 9, color: '#111827' },
           ]
+        : images.platformLogo
+        ? [
+            { image: 'platformLogo', width: 105, alignment: 'center', margin: [0, 4, 0, 6] },
+            { text: platformBrandName, bold: true, alignment: 'center', fontSize: 9, color: '#111827' },
+          ]
         : [
-            { text: sellerName, bold: true, alignment: 'center', fontSize: 14, color: headerBlue, margin: [0, 14, 0, 4] },
-            { text: 'Company Logo', alignment: 'center', fontSize: 8, color: mutedTextColor },
+            { text: platformBrandName, bold: true, alignment: 'center', fontSize: 14, color: headerBlue, margin: [0, 14, 0, 4] },
+            { text: 'Platform Logo', alignment: 'center', fontSize: 8, color: mutedTextColor },
           ],
       margin: [6, 4, 6, 4],
     }
@@ -806,7 +820,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
   // Thermal Layout
   // -------------------
   const contentThermal: any[] = [
-    { text: invoice.companyName ?? 'Shiplifi', alignment: 'center', bold: true },
+    { text: invoice.companyName ?? platformBrandName, alignment: 'center', bold: true },
     { text: 'TAX INVOICE', alignment: 'center', bold: true, margin: [0, 2, 0, 2] },
     {
       text: 'ORIGINAL FOR RECIPIENT',
@@ -901,7 +915,7 @@ export const generateInvoicePDF = async (invoice: InvoiceData): Promise<Buffer> 
       ? { image: 'platformLogo', width: 40, alignment: 'center', margin: [0, 4, 0, 0] }
       : null,
     {
-      text: 'Powered by Shiplifi',
+      text: `Powered by ${platformBrandName}`,
       alignment: 'center',
       italics: true,
       margin: [0, 4, 0, 0],
