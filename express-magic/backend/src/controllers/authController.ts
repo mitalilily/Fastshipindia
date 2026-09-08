@@ -96,20 +96,38 @@ type OtpAuthUser = {
   otpExpiresAt: Date | null
 }
 
-const findOtpAuthUserByEmail = async (email: string): Promise<OtpAuthUser | null> => {
-  const [user] = await db
-    .select({
-      id: usersTable.id,
-      email: usersTable.email,
-      role: usersTable.role,
-      otp: usersTable.otp,
-      otpExpiresAt: usersTable.otpExpiresAt,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.email, email))
-    .limit(1)
+const fallbackOtpStore = new Map<string, { otp: string; otpExpiresAt: Date }>()
 
-  return user ?? null
+const findOtpAuthUserByEmail = async (email: string): Promise<OtpAuthUser | null> => {
+  try {
+    const [user] = await db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        role: usersTable.role,
+        otp: usersTable.otp,
+        otpExpiresAt: usersTable.otpExpiresAt,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1)
+
+    return user ?? null
+  } catch (err: any) {
+    console.warn('OTP auth full user lookup failed, retrying with minimal columns:', err?.message || err)
+
+    const [user] = await db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        role: usersTable.role,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1)
+
+    return user ? { ...user, otp: null, otpExpiresAt: null } : null
+  }
 }
 
 export const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
@@ -427,7 +445,13 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
     }
 
     if (user) {
-      await updateUserOtpByEmail(normalizedEmail, otp, expiry)
+      try {
+        await updateUserOtpByEmail(normalizedEmail, otp, expiry)
+        fallbackOtpStore.delete(normalizedEmail)
+      } catch (otpPersistError) {
+        console.warn('Failed to persist login OTP; using in-memory fallback:', otpPersistError)
+        fallbackOtpStore.set(normalizedEmail, { otp, otpExpiresAt: expiry })
+      }
     } else {
       return res.status(404).json({
         error: 'Account not found. Please create an account first.',
@@ -492,25 +516,35 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
       }
     }
 
-    if (!user || !user.otp || !user.otpExpiresAt) {
+    const fallbackOtp = fallbackOtpStore.get(normalizedEmail)
+    const storedOtp = user?.otp || fallbackOtp?.otp
+    const storedOtpExpiresAt = user?.otpExpiresAt || fallbackOtp?.otpExpiresAt
+
+    if (!user || !storedOtp || !storedOtpExpiresAt) {
       return res.status(400).json({ error: 'OTP not requested' })
     }
 
-    if (Date.now() > new Date(user.otpExpiresAt).getTime()) {
+    if (Date.now() > new Date(storedOtpExpiresAt).getTime()) {
+      fallbackOtpStore.delete(normalizedEmail)
       return res.status(400).json({
         error: 'Your OTP is no longer valid. Please resend to receive a new one.',
       })
     }
 
-    if (user.otp !== otp) {
+    if (storedOtp !== otp) {
       return res.status(400).json({ error: 'Incorrect OTP' })
     }
 
-    await clearUserOtpByEmail(normalizedEmail)
-    await markEmailVerified(normalizedEmail) // update emailVerified = true
+    fallbackOtpStore.delete(normalizedEmail)
+    await clearUserOtpByEmail(normalizedEmail).catch((err) => {
+      console.warn('Failed to clear persisted OTP after verification:', err)
+    })
+    await markEmailVerified(normalizedEmail).catch((err) => {
+      console.warn('Failed to mark email verified after OTP verification:', err)
+    })
     await sendAccountActivatedEmail({
       userId: user.id,
-      email: user.email,
+      email: user.email || normalizedEmail,
     }).catch((err) => {
       console.error('Failed to send account activation email after OTP verification:', err)
     })
@@ -522,7 +556,9 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
     const { token: refreshToken } = signRefreshToken(user.id, user.role ?? 'customer')
 
     /* ---------- persist newest refresh token ---------- */
-    await saveRefreshToken(user.id, refreshToken, ONE_WEEK_MS)
+    await saveRefreshToken(user.id, refreshToken, ONE_WEEK_MS).catch((err) => {
+      console.warn('Failed to save refresh token after OTP verification:', err)
+    })
 
     return res.json({
       message: 'OTP verified successfully',

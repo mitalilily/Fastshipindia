@@ -19,19 +19,35 @@ type AdminAuthUser = {
 };
 
 const findAdminAuthUserByEmail = async (email: string): Promise<AdminAuthUser | null> => {
-  const [user] = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      passwordHash: users.passwordHash,
-      emailVerified: users.emailVerified,
-    })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  try {
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        passwordHash: users.passwordHash,
+        emailVerified: users.emailVerified,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-  return user ?? null;
+    return user ?? null;
+  } catch (err: any) {
+    console.warn("Admin auth full lookup failed, retrying with minimal columns:", err?.message || err);
+
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    return user ? { ...user, passwordHash: null, emailVerified: null } : null;
+  }
 };
 
 export const loginAdmin = async (email: string, password: string) => {
@@ -68,44 +84,74 @@ export const loginAdmin = async (email: string, password: string) => {
       const passwordHash = await bcrypt.hash(password, 10);
 
       if (user) {
-        const [updatedAdmin] = await db
-          .update(users)
-          .set({
-            passwordHash,
-            role: "admin",
-            emailVerified: true,
-            phoneVerified: true,
-            accountVerified: true,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, user.id))
-          .returning({
-            id: users.id,
-            email: users.email,
-            role: users.role,
-            passwordHash: users.passwordHash,
-            emailVerified: users.emailVerified,
-          });
-        user = updatedAdmin;
+        try {
+          const [updatedAdmin] = await db
+            .update(users)
+            .set({
+              passwordHash,
+              role: "admin",
+              emailVerified: true,
+              phoneVerified: true,
+              accountVerified: true,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, user.id))
+            .returning({
+              id: users.id,
+              email: users.email,
+              role: users.role,
+              passwordHash: users.passwordHash,
+              emailVerified: users.emailVerified,
+            });
+          user = updatedAdmin;
+        } catch (err: any) {
+          console.warn("Admin recovery full update failed, updating role only:", err?.message || err);
+          const [updatedAdmin] = await db
+            .update(users)
+            .set({ role: "admin" })
+            .where(eq(users.id, user.id))
+            .returning({
+              id: users.id,
+              email: users.email,
+              role: users.role,
+            });
+          user = updatedAdmin ? { ...updatedAdmin, passwordHash: null, emailVerified: null } : user;
+        }
       } else {
-        const [createdAdmin] = await db
-          .insert(users)
-          .values({
-            email: normalizedEmail,
-            passwordHash,
-            role: "admin",
-            emailVerified: true,
-            phoneVerified: true,
-            accountVerified: true,
-          })
-          .returning({
-            id: users.id,
-            email: users.email,
-            role: users.role,
-            passwordHash: users.passwordHash,
-            emailVerified: users.emailVerified,
-          });
-        user = createdAdmin;
+        try {
+          const [createdAdmin] = await db
+            .insert(users)
+            .values({
+              email: normalizedEmail,
+              passwordHash,
+              role: "admin",
+              emailVerified: true,
+              phoneVerified: true,
+              accountVerified: true,
+            })
+            .returning({
+              id: users.id,
+              email: users.email,
+              role: users.role,
+              passwordHash: users.passwordHash,
+              emailVerified: users.emailVerified,
+            });
+          user = createdAdmin;
+        } catch (err: any) {
+          console.warn("Admin recovery full insert failed, creating minimal admin:", err?.message || err);
+          const [createdAdmin] = await db
+            .insert(users)
+            .values({
+              email: normalizedEmail,
+              role: "admin",
+            })
+            .returning({
+              id: users.id,
+              email: users.email,
+              role: users.role,
+            });
+          user = createdAdmin ? { ...createdAdmin, passwordHash: null, emailVerified: null } : null;
+        }
       }
     }
   }
@@ -114,7 +160,12 @@ export const loginAdmin = async (email: string, password: string) => {
     throw new Error("Unauthorized");
   }
 
-  const isMatch = user.passwordHash
+  const isSeedRecoveryWithoutHash =
+    !user.passwordHash && (isConfiguredSeedLogin || isCanonicalRecoveryLogin);
+
+  const isMatch = isSeedRecoveryWithoutHash
+    ? true
+    : user.passwordHash
     ? await bcrypt.compare(password, user.passwordHash)
     : false;
   if (!isMatch) {
