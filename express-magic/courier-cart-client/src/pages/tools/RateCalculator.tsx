@@ -12,7 +12,7 @@ import {
   useTheme,
 } from '@mui/material'
 import { useMemo, useState, type ReactNode } from 'react'
-import { FormProvider, useFieldArray, useForm, type RegisterOptions } from 'react-hook-form'
+import { FormProvider, useFieldArray, useForm, useWatch, type RegisterOptions } from 'react-hook-form'
 import { FaPlane, FaTruck } from 'react-icons/fa'
 import {
   FiArrowRight,
@@ -275,6 +275,17 @@ const emptyCalculatorBox = (): CalculatorBoxInput => ({
 const normalizeBoxQuantity = (value: unknown) => {
   const quantity = Math.floor(toNumber(value))
   return quantity > 0 ? quantity : 1
+}
+
+const getBoxSequenceLabel = (boxes: CalculatorBoxInput[] = [], index: number) => {
+  const start =
+    boxes
+      .slice(0, index)
+      .reduce((sum, box) => sum + normalizeBoxQuantity(box?.quantity), 0) + 1
+  const quantity = normalizeBoxQuantity(boxes[index]?.quantity)
+  const end = start + quantity - 1
+
+  return start === end ? `Box ${start}` : `Boxes ${start}-${end}`
 }
 
 const getCalculatorBoxMetrics = (
@@ -838,7 +849,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
   const watchedMovementType = watch('movementType')
   const watchedShipmentType = watch('shipmentType')
   const watchedOrderAmount = watch('orderAmount')
-  const watchedBoxes = watch('boxes') || []
+  const watchedBoxes = useWatch({ control, name: 'boxes' }) || []
   const pickupLocationLabel = formatLocation(watch('pickupCity'), watch('pickupState'), pickupPincode)
   const deliveryLocationLabel = formatLocation(
     watch('deliveryCity'),
@@ -2100,7 +2111,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                           >
                             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
                               <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: ui.ink }}>
-                                Box {index + 1}
+                                {getBoxSequenceLabel(watchedBoxes, index)}
                               </Typography>
                               <Button
                                 type="button"
@@ -2122,7 +2133,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                             <Grid container spacing={0.8}>
                               <Grid size={{ xs: 6, sm: 2.4 }}>
                                 <TextField
-                                  label="No. of Boxes"
+                                  label="Qty"
                                   type="number"
                                   {...register(`boxes.${index}.quantity` as const, {
                                     required: 'Required',
@@ -2138,7 +2149,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                               </Grid>
                               <Grid size={{ xs: 6, sm: 2.4 }}>
                                 <TextField
-                                  label="Per Box Weight (kg)"
+                                  label="Wt/Box (kg)"
                                   type="number"
                                   {...register(`boxes.${index}.weight` as const, {
                                     required: 'Required',
@@ -2152,9 +2163,9 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                                 />
                               </Grid>
                               {[
-                                ['length', 'Length (cm)'],
-                                ['breadth', 'Breadth (cm)'],
-                                ['height', 'Height (cm)'],
+                                ['length', 'Length'],
+                                ['breadth', 'Breadth'],
+                                ['height', 'Height'],
                               ].map(([name, label]) => {
                                 const key = name as 'length' | 'breadth' | 'height'
                                 return (
