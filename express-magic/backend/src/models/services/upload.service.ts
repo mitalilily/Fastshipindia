@@ -8,6 +8,7 @@ import {
   createDatabaseUploadDownloadUrl,
   databaseUploadExists,
   isDatabaseUploadKey,
+  uploadBufferToDatabase,
 } from './databaseUpload.service'
 
 import * as dotenv from 'dotenv'
@@ -185,20 +186,35 @@ export const uploadBufferToStorage = async ({
   userId: string
   folderKey?: string
 }) => {
-  const target = buildStorageTarget({
-    filename,
-    userId,
-    folderKey,
-  })
+  try {
+    const target = buildStorageTarget({
+      filename,
+      userId,
+      folderKey,
+    })
 
-  await uploadBufferToStorageTarget({
-    buffer,
-    bucket: target.bucket,
-    key: target.key,
-    contentType,
-  })
+    await uploadBufferToStorageTarget({
+      buffer,
+      bucket: target.bucket,
+      key: target.key,
+      contentType,
+    })
 
-  return target
+    return target
+  } catch (storageError: any) {
+    console.warn('Object storage upload failed; using database upload fallback:', {
+      code: storageError?.code || 'STORAGE_UPLOAD_FAILED',
+      message: storageError?.message || storageError,
+      folderKey,
+    })
+
+    return uploadBufferToDatabase({
+      buffer,
+      filename,
+      contentType,
+      userId,
+    })
+  }
 }
 
 export const uploadBufferToStorageTarget = async ({
