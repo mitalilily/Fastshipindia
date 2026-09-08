@@ -256,11 +256,14 @@ export function mergeResolvedB2CRateCards(
         ? requestedServiceProvider
         : rowServiceProvider
     const key = [
+      rateCard.shippingRateId,
       rateCard.courier_id,
+      rateCard.courier_name,
       effectiveServiceProvider,
       rateCard.zone_id,
       normalizeB2CShippingMode(rateCard.mode),
       rateCard.type,
+      rateCard.min_weight,
     ].join('|')
     const normalizedCard: ResolvedB2CRateCard = {
       ...rateCard,
