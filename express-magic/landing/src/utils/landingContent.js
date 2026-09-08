@@ -333,7 +333,7 @@ export const footerGroups = [
     links: [
       { label: "support@fastship.in", href: "mailto:support@fastship.in" },
       { label: "hello@fastship.in", href: "mailto:hello@fastship.in" },
-      { label: "+91 92175 53934", href: "tel:+919217553934" },
+      { label: "+91 82856 81158", href: "tel:+918285681158" },
       { label: "Mon-Sat, 9:00 AM to 7:00 PM", href: "#top" },
     ],
   },
@@ -341,9 +341,9 @@ export const footerGroups = [
 
 export const footerMeta = {
   address:
-    "A-1/4, Khodiyar Nagar Society near takshashila complex, Khodiyar Nagar road, Varachha, Surat - 395006",
+    "Prince Kataria Complex, Gali No. 81A, Laxman Vihar Phase 2, Gurgaon, Haryana 122001",
   supportHours: "Mon-Sat, 9:00 AM to 7:00 PM",
-  contactNumber: "+91 92175 53934",
+  contactNumber: "+91 82856 81158",
 };
 
 export const mediaAssets = {

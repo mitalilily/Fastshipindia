@@ -30,8 +30,9 @@ export const brandIdentity = {
   shortName: 'FastShip',
   tagline: 'Fast. Safe. Worldwide.',
   supportEmail: 'support@fastship.in',
-  supportPhone: '+91 84878 81121',
-  supportAddress: 'Ahmedabad, Gujarat, India',
+  supportPhone: '+91 82856 81158',
+  supportAddress:
+    'Prince Kataria Complex, Gali No. 81A, Laxman Vihar Phase 2, Gurgaon, Haryana 122001',
   logoSrc: '/brand/shipment-email-logo.png',
   markSrc: '/brand/shipment-email-mark.png',
 }

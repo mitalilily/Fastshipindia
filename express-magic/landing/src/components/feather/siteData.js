@@ -9,11 +9,11 @@ export const companyProfile = {
   tagline: "Smart shipping for smarter sellers",
   shortPitch:
     "A brighter FastShip shipping experience designed to unify store operations, courier decisions, tracking visibility, and delivery performance.",
-  mobile: "9217553934",
-  phone: "92175 53934",
+  mobile: "8285681158",
+  phone: "82856 81158",
   email: "support@fastship.in",
   address:
-    "A-1/4, Khodiyar Nagar Society near takshashila complex, Khodiyar Nagar road, Varachha, Surat - 395006",
+    "Prince Kataria Complex, Gali No. 81A, Laxman Vihar Phase 2, Gurgaon, Haryana 122001",
 };
 
 export const trackingStatuses = [
