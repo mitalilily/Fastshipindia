@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, sql } from 'drizzle-orm'
 import type { ShippingRateFilters } from '../../controllers/admin/courier.controller'
+import { COURIER_PROVIDER_KEYS } from '../../utils/courierProvider'
 import { db } from '../client'
 import { couriers } from '../schema/couriers'
 import { courierSummary } from '../schema/courierSummary'
@@ -909,9 +910,9 @@ export const createCourier = async (data: {
   if (!data?.serviceProvider) throw new Error('Service provider is required')
   
   // Validate service provider is one of the allowed providers
-  const allowedProviders = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship', 'shipmozo']
+  const allowedProviders = [...COURIER_PROVIDER_KEYS]
   const normalizedProvider = (data.serviceProvider || '').toLowerCase().trim()
-  if (!allowedProviders.includes(normalizedProvider)) {
+  if (!(allowedProviders as readonly string[]).includes(normalizedProvider)) {
     throw new Error(
       `Service provider must be one of: ${allowedProviders.join(', ')}. Received: ${data.serviceProvider}`
     )

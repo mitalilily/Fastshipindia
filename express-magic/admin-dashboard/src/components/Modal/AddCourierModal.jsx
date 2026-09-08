@@ -120,6 +120,13 @@ const AddCourierModal = ({ isOpen, onClose }) => {
             <option value="xpressbees">Xpressbees</option>
             <option value="shadowfax">Shadowfax</option>
             <option value="amazon">Amazon Shipping</option>
+            <option value="movin">Movin</option>
+            <option value="bluedart">Blue Dart</option>
+            <option value="dpworld">DP World</option>
+            <option value="rivigo">Rivigo</option>
+            <option value="tci">TCI Express</option>
+            <option value="gati">Gati</option>
+            <option value="dtdc">DTDC</option>
             <option value="bigship">Bigship</option>
             <option value="shipmozo">Shipmozo</option>
           </Select>

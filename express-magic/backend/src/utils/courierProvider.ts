@@ -4,6 +4,13 @@ export const COURIER_PROVIDER_KEYS = [
   'amazon',
   'xpressbees',
   'ekart',
+  'movin',
+  'bluedart',
+  'dpworld',
+  'rivigo',
+  'tci',
+  'gati',
+  'dtdc',
   'bigship',
   'shipmozo',
 ] as const
@@ -16,6 +23,13 @@ const COURIER_PROVIDER_DISPLAY_NAMES: Record<CourierProviderKey, string> = {
   amazon: 'Amazon Shipping',
   xpressbees: 'Xpressbees',
   ekart: 'Ekart Logistics',
+  movin: 'Movin',
+  bluedart: 'Blue Dart',
+  dpworld: 'DP World',
+  rivigo: 'Rivigo',
+  tci: 'TCI Express',
+  gati: 'Gati',
+  dtdc: 'DTDC',
   bigship: 'Bigship',
   shipmozo: 'Shipmozo',
 }
@@ -51,6 +65,13 @@ export const normalizeCourierProviderKey = (value: unknown): CourierProviderKey 
   if (compact.includes('amazon')) return 'amazon'
   if (compact.includes('xpressbees') || compact.includes('xpressbee')) return 'xpressbees'
   if (compact.includes('ekart')) return 'ekart'
+  if (compact.includes('movin')) return 'movin'
+  if (compact.includes('bluedart')) return 'bluedart'
+  if (compact.includes('dpworld')) return 'dpworld'
+  if (compact.includes('rivigo')) return 'rivigo'
+  if (compact.includes('tci')) return 'tci'
+  if (compact.includes('gati')) return 'gati'
+  if (compact.includes('dtdc')) return 'dtdc'
   if (compact.includes('bigship')) return 'bigship'
   if (compact.includes('shipmozo')) return 'shipmozo'
 

@@ -106,6 +106,12 @@ export function normalizeB2CServiceProvider(value: unknown): string {
   if (['xpressbess', 'xpressbee', 'xpress bees'].includes(normalized)) {
     return 'xpressbees'
   }
+  if (['blue dart', 'blue-dart', 'blue_dart'].includes(normalized)) {
+    return 'bluedart'
+  }
+  if (['dp world', 'dp-world', 'dp_world'].includes(normalized)) {
+    return 'dpworld'
+  }
 
   return normalized
 }
@@ -128,6 +134,13 @@ function inferB2CServiceProvider(row: typeof shippingRates.$inferSelect): string
   }
   if (courierName.includes('amazon')) return 'amazon'
   if (courierName.includes('ekart')) return 'ekart'
+  if (courierName.includes('movin')) return 'movin'
+  if (courierName.includes('blue dart') || courierName.includes('bluedart')) return 'bluedart'
+  if (courierName.includes('dp world') || courierName.includes('dpworld')) return 'dpworld'
+  if (courierName.includes('rivigo')) return 'rivigo'
+  if (courierName.includes('tci')) return 'tci'
+  if (courierName.includes('gati')) return 'gati'
+  if (courierName.includes('dtdc')) return 'dtdc'
   if (courierName.includes('shadowfax')) return 'shadowfax'
   if (courierName.includes('xpress')) return 'xpressbees'
   if (courierName.includes('bigship')) return 'bigship'

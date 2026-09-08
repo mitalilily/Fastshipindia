@@ -277,17 +277,6 @@ const normalizeBoxQuantity = (value: unknown) => {
   return quantity > 0 ? quantity : 1
 }
 
-const getBoxSequenceLabel = (boxes: CalculatorBoxInput[] = [], index: number) => {
-  const start =
-    boxes
-      .slice(0, index)
-      .reduce((sum, box) => sum + normalizeBoxQuantity(box?.quantity), 0) + 1
-  const quantity = normalizeBoxQuantity(boxes[index]?.quantity)
-  const end = start + quantity - 1
-
-  return start === end ? `Box ${start}` : `Boxes ${start}-${end}`
-}
-
 const getCalculatorBoxMetrics = (
   boxes: CalculatorBoxInput[] = [],
   shipmentType: CalculatorShipmentType = 'b2c',
@@ -823,6 +812,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
   const {
     control,
     watch,
+    getValues,
     setValue,
     setError,
     clearErrors,
@@ -834,6 +824,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
     fields: boxFields,
     append: appendBox,
     remove: removeBox,
+    replace: replaceBoxes,
   } = useFieldArray({
     control,
     name: 'boxes',
@@ -2111,7 +2102,7 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                           >
                             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
                               <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: ui.ink }}>
-                                {getBoxSequenceLabel(watchedBoxes, index)}
+                                {`Box ${index + 1}`}
                               </Typography>
                               <Button
                                 type="button"
@@ -2140,6 +2131,18 @@ export function RateCalculator({ publicView }: RateCalculatorProps) {
                                     min: { value: 1, message: 'Min 1' },
                                     validate: (value) => Number.isInteger(Number(value)) || 'Whole no.',
                                   })}
+                                  onBlur={(event) => {
+                                    const quantity = normalizeBoxQuantity(event.target.value)
+                                    if (quantity <= 1) return
+
+                                    const expandedBoxes = getValues('boxes').flatMap((currentBox) =>
+                                      Array.from(
+                                        { length: normalizeBoxQuantity(currentBox.quantity) },
+                                        () => ({ ...currentBox, quantity: '1' }),
+                                      ),
+                                    )
+                                    replaceBoxes(expandedBoxes)
+                                  }}
                                   fullWidth
                                   error={!!boxErrors?.quantity}
                                   helperText={String(boxErrors?.quantity?.message || '')}

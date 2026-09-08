@@ -74,9 +74,23 @@ export const getCourierDisplayName = (courierOrName, fallback = 'N/A') => {
   return courierOrName?.displayName || courierOrName?.courier_name || courierOrName?.name || fallback
 }
 
-export const getProviderDisplayName = (provider, fallback = 'Not selected') =>
-  normalizeToken(provider) === 'shipmozo'
-    ? 'Shipmozo'
-    : isDeliveryOneValue(provider)
-      ? 'Delhivery'
-      : provider || fallback
+export const getProviderDisplayName = (provider, fallback = 'Not selected') => {
+  const providerNames = {
+    shipmozo: 'Shipmozo',
+    bigship: 'Bigship',
+    movin: 'Movin',
+    bluedart: 'Blue Dart',
+    dpworld: 'DP World',
+    rivigo: 'Rivigo',
+    tci: 'TCI Express',
+    gati: 'Gati',
+    dtdc: 'DTDC',
+    amazon: 'Amazon Shipping',
+    xpressbees: 'Xpressbees',
+    shadowfax: 'Shadowfax',
+    ekart: 'Ekart',
+  }
+  const normalized = normalizeToken(provider)
+
+  return providerNames[normalized] || (isDeliveryOneValue(provider) ? 'Delhivery' : provider || fallback)
+}

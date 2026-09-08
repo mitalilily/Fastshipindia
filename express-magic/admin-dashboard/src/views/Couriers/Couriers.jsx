@@ -52,6 +52,15 @@ const providerColors = {
   Ekart: ["#E9F5FF", "#006BFF"],
   "Shipex India": ["#F0FFE9", "#28A600"],
   Xpressbees: ["#FFF7E3", "#F08A00"],
+  Shadowfax: ["#F2ECFF", "#5B2BBE"],
+  "Amazon Shipping": ["#FFF8E6", "#B26A00"],
+  Movin: ["#EDF7FF", "#0A5EA8"],
+  "Blue Dart": ["#EAF2FF", "#0B4FA3"],
+  "DP World": ["#E8F8F7", "#087E73"],
+  Rivigo: ["#FFF0E8", "#C64E00"],
+  "TCI Express": ["#FFF7E3", "#A56A00"],
+  Gati: ["#EEF5FF", "#1756A9"],
+  DTDC: ["#F5EEFF", "#6139A5"],
   Bigship: ["#EAF3FF", "#1167D8"],
   Shipmozo: ["#EAF0FF", "#14213D"],
 };
@@ -139,6 +148,17 @@ const fallbackCouriers = [
 const normalizeProvider = (value) => {
   if (!value) return "Delhivery";
   if (value === "deliveryone" || value === "delhivery") return "Delhivery";
+  if (value === "ekart") return "Ekart";
+  if (value === "xpressbees") return "Xpressbees";
+  if (value === "shadowfax") return "Shadowfax";
+  if (value === "amazon") return "Amazon Shipping";
+  if (value === "movin") return "Movin";
+  if (value === "bluedart") return "Blue Dart";
+  if (value === "dpworld") return "DP World";
+  if (value === "rivigo") return "Rivigo";
+  if (value === "tci") return "TCI Express";
+  if (value === "gati") return "Gati";
+  if (value === "dtdc") return "DTDC";
   if (value === "bigship") return "Bigship";
   if (value === "shipmozo") return "Shipmozo";
   return value;
@@ -421,6 +441,17 @@ const Couriers = () => {
               >
                 <option value="">All providers</option>
                 <option value="delhivery">Delhivery</option>
+                <option value="ekart">Ekart</option>
+                <option value="xpressbees">Xpressbees</option>
+                <option value="shadowfax">Shadowfax</option>
+                <option value="amazon">Amazon Shipping</option>
+                <option value="movin">Movin</option>
+                <option value="bluedart">Blue Dart</option>
+                <option value="dpworld">DP World</option>
+                <option value="rivigo">Rivigo</option>
+                <option value="tci">TCI Express</option>
+                <option value="gati">Gati</option>
+                <option value="dtdc">DTDC</option>
                 <option value="bigship">Bigship</option>
                 <option value="shipmozo">Shipmozo</option>
               </AdminSelect>

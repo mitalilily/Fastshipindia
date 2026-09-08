@@ -21,6 +21,7 @@ import {
   resolveGstInclusiveWalletDebit,
 } from '../../utils/bookingWalletDebit'
 import {
+  COURIER_PROVIDER_KEYS,
   getCourierProviderDisplayName,
   getProviderMetaCourierName,
   normalizeCourierProviderKey,
@@ -3508,7 +3509,7 @@ export const fetchAvailableCouriersWithRates = async (
 
     // Build registry of enabled couriers by service provider
     // Filter by business type: check if business_type JSONB array contains 'b2c'
-    const SUPPORTED_PROVIDERS = ['delhivery', 'ekart', 'xpressbees', 'shadowfax', 'amazon', 'bigship', 'shipmozo']
+    const SUPPORTED_PROVIDERS = [...COURIER_PROVIDER_KEYS]
     const allSystemCourierRows = await db
       .select({
         id: couriers.id,
@@ -3751,7 +3752,7 @@ export const fetchAvailableCouriersWithRates = async (
 
     for (const row of systemCourierRows) {
       const providerKey = normalizeProviderKey(row.serviceProvider)
-      if (!providerKey || !SUPPORTED_PROVIDERS.includes(providerKey)) continue
+      if (!providerKey || !(SUPPORTED_PROVIDERS as readonly string[]).includes(providerKey)) continue
       if (!isSupportedB2CProviderCourier(providerKey, row)) {
         continue
       }
@@ -3960,7 +3961,7 @@ export const fetchAvailableCouriersWithRates = async (
       const visibleRateProviders = new Set<string>()
       for (const rate of localRates) {
         const providerKey = inferProviderFromRateCard(rate)
-        if (!providerKey || !SUPPORTED_PROVIDERS.includes(providerKey)) continue
+        if (!providerKey || !(SUPPORTED_PROVIDERS as readonly string[]).includes(providerKey)) continue
         localRateProviders.add(providerKey)
         if (
           !isSupportedB2CProviderCourier(providerKey, {
@@ -4615,6 +4616,13 @@ export const fetchAvailableCouriersWithRates = async (
       xpressbees: 'Xpressbees',
       shadowfax: 'Shadowfax',
       amazon: 'Amazon Shipping',
+      movin: 'Movin',
+      bluedart: 'Blue Dart',
+      dpworld: 'DP World',
+      rivigo: 'Rivigo',
+      tci: 'TCI Express',
+      gati: 'Gati',
+      dtdc: 'DTDC',
       bigship: 'Bigship',
       shipmozo: 'Shipmozo',
     }
