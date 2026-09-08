@@ -1,7 +1,10 @@
 const DATABASE_URL_KEYS = [
+  'DATABASE_PUBLIC_URL',
+  'DATABASE_EXTERNAL_URL',
+  'POSTGRES_EXTERNAL_URL',
+  'POSTGRES_PUBLIC_URL',
   'DATABASE_URL',
   'DATABASE_INTERNAL_URL',
-  'DATABASE_PUBLIC_URL',
   'POSTGRES_URL',
 ] as const
 
@@ -37,7 +40,7 @@ export const resolveDatabaseUrl = (
   }
 
   throw new Error(
-    'No valid PostgreSQL connection URL is configured. In Render, set DATABASE_URL to the Internal Database URL from the Postgres Connect menu; unresolved Railway references such as ${{base.DATABASE_URL}} are not valid on Render.',
+    'No valid PostgreSQL connection URL is configured. In Render, set DATABASE_PUBLIC_URL or DATABASE_EXTERNAL_URL to the reachable External Database URL, or set DATABASE_URL to a reachable database URL. Unresolved provider references such as ${{base.DATABASE_URL}} are not valid on Render.',
   )
 }
 
