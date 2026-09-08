@@ -1,14 +1,58 @@
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { signAccessToken, signRefreshToken } from "../../utils/jwt";
 import { db } from "../client";
 import { users } from "../schema/users";
-import { findUserByEmail, findUserById, saveRefreshToken } from "./userService";
+import { findUserById, saveRefreshToken } from "./userService";
 
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const CANONICAL_ADMIN_EMAIL = "admin@fastship.in";
 const CANONICAL_ADMIN_PASSWORD = "Admin@12345!";
+
+type AdminAuthUser = {
+  id: string;
+  email: string | null;
+  role: string | null;
+  passwordHash: string | null;
+  emailVerified: boolean | null;
+};
+
+let adminAuthSchemaReady: Promise<void> | null = null;
+
+const ensureAdminAuthSchema = async () => {
+  if (!adminAuthSchemaReady) {
+    adminAuthSchemaReady = (async () => {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "passwordHash" varchar(200)`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "emailVerified" boolean DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "phoneVerified" boolean DEFAULT false`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "accountVerified" boolean DEFAULT false`);
+    })().catch((err) => {
+      adminAuthSchemaReady = null;
+      throw err;
+    });
+  }
+
+  return adminAuthSchemaReady;
+};
+
+const findAdminAuthUserByEmail = async (email: string): Promise<AdminAuthUser | null> => {
+  await ensureAdminAuthSchema();
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      passwordHash: users.passwordHash,
+      emailVerified: users.emailVerified,
+    })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  return user ?? null;
+};
 
 export const loginAdmin = async (email: string, password: string) => {
   const normalizedEmail = email.trim().toLowerCase();
@@ -29,7 +73,7 @@ export const loginAdmin = async (email: string, password: string) => {
     normalizedEmail === CANONICAL_ADMIN_EMAIL &&
     password === CANONICAL_ADMIN_PASSWORD;
 
-  let user = await findUserByEmail(normalizedEmail);
+  let user = await findAdminAuthUserByEmail(normalizedEmail);
 
   // Recover the configured admin account if an older deployment left the
   // database with a missing role or stale password hash. The supplied
@@ -55,7 +99,13 @@ export const loginAdmin = async (email: string, password: string) => {
             updatedAt: new Date(),
           })
           .where(eq(users.id, user.id))
-          .returning();
+          .returning({
+            id: users.id,
+            email: users.email,
+            role: users.role,
+            passwordHash: users.passwordHash,
+            emailVerified: users.emailVerified,
+          });
         user = updatedAdmin;
       } else {
         const [createdAdmin] = await db
@@ -68,7 +118,13 @@ export const loginAdmin = async (email: string, password: string) => {
             phoneVerified: true,
             accountVerified: true,
           })
-          .returning();
+          .returning({
+            id: users.id,
+            email: users.email,
+            role: users.role,
+            passwordHash: users.passwordHash,
+            emailVerified: users.emailVerified,
+          });
         user = createdAdmin;
       }
     }

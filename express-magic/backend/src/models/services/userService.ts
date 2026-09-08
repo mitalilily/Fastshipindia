@@ -692,6 +692,24 @@ const getRefreshTokenReuseGraceMs = () => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 2 * 60 * 1000
 }
 
+let refreshTokenSchemaReady: Promise<void> | null = null
+
+const ensureRefreshTokenSchema = async () => {
+  if (!refreshTokenSchemaReady) {
+    refreshTokenSchemaReady = (async () => {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "refreshToken" varchar(500)`)
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "refreshTokenExpiresAt" timestamp`)
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "previousRefreshToken" varchar(500)`)
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "previousRefreshTokenExpiresAt" timestamp`)
+    })().catch((err) => {
+      refreshTokenSchemaReady = null
+      throw err
+    })
+  }
+
+  return refreshTokenSchemaReady
+}
+
 export const saveRefreshToken = async (
   userId: string,
   token: string | null,
@@ -699,6 +717,8 @@ export const saveRefreshToken = async (
   previousToken: string | null = null,
   previousTtlMs = getRefreshTokenReuseGraceMs(),
 ) => {
+  await ensureRefreshTokenSchema()
+
   const isClearing = token === null
   const expiresAt = isClearing ? sql`NULL` : new Date(Date.now() + ttlMs)
   const previousExpiresAt = previousToken ? new Date(Date.now() + previousTtlMs) : sql`NULL`
@@ -719,6 +739,8 @@ export const clampPreviousRefreshTokenExpiry = async (
   userId: string,
   ttlMs = getRefreshTokenReuseGraceMs(),
 ) => {
+  await ensureRefreshTokenSchema()
+
   return db
     .update(users)
     .set({

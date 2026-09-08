@@ -27,7 +27,7 @@ import {
 import axios from 'axios'
 import { OTP_EXPIRY } from '../utils/constants'
 
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '../models/client'
 import { changeAdminPassword, loginAdmin } from '../models/services/adminAuth.service'
 import { getProfileByUserId } from '../models/services/userProfile.service'
@@ -96,7 +96,28 @@ type OtpAuthUser = {
   otpExpiresAt: Date | null
 }
 
+let otpAuthSchemaReady: Promise<void> | null = null
+
+const ensureOtpAuthSchema = async () => {
+  if (!otpAuthSchemaReady) {
+    otpAuthSchemaReady = (async () => {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS otp varchar(6)`)
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "otpExpiresAt" timestamp with time zone`)
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "emailVerified" boolean DEFAULT false`)
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "phoneVerified" boolean DEFAULT false`)
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS "accountVerified" boolean DEFAULT false`)
+    })().catch((err) => {
+      otpAuthSchemaReady = null
+      throw err
+    })
+  }
+
+  return otpAuthSchemaReady
+}
+
 const findOtpAuthUserByEmail = async (email: string): Promise<OtpAuthUser | null> => {
+  await ensureOtpAuthSchema()
+
   const [user] = await db
     .select({
       id: usersTable.id,
