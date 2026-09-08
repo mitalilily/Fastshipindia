@@ -6,7 +6,6 @@ import twilio from 'twilio'
 import * as bcrypt from 'bcryptjs'
 import {
   clearUserEmailToken,
-  createUser,
   clearUserOtpByEmail,
   clampPreviousRefreshTokenExpiry,
   createUserWithWallet,
@@ -33,7 +32,7 @@ import { db } from '../models/client'
 import { changeAdminPassword, loginAdmin } from '../models/services/adminAuth.service'
 import { getProfileByUserId } from '../models/services/userProfile.service'
 import { sendAccountActivatedEmail } from '../models/services/eventEmail.service'
-import { employees } from '../schema/schema'
+import { employees, users as usersTable } from '../schema/schema'
 import { sendVerificationEmail } from '../utils/emailSender'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt'
 
@@ -89,6 +88,30 @@ const buildAuthenticatedUserPayload = async (user: {
   }
 }
 
+type OtpAuthUser = {
+  id: string
+  email: string | null
+  role: string | null
+  otp: string | null
+  otpExpiresAt: Date | null
+}
+
+const findOtpAuthUserByEmail = async (email: string): Promise<OtpAuthUser | null> => {
+  const [user] = await db
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      role: usersTable.role,
+      otp: usersTable.otp,
+      otpExpiresAt: usersTable.otpExpiresAt,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.email, email))
+    .limit(1)
+
+  return user ?? null
+}
+
 export const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 const getAuthOtpDeliveryMode = () => {
@@ -126,17 +149,25 @@ const createOtpLoginUser = async (params: {
     return createUserWithWallet(userPayload)
   }
 
-  return createUser({
-    email: params.email,
-    phone: params.phone,
-    passwordHash: params.passwordHash,
-    otp: params.otp,
-    otpExpiresAt: params.otpExpiresAt,
-    emailVerified: false,
-    phoneVerified: false,
-    accountVerified: false,
-    role: 'customer',
-  })
+  const [user] = await db
+    .insert(usersTable)
+    .values({
+      email: params.email,
+      phone: params.phone || null,
+      passwordHash: params.passwordHash,
+      otp: params.otp,
+      otpExpiresAt: params.otpExpiresAt,
+      role: 'customer',
+    })
+    .returning({
+      id: usersTable.id,
+      email: usersTable.email,
+      role: usersTable.role,
+      otp: usersTable.otp,
+      otpExpiresAt: usersTable.otpExpiresAt,
+    })
+
+  return user
 }
 
 const sendSmsViaTwilio = async (phone: string, message: string) => {
@@ -378,7 +409,7 @@ export const requestOtp = async (req: Request, res: Response): Promise<any> => {
 
   try {
     // 1. Look up user by email
-    const user = await findUserByEmail(normalizedEmail)
+    const user = await findOtpAuthUserByEmail(normalizedEmail)
 
     if (user && user.role === 'employee') {
       const [employeeRecord] = await db
@@ -446,7 +477,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<any> => {
 
   try {
     const normalizedEmail = email.trim().toLowerCase()
-    const user = await findUserByEmail(normalizedEmail)
+    const user = await findOtpAuthUserByEmail(normalizedEmail)
 
     if (user && user.role === 'employee') {
       const [employeeRecord] = await db
