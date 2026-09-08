@@ -16,6 +16,24 @@ const normalizeValue = (value: string | undefined) =>
     .trim()
     .replace(/^(['"])(.*)\1$/, '$2')
 
+const externalizeRenderPostgresHost = (value: string, environment: NodeJS.ProcessEnv) => {
+  try {
+    const url = new URL(value)
+    const isBareRenderInternalHost = /^dpg-[a-z0-9-]+-[a-z0-9]+$/i.test(url.hostname)
+    const shouldUsePublicHost =
+      isBareRenderInternalHost &&
+      (environment.NODE_ENV === 'production' || Boolean(environment.RENDER_EXTERNAL_HOSTNAME))
+
+    if (!shouldUsePublicHost) return value
+
+    const region = normalizeValue(environment.RENDER_POSTGRES_REGION || 'oregon').toLowerCase()
+    url.hostname = `${url.hostname}.${region}-postgres.render.com`
+    return url.toString()
+  } catch {
+    return value
+  }
+}
+
 const validateDatabaseUrl = (value: string) => {
   if (PROVIDER_REFERENCE_PATTERN.test(value)) return false
 
@@ -36,7 +54,9 @@ export const resolveDatabaseUrl = (
 ): string => {
   for (const key of DATABASE_URL_KEYS) {
     const value = normalizeValue(environment[key])
-    if (value && validateDatabaseUrl(value)) return value
+    if (value && validateDatabaseUrl(value)) {
+      return externalizeRenderPostgresHost(value, environment)
+    }
   }
 
   throw new Error(
