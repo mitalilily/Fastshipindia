@@ -114,6 +114,28 @@ const ensureInvoicePreferencesTableShape = async () => {
   }
 }
 
+const ensurePlansTableShape = async () => {
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: env === 'production' ? { rejectUnauthorized: false } : false,
+  })
+
+  try {
+    const tableResult = await pool.query("select to_regclass('public.plans') as table_name")
+    if (!tableResult.rows[0]?.table_name) return
+
+    await pool.query(`
+      alter table plans add column if not exists slug varchar(80);
+      alter table plans add column if not exists is_default boolean not null default false;
+      alter table plans add column if not exists sort_order integer not null default 0;
+      alter table plans add column if not exists updated_at timestamp default now();
+    `)
+    console.log('Plans schema is ready')
+  } finally {
+    await pool.end()
+  }
+}
+
 async function bootstrapDatabase() {
   const hasUsersTable = await usersTableExists()
 
@@ -131,6 +153,7 @@ async function bootstrapDatabase() {
     await ensureLocationsTableShape()
     await ensurePickupCodeSchema()
     await ensureInvoicePreferencesTableShape()
+    await ensurePlansTableShape()
   }
 
   await ensureInvoicePreferencesSchema()
