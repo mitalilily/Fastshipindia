@@ -26,7 +26,7 @@ const externalizeRenderPostgresHost = (value: string, environment: NodeJS.Proces
 
     if (!shouldUsePublicHost) return value
 
-    const region = normalizeValue(environment.RENDER_POSTGRES_REGION || 'oregon').toLowerCase()
+    const region = normalizeValue(environment.RENDER_POSTGRES_REGION || 'singapore').toLowerCase()
     url.hostname = `${url.hostname}.${region}-postgres.render.com`
     return url.toString()
   } catch {
