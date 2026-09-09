@@ -165,6 +165,7 @@ export const listPincodesController = async (req: Request, res: Response) => {
       isSez: parseBoolean(req.query.is_sez),
       isAirport: parseBoolean(req.query.is_airport),
       isHighSecurity: parseBoolean(req.query.is_high_security),
+      isSdlZone: parseBoolean(req.query.is_sdl_zone ?? req.query.sdl_zone),
       sortBy:
         (req.query.sortBy as 'pincode' | 'city' | 'state' | 'created_at' | undefined) || 'pincode',
       sortOrder: (req.query.sortOrder as 'asc' | 'desc' | undefined) || 'asc',
@@ -194,7 +195,9 @@ export const createPincodeController = async (req: Request, res: Response) => {
         isAirport: flagsFromBody.isAirport ?? body.isAirport ?? body.is_airport,
         isHighSecurity:
           flagsFromBody.isHighSecurity ?? body.isHighSecurity ?? body.is_high_security,
+        isSdlZone: flagsFromBody.isSdlZone ?? body.isSdlZone ?? body.is_sdl_zone ?? body.sdl_zone,
       },
+      sdlRatePerKg: body.sdlRatePerKg ?? body.sdl_rate_per_kg ?? null,
     })
 
     res.status(201).json({ success: true, data: record })
@@ -212,6 +215,7 @@ export const updatePincodeController = async (req: Request, res: Response) => {
       city: req.body.city,
       state: req.body.state,
       zoneId: req.body.zoneId ?? req.body.zone_id,
+      sdlRatePerKg: req.body.sdlRatePerKg ?? req.body.sdl_rate_per_kg ?? undefined,
       courierScope: parseCourierScope(req),
       flags: {
         isOda: flagsFromBody.isOda ?? req.body.isOda ?? req.body.is_oda ?? undefined,
@@ -224,6 +228,12 @@ export const updatePincodeController = async (req: Request, res: Response) => {
           flagsFromBody.isHighSecurity ??
           req.body.isHighSecurity ??
           req.body.is_high_security ??
+          undefined,
+        isSdlZone:
+          flagsFromBody.isSdlZone ??
+          req.body.isSdlZone ??
+          req.body.is_sdl_zone ??
+          req.body.sdl_zone ??
           undefined,
       },
     })
@@ -288,6 +298,7 @@ export const bulkUpdatePincodeFlagsController = async (req: Request, res: Respon
       isSez: flags.isSez ?? flags.is_sez,
       isAirport: flags.isAirport ?? flags.is_airport,
       isHighSecurity: flags.isHighSecurity ?? flags.is_high_security,
+      isSdlZone: flags.isSdlZone ?? flags.is_sdl_zone ?? flags.sdl_zone,
     })
 
     res.json({ success: true, data: result })

@@ -23,6 +23,34 @@ import * as zonesModule from '../schema/zones'
 import { getAdditionalCharges } from './b2bPricingConfig.service'
 const { b2bOverheadRules, b2bPincodes, b2bZoneToZoneRates, b2bZoneRegions, zones } = zonesModule
 
+const EXACT_B2B_ZONE_ORDER = [
+  'N1',
+  'N2',
+  'N3',
+  'C1',
+  'C2',
+  'W1',
+  'W2',
+  'E1',
+  'E2',
+  'S1',
+  'S2',
+  'S3',
+  'NE1',
+  'NE2',
+]
+
+const sortExactB2BZones = <T extends { code?: string | null }>(rows: T[]) => {
+  const order = new Map(EXACT_B2B_ZONE_ORDER.map((code, index) => [code, index]))
+  return rows
+    .filter((row) => order.has(String(row.code || '').trim().toUpperCase()))
+    .sort(
+      (left, right) =>
+        (order.get(String(left.code || '').trim().toUpperCase()) ?? 999) -
+        (order.get(String(right.code || '').trim().toUpperCase()) ?? 999),
+    )
+}
+
 // Debug: Check import at module load time
 console.log('[b2bAdmin.service] Module load - zonesModule check:', {
   hasB2bZoneToZoneRates: 'b2bZoneToZoneRates' in zonesModule,
@@ -49,6 +77,7 @@ type PincodeFlags = {
   isSez?: boolean
   isAirport?: boolean
   isHighSecurity?: boolean
+  isSdlZone?: boolean
 }
 
 const normalizeCourierScope = (scope?: CourierScope) => {
@@ -58,6 +87,15 @@ const normalizeCourierScope = (scope?: CourierScope) => {
   const courierId = scope.courierId != null ? Number(scope.courierId) : null
   const serviceProvider = scope.serviceProvider ?? null
   return { courierId, serviceProvider }
+}
+
+const normalizeOptionalAmount = (value: number | string | null | undefined, label: string) => {
+  if (value === undefined || value === null || value === '') return null
+  const amount = Number(value)
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error(`${label} must be a valid amount`)
+  }
+  return amount.toString()
 }
 
 // -----------------------------
@@ -82,7 +120,7 @@ export const listB2BZones = async (
     .where(and(...conditions))
     .orderBy(zones.code)
 
-  return result
+  return sortExactB2BZones(result)
 }
 
 // -----------------------------
@@ -104,6 +142,7 @@ export const listPincodes = async (params: {
   isSez?: boolean
   isAirport?: boolean
   isHighSecurity?: boolean
+  isSdlZone?: boolean
   sortBy?: 'pincode' | 'city' | 'state' | 'created_at'
   sortOrder?: 'asc' | 'desc'
 }) => {
@@ -122,6 +161,7 @@ export const listPincodes = async (params: {
     isSez,
     isAirport,
     isHighSecurity,
+    isSdlZone,
     sortBy = 'pincode',
     sortOrder = 'asc',
   } = params
@@ -146,6 +186,8 @@ export const listPincodes = async (params: {
     filters.push(eq(b2bPincodes.is_airport, isAirport) as SQLWrapper)
   if (isHighSecurity === true || isHighSecurity === false)
     filters.push(eq(b2bPincodes.is_high_security, isHighSecurity) as SQLWrapper)
+  if (isSdlZone === true || isSdlZone === false)
+    filters.push(eq(b2bPincodes.is_sdl_zone, isSdlZone) as SQLWrapper)
 
   if (courierId || serviceProvider) {
     const courierCondition = courierId
@@ -199,6 +241,8 @@ export const listPincodes = async (params: {
       isSez: b2bPincodes.is_sez,
       isAirport: b2bPincodes.is_airport,
       isHighSecurity: b2bPincodes.is_high_security,
+      isSdlZone: b2bPincodes.is_sdl_zone,
+      sdlRatePerKg: b2bPincodes.sdl_rate_per_kg,
       createdAt: b2bPincodes.created_at,
       updatedAt: b2bPincodes.updated_at,
     })
@@ -230,6 +274,7 @@ export const createPincode = async (payload: {
   zoneId: string
   courierScope?: CourierScope
   flags?: PincodeFlags
+  sdlRatePerKg?: number | string | null
 }) => {
   const { courierId, serviceProvider } = normalizeCourierScope(payload.courierScope)
   const pincode = String(payload.pincode || '').trim()
@@ -281,6 +326,8 @@ export const createPincode = async (payload: {
       is_sez: payload.flags?.isSez ?? false,
       is_airport: payload.flags?.isAirport ?? false,
       is_high_security: payload.flags?.isHighSecurity ?? false,
+      is_sdl_zone: payload.flags?.isSdlZone ?? false,
+      sdl_rate_per_kg: normalizeOptionalAmount(payload.sdlRatePerKg, 'SDL rate per kg'),
     })
     .returning()
 
@@ -295,6 +342,7 @@ export const updatePincode = async (
     state: string
     zoneId: string
     flags: PincodeFlags
+    sdlRatePerKg: number | string | null
   }> & { courierScope?: CourierScope },
 ) => {
   const updateData: Record<string, any> = {}
@@ -302,6 +350,9 @@ export const updatePincode = async (
   if (payload.city) updateData.city = payload.city.trim()
   if (payload.state) updateData.state = payload.state.trim()
   if (payload.zoneId) updateData.zone_id = payload.zoneId
+  if ('sdlRatePerKg' in payload) {
+    updateData.sdl_rate_per_kg = normalizeOptionalAmount(payload.sdlRatePerKg, 'SDL rate per kg')
+  }
 
   if (payload.flags) {
     if (payload.flags.isOda != null) updateData.is_oda = payload.flags.isOda
@@ -311,12 +362,17 @@ export const updatePincode = async (
     if (payload.flags.isAirport != null) updateData.is_airport = payload.flags.isAirport
     if (payload.flags.isHighSecurity != null)
       updateData.is_high_security = payload.flags.isHighSecurity
+    if (payload.flags.isSdlZone != null) updateData.is_sdl_zone = payload.flags.isSdlZone
   }
 
   if (payload.courierScope) {
     const { courierId, serviceProvider } = normalizeCourierScope(payload.courierScope)
     updateData.courier_id = courierId
     updateData.service_provider = serviceProvider
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    updateData.updated_at = new Date()
   }
 
   const [record] = await db
@@ -365,6 +421,7 @@ export const bulkUpdatePincodeFlags = async (ids: string[], flags: PincodeFlags)
   if (flags.isSez !== undefined) updateData.is_sez = flags.isSez
   if (flags.isAirport !== undefined) updateData.is_airport = flags.isAirport
   if (flags.isHighSecurity !== undefined) updateData.is_high_security = flags.isHighSecurity
+  if (flags.isSdlZone !== undefined) updateData.is_sdl_zone = flags.isSdlZone
 
   if (Object.keys(updateData).length === 1) {
     // Only updated_at was set, no flags to update
@@ -380,7 +437,7 @@ export const bulkUpdatePincodeFlags = async (ids: string[], flags: PincodeFlags)
   return { updated: updated.length }
 }
 
-type PincodeCsvRecord = {
+type PincodeCsvRecord = Record<string, string | undefined> & {
   pincode: string
   zone_code?: string
   zone_id?: string
@@ -390,6 +447,13 @@ type PincodeCsvRecord = {
   is_sez?: string
   is_airport?: string
   is_high_security?: string
+  is_sdl_zone?: string
+  sdl_zone?: string
+  is_sdl?: string
+  sdl_rate_per_kg?: string
+  sdl_charge_per_kg?: string
+  sdl_rate?: string
+  sdl_charges?: string
   // city and state are optional - will use existing values from DB if not provided
   city?: string
   state?: string
@@ -397,7 +461,38 @@ type PincodeCsvRecord = {
 
 const truthy = (value?: string) => {
   if (!value) return false
-  return ['1', 'true', 'yes', 'y'].includes(value.toLowerCase())
+  return ['1', 'true', 'yes', 'y'].includes(value.trim().toLowerCase())
+}
+
+const normalizeCsvHeader = (header: string) =>
+  String(header ?? '')
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+
+const firstCsvValue = (row: Record<string, string | undefined>, aliases: string[]) => {
+  for (const alias of aliases) {
+    const value = row[alias]
+    if (value != null && String(value).trim() !== '') return String(value).trim()
+  }
+  return ''
+}
+
+const parseOptionalCsvAmount = (value?: string) => {
+  const normalized = String(value ?? '')
+    .trim()
+    .replace(/^[^0-9+.-]+/, '')
+    .replace(/,/g, '')
+    .replace(/\s*\/\s*kg$/i, '')
+    .trim()
+  if (!normalized) return null
+  const amount = Number(normalized)
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error('SDL Rate Per Kg must be a valid amount')
+  }
+  return amount
 }
 
 export const importPincodesFromCsv = async (
@@ -415,6 +510,7 @@ export const importPincodesFromCsv = async (
   const parsed = Papa.parse<PincodeCsvRecord>(csv, {
     header: true,
     skipEmptyLines: true,
+    transformHeader: normalizeCsvHeader,
   })
 
   if (parsed.errors?.length) {
@@ -430,6 +526,8 @@ export const importPincodesFromCsv = async (
   }
 
   const zoneCache = new Map<string, string>()
+  const fields = new Set((parsed.meta.fields ?? []).map(normalizeCsvHeader))
+  const hasColumn = (...aliases: string[]) => aliases.some((alias) => fields.has(alias))
 
   const resolveZoneId = async (row: PincodeCsvRecord) => {
     if (row.zone_id) return row.zone_id
@@ -497,13 +595,32 @@ export const importPincodesFromCsv = async (
         // Update existing pincode attributes
         // Only update city/state if provided in CSV, otherwise keep existing values
         const updateData: any = {
-          is_oda: truthy(row.is_oda),
-          is_remote: truthy(row.is_remote),
-          is_mall: truthy(row.is_mall),
-          is_sez: truthy(row.is_sez),
-          is_airport: truthy(row.is_airport),
-          is_high_security: truthy(row.is_high_security),
           updated_at: new Date(),
+        }
+
+        if (hasColumn('is_oda')) updateData.is_oda = truthy(row.is_oda)
+        if (hasColumn('is_remote')) updateData.is_remote = truthy(row.is_remote)
+        if (hasColumn('is_mall')) updateData.is_mall = truthy(row.is_mall)
+        if (hasColumn('is_sez')) updateData.is_sez = truthy(row.is_sez)
+        if (hasColumn('is_airport')) updateData.is_airport = truthy(row.is_airport)
+        if (hasColumn('is_high_security')) {
+          updateData.is_high_security = truthy(row.is_high_security)
+        }
+        if (hasColumn('is_sdl_zone', 'sdl_zone', 'is_sdl')) {
+          updateData.is_sdl_zone = truthy(
+            firstCsvValue(row, ['is_sdl_zone', 'sdl_zone', 'is_sdl']),
+          )
+        }
+        if (hasColumn('sdl_rate_per_kg', 'sdl_charge_per_kg', 'sdl_rate', 'sdl_charges')) {
+          const sdlRate = parseOptionalCsvAmount(
+            firstCsvValue(row, [
+              'sdl_rate_per_kg',
+              'sdl_charge_per_kg',
+              'sdl_rate',
+              'sdl_charges',
+            ]),
+          )
+          updateData.sdl_rate_per_kg = sdlRate == null ? null : sdlRate.toString()
         }
 
         // Only update city/state if provided in CSV
@@ -542,6 +659,18 @@ export const importPincodesFromCsv = async (
           is_sez: truthy(row.is_sez),
           is_airport: truthy(row.is_airport),
           is_high_security: truthy(row.is_high_security),
+          is_sdl_zone: truthy(firstCsvValue(row, ['is_sdl_zone', 'sdl_zone', 'is_sdl'])),
+          sdl_rate_per_kg: (() => {
+            const amount = parseOptionalCsvAmount(
+              firstCsvValue(row, [
+                'sdl_rate_per_kg',
+                'sdl_charge_per_kg',
+                'sdl_rate',
+                'sdl_charges',
+              ]),
+            )
+            return amount == null ? null : amount.toString()
+          })(),
         })
         inserted += 1
       }
@@ -1812,6 +1941,10 @@ export const calculateB2BRate = async (params: {
   const isCsdByPincode = origin.isCsd || destination.isCsd
   const isCsdByAddress = checkCsdKeywords(params.deliveryAddress)
   const isCsd = isCsdByPincode || isCsdByAddress
+  const sdlRatePerKg = Math.max(
+    origin.isSdlZone ? Number(origin.sdlRatePerKg || 0) : 0,
+    destination.isSdlZone ? Number(destination.sdlRatePerKg || 0) : 0,
+  )
 
   const context = {
     paymentMode: (params.paymentMode ?? 'PREPAID').toUpperCase(),
@@ -1822,6 +1955,8 @@ export const calculateB2BRate = async (params: {
     isHighSecurity: origin.isHighSecurity || destination.isHighSecurity,
     isMall: destination.isMall, // Mall delivery charges apply only if destination pincode is a mall
     isCsd: isCsd, // CSD: pincode flag OR address contains CSD keywords
+    isSdlZone: origin.isSdlZone || destination.isSdlZone,
+    sdlRatePerKg,
     isHoliday: isHoliday,
     isExpress: false, // TODO: Add support for express delivery flag
     isTimeSpecific: params.deliveryTime ? true : false, // Apply if delivery time window is provided from frontend
@@ -1978,6 +2113,19 @@ export const calculateB2BRate = async (params: {
         })
         runningTotal += odaCharge
       }
+    }
+
+    if (context.isSdlZone && context.sdlRatePerKg > 0 && billableWeight > 0) {
+      const sdlCharge = context.sdlRatePerKg * billableWeight
+      overheadBreakdown.push({
+        id: 'sdl_charge',
+        code: 'SDL',
+        name: 'SDL Zone Charge',
+        type: 'per_kg',
+        amount: sdlCharge,
+        description: `${context.sdlRatePerKg}/kg x ${billableWeight}kg`,
+      })
+      runningTotal += sdlCharge
     }
 
     // CSD Delivery Charge - Always flat per AWB
@@ -2553,6 +2701,7 @@ export const calculateB2BRate = async (params: {
             rovPercentage: Number(additionalCharges.rov_percentage || 0.5),
             liabilityLimit: Number(additionalCharges.liability_limit || 5000),
             cftFactor: Number(additionalCharges.cft_factor || 5),
+            sdlRatePerKg,
           }
         : null,
       volumetricDivisor: cftFactor, // Uses CFT factor from additional charges configuration
@@ -2571,6 +2720,8 @@ export type ZoneLookupResult = {
   isAirport: boolean
   isHighSecurity: boolean
   isCsd: boolean
+  isSdlZone: boolean
+  sdlRatePerKg: number | null
 }
 
 export const findZoneForPincode = async (
@@ -2600,6 +2751,8 @@ export const findZoneForPincode = async (
         isAirport: b2bPincodes.is_airport,
         isHighSecurity: b2bPincodes.is_high_security,
         isCsd: b2bPincodes.is_csd,
+        isSdlZone: b2bPincodes.is_sdl_zone,
+        sdlRatePerKg: b2bPincodes.sdl_rate_per_kg,
         zoneCode: zones.code,
         zoneName: zones.name,
       })
@@ -2629,6 +2782,8 @@ export const findZoneForPincode = async (
         isAirport: row.isAirport,
         isHighSecurity: row.isHighSecurity,
         isCsd: row.isCsd,
+        isSdlZone: row.isSdlZone,
+        sdlRatePerKg: row.sdlRatePerKg == null ? null : Number(row.sdlRatePerKg),
       }
     }
   }
@@ -2725,6 +2880,7 @@ const ruleApplies = (
     isAirport: boolean
     isHighSecurity: boolean
     isMall: boolean
+    isSdlZone: boolean
     isHoliday?: boolean
     isExpress?: boolean
     isTimeSpecific?: boolean
@@ -2790,6 +2946,11 @@ const ruleApplies = (
             if (rhs === 'true' && !context.isHighSecurity) return false
             if (rhs === 'false' && context.isHighSecurity) return false
             break
+          case 'is_sdl_zone':
+          case 'sdl_zone':
+            if (rhs === 'true' && !context.isSdlZone) return false
+            if (rhs === 'false' && context.isSdlZone) return false
+            break
           case 'min_weight':
             if (rhs && context.weightKg < Number(rhs)) return false
             break
@@ -2821,6 +2982,8 @@ const ruleApplies = (
     if (conditionObj.highSecurity === false && context.isHighSecurity) return false
     if (conditionObj.mall === true && !context.isMall) return false
     if (conditionObj.mall === false && context.isMall) return false
+    if (conditionObj.sdlZone === true && !context.isSdlZone) return false
+    if (conditionObj.sdlZone === false && context.isSdlZone) return false
     if (conditionObj.min_weight && context.billableWeight < Number(conditionObj.min_weight)) {
       return false
     }

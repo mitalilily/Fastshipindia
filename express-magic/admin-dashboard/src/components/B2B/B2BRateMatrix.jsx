@@ -267,7 +267,7 @@ const B2BRateMatrix = ({ planId }) => {
 
   // Sample CSV headers for template download
   // Use first zone if available, otherwise use placeholder
-  const firstZoneCode = zones.length > 0 ? zones[0].code : 'A_B2B'
+  const firstZoneCode = zones.length > 0 ? zones[0].code : 'N1'
   const sampleCSVHeaders = [
     {
       origin_zone_code: firstZoneCode,
@@ -522,7 +522,7 @@ const B2BRateMatrix = ({ planId }) => {
           <DownloadSampleCSVButton
             headers={sampleCSVHeaders}
             filename={`b2b_rates_template_${new Date().toISOString().split('T')[0]}.csv`}
-            buttonText="Download Template"
+            buttonText="Download Approved Template"
             size="sm"
             colorScheme="blue"
             tooltip="Download a sample CSV file with the correct format"
@@ -558,7 +558,7 @@ const B2BRateMatrix = ({ planId }) => {
             </Text>
             <VStack align="stretch" spacing={1} fontSize="xs" color="blue.600">
               <Text>• Columns: origin_zone_code, destination_zone_code, rate_per_kg</Text>
-              <Text>• Zone codes must match the matrix headers (for example A_B2B)</Text>
+              <Text>• Zone codes must match the matrix headers (for example N1)</Text>
               <Text>• Rate Per Kg should be a number only (no currency symbols)</Text>
               <Text>• Empty cells will be treated as null/not set</Text>
             </VStack>

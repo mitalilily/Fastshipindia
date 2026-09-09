@@ -16,6 +16,34 @@ const CANONICAL_B2C_ZONE_CODES = new Set([
   'WITHIN_STATE',
 ])
 
+const EXACT_B2B_ZONE_ORDER = [
+  'N1',
+  'N2',
+  'N3',
+  'C1',
+  'C2',
+  'W1',
+  'W2',
+  'E1',
+  'E2',
+  'S1',
+  'S2',
+  'S3',
+  'NE1',
+  'NE2',
+]
+
+const sortExactB2BZones = <T extends { code?: string | null }>(rows: T[]) => {
+  const order = new Map(EXACT_B2B_ZONE_ORDER.map((code, index) => [code, index]))
+  return rows
+    .filter((row) => order.has(String(row.code || '').trim().toUpperCase()))
+    .sort(
+      (left, right) =>
+        (order.get(String(left.code || '').trim().toUpperCase()) ?? 999) -
+        (order.get(String(right.code || '').trim().toUpperCase()) ?? 999),
+    )
+}
+
 const normalizeZoneLabel = (value: unknown) =>
   String(value ?? '')
     .trim()
@@ -176,6 +204,10 @@ export const getAllZones = async (
 
     if (normalizedBusinessType === 'B2C') {
       return dedupeB2CZones(result || [])
+    }
+
+    if (normalizedBusinessType === 'B2B') {
+      return sortExactB2BZones(result || [])
     }
 
     return result || []

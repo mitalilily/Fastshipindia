@@ -49,6 +49,8 @@ const emptyForm = {
   isSez: false,
   isAirport: false,
   isHighSecurity: false,
+  isSdlZone: false,
+  sdlRatePerKg: '',
 }
 
 const flagFields = [
@@ -58,6 +60,7 @@ const flagFields = [
   ['isSez', 'SEZ / Port'],
   ['isAirport', 'Airport'],
   ['isHighSecurity', 'High Security'],
+  ['isSdlZone', 'SDL Zone'],
 ]
 
 const normaliseRow = (row) => ({
@@ -71,12 +74,14 @@ const normaliseRow = (row) => ({
   isSez: row.isSez ?? row.is_sez ?? false,
   isAirport: row.isAirport ?? row.is_airport ?? false,
   isHighSecurity: row.isHighSecurity ?? row.is_high_security ?? false,
+  isSdlZone: row.isSdlZone ?? row.is_sdl_zone ?? false,
+  sdlRatePerKg: row.sdlRatePerKg ?? row.sdl_rate_per_kg ?? '',
 })
 
 const downloadTemplate = () => {
   const csv = [
-    'pincode,city,state,zone_code,is_oda,is_remote,is_mall,is_sez,is_airport,is_high_security',
-    '110001,New Delhi,Delhi,A_B2B,false,false,false,false,false,false',
+    'pincode,city,state,zone_code,is_sdl_zone,sdl_rate_per_kg,is_oda,is_remote,is_mall,is_sez,is_airport,is_high_security',
+    '110001,New Delhi,Delhi,N1,true,6.00,false,false,false,false,false,false',
   ].join('\n')
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
@@ -242,6 +247,12 @@ const B2BPincodeManagement = () => {
     if (!String(form.city || '').trim()) nextErrors.city = 'City is required'
     if (!String(form.state || '').trim()) nextErrors.state = 'State is required'
     if (!form.zoneId) nextErrors.zoneId = 'Select a B2B zone'
+    if (
+      form.sdlRatePerKg !== '' &&
+      (!Number.isFinite(Number(form.sdlRatePerKg)) || Number(form.sdlRatePerKg) < 0)
+    ) {
+      nextErrors.sdlRatePerKg = 'Enter a valid SDL rate'
+    }
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
 
@@ -254,6 +265,7 @@ const B2BPincodeManagement = () => {
       courierId: form.courierId || undefined,
       serviceProvider: form.serviceProvider || undefined,
       flags: Object.fromEntries(flagFields.map(([key]) => [key, Boolean(form[key])])),
+      sdlRatePerKg: form.sdlRatePerKg === '' ? null : Number(form.sdlRatePerKg),
     })
   }
 
@@ -297,6 +309,17 @@ const B2BPincodeManagement = () => {
           <Text color={adminUi.muted}>Standard</Text>
         )
       },
+    },
+    {
+      key: 'sdlRatePerKg',
+      label: 'SDL Rate/Kg',
+      w: '130px',
+      render: (value, row) =>
+        row.isSdlZone && value !== '' && value != null ? (
+          <Text fontWeight="700">Rs {Number(value || 0).toFixed(2)}</Text>
+        ) : (
+          <Text color={adminUi.muted}>-</Text>
+        ),
     },
   ]
 
@@ -362,6 +385,7 @@ const B2BPincodeManagement = () => {
             <option value="is_sez">SEZ / Port</option>
             <option value="is_airport">Airport</option>
             <option value="is_high_security">High Security</option>
+            <option value="is_sdl_zone">SDL Zone</option>
           </AdminSelect>
           <Text color={adminUi.muted} fontSize="sm">
             {total.toLocaleString('en-IN')} pincodes
@@ -370,7 +394,7 @@ const B2BPincodeManagement = () => {
 
         <HStack spacing={2} wrap="wrap">
           <Button leftIcon={<IconDownload size={17} />} onClick={downloadTemplate} variant="outline">
-            Template
+            Approved Template
           </Button>
           <Button leftIcon={<IconFileImport size={17} />} onClick={importModal.onOpen} variant="outline">
             Import CSV
@@ -496,6 +520,21 @@ const B2BPincodeManagement = () => {
                 })}
               </AdminSelect>
             </FormControl>
+            <FormControl isInvalid={Boolean(errors.sdlRatePerKg)}>
+              <FormLabel>SDL rate per kg</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.sdlRatePerKg}
+                onChange={(event) =>
+                  setForm((value) => ({ ...value, sdlRatePerKg: event.target.value }))
+                }
+                placeholder="0.00"
+              />
+              <FormHelperText>Used when this pincode is marked as SDL Zone.</FormHelperText>
+              <FormErrorMessage>{errors.sdlRatePerKg}</FormErrorMessage>
+            </FormControl>
           </SimpleGrid>
           <Box>
             <Text fontWeight="700" mb={3}>Delivery attributes</Text>
@@ -526,7 +565,8 @@ const B2BPincodeManagement = () => {
         <Stack spacing={4}>
           <Alert status="info" borderRadius="lg">
             <AlertIcon />
-            CSV can add new pincodes and update existing ones. Include zone_code, or select a default zone below.
+            CSV can add new pincodes and update existing ones. Use the approved template to include
+            zone_code, is_sdl_zone, and sdl_rate_per_kg.
           </Alert>
           <FormControl>
             <FormLabel>Default zone (optional)</FormLabel>

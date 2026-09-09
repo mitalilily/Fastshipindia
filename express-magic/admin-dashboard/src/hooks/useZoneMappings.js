@@ -65,6 +65,8 @@ export function useZoneMappings(
     is_sez: item.is_sez ?? item.isSez ?? false,
     is_airport: item.is_airport ?? item.isAirport ?? false,
     is_high_security: item.is_high_security ?? item.isHighSecurity ?? false,
+    is_sdl_zone: item.is_sdl_zone ?? item.isSdlZone ?? false,
+    sdl_rate_per_kg: item.sdl_rate_per_kg ?? item.sdlRatePerKg ?? '',
   }))
   const total = isB2B
     ? mappingsData.pagination?.total || 0

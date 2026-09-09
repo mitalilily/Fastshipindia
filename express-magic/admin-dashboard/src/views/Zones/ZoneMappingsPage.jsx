@@ -60,6 +60,7 @@ const ZoneMappingsPage = () => {
     is_sez: '',
     is_airport: '',
     is_high_security: '',
+    is_sdl_zone: '',
     sortBy: 'pincode',
     sortOrder: 'asc', // Default to ascending for natural pincode order
   })
@@ -115,6 +116,7 @@ const ZoneMappingsPage = () => {
           type: 'select',
           options: booleanSelectOptions,
         },
+        { key: 'is_sdl_zone', label: 'SDL Zone', type: 'select', options: booleanSelectOptions },
       ]
     : [
         { key: 'pincode', label: 'Pincode', type: 'text' },
@@ -134,6 +136,8 @@ const ZoneMappingsPage = () => {
     is_sez: false,
     is_airport: false,
     is_high_security: false,
+    is_sdl_zone: false,
+    sdl_rate_per_kg: '',
   }
   const [mappingForm, setMappingForm] = useState(initialMappingState)
   const [isEdit, setIsEdit] = useState(false)
@@ -147,6 +151,7 @@ const ZoneMappingsPage = () => {
     is_sez: undefined,
     is_airport: undefined,
     is_high_security: undefined,
+    is_sdl_zone: undefined,
   })
   const [isImportModalOpen, setImportModalOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
@@ -189,6 +194,7 @@ const ZoneMappingsPage = () => {
     is_sez: 'isSez',
     is_airport: 'isAirport',
     is_high_security: 'isHighSecurity',
+    is_sdl_zone: 'isSdlZone',
   }
 
   const buildCurrentFlags = (row) => ({
@@ -198,6 +204,7 @@ const ZoneMappingsPage = () => {
     isSez: row.is_sez ?? row.isSez ?? false,
     isAirport: row.is_airport ?? row.isAirport ?? false,
     isHighSecurity: row.is_high_security ?? row.isHighSecurity ?? false,
+    isSdlZone: row.is_sdl_zone ?? row.isSdlZone ?? false,
   })
 
   const handleFlagToggle = (row, key, checked) => {
@@ -229,6 +236,33 @@ const ZoneMappingsPage = () => {
     </HStack>
   )
 
+  const handleSdlRateBlur = (row, value) => {
+    if (!isB2B) return
+    const trimmed = String(value ?? '').trim()
+    const nextValue = trimmed === '' ? null : Number(trimmed)
+
+    if (trimmed !== '' && (!Number.isFinite(nextValue) || nextValue < 0)) {
+      toast({
+        title: 'Invalid SDL rate',
+        description: 'Enter a valid SDL rate per kg.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      })
+      return
+    }
+
+    const currentValue = row.sdl_rate_per_kg ?? row.sdlRatePerKg ?? ''
+    if (String(currentValue ?? '') === String(nextValue ?? '')) return
+
+    updateMapping.mutate({
+      mappingId: row.id,
+      mappingData: {
+        sdlRatePerKg: nextValue,
+      },
+    })
+  }
+
   // Open modals
   const openAddModal = () => {
     setIsEdit(false)
@@ -250,6 +284,8 @@ const ZoneMappingsPage = () => {
       is_sez: mapping.is_sez ?? mapping.isSez ?? false,
       is_airport: mapping.is_airport ?? mapping.isAirport ?? false,
       is_high_security: mapping.is_high_security ?? mapping.isHighSecurity ?? false,
+      is_sdl_zone: mapping.is_sdl_zone ?? mapping.isSdlZone ?? false,
+      sdl_rate_per_kg: mapping.sdl_rate_per_kg ?? mapping.sdlRatePerKg ?? '',
     })
     setManualOverrides({ city: true, state: true })
     setModalOpen(true)
@@ -263,6 +299,16 @@ const ZoneMappingsPage = () => {
 
     if (!mappingForm.city || !mappingForm.state) {
       toast({ title: 'City and state are required', status: 'warning' })
+      return
+    }
+
+    if (
+      isB2B &&
+      mappingForm.sdl_rate_per_kg !== '' &&
+      (!Number.isFinite(Number(mappingForm.sdl_rate_per_kg)) ||
+        Number(mappingForm.sdl_rate_per_kg) < 0)
+    ) {
+      toast({ title: 'Enter a valid SDL rate per kg', status: 'warning' })
       return
     }
 
@@ -281,7 +327,10 @@ const ZoneMappingsPage = () => {
         isSez: mappingForm.is_sez,
         isAirport: mappingForm.is_airport,
         isHighSecurity: mappingForm.is_high_security,
+        isSdlZone: mappingForm.is_sdl_zone,
       }
+      payload.sdlRatePerKg =
+        mappingForm.sdl_rate_per_kg === '' ? null : Number(mappingForm.sdl_rate_per_kg)
     }
 
     if (isEdit) {
@@ -412,6 +461,7 @@ const ZoneMappingsPage = () => {
             is_sez: undefined,
             is_airport: undefined,
             is_high_security: undefined,
+            is_sdl_zone: undefined,
           })
         },
       },
@@ -426,6 +476,11 @@ const ZoneMappingsPage = () => {
     ? [
         {
           pincode: '',
+          city: 'Required for new pincodes',
+          state: 'Required for new pincodes',
+          zone_code: specificZone?.code || 'N1',
+          is_sdl_zone: '0/1 or true/false or yes/no',
+          sdl_rate_per_kg: '6.00',
           is_oda: '0/1 or true/false or yes/no',
           is_remote: '0/1 or true/false or yes/no',
           is_mall: '0/1 or true/false or yes/no',
@@ -563,6 +618,8 @@ const ZoneMappingsPage = () => {
                 'SEZ / Port',
                 'Airport',
                 'High Security',
+                'SDL Zone',
+                'SDL Rate/Kg',
                 'Actions',
               ]
             : ['Pincode', 'City', 'State', 'Actions']
@@ -579,6 +636,8 @@ const ZoneMappingsPage = () => {
                 'is_sez',
                 'is_airport',
                 'is_high_security',
+                'is_sdl_zone',
+                'sdl_rate_per_kg',
               ]
             : ['pincode', 'city', 'state']
         }
@@ -597,20 +656,31 @@ const ZoneMappingsPage = () => {
                 is_sez: (_value, row) => renderFlagSwitch(row, 'is_sez'),
                 is_airport: (_value, row) => renderFlagSwitch(row, 'is_airport'),
                 is_high_security: (_value, row) => renderFlagSwitch(row, 'is_high_security'),
+                is_sdl_zone: (_value, row) => renderFlagSwitch(row, 'is_sdl_zone'),
+                sdl_rate_per_kg: (value, row) => (
+                  <Input
+                    size="sm"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    maxW="110px"
+                    defaultValue={value ?? row.sdlRatePerKg ?? ''}
+                    placeholder="0.00"
+                    onBlur={(event) => handleSdlRateBlur(row, event.target.value)}
+                  />
+                ),
               }
             : undefined
         }
         renderActions={(row) => (
           <Flex gap={2}>
-            {!isB2B && (
-              <IconButton
-                aria-label="Edit"
-                icon={<EditIcon />}
-                size="sm"
-                colorScheme="yellow"
-                onClick={() => openEditModal(row)}
-              />
-            )}
+            <IconButton
+              aria-label="Edit"
+              icon={<EditIcon />}
+              size="sm"
+              colorScheme="yellow"
+              onClick={() => openEditModal(row)}
+            />
             <IconButton
               aria-label="Delete"
               icon={<DeleteIcon />}
@@ -694,8 +764,9 @@ const ZoneMappingsPage = () => {
               is_mall: undefined,
               is_sez: undefined,
               is_airport: undefined,
-              is_high_security: undefined,
-            })
+            is_high_security: undefined,
+            is_sdl_zone: undefined,
+          })
           }}
           title={`Update Attributes for ${selectedRows.length} Pincode${
             selectedRows.length > 1 ? 's' : ''
@@ -871,11 +942,11 @@ const ZoneMappingsPage = () => {
         </CustomModal>
       )}
 
-      {!isB2B && (
+      {modalOpen && (
         <CustomModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          title={isEdit ? 'Edit Mapping' : 'Add Mapping'}
+          title={isB2B ? 'Edit B2B Pincode' : isEdit ? 'Edit Mapping' : 'Add Mapping'}
           size="xl"
           footer={
             <HStack justify="space-between" w="100%">
@@ -981,7 +1052,26 @@ const ZoneMappingsPage = () => {
                   >
                     High Security
                   </Checkbox>
+                  <Checkbox
+                    isChecked={mappingForm.is_sdl_zone}
+                    onChange={(e) =>
+                      setMappingForm({ ...mappingForm, is_sdl_zone: e.target.checked })
+                    }
+                  >
+                    SDL Zone
+                  </Checkbox>
                 </Flex>
+                <Input
+                  mt={4}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="SDL rate per kg"
+                  value={mappingForm.sdl_rate_per_kg}
+                  onChange={(e) =>
+                    setMappingForm({ ...mappingForm, sdl_rate_per_kg: e.target.value })
+                  }
+                />
               </Box>
             )}
           </Stack>
@@ -1020,8 +1110,11 @@ const ZoneMappingsPage = () => {
                           setImportModalOpen(false)
                         let description = ''
                         if (isB2B && data) {
-                          if (data.updated > 0) {
-                            description = `${data.updated} pincode(s) updated with attributes`
+                          const changedCount = Number(data.updated || 0) + Number(data.inserted || 0)
+                          if (changedCount > 0) {
+                            description = `${data.inserted || 0} pincode(s) added, ${
+                              data.updated || 0
+                            } pincode(s) updated`
                             if (data.skipped && data.skipped.length > 0) {
                               description += `. ${data.skipped.length} skipped (not found in zone)`
                             }
@@ -1034,11 +1127,14 @@ const ZoneMappingsPage = () => {
                         }
                           toast({
                           title:
-                            data?.updated > 0
+                            Number(data?.updated || 0) + Number(data?.inserted || 0) > 0
                               ? 'Update completed successfully'
                               : 'No pincodes updated',
                           description: description || undefined,
-                          status: data?.updated > 0 ? 'success' : 'warning',
+                          status:
+                            Number(data?.updated || 0) + Number(data?.inserted || 0) > 0
+                              ? 'success'
+                              : 'warning',
                           duration: 4000,
                             isClosable: true,
                           })
@@ -1071,10 +1167,10 @@ const ZoneMappingsPage = () => {
           <DownloadSampleCSVButton
             headers={csvHeaders}
             filename={isB2B ? 'pincode_attributes_template.csv' : 'mappings_template.csv'}
-            buttonText="Download Sample CSV"
+            buttonText={isB2B ? 'Download Approved Template' : 'Download Sample CSV'}
             tooltip={
               isB2B
-                ? 'Download a sample CSV file with example pincode and attribute values'
+                ? 'Download the approved CSV template with SDL zone and SDL rate columns'
                 : 'Download a sample CSV file with the required format'
             }
           />
@@ -1089,12 +1185,13 @@ const ZoneMappingsPage = () => {
                   CSV Update for B2B Zones:
                 </Text>
                 <Text mb={2} fontSize="sm" color="blue.700">
-                  <strong>Note:</strong> Only existing pincodes in this zone will be updated. New
-                  pincodes will be skipped. City and state are already stored - you only need to
-                  provide pincode and attributes.
+                  <strong>Note:</strong> Existing pincodes will be updated. New pincodes can be
+                  added when city, state, and zone_code are included, or when this page supplies the
+                  current zone.
                 </Text>
                 <Text mb={1}>
-                  Required column: <strong>pincode</strong>
+                  Required column: <strong>pincode</strong>. For new pincodes, include{' '}
+                  <strong>city</strong>, <strong>state</strong>, and <strong>zone_code</strong>.
                 </Text>
                 <Text mb={1}>
                   Attribute columns (use <strong>true/false</strong>, <strong>yes/no</strong>, or{' '}
@@ -1104,7 +1201,8 @@ const ZoneMappingsPage = () => {
                   • is_oda • is_remote • is_mall • is_sez • is_airport • is_high_security
                 </Text>
                 <Text fontSize="xs" mt={2} color="gray.600">
-                  Example: pincode=110001, is_oda=true, is_remote=false, is_mall=yes
+                  Example: pincode=110001, zone_code=N1, is_sdl_zone=true,
+                  sdl_rate_per_kg=6.00
                 </Text>
                 <Text fontSize="xs" mt={1} color="gray.500" fontStyle="italic">
                   Optional: You can include city and state to update them, but they're not required.

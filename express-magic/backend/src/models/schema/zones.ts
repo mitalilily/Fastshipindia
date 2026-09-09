@@ -71,6 +71,8 @@ export const b2bPincodes = createTable('b2b_pincodes', {
   is_airport: boolean('is_airport').default(false).notNull(),
   is_high_security: boolean('is_high_security').default(false).notNull(),
   is_csd: boolean('is_csd').default(false).notNull(),
+  is_sdl_zone: boolean('is_sdl_zone').default(false).notNull(),
+  sdl_rate_per_kg: decimal('sdl_rate_per_kg', { precision: 12, scale: 4 }),
   metadata: jsonb('metadata'),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
