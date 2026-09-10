@@ -586,9 +586,10 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
     showOrderDate || orderDate !== '-' ? ['Date', orderDate] : null,
     showInvoiceDate && invoiceDate !== '-' ? ['Inv. Date', invoiceDate] : null,
     showCodBanner ? ['Payment Type', paymentLabel] : null,
-    includeDeadWeight ? ['Weight', packageWeightLabel] : null,
+    // Weight must be present on every shipping label. It replaces invoice
+    // value so no commercial value is printed on the consignee copy.
+    ['Weight', packageWeightLabel],
     includeDimension && dimensionLabel ? ['Dimensions', trimText(dimensionLabel, 24)] : null,
-    showDeclaredValue ? ['Invoice Value', invoiceValue] : null,
   ].filter(Boolean) as string[][]
 
   const headerBrandStack: any[] = []
