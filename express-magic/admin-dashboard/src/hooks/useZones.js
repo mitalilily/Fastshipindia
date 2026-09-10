@@ -1,8 +1,37 @@
 // src/hooks/useZones.js
 import { useToast } from '@chakra-ui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { b2bAdminService } from '../services/b2bAdmin.service'
 import { zoneService } from '../services/zones.service'
+
+// The API returns zones in creation order. Keep the B2C pricing UI aligned
+// with the rate-card order (Zone A through Zone E), irrespective of when a
+// zone was added.
+const B2C_ZONE_ORDER = {
+  WITHIN_CITY: 10, // Zone A
+  WITHIN_STATE: 20, // Zone B
+  WITHIN_REGION: 21, // Zone B legacy variant
+  METRO_TO_METRO: 30, // Zone C
+  ROI: 40, // Zone D
+  KASHMIR: 50, // Zone E
+}
+
+const getB2CZonePosition = (zone) => {
+  const code = String(zone?.code || '').trim().toUpperCase()
+  if (B2C_ZONE_ORDER[code] !== undefined) return B2C_ZONE_ORDER[code]
+
+  const label = `${zone?.name || ''} ${zone?.description || ''}`.toUpperCase()
+  if (label.includes('KASHMIR') || label.includes('LADAKH') || label.includes('NORTH EAST')) return 50
+  return 100
+}
+
+const sortB2CZones = (zones) =>
+  [...zones].sort((left, right) => {
+    const positionDifference = getB2CZonePosition(left) - getB2CZonePosition(right)
+    if (positionDifference !== 0) return positionDifference
+    return String(left?.name || left?.code || '').localeCompare(String(right?.name || right?.code || ''))
+  })
 
 export function useZones(businessType = null, filters = {}) {
   const queryClient = useQueryClient()
@@ -17,7 +46,7 @@ export function useZones(businessType = null, filters = {}) {
     queryClient.invalidateQueries({ queryKey: ['b2b-zone-rates'] })
   }
 
-  const { data: zones = [], isLoading, isError } = useQuery({
+  const { data: fetchedZones = [], isLoading, isError } = useQuery({
     queryKey,
     queryFn: () =>
       isB2B
@@ -28,6 +57,11 @@ export function useZones(businessType = null, filters = {}) {
         : zoneService.getZones(businessType, filters),
     keepPreviousData: true,
   })
+
+  const zones = useMemo(
+    () => (normalizedType === 'B2C' ? sortB2CZones(fetchedZones) : fetchedZones),
+    [fetchedZones, normalizedType],
+  )
 
   const createZone = useMutation({
     mutationFn: (payload) =>
