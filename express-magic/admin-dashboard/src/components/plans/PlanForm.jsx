@@ -24,6 +24,7 @@ const emptyForm = {
   slug: '',
   description: '',
   sort_order: 0,
+  commission_percentage: 0,
   is_active: true,
   is_default: false,
 }
@@ -41,6 +42,7 @@ const PlanForm = ({ plan, onClose }) => {
         slug: plan.slug || slugify(plan.name || ''),
         description: plan.description || '',
         sort_order: plan.sort_order ?? 0,
+        commission_percentage: plan.commission_percentage ?? 0,
         is_active: plan.is_active !== false,
         is_default: Boolean(plan.is_default),
       })
@@ -62,6 +64,7 @@ const PlanForm = ({ plan, onClose }) => {
       slug: slugify(form.slug),
       description: form.description.trim(),
       sort_order: Number(form.sort_order || 0),
+      commission_percentage: Number(form.commission_percentage || 0),
       is_active: form.is_default ? true : form.is_active,
     }
 
@@ -111,6 +114,19 @@ const PlanForm = ({ plan, onClose }) => {
           placeholder="Short description shown to admins"
           onChange={(event) => setField('description', event.target.value)}
         />
+      </FormControl>
+
+      <FormControl>
+        <FormLabel>Courier cost commission (%)</FormLabel>
+        <Input
+          type="number"
+          min="0"
+          max="70"
+          step="0.01"
+          value={form.commission_percentage}
+          onChange={(event) => setField('commission_percentage', event.target.value)}
+        />
+        <FormHelperText>Added to courier cost for sellers assigned to this plan.</FormHelperText>
       </FormControl>
 
       <FormControl>

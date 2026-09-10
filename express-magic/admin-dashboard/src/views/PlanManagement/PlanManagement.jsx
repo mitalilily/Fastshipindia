@@ -134,6 +134,12 @@ const PlanManagement = () => {
             render: (value) => <Text color="#607397">{value || '—'}</Text>,
           },
           {
+            key: 'commission_percentage',
+            label: 'Commission',
+            align: 'center',
+            render: (value) => `${Number(value || 0).toFixed(2)}%`,
+          },
+          {
             key: 'sort_order',
             label: 'Sort Order',
             align: 'center',

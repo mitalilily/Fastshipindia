@@ -78,6 +78,7 @@ import { userPlans } from '../schema/userPlans'
 import { userProfiles } from '../schema/userProfile'
 import { b2bPincodes, b2bZoneToZoneRates, zones } from '../schema/zones'
 import { calculateB2BRate } from './b2bAdmin.service'
+import { ensurePlanSchemaCompatibility } from './planSchemaCompatibility.service'
 import {
   computeEffectiveB2CCodCharge,
   computeB2CRateCardCharge,
@@ -3451,6 +3452,7 @@ export const fetchAvailableCouriersWithRates = async (
   userOrOptions?: FetchCouriersOptions,
 ) => {
   try {
+    await ensurePlanSchemaCompatibility()
     // ✅ B2C only - B2B should use fetchAvailableCouriersWithRatesB2B
     if (params.shipment_type && params.shipment_type !== 'b2c') {
       throw new Error(
@@ -3878,6 +3880,7 @@ export const fetchAvailableCouriersWithRates = async (
     // exclusively from enabled B2C rows in the couriers registry.
     let localRates: any[] = []
     let approxZone: { id: string; code: string; name?: string } | null = null
+    let planCommissionPercentage = 0
 
     const inferProviderFromRateCard = (rate: any) => {
       const explicitProvider = normalizeProviderKey(normalizeB2CServiceProvider(rate.service_provider))
@@ -3957,6 +3960,18 @@ export const fetchAvailableCouriersWithRates = async (
         })
         localRates = localRates.map(canonicalizeB2CLocalRateCard)
       }
+
+      const [activePlan] = activePlanId
+        ? await db
+            .select({ commissionPercentage: plans.commission_percentage })
+            .from(plans)
+            .where(eq(plans.id, activePlanId))
+            .limit(1)
+        : [null]
+      planCommissionPercentage = Math.min(
+        70,
+        Math.max(0, Number(activePlan?.commissionPercentage ?? 0)),
+      )
 
       const visibleRateProviders = new Set<string>()
       for (const rate of localRates) {
@@ -5306,21 +5321,32 @@ export const fetchAvailableCouriersWithRates = async (
             ? 'rto'
             : 'forward'
 
+      const courierCost = Number(activeRate.total_charges ?? courier.total_charges ?? 0)
+      const planCommissionAmount = Number(
+        ((courierCost * planCommissionPercentage) / 100).toFixed(2),
+      )
+      const billedCourierCharge = Number((courierCost + planCommissionAmount).toFixed(2))
+
       return {
         ...courier,
         rate: activeRate.rate ?? courier.rate ?? null,
         freight_charges: activeRate.rate ?? courier.freight_charges ?? null,
         cod_charges: activeRate.cod_charges ?? courier.cod_charges ?? 0,
         other_charges: activeRate.other_charges ?? courier.other_charges ?? 0,
-        total_charges: activeRate.total_charges ?? courier.total_charges ?? null,
+        total_charges: billedCourierCharge || activeRate.total_charges || courier.total_charges || null,
         courier_cost_estimate:
           activeRate.total_charges ?? courier.courier_cost_estimate ?? courier.total_charges ?? null,
+        plan_commission_percentage: planCommissionPercentage,
+        plan_commission_amount: planCommissionAmount,
         chargeable_weight: activeRate.chargeable_weight ?? null,
         volumetric_weight: activeRate.volumetric_weight ?? null,
         localRates: {
           ...courier.localRates,
           [activeLocalRateKey]: {
             ...activeRate,
+            total_charges: billedCourierCharge || activeRate.total_charges || null,
+            plan_commission_percentage: planCommissionPercentage,
+            plan_commission_amount: planCommissionAmount,
             chargeable_weight: activeRate.chargeable_weight ?? null,
             volumetric_weight: activeRate.volumetric_weight ?? null,
           },

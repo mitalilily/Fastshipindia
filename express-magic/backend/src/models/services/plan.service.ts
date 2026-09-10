@@ -16,6 +16,7 @@ type PlanInput = {
   is_active?: boolean
   is_default?: boolean
   sort_order?: number
+  commission_percentage?: number | string
 }
 
 const slugify = (value: string) =>
@@ -30,6 +31,14 @@ const normalizeSortOrder = (value: unknown) => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 0
   return Math.max(0, Math.trunc(parsed))
+}
+
+const normalizeCommissionPercentage = (value: unknown) => {
+  const parsed = Number(value ?? 0)
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 70) {
+    throw new HttpError(400, 'Commission percentage must be between 0 and 70')
+  }
+  return parsed.toFixed(2)
 }
 
 const validateName = (value: unknown) => {
@@ -91,6 +100,7 @@ export const PlansService = {
           is_active: makeDefault ? true : data.is_active !== false,
           is_default: makeDefault,
           sort_order: normalizeSortOrder(data.sort_order),
+          commission_percentage: normalizeCommissionPercentage(data.commission_percentage),
           updated_at: new Date(),
         })
         .returning()
@@ -132,6 +142,9 @@ export const PlansService = {
           ...(data.is_active !== undefined && { is_active: makeDefault ? true : data.is_active }),
           ...(data.is_default !== undefined && { is_default: data.is_default }),
           ...(data.sort_order !== undefined && { sort_order: normalizeSortOrder(data.sort_order) }),
+          ...(data.commission_percentage !== undefined && {
+            commission_percentage: normalizeCommissionPercentage(data.commission_percentage),
+          }),
           updated_at: new Date(),
         })
         .where(eq(plans.id, id))
