@@ -432,6 +432,7 @@ const SurchargeModal = ({ isOpen, onClose, rule, courierId, serviceProvider, pla
     conditionIsFragile: false,
     conditionIsInsurance: false,
     conditionZones: [], // Array of zone IDs
+    conditionDestinationStates: '', // Comma-separated delivery states for SDL/routing rules
     conditionMinWeight: '',
     conditionMaxWeight: '',
     conditionMinValue: '', // Minimum order value
@@ -467,6 +468,9 @@ const SurchargeModal = ({ isOpen, onClose, rule, courierId, serviceProvider, pla
         conditionIsFragile: parsed.isFragile === true,
         conditionIsInsurance: parsed.isInsurance === true,
         conditionZones: Array.isArray(parsed.zones) ? parsed.zones : [],
+        conditionDestinationStates: Array.isArray(parsed.destinationStates)
+          ? parsed.destinationStates.join(', ')
+          : '',
         conditionMinWeight: parsed.minWeight?.toString() || '',
         conditionMaxWeight: parsed.maxWeight?.toString() || '',
         conditionMinValue: parsed.minValue?.toString() || '',
@@ -495,6 +499,11 @@ const SurchargeModal = ({ isOpen, onClose, rule, courierId, serviceProvider, pla
     if (formData.conditionZones.length > 0) {
       condition.zones = formData.conditionZones
     }
+    const destinationStates = formData.conditionDestinationStates
+      .split(',')
+      .map((state) => state.trim())
+      .filter(Boolean)
+    if (destinationStates.length > 0) condition.destinationStates = destinationStates
     if (formData.conditionMinWeight) {
       condition.minWeight = Number(formData.conditionMinWeight)
     }
@@ -545,6 +554,7 @@ const SurchargeModal = ({ isOpen, onClose, rule, courierId, serviceProvider, pla
         conditionIsFragile: false,
         conditionIsInsurance: false,
         conditionZones: [],
+        conditionDestinationStates: '',
         conditionMinWeight: '',
         conditionMaxWeight: '',
         conditionMinValue: '',
@@ -961,6 +971,23 @@ const SurchargeModal = ({ isOpen, onClose, rule, courierId, serviceProvider, pla
                     <FormHelperText fontSize="xs" mt={2}>
                       Leave empty to apply to all zones. Select a specific zone if this charge only
                       applies to that area.
+                    </FormHelperText>
+                  </FormControl>
+
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight="medium">
+                      Delivery States (Optional)
+                    </FormLabel>
+                    <Input
+                      value={formData.conditionDestinationStates}
+                      onChange={(e) =>
+                        setFormData({ ...formData, conditionDestinationStates: e.target.value })
+                      }
+                      placeholder="e.g. Himachal Pradesh, Jammu & Kashmir"
+                      size="md"
+                    />
+                    <FormHelperText fontSize="xs">
+                      Comma-separated. The charge applies only when delivery is in one of these states.
                     </FormHelperText>
                   </FormControl>
 

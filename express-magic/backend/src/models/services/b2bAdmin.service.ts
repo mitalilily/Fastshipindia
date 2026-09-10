@@ -1999,6 +1999,13 @@ export const calculateB2BRate = async (params: {
     description?: string
   }[] = []
 
+  // A matrix rule is authoritative for the supplied hilly SDL rate card. Keep
+  // the legacy per-pincode SDL amount as a fallback for all other SDL zones.
+  const hasSdlMatrixRate = overheadRules.some(
+    (rule: typeof b2bOverheadRules.$inferSelect) =>
+      rule.code?.startsWith('SDL_HILLY_') && ruleApplies(rule, context),
+  )
+
   // Demurrage variables (declared outside charges block for return statement access)
   let demurrageCharge = 0
   let demurrageBreakdown: any = {
@@ -2132,7 +2139,12 @@ export const calculateB2BRate = async (params: {
       }
     }
 
-    if (context.isSdlZone && context.sdlRatePerKg > 0 && billableWeight > 0) {
+    if (
+      !hasSdlMatrixRate &&
+      context.isSdlZone &&
+      context.sdlRatePerKg > 0 &&
+      billableWeight > 0
+    ) {
       const sdlCharge = context.sdlRatePerKg * billableWeight
       overheadBreakdown.push({
         id: 'sdl_charge',
@@ -2754,6 +2766,7 @@ export type ZoneLookupResult = {
   zoneId: string
   zoneCode: string
   zoneName: string
+  state: string
   isOda: boolean
   isRemote: boolean
   isMall: boolean
@@ -2785,6 +2798,7 @@ export const findZoneForPincode = async (
       .select({
         id: b2bPincodes.id,
         zoneId: b2bPincodes.zone_id,
+        state: b2bPincodes.state,
         isOda: b2bPincodes.is_oda,
         isRemote: b2bPincodes.is_remote,
         isMall: b2bPincodes.is_mall,
@@ -2816,6 +2830,7 @@ export const findZoneForPincode = async (
         zoneId: row.zoneId,
         zoneCode: row.zoneCode,
         zoneName: row.zoneName,
+        state: row.state,
         isOda: row.isOda,
         isRemote: row.isRemote,
         isMall: row.isMall,
@@ -3042,6 +3057,20 @@ const ruleApplies = (
       ) {
         return false
       }
+    }
+    // SDL rate cards can use the shipping origin zone independently from the
+    // destination's normal zone. This is important for hilly-region SDL rates.
+    if (conditionObj.originZones && Array.isArray(conditionObj.originZones)) {
+      const originZone = context.origin.zoneCode.toUpperCase()
+      const originZones = conditionObj.originZones.map((zone: string) => zone.toUpperCase())
+      if (!originZones.includes(originZone)) return false
+    }
+    if (conditionObj.destinationStates && Array.isArray(conditionObj.destinationStates)) {
+      const destinationState = String(context.destination.state ?? '').trim().toUpperCase()
+      const destinationStates = conditionObj.destinationStates.map((state: string) =>
+        state.trim().toUpperCase(),
+      )
+      if (!destinationStates.includes(destinationState)) return false
     }
     // New condition fields
     if (conditionObj.isHoliday === true && !context.isHoliday) return false
