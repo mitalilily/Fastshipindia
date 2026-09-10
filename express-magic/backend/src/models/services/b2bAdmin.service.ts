@@ -442,6 +442,8 @@ type PincodeCsvRecord = Record<string, string | undefined> & {
   zone_code?: string
   zone_id?: string
   is_oda?: string
+  oda_zone?: string
+  status?: string
   is_remote?: string
   is_mall?: string
   is_sez?: string
@@ -462,6 +464,11 @@ type PincodeCsvRecord = Record<string, string | undefined> & {
 const truthy = (value?: string) => {
   if (!value) return false
   return ['1', 'true', 'yes', 'y'].includes(value.trim().toLowerCase())
+}
+
+const isActiveCsvRow = (status?: string) => {
+  const normalized = String(status ?? '').trim().toLowerCase()
+  return !normalized || ['active', 'yes', 'true', '1'].includes(normalized)
 }
 
 const normalizeCsvHeader = (header: string) =>
@@ -528,6 +535,7 @@ export const importPincodesFromCsv = async (
   const zoneCache = new Map<string, string>()
   const fields = new Set((parsed.meta.fields ?? []).map(normalizeCsvHeader))
   const hasColumn = (...aliases: string[]) => aliases.some((alias) => fields.has(alias))
+  const hasOdaColumn = hasColumn('is_oda', 'oda_zone', 'oda')
 
   const resolveZoneId = async (row: PincodeCsvRecord) => {
     if (row.zone_id) return row.zone_id
@@ -598,7 +606,11 @@ export const importPincodesFromCsv = async (
           updated_at: new Date(),
         }
 
-        if (hasColumn('is_oda')) updateData.is_oda = truthy(row.is_oda)
+        // Delhivery B2B LTL lists use `ODA Zone` and `Status`. Only active
+        // rows are authoritative, so an inactive row never clears an ODA flag.
+        if (hasOdaColumn && isActiveCsvRow(row.status)) {
+          updateData.is_oda = truthy(firstCsvValue(row, ['is_oda', 'oda_zone', 'oda']))
+        }
         if (hasColumn('is_remote')) updateData.is_remote = truthy(row.is_remote)
         if (hasColumn('is_mall')) updateData.is_mall = truthy(row.is_mall)
         if (hasColumn('is_sez')) updateData.is_sez = truthy(row.is_sez)
@@ -653,7 +665,9 @@ export const importPincodesFromCsv = async (
           zone_id: zoneId,
           courier_id: courierId ?? null,
           service_provider: serviceProvider ?? null,
-          is_oda: truthy(row.is_oda),
+          is_oda:
+            isActiveCsvRow(row.status) &&
+            truthy(firstCsvValue(row, ['is_oda', 'oda_zone', 'oda'])),
           is_remote: truthy(row.is_remote),
           is_mall: truthy(row.is_mall),
           is_sez: truthy(row.is_sez),

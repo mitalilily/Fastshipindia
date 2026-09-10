@@ -566,8 +566,9 @@ const B2BPincodeManagement = () => {
         <Stack spacing={4}>
           <Alert status="info" borderRadius="lg">
             <AlertIcon />
-            CSV can add new pincodes and update existing ones. Use the approved template to include
-            zone_code, is_sdl_zone, and sdl_rate_per_kg.
+            CSV can add new pincodes and update existing ones. Delhivery B2B LTL files with
+            PinCode, ODA Zone, and Status are supported: active ODA Zone = Yes rows are marked ODA.
+            For new pincodes, use the approved template with city, state, and zone_code.
           </Alert>
           <FormControl>
             <FormLabel>Default zone (optional)</FormLabel>
