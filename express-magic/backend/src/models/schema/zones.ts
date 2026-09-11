@@ -202,15 +202,15 @@ export const b2bAdditionalCharges = createTable('b2b_additional_charges', {
   }).default('0'),
 
   // 7a. Green Tax - condition: "Rs Additional"
-  green_tax: decimal('green_tax', { precision: 12, scale: 2 }).default('0'),
-  green_tax_per_kg: decimal('green_tax_per_kg', { precision: 12, scale: 4 }).default('0'),
+  green_tax: decimal('green_tax', { precision: 12, scale: 2 }).default('100'),
+  green_tax_per_kg: decimal('green_tax_per_kg', { precision: 12, scale: 4 }).default('0.5'),
   green_tax_method: varchar('green_tax_method', { length: 30 }).default('whichever_is_higher'),
 
   // Conditional pincode charges. They apply only when their pincode switch is enabled.
   fm_charge_per_awb: decimal('fm_charge_per_awb', { precision: 12, scale: 2 }).default('0'),
-  fm_charge_per_kg: decimal('fm_charge_per_kg', { precision: 12, scale: 4 }).default('0'),
+  fm_charge_per_kg: decimal('fm_charge_per_kg', { precision: 12, scale: 4 }).default('100'),
   fm_charge_method: varchar('fm_charge_method', { length: 30 }).default('whichever_is_higher'),
-  to_pay_fixed_amount: decimal('to_pay_fixed_amount', { precision: 12, scale: 2 }).default('0'),
+  to_pay_fixed_amount: decimal('to_pay_fixed_amount', { precision: 12, scale: 2 }).default('100'),
   to_pay_percentage: decimal('to_pay_percentage', { precision: 8, scale: 4 }).default('0'),
   to_pay_method: varchar('to_pay_method', { length: 30 }).default('whichever_is_higher'),
 
