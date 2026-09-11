@@ -73,6 +73,10 @@ export const b2bPincodes = createTable('b2b_pincodes', {
   is_csd: boolean('is_csd').default(false).notNull(),
   is_sdl_zone: boolean('is_sdl_zone').default(false).notNull(),
   sdl_rate_per_kg: decimal('sdl_rate_per_kg', { precision: 12, scale: 4 }),
+  // Pincode-level switches for conditional B2B surcharges.
+  is_fm_charge: boolean('is_fm_charge').default(false).notNull(),
+  is_to_pay_charge: boolean('is_to_pay_charge').default(false).notNull(),
+  is_green_tax: boolean('is_green_tax').default(false).notNull(),
   metadata: jsonb('metadata'),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -199,6 +203,16 @@ export const b2bAdditionalCharges = createTable('b2b_additional_charges', {
 
   // 7a. Green Tax - condition: "Rs Additional"
   green_tax: decimal('green_tax', { precision: 12, scale: 2 }).default('0'),
+  green_tax_per_kg: decimal('green_tax_per_kg', { precision: 12, scale: 4 }).default('0'),
+  green_tax_method: varchar('green_tax_method', { length: 30 }).default('whichever_is_higher'),
+
+  // Conditional pincode charges. They apply only when their pincode switch is enabled.
+  fm_charge_per_awb: decimal('fm_charge_per_awb', { precision: 12, scale: 2 }).default('0'),
+  fm_charge_per_kg: decimal('fm_charge_per_kg', { precision: 12, scale: 4 }).default('0'),
+  fm_charge_method: varchar('fm_charge_method', { length: 30 }).default('whichever_is_higher'),
+  to_pay_fixed_amount: decimal('to_pay_fixed_amount', { precision: 12, scale: 2 }).default('0'),
+  to_pay_percentage: decimal('to_pay_percentage', { precision: 8, scale: 4 }).default('0'),
+  to_pay_method: varchar('to_pay_method', { length: 30 }).default('whichever_is_higher'),
 
   // 8. ODA Charges - condition: "Rs per AWB OR Rs per Kg" (admin-selectable method)
   oda_charges: decimal('oda_charges', { precision: 12, scale: 2 }).default('0'), // Rs per AWB

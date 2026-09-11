@@ -80,6 +80,9 @@ type PincodeFlags = {
   isAirport?: boolean
   isHighSecurity?: boolean
   isSdlZone?: boolean
+  isFmCharge?: boolean
+  isToPayCharge?: boolean
+  isGreenTax?: boolean
 }
 
 const normalizeCourierScope = (scope?: CourierScope) => {
@@ -145,6 +148,9 @@ export const listPincodes = async (params: {
   isAirport?: boolean
   isHighSecurity?: boolean
   isSdlZone?: boolean
+  isFmCharge?: boolean
+  isToPayCharge?: boolean
+  isGreenTax?: boolean
   sortBy?: 'pincode' | 'city' | 'state' | 'created_at'
   sortOrder?: 'asc' | 'desc'
 }) => {
@@ -164,6 +170,9 @@ export const listPincodes = async (params: {
     isAirport,
     isHighSecurity,
     isSdlZone,
+    isFmCharge,
+    isToPayCharge,
+    isGreenTax,
     sortBy = 'pincode',
     sortOrder = 'asc',
   } = params
@@ -190,6 +199,12 @@ export const listPincodes = async (params: {
     filters.push(eq(b2bPincodes.is_high_security, isHighSecurity) as SQLWrapper)
   if (isSdlZone === true || isSdlZone === false)
     filters.push(eq(b2bPincodes.is_sdl_zone, isSdlZone) as SQLWrapper)
+  if (isFmCharge === true || isFmCharge === false)
+    filters.push(eq(b2bPincodes.is_fm_charge, isFmCharge) as SQLWrapper)
+  if (isToPayCharge === true || isToPayCharge === false)
+    filters.push(eq(b2bPincodes.is_to_pay_charge, isToPayCharge) as SQLWrapper)
+  if (isGreenTax === true || isGreenTax === false)
+    filters.push(eq(b2bPincodes.is_green_tax, isGreenTax) as SQLWrapper)
 
   if (courierId || serviceProvider) {
     const courierCondition = courierId
@@ -245,6 +260,9 @@ export const listPincodes = async (params: {
       isHighSecurity: b2bPincodes.is_high_security,
       isSdlZone: b2bPincodes.is_sdl_zone,
       sdlRatePerKg: b2bPincodes.sdl_rate_per_kg,
+      isFmCharge: b2bPincodes.is_fm_charge,
+      isToPayCharge: b2bPincodes.is_to_pay_charge,
+      isGreenTax: b2bPincodes.is_green_tax,
       createdAt: b2bPincodes.created_at,
       updatedAt: b2bPincodes.updated_at,
     })
@@ -330,6 +348,9 @@ export const createPincode = async (payload: {
       is_high_security: payload.flags?.isHighSecurity ?? false,
       is_sdl_zone: payload.flags?.isSdlZone ?? false,
       sdl_rate_per_kg: normalizeOptionalAmount(payload.sdlRatePerKg, 'SDL rate per kg'),
+      is_fm_charge: payload.flags?.isFmCharge ?? false,
+      is_to_pay_charge: payload.flags?.isToPayCharge ?? false,
+      is_green_tax: payload.flags?.isGreenTax ?? false,
     })
     .returning()
 
@@ -365,6 +386,9 @@ export const updatePincode = async (
     if (payload.flags.isHighSecurity != null)
       updateData.is_high_security = payload.flags.isHighSecurity
     if (payload.flags.isSdlZone != null) updateData.is_sdl_zone = payload.flags.isSdlZone
+    if (payload.flags.isFmCharge != null) updateData.is_fm_charge = payload.flags.isFmCharge
+    if (payload.flags.isToPayCharge != null) updateData.is_to_pay_charge = payload.flags.isToPayCharge
+    if (payload.flags.isGreenTax != null) updateData.is_green_tax = payload.flags.isGreenTax
   }
 
   if (payload.courierScope) {
@@ -424,6 +448,9 @@ export const bulkUpdatePincodeFlags = async (ids: string[], flags: PincodeFlags)
   if (flags.isAirport !== undefined) updateData.is_airport = flags.isAirport
   if (flags.isHighSecurity !== undefined) updateData.is_high_security = flags.isHighSecurity
   if (flags.isSdlZone !== undefined) updateData.is_sdl_zone = flags.isSdlZone
+  if (flags.isFmCharge !== undefined) updateData.is_fm_charge = flags.isFmCharge
+  if (flags.isToPayCharge !== undefined) updateData.is_to_pay_charge = flags.isToPayCharge
+  if (flags.isGreenTax !== undefined) updateData.is_green_tax = flags.isGreenTax
 
   if (Object.keys(updateData).length === 1) {
     // Only updated_at was set, no flags to update
@@ -452,6 +479,9 @@ type PincodeCsvRecord = Record<string, string | undefined> & {
   is_airport?: string
   is_high_security?: string
   is_sdl_zone?: string
+  is_fm_charge?: string
+  is_to_pay_charge?: string
+  is_green_tax?: string
   sdl_zone?: string
   is_sdl?: string
   sdl_rate_per_kg?: string
@@ -625,6 +655,9 @@ export const importPincodesFromCsv = async (
             firstCsvValue(row, ['is_sdl_zone', 'sdl_zone', 'is_sdl']),
           )
         }
+        if (hasColumn('is_fm_charge', 'fm_charge', 'fm')) updateData.is_fm_charge = truthy(firstCsvValue(row, ['is_fm_charge', 'fm_charge', 'fm']))
+        if (hasColumn('is_to_pay_charge', 'to_pay_charge', 'to_pay')) updateData.is_to_pay_charge = truthy(firstCsvValue(row, ['is_to_pay_charge', 'to_pay_charge', 'to_pay']))
+        if (hasColumn('is_green_tax', 'green_tax')) updateData.is_green_tax = truthy(firstCsvValue(row, ['is_green_tax', 'green_tax']))
         if (hasColumn('sdl_rate_per_kg', 'sdl_charge_per_kg', 'sdl_rate', 'sdl_charges')) {
           const sdlRate = parseOptionalCsvAmount(
             firstCsvValue(row, [
@@ -676,6 +709,9 @@ export const importPincodesFromCsv = async (
           is_airport: truthy(row.is_airport),
           is_high_security: truthy(row.is_high_security),
           is_sdl_zone: truthy(firstCsvValue(row, ['is_sdl_zone', 'sdl_zone', 'is_sdl'])),
+          is_fm_charge: truthy(firstCsvValue(row, ['is_fm_charge', 'fm_charge', 'fm'])),
+          is_to_pay_charge: truthy(firstCsvValue(row, ['is_to_pay_charge', 'to_pay_charge', 'to_pay'])),
+          is_green_tax: truthy(firstCsvValue(row, ['is_green_tax', 'green_tax'])),
           sdl_rate_per_kg: (() => {
             const amount = parseOptionalCsvAmount(
               firstCsvValue(row, [
@@ -1754,7 +1790,7 @@ export const calculateB2BRate = async (params: {
   width?: number // in cm
   height?: number // in cm
   invoiceValue?: number
-  paymentMode?: 'COD' | 'PREPAID'
+  paymentMode?: 'COD' | 'PREPAID' | 'TO_PAY'
   courierScope?: CourierScope
   effectiveDate?: Date
   isSinglePiece?: boolean // If true, applies single piece handling charge instead of weight-based
@@ -1964,7 +2000,7 @@ export const calculateB2BRate = async (params: {
   )
 
   const context = {
-    paymentMode: (params.paymentMode ?? 'PREPAID').toUpperCase(),
+    paymentMode: String(params.paymentMode ?? 'PREPAID').toUpperCase().replace(/[\s-]+/g, '_'),
     isOda: destination.isOda, // ODA charges apply only if destination pincode is ODA
     isRemote: origin.isRemote || destination.isRemote,
     isSez: origin.isSez || destination.isSez,
@@ -1974,6 +2010,9 @@ export const calculateB2BRate = async (params: {
     isCsd: isCsd, // CSD: pincode flag OR address contains CSD keywords
     isSdlZone: origin.isSdlZone || destination.isSdlZone,
     sdlRatePerKg,
+    isFmCharge: origin.isFmCharge || destination.isFmCharge,
+    isToPayCharge: origin.isToPayCharge || destination.isToPayCharge,
+    isGreenTax: origin.isGreenTax || destination.isGreenTax,
     isHoliday: isHoliday,
     isExpress: false, // TODO: Add support for express delivery flag
     isTimeSpecific: params.deliveryTime ? true : false, // Apply if delivery time window is provided from frontend
@@ -2080,17 +2119,25 @@ export const calculateB2BRate = async (params: {
       }
     }
 
-    // Green Tax - ALWAYS applies per AWB as an environmental compliance fee
-    // Condition: "Per AWB environmental compliance fee" (unless set to 0 or disabled)
-    if (additionalCharges.green_tax) {
-      const greenTaxCharge = Number(additionalCharges.green_tax || 0)
+    // Green tax is applied only when either configured pincode has Green Tax enabled.
+    // Formula: configured method of flat per AWB vs per-kg × billable weight.
+    if (context.isGreenTax && billableWeight > 0) {
+      const greenTaxFlat = Number(additionalCharges.green_tax || 0)
+      const greenTaxPerKg = Number(additionalCharges.green_tax_per_kg || 0)
+      const greenTaxCharge = calculateDualValueCharge(
+        greenTaxFlat,
+        greenTaxPerKg,
+        billableWeight,
+        additionalCharges.green_tax_method,
+      )
       if (greenTaxCharge > 0) {
         overheadBreakdown.push({
           id: 'green_tax',
           code: 'GREEN_TAX',
           name: 'Green Tax',
-          type: 'flat',
+          type: 'per_kg',
           amount: greenTaxCharge,
+          description: `₹${greenTaxFlat}/AWB or ₹${greenTaxPerKg}/kg × ${billableWeight}kg (whichever is higher)`,
         })
         runningTotal += greenTaxCharge
       }
@@ -2155,6 +2202,26 @@ export const calculateB2BRate = async (params: {
         description: `${context.sdlRatePerKg}/kg x ${billableWeight}kg`,
       })
       runningTotal += sdlCharge
+    }
+
+    // FM (first-mile) charge is pincode-controlled and uses the configured
+    // higher/lower rule between its per-AWB and per-kg values.
+    if (context.isFmCharge && billableWeight > 0) {
+      const fmPerAwb = Number(additionalCharges.fm_charge_per_awb || 0)
+      const fmPerKg = Number(additionalCharges.fm_charge_per_kg || 0)
+      const fmCharge = calculateDualValueCharge(
+        fmPerAwb,
+        fmPerKg,
+        billableWeight,
+        additionalCharges.fm_charge_method,
+      )
+      if (fmCharge > 0) {
+        overheadBreakdown.push({
+          id: 'fm_charge', code: 'FM', name: 'FM Charge', type: 'per_kg', amount: fmCharge,
+          description: `₹${fmPerAwb}/AWB or ₹${fmPerKg}/kg × ${billableWeight}kg (whichever is higher)`,
+        })
+        runningTotal += fmCharge
+      }
     }
 
     // CSD Delivery Charge - Always flat per AWB
@@ -2366,6 +2433,28 @@ export const calculateB2BRate = async (params: {
           amount: codCharge,
         })
         runningTotal += codCharge
+      }
+    }
+
+    // To-Pay charge is only for TO_PAY shipments and only for opted-in pincodes.
+    // Formula: fixed amount or invoice value percentage, whichever is higher.
+    if (context.paymentMode === 'TO_PAY' && context.isToPayCharge) {
+      const toPayFixed = Number(additionalCharges.to_pay_fixed_amount || 0)
+      const toPayPercentage = Number(additionalCharges.to_pay_percentage || 0)
+      const toPayByPercentage = ((params.invoiceValue ?? 0) * toPayPercentage) / 100
+      const toPayCharge = additionalCharges.to_pay_method === 'whichever_is_lower'
+        ? Math.min(toPayFixed, toPayByPercentage || toPayFixed)
+        : Math.max(toPayFixed, toPayByPercentage)
+      if (toPayCharge > 0) {
+        overheadBreakdown.push({
+          id: 'to_pay_charge',
+          code: 'TO_PAY',
+          name: 'To-Pay Charge',
+          type: 'flat',
+          amount: toPayCharge,
+          description: `₹${toPayFixed} or ${toPayPercentage}% of invoice value (whichever is higher)`,
+        })
+        runningTotal += toPayCharge
       }
     }
 
@@ -2776,6 +2865,9 @@ export type ZoneLookupResult = {
   isCsd: boolean
   isSdlZone: boolean
   sdlRatePerKg: number | null
+  isFmCharge: boolean
+  isToPayCharge: boolean
+  isGreenTax: boolean
 }
 
 export const findZoneForPincode = async (
@@ -2808,6 +2900,9 @@ export const findZoneForPincode = async (
         isCsd: b2bPincodes.is_csd,
         isSdlZone: b2bPincodes.is_sdl_zone,
         sdlRatePerKg: b2bPincodes.sdl_rate_per_kg,
+        isFmCharge: b2bPincodes.is_fm_charge,
+        isToPayCharge: b2bPincodes.is_to_pay_charge,
+        isGreenTax: b2bPincodes.is_green_tax,
         zoneCode: zones.code,
         zoneName: zones.name,
       })
@@ -3058,6 +3153,7 @@ const ruleApplies = (
         return false
       }
     }
+
     // SDL rate cards can use the shipping origin zone independently from the
     // destination's normal zone. This is important for hilly-region SDL rates.
     if (conditionObj.originZones && Array.isArray(conditionObj.originZones)) {

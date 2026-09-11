@@ -166,6 +166,9 @@ export const listPincodesController = async (req: Request, res: Response) => {
       isAirport: parseBoolean(req.query.is_airport),
       isHighSecurity: parseBoolean(req.query.is_high_security),
       isSdlZone: parseBoolean(req.query.is_sdl_zone ?? req.query.sdl_zone),
+      isFmCharge: parseBoolean(req.query.is_fm_charge ?? req.query.fm_charge),
+      isToPayCharge: parseBoolean(req.query.is_to_pay_charge ?? req.query.to_pay_charge),
+      isGreenTax: parseBoolean(req.query.is_green_tax),
       sortBy:
         (req.query.sortBy as 'pincode' | 'city' | 'state' | 'created_at' | undefined) || 'pincode',
       sortOrder: (req.query.sortOrder as 'asc' | 'desc' | undefined) || 'asc',
@@ -196,6 +199,9 @@ export const createPincodeController = async (req: Request, res: Response) => {
         isHighSecurity:
           flagsFromBody.isHighSecurity ?? body.isHighSecurity ?? body.is_high_security,
         isSdlZone: flagsFromBody.isSdlZone ?? body.isSdlZone ?? body.is_sdl_zone ?? body.sdl_zone,
+        isFmCharge: flagsFromBody.isFmCharge ?? body.isFmCharge ?? body.is_fm_charge ?? body.fm_charge,
+        isToPayCharge: flagsFromBody.isToPayCharge ?? body.isToPayCharge ?? body.is_to_pay_charge ?? body.to_pay_charge,
+        isGreenTax: flagsFromBody.isGreenTax ?? body.isGreenTax ?? body.is_green_tax,
       },
       sdlRatePerKg: body.sdlRatePerKg ?? body.sdl_rate_per_kg ?? null,
     })
@@ -235,6 +241,9 @@ export const updatePincodeController = async (req: Request, res: Response) => {
           req.body.is_sdl_zone ??
           req.body.sdl_zone ??
           undefined,
+        isFmCharge: flagsFromBody.isFmCharge ?? req.body.isFmCharge ?? req.body.is_fm_charge ?? req.body.fm_charge ?? undefined,
+        isToPayCharge: flagsFromBody.isToPayCharge ?? req.body.isToPayCharge ?? req.body.is_to_pay_charge ?? req.body.to_pay_charge ?? undefined,
+        isGreenTax: flagsFromBody.isGreenTax ?? req.body.isGreenTax ?? req.body.is_green_tax ?? undefined,
       },
     })
 
@@ -299,6 +308,9 @@ export const bulkUpdatePincodeFlagsController = async (req: Request, res: Respon
       isAirport: flags.isAirport ?? flags.is_airport,
       isHighSecurity: flags.isHighSecurity ?? flags.is_high_security,
       isSdlZone: flags.isSdlZone ?? flags.is_sdl_zone ?? flags.sdl_zone,
+      isFmCharge: flags.isFmCharge ?? flags.is_fm_charge ?? flags.fm_charge,
+      isToPayCharge: flags.isToPayCharge ?? flags.is_to_pay_charge ?? flags.to_pay_charge,
+      isGreenTax: flags.isGreenTax ?? flags.is_green_tax,
     })
 
     res.json({ success: true, data: result })

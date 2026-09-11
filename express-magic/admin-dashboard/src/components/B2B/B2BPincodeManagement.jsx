@@ -51,6 +51,9 @@ const emptyForm = {
   isAirport: false,
   isHighSecurity: false,
   isSdlZone: false,
+  isFmCharge: false,
+  isToPayCharge: false,
+  isGreenTax: false,
   sdlRatePerKg: '',
 }
 
@@ -62,6 +65,9 @@ const flagFields = [
   ['isAirport', 'Airport'],
   ['isHighSecurity', 'High Security'],
   ['isSdlZone', 'SDL Zone'],
+  ['isFmCharge', 'FM Charge'],
+  ['isToPayCharge', 'To-Pay Charge'],
+  ['isGreenTax', 'Green Tax'],
 ]
 
 const normaliseRow = (row) => ({
@@ -76,13 +82,16 @@ const normaliseRow = (row) => ({
   isAirport: row.isAirport ?? row.is_airport ?? false,
   isHighSecurity: row.isHighSecurity ?? row.is_high_security ?? false,
   isSdlZone: row.isSdlZone ?? row.is_sdl_zone ?? false,
+  isFmCharge: row.isFmCharge ?? row.is_fm_charge ?? false,
+  isToPayCharge: row.isToPayCharge ?? row.is_to_pay_charge ?? false,
+  isGreenTax: row.isGreenTax ?? row.is_green_tax ?? false,
   sdlRatePerKg: row.sdlRatePerKg ?? row.sdl_rate_per_kg ?? '',
 })
 
 const downloadTemplate = () => {
   const csv = [
-    'pincode,city,state,zone_code,is_sdl_zone,sdl_rate_per_kg,is_oda,is_remote,is_mall,is_sez,is_airport,is_high_security',
-    '110001,New Delhi,Delhi,N1,true,6.00,false,false,false,false,false,false',
+    'pincode,city,state,zone_code,is_sdl_zone,sdl_rate_per_kg,is_fm_charge,is_to_pay_charge,is_green_tax,is_oda,is_remote,is_mall,is_sez,is_airport,is_high_security',
+    '110001,New Delhi,Delhi,N1,true,7.00,true,true,true,false,false,false,false,false,false',
   ].join('\n')
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
@@ -387,6 +396,9 @@ const B2BPincodeManagement = () => {
             <option value="is_airport">Airport</option>
             <option value="is_high_security">High Security</option>
             <option value="is_sdl_zone">SDL Zone</option>
+            <option value="is_fm_charge">FM Charge</option>
+            <option value="is_to_pay_charge">To-Pay Charge</option>
+            <option value="is_green_tax">Green Tax</option>
           </AdminSelect>
           <Text color={adminUi.muted} fontSize="sm">
             {total.toLocaleString('en-IN')} pincodes

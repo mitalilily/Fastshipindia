@@ -138,6 +138,9 @@ const ZoneMappingsPage = () => {
     is_high_security: false,
     is_sdl_zone: false,
     sdl_rate_per_kg: '',
+    is_fm_charge: false,
+    is_to_pay_charge: false,
+    is_green_tax: false,
   }
   const [mappingForm, setMappingForm] = useState(initialMappingState)
   const [isEdit, setIsEdit] = useState(false)
@@ -152,6 +155,9 @@ const ZoneMappingsPage = () => {
     is_airport: undefined,
     is_high_security: undefined,
     is_sdl_zone: undefined,
+    is_fm_charge: undefined,
+    is_to_pay_charge: undefined,
+    is_green_tax: undefined,
   })
   const [isImportModalOpen, setImportModalOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
@@ -195,6 +201,9 @@ const ZoneMappingsPage = () => {
     is_airport: 'isAirport',
     is_high_security: 'isHighSecurity',
     is_sdl_zone: 'isSdlZone',
+    is_fm_charge: 'isFmCharge',
+    is_to_pay_charge: 'isToPayCharge',
+    is_green_tax: 'isGreenTax',
   }
 
   const buildCurrentFlags = (row) => ({
@@ -205,6 +214,9 @@ const ZoneMappingsPage = () => {
     isAirport: row.is_airport ?? row.isAirport ?? false,
     isHighSecurity: row.is_high_security ?? row.isHighSecurity ?? false,
     isSdlZone: row.is_sdl_zone ?? row.isSdlZone ?? false,
+    isFmCharge: row.is_fm_charge ?? row.isFmCharge ?? false,
+    isToPayCharge: row.is_to_pay_charge ?? row.isToPayCharge ?? false,
+    isGreenTax: row.is_green_tax ?? row.isGreenTax ?? false,
   })
 
   const handleFlagToggle = (row, key, checked) => {
@@ -286,6 +298,9 @@ const ZoneMappingsPage = () => {
       is_high_security: mapping.is_high_security ?? mapping.isHighSecurity ?? false,
       is_sdl_zone: mapping.is_sdl_zone ?? mapping.isSdlZone ?? false,
       sdl_rate_per_kg: mapping.sdl_rate_per_kg ?? mapping.sdlRatePerKg ?? '',
+      is_fm_charge: mapping.is_fm_charge ?? mapping.isFmCharge ?? false,
+      is_to_pay_charge: mapping.is_to_pay_charge ?? mapping.isToPayCharge ?? false,
+      is_green_tax: mapping.is_green_tax ?? mapping.isGreenTax ?? false,
     })
     setManualOverrides({ city: true, state: true })
     setModalOpen(true)
@@ -328,6 +343,9 @@ const ZoneMappingsPage = () => {
         isAirport: mappingForm.is_airport,
         isHighSecurity: mappingForm.is_high_security,
         isSdlZone: mappingForm.is_sdl_zone,
+        isFmCharge: mappingForm.is_fm_charge,
+        isToPayCharge: mappingForm.is_to_pay_charge,
+        isGreenTax: mappingForm.is_green_tax,
       }
       payload.sdlRatePerKg =
         mappingForm.sdl_rate_per_kg === '' ? null : Number(mappingForm.sdl_rate_per_kg)
@@ -1059,6 +1077,24 @@ const ZoneMappingsPage = () => {
                     }
                   >
                     SDL Zone
+                  </Checkbox>
+                  <Checkbox
+                    isChecked={mappingForm.is_fm_charge}
+                    onChange={(e) => setMappingForm({ ...mappingForm, is_fm_charge: e.target.checked })}
+                  >
+                    FM Charge
+                  </Checkbox>
+                  <Checkbox
+                    isChecked={mappingForm.is_to_pay_charge}
+                    onChange={(e) => setMappingForm({ ...mappingForm, is_to_pay_charge: e.target.checked })}
+                  >
+                    To-Pay Charge
+                  </Checkbox>
+                  <Checkbox
+                    isChecked={mappingForm.is_green_tax}
+                    onChange={(e) => setMappingForm({ ...mappingForm, is_green_tax: e.target.checked })}
+                  >
+                    Green Tax
                   </Checkbox>
                 </Flex>
                 <Input

@@ -210,7 +210,15 @@ export const seedDefaultAdditionalCharges = async (params: {
     demurrage_method: 'whichever_is_higher',
     public_holiday_pickup_charge: '0',
     fuel_surcharge_percentage: '0',
-    green_tax: '0',
+    green_tax: '100',
+    green_tax_per_kg: '0.5',
+    green_tax_method: 'whichever_is_higher',
+    fm_charge_per_awb: '0',
+    fm_charge_per_kg: '100',
+    fm_charge_method: 'whichever_is_higher',
+    to_pay_fixed_amount: '100',
+    to_pay_percentage: '0',
+    to_pay_method: 'whichever_is_higher',
     oda_charges: '0',
     oda_per_kg_charge: '0',
     oda_method: 'whichever_is_higher',
@@ -267,6 +275,14 @@ export const upsertAdditionalCharges = async (
     publicHolidayPickupCharge: number
     fuelSurchargePercentage: number
     greenTax: number
+    greenTaxPerKg: number
+    greenTaxMethod: 'whichever_is_higher' | 'whichever_is_lower'
+    fmChargePerAwb: number
+    fmChargePerKg: number
+    fmChargeMethod: 'whichever_is_higher' | 'whichever_is_lower'
+    toPayFixedAmount: number
+    toPayPercentage: number
+    toPayMethod: 'whichever_is_higher' | 'whichever_is_lower'
     odaCharges: number
     odaPerKgCharge: number
     odaMethod: 'whichever_is_higher' | 'whichever_is_lower'
@@ -334,6 +350,14 @@ export const upsertAdditionalCharges = async (
   if (payload.fuelSurchargePercentage !== undefined)
     updateData.fuel_surcharge_percentage = payload.fuelSurchargePercentage.toString()
   if (payload.greenTax !== undefined) updateData.green_tax = payload.greenTax.toString()
+  if (payload.greenTaxPerKg !== undefined) updateData.green_tax_per_kg = payload.greenTaxPerKg.toString()
+  if (payload.greenTaxMethod !== undefined) updateData.green_tax_method = payload.greenTaxMethod
+  if (payload.fmChargePerAwb !== undefined) updateData.fm_charge_per_awb = payload.fmChargePerAwb.toString()
+  if (payload.fmChargePerKg !== undefined) updateData.fm_charge_per_kg = payload.fmChargePerKg.toString()
+  if (payload.fmChargeMethod !== undefined) updateData.fm_charge_method = payload.fmChargeMethod
+  if (payload.toPayFixedAmount !== undefined) updateData.to_pay_fixed_amount = payload.toPayFixedAmount.toString()
+  if (payload.toPayPercentage !== undefined) updateData.to_pay_percentage = payload.toPayPercentage.toString()
+  if (payload.toPayMethod !== undefined) updateData.to_pay_method = payload.toPayMethod
   if (payload.odaCharges !== undefined) updateData.oda_charges = payload.odaCharges.toString()
   if (payload.odaPerKgCharge !== undefined)
     updateData.oda_per_kg_charge = payload.odaPerKgCharge.toString()
