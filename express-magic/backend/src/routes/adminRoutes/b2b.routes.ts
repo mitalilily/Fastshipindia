@@ -18,6 +18,7 @@ import {
   listOverheadsController,
   listPincodesController,
   listStatesController,
+  lookupB2BPincodeController,
   listZonePincodeOptionsController,
   listZoneRatesController,
   listZonesController,
@@ -61,6 +62,7 @@ router.put('/zones/:id', requireAuth, isAdminMiddleware, updateZoneController)
 router.delete('/zones/:id', requireAuth, isAdminMiddleware, deleteZoneController)
 router.post('/zones/:id/remap', requireAuth, isAdminMiddleware, remapZonePincodesController)
 router.get('/states', requireAuth, isAdminMiddleware, listStatesController)
+router.get('/pincode-lookup/:pincode', requireAuth, isAdminMiddleware, lookupB2BPincodeController)
 router.get('/zone-pincode-options', requireAuth, isAdminMiddleware, listZonePincodeOptionsController)
 
 // Pincodes

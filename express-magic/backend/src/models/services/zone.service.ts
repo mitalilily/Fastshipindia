@@ -707,6 +707,48 @@ export const listAllZoneStates = async () => {
   return rows.map((row) => row.state).filter((state): state is string => Boolean(state))
 }
 
+export const lookupB2BPincodeDetails = async (rawPincode: string) => {
+  const pincode = String(rawPincode || '').trim()
+  if (!/^\d{6}$/.test(pincode)) throw new Error('Enter a valid 6-digit pincode')
+
+  const [location] = await db
+    .select({ pincode: locations.pincode, city: locations.city, state: locations.state })
+    .from(locations)
+    .where(and(eq(locations.pincode, pincode), eq(locations.active, true)))
+    .limit(1)
+
+  const [mapping] = await db
+    .select({ city: b2bPincodes.city, state: b2bPincodes.state, zoneId: b2bPincodes.zone_id })
+    .from(b2bPincodes)
+    .where(eq(b2bPincodes.pincode, pincode))
+    .limit(1)
+
+  if (!location && !mapping) return null
+
+  const state = location?.state || mapping?.state || ''
+  let zoneId = mapping?.zoneId || null
+  if (!zoneId && state) {
+    const candidateZones = await db
+      .select({ id: zones.id, states: zones.states })
+      .from(zones)
+      .where(eq(zones.business_type, 'B2B'))
+      .orderBy(asc(zones.code))
+    zoneId =
+      candidateZones.find((zone) =>
+        sanitizeStates(zone.states).some(
+          (zoneState) => zoneState.toLowerCase() === state.toLowerCase(),
+        ),
+      )?.id || null
+  }
+
+  return {
+    pincode,
+    city: location?.city || mapping?.city || '',
+    state,
+    zoneId,
+  }
+}
+
 export const listZonePincodeOptions = async (states: string[], zoneId?: string) => {
   const selectedStates = sanitizeStates(states)
   if (selectedStates.length === 0) return []

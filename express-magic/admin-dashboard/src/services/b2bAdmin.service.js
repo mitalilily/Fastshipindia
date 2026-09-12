@@ -54,6 +54,11 @@ export const b2bAdminService = {
     return data.data ?? data
   },
 
+  async lookupPincode(pincode) {
+    const { data } = await api.get(`${BASE_URL}/pincode-lookup/${encodeURIComponent(pincode)}`)
+    return data.data ?? null
+  },
+
   // Pincodes
   async getPincodes(params = {}) {
     const query = buildQuery(params)

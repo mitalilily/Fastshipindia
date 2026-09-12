@@ -21,7 +21,7 @@ import {
 } from '@chakra-ui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { IconDownload, IconFileImport, IconPlus } from '@tabler/icons-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCouriers } from '../../hooks/useCouriers'
 import {
   AdminSelect,
@@ -129,6 +129,29 @@ const B2BPincodeManagement = () => {
     queryFn: () => b2bAdminService.getZones({}),
   })
 
+  const normalizedFormPincode = String(form.pincode || '').replace(/\D/g, '').slice(0, 6)
+  const {
+    data: pincodeLookup,
+    isFetching: isLookingUpPincode,
+    isFetched: hasLookedUpPincode,
+  } = useQuery({
+    queryKey: ['b2b-pincode-lookup', normalizedFormPincode],
+    queryFn: () => b2bAdminService.lookupPincode(normalizedFormPincode),
+    enabled: formModal.isOpen && /^\d{6}$/.test(normalizedFormPincode),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  useEffect(() => {
+    if (!pincodeLookup || pincodeLookup.pincode !== normalizedFormPincode) return
+    setForm((current) => ({
+      ...current,
+      city: pincodeLookup.city || current.city,
+      state: pincodeLookup.state || current.state,
+      zoneId: pincodeLookup.zoneId || current.zoneId,
+    }))
+    setErrors((current) => ({ ...current, city: '', state: '', zoneId: '' }))
+  }, [normalizedFormPincode, pincodeLookup])
+
   const { data: pincodeResult, isLoading } = useQuery({
     queryKey: ['b2b-pincodes', page, search, zoneFilter, courierFilter, flagFilter],
     queryFn: () =>
@@ -232,7 +255,7 @@ const B2BPincodeManagement = () => {
   const openAdd = () => {
     setForm({
       ...emptyForm,
-      zoneId: zoneFilter || zones[0]?.id || '',
+      zoneId: zoneFilter || '',
       courierId: selectedCourierFilter.courierId,
       serviceProvider: selectedCourierFilter.serviceProvider,
     })
@@ -488,6 +511,15 @@ const B2BPincodeManagement = () => {
                 onChange={(event) => setForm((value) => ({ ...value, pincode: event.target.value.replace(/\D/g, '') }))}
                 placeholder="6-digit pincode"
               />
+              <FormHelperText>
+                {isLookingUpPincode
+                  ? 'Finding city, state and zone...'
+                  : hasLookedUpPincode && /^\d{6}$/.test(normalizedFormPincode)
+                  ? pincodeLookup
+                    ? 'City, state and zone filled automatically.'
+                    : 'Pincode not found in master data; enter details manually.'
+                  : 'Enter all 6 digits to auto-fill details.'}
+              </FormHelperText>
               <FormErrorMessage>{errors.pincode}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={Boolean(errors.zoneId)}>

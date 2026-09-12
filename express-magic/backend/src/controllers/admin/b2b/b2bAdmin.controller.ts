@@ -25,6 +25,7 @@ import {
   deleteZone,
   getAllZones,
   listAllZoneStates,
+  lookupB2BPincodeDetails,
   listZonePincodeOptions,
   remapZonePincodes,
   updateZone,
@@ -142,6 +143,15 @@ export const listStatesController = async (_req: Request, res: Response) => {
     res.json({ success: true, data: states })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error?.message || 'Failed to fetch states' })
+  }
+}
+
+export const lookupB2BPincodeController = async (req: Request, res: Response) => {
+  try {
+    const details = await lookupB2BPincodeDetails(req.params.pincode)
+    res.json({ success: true, data: details })
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error?.message || 'Failed to lookup pincode' })
   }
 }
 
