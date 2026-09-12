@@ -124,6 +124,184 @@ const DEFAULT_LABEL_SETTINGS = {
   powered_by: PLATFORM_LABEL_BRAND,
 }
 
+async function generateDataMatrixBase64(text: string): Promise<string | null> {
+  if (!text) return null
+  try {
+    const png = await bwipjs.toBuffer({
+      bcid: 'datamatrix',
+      text,
+      scale: 4,
+      paddingwidth: 0,
+      paddingheight: 0,
+    })
+    return `data:image/png;base64,${png.toString('base64')}`
+  } catch (err) {
+    console.warn('Data Matrix generation failed:', err)
+    return null
+  }
+}
+
+const compactAddress = (parts: unknown[]) =>
+  parts
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
+    .join(', ')
+
+export async function buildB2BLabelDefinition(order: any, pickup: any, rto: any) {
+  const packages = safeParseArray(order.packages)
+  const packageRows = packages.length > 0 ? packages : [{}]
+  const lrn = String(order.awb_number || order.provider_reference || order.shipment_id || '-').trim()
+  const masterNumber = String(order.shipment_id || order.provider_reference || lrn).trim()
+  const courier = String(order.courier_partner || order.courier_name || 'Courier').trim()
+  const orderDateValue = order.order_date || order.created_at
+  const parsedDate = orderDateValue ? new Date(orderDateValue) : new Date()
+  const dateLabel = Number.isNaN(parsedDate.getTime())
+    ? String(orderDateValue || '-')
+    : parsedDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+  const destinationAddress = compactAddress([
+    order.buyer_name,
+    order.address,
+    order.city,
+    order.state,
+    order.pincode,
+    order.buyer_phone ? `Phone: ${order.buyer_phone}` : '',
+  ])
+  const returnSource = rto?.address ? rto : pickup
+  const returnAddress = compactAddress([
+    returnSource?.warehouse_name || returnSource?.name,
+    returnSource?.address,
+    returnSource?.city,
+    returnSource?.state,
+    returnSource?.pincode,
+  ])
+  const originName = String(pickup?.warehouse_name || pickup?.name || 'SHIPPER').trim()
+  const routingCode = String(order.sort_code || order.routing_code || order.delivery_location || '').trim()
+
+  const labelCells = await Promise.all(
+    packageRows.map(async (pkg: any, index: number) => {
+      const packageTracking = String(
+        pkg.awb_number || pkg.tracking_number || pkg.waybill || masterNumber,
+      ).trim()
+      const boxName = String(pkg.box_name || pkg.boxName || pkg.name || pkg.product_name || 'PACKAGE').trim()
+      const isMaster = index === 0
+      const barcode = await generateBarcodeBase64(packageTracking)
+      const dataMatrix = await generateDataMatrixBase64(`${lrn}|${packageTracking}|${order.pincode || ''}`)
+      const borderLayout = {
+        hLineColor: () => '#111111',
+        vLineColor: () => '#111111',
+        hLineWidth: () => 0.8,
+        vLineWidth: () => 0.8,
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 3,
+        paddingBottom: () => 3,
+      }
+
+      return {
+        table: {
+          dontBreakRows: true,
+          widths: [108, '*'],
+          body: [
+            [
+              {
+                stack: [
+                  { text: courier.toUpperCase(), bold: true, fontSize: 12 },
+                  { text: 'B2B SHIPPING', bold: true, color: '#d71920', fontSize: 5.8 },
+                ],
+                rowSpan: 2,
+                margin: [1, 1, 1, 1],
+              },
+              { text: `Date: ${dateLabel}`, bold: true, fontSize: 7 },
+            ],
+            [{}, { text: `LRN: ${lrn}`, bold: true, fontSize: 7 }],
+            [
+              dataMatrix
+                ? { image: dataMatrix, width: 48, height: 48, alignment: 'left', margin: [4, 4, 0, 4] }
+                : { text: '', margin: [0, 22, 0, 22] },
+              {
+                stack: [
+                  { text: `OID: ${order.order_number || '-'}`, bold: true, fontSize: 7.2 },
+                  { text: boxName.toUpperCase(), bold: true, fontSize: 7.2, margin: [0, 2, 0, 4] },
+                  { text: `Master: ${masterNumber}`, bold: true, fontSize: 7 },
+                  {
+                    text: `${order.pincode || '-'}${routingCode ? ` ${routingCode}` : ''}`,
+                    bold: true,
+                    fontSize: 7.2,
+                    margin: [0, 5, 0, 0],
+                  },
+                ],
+              },
+            ],
+            [
+              {
+                colSpan: 2,
+                stack: [
+                  ...(barcode
+                    ? [{ image: barcode, width: 145, height: 25, alignment: 'center' }]
+                    : []),
+                  { text: packageTracking, alignment: 'center', bold: true, fontSize: 6 },
+                ],
+                margin: [0, 1, 0, 1],
+              },
+              {},
+            ],
+            [
+              { text: `Box : ${index + 1}/${packageRows.length}`, bold: true, alignment: 'center', fontSize: 7.3 },
+              { text: isMaster ? 'MASTER' : 'CHILD', alignment: 'center', fontSize: 7.3 },
+            ],
+            [
+              { text: order.delivery_location || routingCode || '-', fontSize: 6.3 },
+              { text: originName, bold: true, alignment: 'center', fontSize: 6.5 },
+            ],
+            [
+              {
+                stack: [
+                  { text: 'Shipping address :', bold: true, fontSize: 6.8 },
+                  { text: destinationAddress || '-', fontSize: 6.1, lineHeight: 1.05 },
+                ],
+              },
+              { text: boxName.toUpperCase(), fontSize: 6.3, alignment: 'center', margin: [0, 12, 0, 0] },
+            ],
+            [
+              {
+                colSpan: 2,
+                stack: [
+                  { text: 'Return address :', bold: true, fontSize: 6.8 },
+                  { text: returnAddress || '-', fontSize: 6.1, lineHeight: 1.05 },
+                ],
+              },
+              {},
+            ],
+          ],
+        },
+        layout: borderLayout,
+        margin: [0, 0, 0, 8],
+      }
+    }),
+  )
+
+  const pages: any[] = []
+  for (let start = 0; start < labelCells.length; start += 4) {
+    const group = labelCells.slice(start, start + 4)
+    const rows: any[] = []
+    for (let index = 0; index < group.length; index += 2) {
+      rows.push([group[index], group[index + 1] || { text: '' }])
+    }
+    pages.push({
+      table: { dontBreakRows: true, widths: ['*', '*'], body: rows },
+      layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingLeft: () => 5, paddingRight: () => 5, paddingTop: () => 0, paddingBottom: () => 0 },
+      pageBreak: start > 0 ? 'before' : undefined,
+    })
+  }
+
+  return {
+    defaultStyle: { font: 'Helvetica', color: '#111111' },
+    pageSize: 'A4',
+    pageMargins: [96, 14, 96, 14],
+    content: pages,
+  }
+}
+
 function safeParseObject(value: unknown, fallback: Record<string, any> = {}) {
   if (!value) return fallback
   if (typeof value === 'string') {
@@ -254,6 +432,11 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   const providerMeta = safeParseObject(order.provider_meta)
 
   const rto = safeParseObject(order.rto_details)
+  // B2B rows uniquely expose the `packages` column. Keep the existing B2C
+  // renderer untouched and use the compact multi-piece layout only for B2B.
+  const isB2BOrder =
+    String(order.business_type || order.businessType || '').toUpperCase() === 'B2B' ||
+    Object.prototype.hasOwnProperty.call(order, 'packages')
 
   const products = safeParseArray(order.products)
   const paymentType = (order.payment_type ?? order.order_type ?? order.type ?? '')
@@ -965,26 +1148,28 @@ export async function generateLabelForOrder(order: any, userId: string, tx: any 
   }
   pages.push({ stack: pageContent })
 
-  const docDefinition: any = {
-    defaultStyle: { font: 'Helvetica', color: darkTextColor },
-    pageSize: settings.printer_type === 'thermal' ? { width: 288, height: 432 } : 'A4',
-    content: pages,
-    pageMargins: [10, 10, 10, 10], // Reduced margins for more space
-    background: (_currentPage: number, pageSize: { width: number; height: number }) => ({
-      canvas: [
-        {
-          type: 'rect',
-          x: 5,
-          y: 5,
-          w: pageSize.width - 10,
-          h: pageSize.height - 10,
-          lineWidth: 1.4,
-          lineColor: strongBorderColor,
-        },
-      ],
-    }),
-    ...(Object.keys(images).length > 0 && { images }),
-  }
+  const docDefinition: any = isB2BOrder
+    ? await buildB2BLabelDefinition(order, pickup, rto)
+    : {
+        defaultStyle: { font: 'Helvetica', color: darkTextColor },
+        pageSize: settings.printer_type === 'thermal' ? { width: 288, height: 432 } : 'A4',
+        content: pages,
+        pageMargins: [10, 10, 10, 10], // Reduced margins for more space
+        background: (_currentPage: number, pageSize: { width: number; height: number }) => ({
+          canvas: [
+            {
+              type: 'rect',
+              x: 5,
+              y: 5,
+              w: pageSize.width - 10,
+              h: pageSize.height - 10,
+              lineWidth: 1.4,
+              lineColor: strongBorderColor,
+            },
+          ],
+        }),
+        ...(Object.keys(images).length > 0 && { images }),
+      }
 
   try {
     const printer = new PdfPrinter(fonts)
