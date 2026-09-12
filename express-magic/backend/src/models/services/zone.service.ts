@@ -601,7 +601,10 @@ const remapB2BPincodesForZone = async (
     const selectedStates = sanitizeStates(zone.states)
 
     // A remap without an explicit selection keeps the zone's current pincode set.
-    const existingRows = await tx.select().from(b2bPincodes).where(eq(b2bPincodes.zone_id, zoneId))
+    const existingRows = await tx
+      .select({ id: b2bPincodes.id, pincode: b2bPincodes.pincode })
+      .from(b2bPincodes)
+      .where(eq(b2bPincodes.zone_id, zoneId))
     const selectedPincodes = sanitizePincodes(
       requestedPincodes === undefined ? existingRows.map((row: any) => row.pincode) : requestedPincodes,
     )
@@ -646,7 +649,7 @@ const remapB2BPincodesForZone = async (
     for (const location of validLocations) {
       // Since zones are global, pincodes are mapped to zones only (no courier filtering)
       const [existing] = await tx
-        .select()
+        .select({ id: b2bPincodes.id, zone_id: b2bPincodes.zone_id })
         .from(b2bPincodes)
         .where(
           and(
