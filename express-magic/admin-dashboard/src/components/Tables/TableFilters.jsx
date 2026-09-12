@@ -58,17 +58,18 @@ const TableFilters = ({
     }
   }, [values])
 
-  const isAnyFilterApplied = Object.values(values || {}).some((val) => {
+  const configuredValues = filters.map((filter) => values?.[filter.key])
+  const isAnyFilterApplied = configuredValues.some((val) => {
     if (Array.isArray(val)) return val.length > 0
     return !!val
   })
 
   const activeFiltersCount = useMemo(() => {
-    return Object.values(values || {}).filter((val) => {
+    return filters.map((filter) => values?.[filter.key]).filter((val) => {
       if (Array.isArray(val)) return val.length > 0
       return !!val
     }).length
-  }, [values])
+  }, [filters, values])
 
   const handleChange = (key, value) => {
     setLocalValues((prev) => ({ ...prev, [key]: value }))
@@ -84,10 +85,10 @@ const TableFilters = ({
   }
 
   const hasFilters = useMemo(() => {
-    return Object.values(localValues || {}).some((val) =>
+    return filters.map((filter) => localValues?.[filter.key]).some((val) =>
       Array.isArray(val) ? val.length > 0 : val?.toString().trim(),
     )
-  }, [localValues])
+  }, [filters, localValues])
 
   const DEFAULT_VISIBLE_COUNT = 4
   const shouldLimit = !showAll && filters.length > DEFAULT_VISIBLE_COUNT
