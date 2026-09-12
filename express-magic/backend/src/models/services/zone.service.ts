@@ -623,17 +623,6 @@ const remapB2BPincodesForZone = async (
       throw new Error(`Some selected pincodes do not belong to the selected states: ${invalidPincodes.slice(0, 5).join(', ')}`)
     }
 
-    const conflicts = await tx
-      .select({ pincode: b2bPincodes.pincode, zoneId: b2bPincodes.zone_id })
-      .from(b2bPincodes)
-      .where(inArray(b2bPincodes.pincode, selectedPincodes))
-    const conflictingPincodes = Array.from(
-      new Set(conflicts.filter((row: any) => row.zoneId !== zoneId).map((row: any) => row.pincode)),
-    )
-    if (conflictingPincodes.length > 0) {
-      throw new Error(`Pincode(s) ${conflictingPincodes.slice(0, 10).join(', ')} already belong to another zone`)
-    }
-
     // Remove pincodes that no longer belong to this zone
     if (!b2bPincodes) {
       throw new Error(
@@ -645,6 +634,13 @@ const remapB2BPincodesForZone = async (
         await tx.delete(b2bPincodes).where(eq(b2bPincodes.id, row.id))
       }
     }
+
+    // Zone assignment is global. Selecting a pincode already used by another
+    // zone transfers every scoped copy to the zone currently being saved.
+    await tx
+      .update(b2bPincodes)
+      .set({ zone_id: zoneId, updated_at: new Date() })
+      .where(inArray(b2bPincodes.pincode, selectedPincodes))
 
     for (const location of validLocations) {
       // Since zones are global, pincodes are mapped to zones only (no courier filtering)
@@ -734,8 +730,11 @@ export const listZonePincodeOptions = async (states: string[], zoneId?: string) 
     .filter((row) => {
       if (seen.has(row.pincode)) return false
       seen.add(row.pincode)
-      const assignedZoneId = assignedZoneByPincode.get(row.pincode)
-      return !assignedZoneId || assignedZoneId === zoneId
+      return true
     })
-    .map((row) => ({ ...row, selected: assignedZoneByPincode.get(row.pincode) === zoneId }))
+    .map((row) => ({
+      ...row,
+      assignedZoneId: assignedZoneByPincode.get(row.pincode) ?? null,
+      selected: assignedZoneByPincode.get(row.pincode) === zoneId,
+    }))
 }

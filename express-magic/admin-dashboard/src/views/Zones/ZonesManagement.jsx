@@ -708,6 +708,9 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
                               <Text as="span" fontWeight="semibold">{option.pincode}</Text>{' '}
                               <Text as="span" fontSize="xs" color="gray.500">
                                 {option.city}
+                                {option.assignedZoneId && option.assignedZoneId !== zoneForm.id
+                                  ? ' - assigned to another zone; selecting will move it'
+                                  : ''}
                               </Text>
                             </Checkbox>
                           ))}
@@ -718,13 +721,14 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
                             ? 'Loading pincodes...'
                             : pincodeSearch
                             ? 'No pincodes match your search.'
-                            : 'No unassigned pincodes are available for the selected states.'}
+                            : 'No pincodes are available for the selected states.'}
                         </Text>
                       )}
                     </CheckboxGroup>
                   </Box>
                   <FormHelperText>
-                    Pincodes already used in another zone are hidden.
+                    All state pincodes are selectable. Selecting one from another zone moves it here
+                    when you save.
                   </FormHelperText>
                   <FormErrorMessage>{errors.pincodes}</FormErrorMessage>
                 </FormControl>
