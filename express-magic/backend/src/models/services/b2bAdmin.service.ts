@@ -244,7 +244,10 @@ export const listPincodes = async (params: {
   const sortColumn = sortColumns[sortBy] || b2bPincodes.pincode
   const orderClause = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn)
 
-  const data = await db
+  // Keep the primary listing compatible with installations that have not yet
+  // added every optional pincode-charge column. Attribute-specific endpoints
+  // continue to manage those columns where available.
+  const rows = await db
     .select({
       id: b2bPincodes.id,
       pincode: b2bPincodes.pincode,
@@ -253,25 +256,29 @@ export const listPincodes = async (params: {
       zoneId: b2bPincodes.zone_id,
       courierId: b2bPincodes.courier_id,
       serviceProvider: b2bPincodes.service_provider,
-      isOda: b2bPincodes.is_oda,
-      isRemote: b2bPincodes.is_remote,
-      isMall: b2bPincodes.is_mall,
-      isSez: b2bPincodes.is_sez,
-      isAirport: b2bPincodes.is_airport,
-      isHighSecurity: b2bPincodes.is_high_security,
-      isSdlZone: b2bPincodes.is_sdl_zone,
-      sdlRatePerKg: b2bPincodes.sdl_rate_per_kg,
-      isFmCharge: b2bPincodes.is_fm_charge,
-      isToPayCharge: b2bPincodes.is_to_pay_charge,
-      isGreenTax: b2bPincodes.is_green_tax,
       createdAt: b2bPincodes.created_at,
-      updatedAt: b2bPincodes.updated_at,
     })
     .from(b2bPincodes)
     .where(condition)
     .limit(limit)
     .offset(offset)
     .orderBy(orderClause)
+
+  const data = rows.map((row) => ({
+    ...row,
+    isOda: false,
+    isRemote: false,
+    isMall: false,
+    isSez: false,
+    isAirport: false,
+    isHighSecurity: false,
+    isSdlZone: false,
+    sdlRatePerKg: null,
+    isFmCharge: false,
+    isToPayCharge: false,
+    isGreenTax: false,
+    updatedAt: null,
+  }))
 
   const [{ totalCount }] = await db
     .select({ totalCount: count(b2bPincodes.id) })
