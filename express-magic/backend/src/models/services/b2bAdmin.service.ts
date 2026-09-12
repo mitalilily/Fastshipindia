@@ -44,13 +44,14 @@ const EXACT_B2B_ZONE_ORDER = [
 
 const sortExactB2BZones = <T extends { code?: string | null }>(rows: T[]) => {
   const order = new Map(EXACT_B2B_ZONE_ORDER.map((code, index) => [code, index]))
-  return rows
-    .filter((row) => order.has(String(row.code || '').trim().toUpperCase()))
-    .sort(
-      (left, right) =>
-        (order.get(String(left.code || '').trim().toUpperCase()) ?? 999) -
-        (order.get(String(right.code || '').trim().toUpperCase()) ?? 999),
-    )
+  return [...rows].sort((left, right) => {
+    const leftCode = String(left.code || '').trim().toUpperCase()
+    const rightCode = String(right.code || '').trim().toUpperCase()
+    const rankDifference =
+      (order.get(leftCode) ?? EXACT_B2B_ZONE_ORDER.length) -
+      (order.get(rightCode) ?? EXACT_B2B_ZONE_ORDER.length)
+    return rankDifference || leftCode.localeCompare(rightCode)
+  })
 }
 
 // Debug: Check import at module load time

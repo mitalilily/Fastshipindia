@@ -80,9 +80,10 @@ export function useZones(businessType = null, filters = {}) {
         isClosable: true,
       })
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: 'Failed to create zone.',
+        description: error?.response?.data?.error || error?.message,
         status: 'error',
         duration: 3000,
         isClosable: true,
