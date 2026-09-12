@@ -2010,7 +2010,8 @@ export const calculateB2BRate = async (params: {
     isCsd: isCsd, // CSD: pincode flag OR address contains CSD keywords
     isSdlZone: origin.isSdlZone || destination.isSdlZone,
     sdlRatePerKg,
-    isFmCharge: origin.isFmCharge || destination.isFmCharge,
+    // FM is a global shipment charge; legacy pincode flags are intentionally ignored.
+    isFmCharge: true,
     isToPayCharge: origin.isToPayCharge || destination.isToPayCharge,
     isGreenTax: origin.isGreenTax || destination.isGreenTax,
     isHoliday: isHoliday,
@@ -2204,9 +2205,9 @@ export const calculateB2BRate = async (params: {
       runningTotal += sdlCharge
     }
 
-    // FM (first-mile) charge is pincode-controlled and uses the configured
+    // FM (first-mile) charge applies to every pincode and uses the configured
     // higher/lower rule between its per-AWB and per-kg values.
-    if (context.isFmCharge && billableWeight > 0) {
+    if (billableWeight > 0) {
       const fmPerAwb = Number(additionalCharges.fm_charge_per_awb || 0)
       const fmPerKg = Number(additionalCharges.fm_charge_per_kg || 0)
       const fmCharge = calculateDualValueCharge(

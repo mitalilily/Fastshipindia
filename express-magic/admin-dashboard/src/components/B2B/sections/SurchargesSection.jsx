@@ -5,8 +5,10 @@ import {
   FormLabel,
   NumberInput,
   NumberInputField,
+  Select,
   SimpleGrid,
   Text,
+  useColorModeValue,
 } from '@chakra-ui/react'
 import { memo } from 'react'
 
@@ -63,12 +65,44 @@ const SurchargesSection = memo(({ formData, onFieldChange }) => {
           <FormHelperText fontSize="xs">Rs Additional</FormHelperText>
         </FormControl>
       </SimpleGrid>
+      <Box
+        mt={4}
+        mb={4}
+        p={4}
+        bg={useColorModeValue('blue.50', 'blue.900')}
+        borderRadius="md"
+        borderWidth="1px"
+        borderColor={useColorModeValue('blue.200', 'blue.700')}
+      >
+        <Text fontSize="sm" fontWeight="semibold" color="blue.700" mb={3}>
+          FM Charge
+        </Text>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+          <FormControl>
+            <FormLabel fontSize="sm" fontWeight="medium">FM Charge Per AWB (₹)</FormLabel>
+            <NumberInput value={formData.fmChargePerAwb} onChange={(_, value) => onFieldChange('fmChargePerAwb', value)} size="sm">
+              <NumberInputField />
+            </NumberInput>
+            <FormHelperText fontSize="xs">Rs per AWB</FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel fontSize="sm" fontWeight="medium">FM Charge Per Kg (₹)</FormLabel>
+            <NumberInput value={formData.fmChargePerKg} onChange={(_, value) => onFieldChange('fmChargePerKg', value)} size="sm">
+              <NumberInputField />
+            </NumberInput>
+            <FormHelperText fontSize="xs">Rs per Kg</FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel fontSize="sm" fontWeight="medium">FM Calculation Method</FormLabel>
+            <Select value={formData.fmChargeMethod || 'whichever_is_higher'} onChange={(event) => onFieldChange('fmChargeMethod', event.target.value)} size="sm">
+              <option value="whichever_is_higher">Whichever is Higher</option>
+              <option value="whichever_is_lower">Whichever is Lower</option>
+            </Select>
+            <FormHelperText fontSize="xs">Applied to all pincodes.</FormHelperText>
+          </FormControl>
+        </SimpleGrid>
+      </Box>
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mt={4}>
-        <FormControl>
-          <FormLabel fontSize="sm" fontWeight="medium">FM Charge (₹/kg)</FormLabel>
-          <NumberInput value={formData.fmChargePerKg} onChange={(_, value) => onFieldChange('fmChargePerKg', value)} size="sm"><NumberInputField /></NumberInput>
-          <FormHelperText fontSize="xs">Applied only to pincodes marked FM Charge.</FormHelperText>
-        </FormControl>
         <FormControl>
           <FormLabel fontSize="sm" fontWeight="medium">To-Pay Charge (₹ fixed)</FormLabel>
           <NumberInput value={formData.toPayFixedAmount} onChange={(_, value) => onFieldChange('toPayFixedAmount', value)} size="sm"><NumberInputField /></NumberInput>

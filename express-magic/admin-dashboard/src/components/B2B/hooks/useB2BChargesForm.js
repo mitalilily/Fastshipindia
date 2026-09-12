@@ -135,6 +135,7 @@ export const useB2BChargesForm = (charges) => {
           const defaultMethod =
             key.includes('minimumChargeable') ||
             key.includes('demurrage') ||
+            key.includes('fmCharge') ||
             key.includes('oda') ||
             key.includes('timeSpecific') ||
             key.includes('mallDelivery') ||
