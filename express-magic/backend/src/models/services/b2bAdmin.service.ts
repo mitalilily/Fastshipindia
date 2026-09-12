@@ -2935,6 +2935,9 @@ export const findZoneForPincode = async (
         isCsd: row.isCsd,
         isSdlZone: row.isSdlZone,
         sdlRatePerKg: row.sdlRatePerKg == null ? null : Number(row.sdlRatePerKg),
+        isFmCharge: row.isFmCharge,
+        isToPayCharge: row.isToPayCharge,
+        isGreenTax: row.isGreenTax,
       }
     }
   }

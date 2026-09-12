@@ -25,6 +25,7 @@ import {
   deleteZone,
   getAllZones,
   listAllZoneStates,
+  listZonePincodeOptions,
   remapZonePincodes,
   updateZone,
 } from '../../../models/services/zone.service'
@@ -141,6 +142,20 @@ export const listStatesController = async (_req: Request, res: Response) => {
     res.json({ success: true, data: states })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error?.message || 'Failed to fetch states' })
+  }
+}
+
+export const listZonePincodeOptionsController = async (req: Request, res: Response) => {
+  try {
+    const rawStates = Array.isArray(req.query.state) ? req.query.state : [req.query.state]
+    const states = rawStates.flatMap((value) => String(value ?? '').split(',')).filter(Boolean)
+    const pincodes = await listZonePincodeOptions(
+      states,
+      req.query.zone_id ? String(req.query.zone_id) : undefined,
+    )
+    res.json({ success: true, data: pincodes })
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error?.message || 'Failed to fetch pincodes' })
   }
 }
 

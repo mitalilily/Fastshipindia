@@ -56,6 +56,7 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
     description: '',
     business_type: businessType,
     states: [],
+    pincodes: [],
   })
   const [isEdit, setIsEdit] = useState(false)
 
@@ -73,17 +74,38 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
   })
 
   const [stateSearch, setStateSearch] = useState('')
+  const [pincodeSearch, setPincodeSearch] = useState('')
+  const [hasHydratedPincodes, setHasHydratedPincodes] = useState(false)
   const filteredStateOptions = isB2B
     ? stateOptions.filter((state) =>
         state?.toLowerCase().includes(stateSearch.trim().toLowerCase()),
       )
     : []
 
+  const { data: pincodeOptions = [], isLoading: isLoadingPincodes } = useQuery({
+    queryKey: ['b2b-zone-pincode-options', zoneForm.states, isEdit ? zoneForm.id : null],
+    queryFn: () => b2bAdminService.getZonePincodeOptions(zoneForm.states, isEdit ? zoneForm.id : null),
+    enabled: isB2B && isOpen && zoneForm.states.length > 0,
+  })
+  const filteredPincodeOptions = pincodeOptions.filter((option) => {
+    const search = pincodeSearch.trim().toLowerCase()
+    return !search || `${option.pincode} ${option.city} ${option.state}`.toLowerCase().includes(search)
+  })
+
   // Zones are always global - no courier filtering needed
   const zoneFilters = []
 
   // Validation state
-  const [errors, setErrors] = useState({ code: '', name: '', states: '' })
+  const [errors, setErrors] = useState({ code: '', name: '', states: '', pincodes: '' })
+
+  useEffect(() => {
+    if (!isEdit || hasHydratedPincodes || pincodeOptions.length === 0) return
+    setZoneForm((current) => ({
+      ...current,
+      pincodes: pincodeOptions.filter((option) => option.selected).map((option) => option.pincode),
+    }))
+    setHasHydratedPincodes(true)
+  }, [hasHydratedPincodes, isEdit, pincodeOptions])
 
   useEffect(() => {
     // Reset form and errors when tab changes
@@ -95,9 +117,11 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
       business_type: businessType,
       is_global: true,
       states: [],
+      pincodes: [],
     })
-    setErrors({ code: '', name: '', states: '' })
+    setErrors({ code: '', name: '', states: '', pincodes: '' })
     setStateSearch('')
+    setPincodeSearch('')
   }, [businessType])
 
   const openCreateModal = () => {
@@ -110,9 +134,12 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
       business_type: businessType,
       is_global: true,
       states: [],
+      pincodes: [],
     })
-    setErrors({ code: '', name: '', states: '' })
+    setErrors({ code: '', name: '', states: '', pincodes: '' })
     setStateSearch('')
+    setPincodeSearch('')
+    setHasHydratedPincodes(true)
     onOpen()
   }
 
@@ -121,15 +148,18 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
     setZoneForm({
       ...zone,
       states: Array.isArray(zone.states) ? zone.states : zone.states ? [zone.states] : [],
+      pincodes: [],
     })
     // Zones are always global - no courier selection needed
-    setErrors({ code: '', name: '', states: '' })
+    setErrors({ code: '', name: '', states: '', pincodes: '' })
     setStateSearch('')
+    setPincodeSearch('')
+    setHasHydratedPincodes(false)
     onOpen()
   }
 
   const validateForm = () => {
-    const newErrors = { code: '', name: '', states: '' }
+    const newErrors = { code: '', name: '', states: '', pincodes: '' }
     let valid = true
 
     if (!zoneForm.code.trim()) {
@@ -143,6 +173,10 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
     // Zones are always global - no courier selection needed (industry standard)
     if (businessType === 'B2B' && (!zoneForm.states || zoneForm.states.length === 0)) {
       newErrors.states = 'Select at least one state for this zone'
+      valid = false
+    }
+    if (businessType === 'B2B' && (!zoneForm.pincodes || zoneForm.pincodes.length === 0)) {
+      newErrors.pincodes = 'Select at least one pincode for this zone'
       valid = false
     }
 
@@ -168,9 +202,11 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
         description: '',
         business_type: businessType,
         states: [],
+        pincodes: [],
       })
-      setErrors({ code: '', name: '', states: '' })
+      setErrors({ code: '', name: '', states: '', pincodes: '' })
       setStateSearch('')
+      setPincodeSearch('')
       onClose()
     }
 
@@ -563,12 +599,18 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
                 >
                   <CheckboxGroup
                     value={zoneForm.states || []}
-                    onChange={(values) =>
-                      setZoneForm({
-                        ...zoneForm,
-                        states: Array.isArray(values) ? values.map((val) => String(val)) : [],
-                      })
-                    }
+                    onChange={(values) => {
+                      const nextStates = Array.isArray(values) ? values.map((val) => String(val)) : []
+                      const retainedPincodes = pincodeOptions
+                        .filter(
+                          (option) =>
+                            nextStates.includes(option.state) &&
+                            (zoneForm.pincodes || []).includes(option.pincode),
+                        )
+                        .map((option) => option.pincode)
+                      setZoneForm({ ...zoneForm, states: nextStates, pincodes: retainedPincodes })
+                      setHasHydratedPincodes(true)
+                    }}
                   >
                     {filteredStateOptions.length > 0 ? (
                       <SimpleGrid columns={{ base: 1, sm: 2 }} spacingY={2} spacingX={3}>
@@ -586,11 +628,107 @@ const ZonesManagement = ({ defaultBusinessType = null }) => {
                   </CheckboxGroup>
                 </Box>
                 <FormHelperText>
-                  We will auto-map every pincode from the selected states to this zone. Adjust
-                  special pincodes later from Pincode Management.
+                  Select a state, then choose only the pincodes that should belong to this zone.
                 </FormHelperText>
                 <FormErrorMessage>{errors.states}</FormErrorMessage>
               </FormControl>
+
+              {zoneForm.states.length > 0 && (
+                <FormControl isRequired isInvalid={Boolean(errors.pincodes)}>
+                  <Flex align="center" justify="space-between" mb={2}>
+                    <FormLabel m={0}>Pincodes in this zone</FormLabel>
+                    {isLoadingPincodes && <Spinner size="sm" />}
+                  </Flex>
+
+                  <Input
+                    placeholder="Search pincode, city or state..."
+                    size="sm"
+                    value={pincodeSearch}
+                    onChange={(event) => setPincodeSearch(event.target.value)}
+                    mb={3}
+                  />
+
+                  <Flex justify="space-between" align="center" mb={2}>
+                    <Text fontSize="sm" color="gray.600">
+                      Selected ({zoneForm.pincodes.length})
+                    </Text>
+                    <HStack spacing={2}>
+                      <Button
+                        size="xs"
+                        variant="link"
+                        onClick={() =>
+                          setZoneForm({
+                            ...zoneForm,
+                            pincodes: Array.from(
+                              new Set([
+                                ...zoneForm.pincodes,
+                                ...filteredPincodeOptions.map((option) => option.pincode),
+                              ]),
+                            ),
+                          })
+                        }
+                        isDisabled={filteredPincodeOptions.length === 0}
+                      >
+                        Select visible
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="link"
+                        colorScheme="red"
+                        onClick={() => setZoneForm({ ...zoneForm, pincodes: [] })}
+                        isDisabled={zoneForm.pincodes.length === 0}
+                      >
+                        Clear
+                      </Button>
+                    </HStack>
+                  </Flex>
+
+                  <Box
+                    borderWidth="1px"
+                    borderRadius="md"
+                    maxH="250px"
+                    overflowY="auto"
+                    px={3}
+                    py={3}
+                    bg="white"
+                  >
+                    <CheckboxGroup
+                      value={zoneForm.pincodes}
+                      onChange={(values) =>
+                        setZoneForm({
+                          ...zoneForm,
+                          pincodes: Array.isArray(values) ? values.map(String) : [],
+                        })
+                      }
+                    >
+                      {filteredPincodeOptions.length > 0 ? (
+                        <SimpleGrid columns={{ base: 1, sm: 2 }} spacingY={2} spacingX={3}>
+                          {filteredPincodeOptions.map((option) => (
+                            <Checkbox key={option.pincode} value={option.pincode}>
+                              <Text as="span" fontWeight="semibold">{option.pincode}</Text>{' '}
+                              <Text as="span" fontSize="xs" color="gray.500">
+                                {option.city}
+                              </Text>
+                            </Checkbox>
+                          ))}
+                        </SimpleGrid>
+                      ) : (
+                        <Text fontSize="sm" color="gray.500">
+                          {isLoadingPincodes
+                            ? 'Loading pincodes...'
+                            : pincodeSearch
+                            ? 'No pincodes match your search.'
+                            : 'No unassigned pincodes are available for the selected states.'}
+                        </Text>
+                      )}
+                    </CheckboxGroup>
+                  </Box>
+                  <FormHelperText>
+                    Pincodes already used in another zone are hidden.
+                  </FormHelperText>
+                  <FormErrorMessage>{errors.pincodes}</FormErrorMessage>
+                </FormControl>
+              )}
             </Stack>
           )}
         </Stack>

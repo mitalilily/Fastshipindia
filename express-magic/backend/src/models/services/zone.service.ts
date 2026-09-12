@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, or, SQLWrapper } from 'drizzle-orm'
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or, SQLWrapper } from 'drizzle-orm'
 import fs from 'fs'
 import Papa from 'papaparse'
 import { db } from '../client'
@@ -95,6 +95,17 @@ const sanitizeStates = (input: any): string[] => {
   return Array.from(unique)
 }
 
+const sanitizePincodes = (input: any): string[] => {
+  if (!Array.isArray(input)) return []
+  return Array.from(
+    new Set(
+      input
+        .map((value) => String(value ?? '').trim())
+        .filter((value) => /^\d{6}$/.test(value)),
+    ),
+  )
+}
+
 // Zones
 export const createZone = async (data: any, businessType: 'b2b' | 'b2c') => {
   const normalizedBusinessType = businessType?.toUpperCase() === 'B2C' ? 'B2C' : 'B2B'
@@ -108,6 +119,7 @@ export const createZone = async (data: any, businessType: 'b2b' | 'b2c') => {
     metadata,
     business_type,
     states,
+    pincodes,
   } = data
 
   const effectiveBusinessType = (business_type ?? normalizedBusinessType).toUpperCase()
@@ -115,6 +127,10 @@ export const createZone = async (data: any, businessType: 'b2b' | 'b2c') => {
 
   if (effectiveBusinessType === 'B2B' && sanitizedStates.length === 0) {
     throw new Error('Select at least one state for a B2B zone')
+  }
+  const sanitizedPincodes = sanitizePincodes(pincodes)
+  if (effectiveBusinessType === 'B2B' && sanitizedPincodes.length === 0) {
+    throw new Error('Select at least one pincode for a B2B zone')
   }
 
   // Zones are always global - no courier-specific zones (industry standard)
@@ -143,7 +159,7 @@ export const createZone = async (data: any, businessType: 'b2b' | 'b2c') => {
       }
 
       if (created.business_type === 'B2B') {
-        await remapB2BPincodesForZone(created.id, tx)
+        await remapB2BPincodesForZone(created.id, tx, sanitizedPincodes)
       }
 
       // Map the returned fields to the expected format
@@ -240,6 +256,7 @@ export const updateZone = async (id: string, data: any) => {
     id: _,
     business_type,
     states,
+    pincodes,
     ...rest
   } = data
 
@@ -268,6 +285,11 @@ export const updateZone = async (id: string, data: any) => {
     updatePayload.states = sanitizeStates(states)
   }
 
+  const sanitizedPincodes = pincodes === undefined ? undefined : sanitizePincodes(pincodes)
+  if (pincodes !== undefined && sanitizedPincodes?.length === 0) {
+    throw new Error('Select at least one pincode for a B2B zone')
+  }
+
   const updated = await db.transaction(async (tx) => {
     const [zone] = await tx
       .update(zones)
@@ -276,7 +298,7 @@ export const updateZone = async (id: string, data: any) => {
       .returning()
 
     if (zone?.business_type === 'B2B') {
-      await remapB2BPincodesForZone(zone.id, tx)
+      await remapB2BPincodesForZone(zone.id, tx, sanitizedPincodes)
     }
 
     return zone
@@ -544,7 +566,11 @@ export const bulkInsertZoneMappingsFromCSV = async (
   })
 }
 
-const remapB2BPincodesForZone = async (zoneId: string, externalClient?: any) => {
+const remapB2BPincodesForZone = async (
+  zoneId: string,
+  externalClient?: any,
+  requestedPincodes?: string[],
+) => {
   // Validate b2bPincodes is available
   if (!b2bPincodes || typeof b2bPincodes !== 'object' || !b2bPincodes.zone_id) {
     console.error('[remapB2BPincodesForZone] b2bPincodes validation failed:', {
@@ -573,28 +599,39 @@ const remapB2BPincodesForZone = async (zoneId: string, externalClient?: any) => 
 
     const selectedStates = sanitizeStates(zone.states)
 
-    // Conflict detection: ensure no other zone has overlapping states
-    // Since zones are global, check all B2B zones for state conflicts
-    const conflictingZones = await tx
-      .select()
-      .from(zones)
-      .where(
-        and(
-          eq(zones.business_type, 'B2B'),
-          ne(zones.id, zoneId),
-        ),
-      )
+    // A remap without an explicit selection keeps the zone's current pincode set.
+    const existingRows = await tx.select().from(b2bPincodes).where(eq(b2bPincodes.zone_id, zoneId))
+    const selectedPincodes = sanitizePincodes(
+      requestedPincodes === undefined ? existingRows.map((row: any) => row.pincode) : requestedPincodes,
+    )
 
-    for (const otherZone of conflictingZones) {
-      const otherStates = sanitizeStates(otherZone.states)
-      const overlap = otherStates.filter((state) => selectedStates.includes(state))
-      if (overlap.length > 0) {
-        throw new Error(
-          `State(s) ${overlap.join(', ')} already mapped to zone "${
-            otherZone.name
-          }". Remove conflicts before saving.`,
-        )
-      }
+    if (selectedPincodes.length === 0) {
+      throw new Error('Select at least one pincode for a B2B zone')
+    }
+
+    const locationRows = await tx
+      .select()
+      .from(locations)
+      .where(inArray(locations.pincode, selectedPincodes))
+
+    const validLocations = locationRows.filter((location: any) =>
+      selectedStates.includes(location.state),
+    )
+    const validPincodes = new Set(validLocations.map((location: any) => location.pincode))
+    const invalidPincodes = selectedPincodes.filter((pincode) => !validPincodes.has(pincode))
+    if (invalidPincodes.length > 0) {
+      throw new Error(`Some selected pincodes do not belong to the selected states: ${invalidPincodes.slice(0, 5).join(', ')}`)
+    }
+
+    const conflicts = await tx
+      .select({ pincode: b2bPincodes.pincode, zoneId: b2bPincodes.zone_id })
+      .from(b2bPincodes)
+      .where(inArray(b2bPincodes.pincode, selectedPincodes))
+    const conflictingPincodes = Array.from(
+      new Set(conflicts.filter((row: any) => row.zoneId !== zoneId).map((row: any) => row.pincode)),
+    )
+    if (conflictingPincodes.length > 0) {
+      throw new Error(`Pincode(s) ${conflictingPincodes.slice(0, 10).join(', ')} already belong to another zone`)
     }
 
     // Remove pincodes that no longer belong to this zone
@@ -603,24 +640,13 @@ const remapB2BPincodesForZone = async (zoneId: string, externalClient?: any) => 
         'b2bPincodes table schema is not defined. Please ensure the schema is properly imported.',
       )
     }
-    const existingRows = await tx.select().from(b2bPincodes).where(eq(b2bPincodes.zone_id, zoneId))
-
     for (const row of existingRows) {
-      if (!selectedStates.includes(row.state)) {
+      if (!selectedPincodes.includes(row.pincode)) {
         await tx.delete(b2bPincodes).where(eq(b2bPincodes.id, row.id))
       }
     }
 
-    if (selectedStates.length === 0) {
-      return
-    }
-
-    const locationRows = await tx
-      .select()
-      .from(locations)
-      .where(inArray(locations.state, selectedStates))
-
-    for (const location of locationRows) {
+    for (const location of validLocations) {
       // Since zones are global, pincodes are mapped to zones only (no courier filtering)
       const [existing] = await tx
         .select()
@@ -683,4 +709,33 @@ export const listAllZoneStates = async () => {
     .orderBy(asc(locations.state))
 
   return rows.map((row) => row.state).filter((state): state is string => Boolean(state))
+}
+
+export const listZonePincodeOptions = async (states: string[], zoneId?: string) => {
+  const selectedStates = sanitizeStates(states)
+  if (selectedStates.length === 0) return []
+
+  const locationRows = await db
+    .select({ pincode: locations.pincode, city: locations.city, state: locations.state })
+    .from(locations)
+    .where(and(inArray(locations.state, selectedStates), eq(locations.active, true)))
+    .orderBy(asc(locations.state), asc(locations.pincode))
+
+  if (locationRows.length === 0) return []
+
+  const assignments = await db
+    .select({ pincode: b2bPincodes.pincode, zoneId: b2bPincodes.zone_id })
+    .from(b2bPincodes)
+    .where(inArray(b2bPincodes.pincode, locationRows.map((row) => row.pincode)))
+
+  const assignedZoneByPincode = new Map(assignments.map((row) => [row.pincode, row.zoneId]))
+  const seen = new Set<string>()
+  return locationRows
+    .filter((row) => {
+      if (seen.has(row.pincode)) return false
+      seen.add(row.pincode)
+      const assignedZoneId = assignedZoneByPincode.get(row.pincode)
+      return !assignedZoneId || assignedZoneId === zoneId
+    })
+    .map((row) => ({ ...row, selected: assignedZoneByPincode.get(row.pincode) === zoneId }))
 }

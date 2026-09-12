@@ -71,9 +71,9 @@ export function useZones(businessType = null, filters = {}) {
     onSuccess: () => {
       refreshZoneBackedViews()
       toast({
-        title: isB2B ? 'Zone saved & pincodes auto-mapped.' : 'Zone created successfully.',
+        title: isB2B ? 'Zone saved with selected pincodes.' : 'Zone created successfully.',
         description: isB2B
-          ? 'All pincodes for the selected states are now mapped to this zone.'
+          ? 'Only the selected pincodes are now mapped to this zone.'
           : undefined,
         status: 'success',
         duration: 3000,
@@ -98,9 +98,9 @@ export function useZones(businessType = null, filters = {}) {
     onSuccess: (data) => {
       refreshZoneBackedViews()
       toast({
-        title: isB2B ? 'Zone updated & pincodes refreshed.' : data.message || 'Zone updated successfully',
+        title: isB2B ? 'Zone and pincode selection updated.' : data.message || 'Zone updated successfully',
         description: isB2B
-          ? 'Pincodes for the selected states have been remapped to this zone.'
+          ? 'Only the selected pincodes are mapped to this zone.'
           : undefined,
         status: 'success',
         duration: 3000,

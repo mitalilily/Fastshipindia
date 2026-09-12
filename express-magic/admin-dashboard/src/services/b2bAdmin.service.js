@@ -48,6 +48,12 @@ export const b2bAdminService = {
     return data.data ?? data
   },
 
+  async getZonePincodeOptions(states, zoneId) {
+    const query = buildQuery({ state: states, zone_id: zoneId })
+    const { data } = await api.get(`${BASE_URL}/zone-pincode-options?${query}`)
+    return data.data ?? data
+  },
+
   // Pincodes
   async getPincodes(params = {}) {
     const query = buildQuery(params)
